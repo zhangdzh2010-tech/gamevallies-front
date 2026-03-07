@@ -8,17 +8,17 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    height: 52px;
+    height: 96px;
     background: rgba(17, 17, 24, 0.8);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(37, 37, 53, 0.5);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 16px;
+    padding: 0 30px;
 
     .logo {
-      font-size: 18px;
+      font-size: 33px;
       font-weight: 700;
       background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
       -webkit-background-clip: text;
@@ -28,27 +28,27 @@
 
     .header-actions {
       display: flex;
-      gap: 12px;
+      gap: 21px;
       align-items: center;
 
       .create-btn {
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 6px 12px;
+        gap: 9px;
+        padding: 12px 24px;
         background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
-        border-radius: 8px;
+        border-radius: 15px;
         color: white;
-        font-size: 12px;
+        font-size: 23px;
         font-weight: 600;
         transition: all 0.3s ease;
 
         .create-icon {
-          font-size: 14px;
+          font-size: 26px;
         }
 
         .create-text {
-          font-size: 12px;
+          font-size: 23px;
         }
 
         &:active {
@@ -57,14 +57,14 @@
       }
 
       .avatar {
-        width: 32px;
-        height: 32px;
+        width: 66px;
+        height: 66px;
         border-radius: 50%;
         background: rgba(110, 86, 255, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
+        font-size: 30px;
         cursor: pointer;
         transition: all 0.3s ease;
 
@@ -82,11 +82,11 @@
     -webkit-overflow-scrolling: touch;
 
     .challenge-banner {
-      margin: 16px;
-      padding: 16px;
+      margin: 30px;
+      padding: 30px;
       background: linear-gradient(135deg, rgba(110, 86, 255, 0.2) 0%, rgba(45, 212, 168, 0.2) 100%);
       border: 1px solid rgba(110, 86, 255, 0.3);
-      border-radius: 16px;
+      border-radius: 30px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -96,31 +96,31 @@
 
         .challenge-title {
           display: block;
-          font-size: 16px;
+          font-size: 27px;
           font-weight: 600;
           color: #eae8f4;
-          margin-bottom: 8px;
+          margin-bottom: 15px;
         }
 
         .challenge-meta {
           display: flex;
-          gap: 12px;
+          gap: 21px;
 
           .meta-item {
-            font-size: 12px;
+            font-size: 21px;
             color: #8b87a3;
           }
         }
       }
 
       .challenge-action {
-        font-size: 12px;
+        font-size: 23px;
         color: #6e56ff;
         font-weight: 600;
         cursor: pointer;
-        padding: 8px 12px;
+        padding: 15px 24px;
         background: rgba(110, 86, 255, 0.15);
-        border-radius: 8px;
+        border-radius: 15px;
         transition: all 0.3s ease;
 
         &:active {
@@ -130,17 +130,17 @@
     }
 
     .tabs-container {
-      padding: 12px 16px;
+      padding: 21px 30px;
       display: flex;
-      gap: 8px;
+      gap: 15px;
       white-space: nowrap;
 
       .tab-item {
-        padding: 8px 14px;
-        border-radius: 20px;
+        padding: 15px 27px;
+        border-radius: 33px;
         background: transparent;
         color: #8b87a3;
-        font-size: 13px;
+        font-size: 23px;
         font-weight: 600;
         transition: all 0.3s ease;
         cursor: pointer;
@@ -160,8 +160,8 @@
     .games-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      padding: 0 12px;
+      gap: 21px;
+      padding: 0 24px;
 
       > * {
         break-inside: avoid;
@@ -169,28 +169,28 @@
     }
 
     .creators-section {
-      padding: 24px 16px;
+      padding: 42px 30px;
 
       .section-title {
         display: block;
-        font-size: 16px;
+        font-size: 27px;
         font-weight: 600;
         color: #eae8f4;
-        margin-bottom: 12px;
+        margin-bottom: 21px;
       }
 
       .creators-scroll {
         display: flex;
-        gap: 12px;
+        gap: 21px;
         white-space: nowrap;
 
         .creator-card {
           flex-shrink: 0;
-          width: 100px;
-          padding: 12px;
+          width: 180px;
+          padding: 24px;
           background: #111118;
           border: 1px solid #252535;
-          border-radius: 12px;
+          border-radius: 21px;
           text-align: center;
           transition: all 0.3s ease;
           cursor: pointer;
@@ -201,21 +201,21 @@
           }
 
           .creator-emoji {
-            font-size: 32px;
-            margin-bottom: 8px;
+            font-size: 57px;
+            margin-bottom: 15px;
           }
 
           .creator-name {
             display: block;
-            font-size: 13px;
+            font-size: 23px;
             font-weight: 600;
             color: #eae8f4;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
           }
 
           .creator-plays {
             display: block;
-            font-size: 11px;
+            font-size: 20px;
             color: #8b87a3;
           }
         }
@@ -224,13 +224,13 @@
 
     .loading-indicator {
       text-align: center;
-      padding: 20px;
+      padding: 36px;
       color: #8b87a3;
-      font-size: 12px;
+      font-size: 21px;
     }
 
     .bottom-spacer {
-      height: 80px;
+      height: 144px;
     }
   }
 }

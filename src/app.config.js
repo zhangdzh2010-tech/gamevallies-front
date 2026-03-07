@@ -5,6 +5,10 @@ export default defineAppConfig({
 
   subPackages: [
   {
+    root: 'pages/register',
+    pages: ['index']
+  },
+  {
     root: 'pages/create',
     pages: ['index']
   },

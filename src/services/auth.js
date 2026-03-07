@@ -9,13 +9,15 @@ export async function register(data) {
   const payload = {
     username: data.username,
     email: data.email,
-    phone: data.phone,
     password: data.password,
-    verificationCode: data.verificationCode
   };
 
   const response = await post('/api/v1/auth/register', payload);
-  return response.user;
+  // Backend returns same shape as login: { accessToken, refreshToken, user }
+  Storage.setToken(response.accessToken);
+  Storage.setRefreshToken(response.refreshToken);
+  Storage.setUser(response.user);
+  return response;
 }
 
 /**
@@ -27,8 +29,8 @@ export async function login(account, password) {
     password
   });
 
-  // Save tokens and user
-  Storage.setToken(response.token);
+  // Save tokens and user (backend returns accessToken, not token)
+  Storage.setToken(response.accessToken);
   Storage.setRefreshToken(response.refreshToken);
   Storage.setUser(response.user);
 
@@ -44,11 +46,11 @@ export async function refreshTokenRequest(refreshToken) {
     { refreshToken }
   );
 
-  // Update stored tokens
-  Storage.setToken(response.token);
+  // Update stored tokens (backend returns accessToken, not token)
+  Storage.setToken(response.accessToken);
   Storage.setRefreshToken(response.refreshToken);
 
-  return response.token;
+  return response.accessToken;
 }
 
 /**

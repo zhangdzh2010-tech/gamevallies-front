@@ -70,7 +70,7 @@ export const useAuthStore = create((set, get) => ({
 
       set({
         user: response.user,
-        token: response.token,
+        token: response.accessToken,
         refreshToken: response.refreshToken,
         isAuthenticated: true,
         isLoading: false,
@@ -92,12 +92,13 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const user = await authService.register(data);
+      const response = await authService.register(data);
 
-      // Auto login after successful registration
-      // Note: In a real app, you might send user a verification email first
       set({
-        user,
+        user: response.user,
+        token: response.accessToken,
+        refreshToken: response.refreshToken,
+        isAuthenticated: true,
         isLoading: false,
         error: null
       });

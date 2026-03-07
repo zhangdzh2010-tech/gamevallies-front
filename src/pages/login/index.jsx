@@ -2,80 +2,38 @@ import React, { useState } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
+import { useAuthStore } from '../../store/authStore';
 import './index.scss';
 
 export default function Login() {
   const navigation = useNavigation();
+  const { login, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Taro.showToast({
-        title: '请输入邮箱和密码',
-        icon: 'none'
-      });
+      Taro.showToast({ title: '请输入邮箱和密码', icon: 'none' });
       return;
     }
 
-    setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Mock successful login
-      Taro.setStorage({
-        key: 'authToken',
-        data: 'mock_token_' + Date.now()
-      });
-
-      Taro.showToast({
-        title: '登录成功',
-        icon: 'success'
-      });
-
-      // Navigate to home
+      await login(email, password);
+      Taro.showToast({ title: '登录成功', icon: 'success' });
       setTimeout(() => {
-        navigation.switchTab({
-          url: '/pages/index/index'
-        });
-      }, 1500);
-    } finally {
-      setLoading(false);
+        navigation.switchTab({ url: '/pages/index/index' });
+      }, 1000);
+    } catch (error) {
+      Taro.showToast({ title: error.message || '登录失败', icon: 'none' });
     }
   };
 
   const handleRegister = () => {
-    navigation.push({
-      url: '/pages/register/index'
-    });
+    navigation.push({ url: '/pages/register/index' });
   };
 
   const handleWeChatLogin = async () => {
-    setLoading(true);
-    try {
-      // Simulate WeChat login
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      Taro.setStorage({
-        key: 'authToken',
-        data: 'wechat_token_' + Date.now()
-      });
-
-      Taro.showToast({
-        title: '微信登录成功',
-        icon: 'success'
-      });
-
-      setTimeout(() => {
-        navigation.switchTab({
-          url: '/pages/index/index'
-        });
-      }, 1500);
-    } finally {
-      setLoading(false);
-    }
+    Taro.showToast({ title: '微信登录暂未开放', icon: 'none' });
   };
 
   return (
@@ -115,11 +73,11 @@ export default function Login() {
             className="login-btn"
             onClick={handleLogin}
             style={{
-              opacity: loading ? 0.6 : 1,
-              pointerEvents: loading ? 'none' : 'auto'
+              opacity: isLoading ? 0.6 : 1,
+              pointerEvents: isLoading ? 'none' : 'auto'
             }}>
             
-            <Text>{loading ? '登录中...' : '登录'}</Text>
+            <Text>{isLoading ? '登录中...' : '登录'}</Text>
           </View>
 
           <View className="register-link">
@@ -142,8 +100,8 @@ export default function Login() {
           className="wechat-btn"
           onClick={handleWeChatLogin}
           style={{
-            opacity: loading ? 0.6 : 1,
-            pointerEvents: loading ? 'none' : 'auto'
+            opacity: isLoading ? 0.6 : 1,
+            pointerEvents: isLoading ? 'none' : 'auto'
           }}>
           
           <Text>微信一键登录</Text>

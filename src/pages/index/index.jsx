@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,171 +9,99 @@ import {
 import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import * as feedService from '../../services/feed';
+import useGamePlayerStore from '../../stores/gamePlayer';
 import './index.scss';
 
-// Mock data matching JSX demo
-const GAMES = [
-{
-  id: '1',
-  title: '2048 数字游戏',
-  description: '合并相同数字达到2048',
-  emoji: '🎮',
-  color: '#6e56ff',
-  plays: 23400,
-  likes: 5600,
-  author: '创意工厂',
-  authorEmoji: '🎨',
-  isHot: true,
-  forks: 234
-},
-{
-  id: '2',
-  title: '太空防御',
-  description: '击落来临的陨石',
-  emoji: '🚀',
-  color: '#2dd4a8',
-  plays: 18900,
-  likes: 4200,
-  author: '星空开发',
-  authorEmoji: '⭐',
-  isHot: true,
-  forks: 189
-},
-{
-  id: '3',
-  title: '音乐节奏',
-  description: '跟随节奏点击',
-  emoji: '🎵',
-  color: '#fbbf24',
-  plays: 15600,
-  likes: 3800,
-  author: '音乐工坊',
-  authorEmoji: '🎼',
-  isHot: false,
-  forks: 156
-},
-{
-  id: '4',
-  title: '消消乐',
-  description: '消除相同元素',
-  emoji: '💎',
-  color: '#ff5c8a',
-  plays: 32100,
-  likes: 7900,
-  author: '益智游戏',
-  authorEmoji: '🧩',
-  isHot: false,
-  forks: 312
-},
-{
-  id: '5',
-  title: '飞翔小鸟',
-  description: '躲避障碍飞翔',
-  emoji: '🐦',
-  color: '#6e56ff',
-  plays: 28700,
-  likes: 6100,
-  author: '经典重现',
-  authorEmoji: '🎭',
-  isHot: false,
-  forks: 287
-},
-{
-  id: '6',
-  title: '捕鱼大师',
-  description: '点击捕获更多鱼',
-  emoji: '🎣',
-  color: '#2dd4a8',
-  plays: 19400,
-  likes: 4100,
-  author: '渔业大师',
-  authorEmoji: '⛵',
-  isHot: false,
-  forks: 194
-}];
+const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
+const GAME_EMOJIS = ['🎮', '🚀', '🎵', '💎', '🐦', '🎣', '🧩', '🎯'];
 
-
-const CREATORS = [
-{
-  id: '1',
-  name: '创意工厂',
-  emoji: '🎨',
-  plays: 156000,
-  description: '专注游戏创作'
-},
-{
-  id: '2',
-  name: '星空开发',
-  emoji: '⭐',
-  plays: 98000,
-  description: '科幻游戏达人'
-},
-{
-  id: '3',
-  name: '音乐工坊',
-  emoji: '🎼',
-  plays: 76000,
-  description: '音乐游戏专家'
-},
-{
-  id: '4',
-  name: '益智游戏',
-  emoji: '🧩',
-  plays: 134000,
-  description: '益智内容创作'
-},
-{
-  id: '5',
-  name: '经典重现',
-  emoji: '🎭',
-  plays: 102000,
-  description: '经典游戏改编'
-}];
+function normalizeGame(game, index) {
+  return {
+    ...game,
+    emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
+    color: game.color || GAME_COLORS[index % GAME_COLORS.length],
+    author: game.author?.username || game.author || '未知创作者',
+    authorEmoji: game.authorEmoji || '👤',
+    isHot: game.plays > 10000,
+  };
+}
 
 
 
 
 export default function Home() {
   const navigation = useNavigation();
+  const openGame = useGamePlayerStore((s) => s.openGame);
   const [activeTab, setActiveTab] = useState('🔥 热门');
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [games, setGames] = useState([]);
+  const [creators, setCreators] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const scrollViewRef = useRef(null);
 
   const CATEGORY_TABS = ['🔥 热门', '✨ 最新', '🚀 太空', '🎵 音乐'];
 
-  const filteredGames = useCallback(() => {
-    switch (activeTab) {
-      case '🚀 太空':
-        return GAMES.filter((g) => g.emoji === '🚀');
-      case '🎵 音乐':
-        return GAMES.filter((g) => g.emoji === '🎵');
-      case '✨ 最新':
-        return GAMES.slice().reverse();
-      case '🔥 热门':
-      default:
-        return GAMES.sort((a, b) => b.plays - a.plays);
+  const fetchGames = useCallback(async (tab, pageNum, append = false) => {
+    try {
+      let result;
+      if (tab === '🔥 热门') result = await feedService.getTrending(pageNum, 10);
+      else if (tab === '✨ 最新') result = await feedService.getLatest(pageNum, 10);
+      else if (tab === '🚀 太空') result = await feedService.searchGames('', { gameType: 'space', page: pageNum, limit: 10 });
+      else if (tab === '🎵 音乐') result = await feedService.searchGames('', { gameType: 'music', page: pageNum, limit: 10 });
+      const items = (result?.items || []).map(normalizeGame);
+      setGames((prev) => append ? [...prev, ...items] : items);
+      setHasMore(result?.hasMore ?? false);
+    } catch (e) {
+      console.error('fetchGames error:', e);
     }
-  }, [activeTab]);
+  }, []);
+
+  const fetchCreators = useCallback(async () => {
+    try {
+      const result = await feedService.getTrendingCreators(5);
+      setCreators(result?.items || []);
+    } catch (e) {
+      console.error('fetchCreators error:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGames(activeTab, 1);
+    fetchCreators();
+  }, []);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setPage(1);
+    setHasMore(true);
+    fetchGames(tab, 1);
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setPage(1);
+    await fetchGames(activeTab, 1);
     setRefreshing(false);
   };
 
   const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
-    // Simulate loading more
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const nextPage = page + 1;
+    await fetchGames(activeTab, nextPage, true);
+    setPage(nextPage);
     setIsLoadingMore(false);
   };
 
-  const handlePlay = (gameId) => {
-    navigation.push({
-      url: `/pages/game/detail/index?id=${gameId}`
-    });
+  const handlePlay = (game) => {
+    if (game.gameUrl) {
+      openGame(game.gameUrl, game.title);
+    } else {
+      navigation.push({ url: `/pages/game/detail/index?id=${game.id}` });
+    }
   };
 
   const handleFork = (gameId) => {
@@ -245,7 +173,7 @@ export default function Home() {
           <View
             key={tab}
             className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}>
+            onClick={() => handleTabChange(tab)}>
             
               <Text>{tab}</Text>
             </View>
@@ -254,7 +182,7 @@ export default function Home() {
 
         {/* Games Grid */}
         <View className="games-grid">
-          {filteredGames().map((game) =>
+          {games.map((game) =>
           <GameCard
             key={game.id}
             game={game}
@@ -268,12 +196,12 @@ export default function Home() {
         <View className="creators-section">
           <Text className="section-title">🌟 热门创作者</Text>
           <ScrollView className="creators-scroll" scrollX>
-            {CREATORS.map((creator) =>
+            {creators.map((creator) =>
             <View key={creator.id} className="creator-card">
-                <View className="creator-emoji">{creator.emoji}</View>
-                <Text className="creator-name">{creator.name}</Text>
+                <View className="creator-emoji">{creator.avatar || '👤'}</View>
+                <Text className="creator-name">{creator.username || creator.name}</Text>
                 <Text className="creator-plays">
-                  {formatNumber(creator.plays)} 次游玩
+                  {formatNumber(creator.gamesCount || creator.plays || 0)} 次游玩
                 </Text>
               </View>
             )}

@@ -1,43 +1,17 @@
 const isProd = process.env.NODE_ENV === 'production';
 
-// Determine base URL based on environment
-const getApiBaseUrl = () => {
-  if (process.env.TARO_ENV === 'weapp') {
-    // WeChat Mini Program
-    return isProd ?
-    'https://api.playforge.com' :
-    'https://dev-api.playforge.com';
-  } else if (process.env.TARO_ENV === 'h5') {
-    // Web (H5)
-    return isProd ?
-    'https://api.playforge.com' :
-    'http://localhost:3000';
-  }
-
-  return 'https://api.playforge.com';
-};
-
-// Determine WebSocket URL based on environment
-const getWsUrl = () => {
-  if (process.env.TARO_ENV === 'weapp') {
-    // WeChat Mini Program
-    return isProd ?
-    'wss://ws.playforge.com' :
-    'wss://dev-ws.playforge.com';
-  } else if (process.env.TARO_ENV === 'h5') {
-    // Web (H5)
-    return isProd ?
-    'wss://ws.playforge.com' :
-    'ws://localhost:3000';
-  }
-
-  return 'wss://ws.playforge.com';
-};
-
 export const ENV = {
-  // API Configuration
-  API_BASE_URL: getApiBaseUrl(),
-  WS_URL: getWsUrl(),
+  // API Configuration — read from .env / .env.development
+  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL,
+  SERVICE_URLS: {
+    AUTH: process.env.TARO_APP_AUTH_SERVICE_URL,
+    GAME: process.env.TARO_APP_GAME_SERVICE_URL,
+    SOCIAL: process.env.TARO_APP_SOCIAL_SERVICE_URL,
+    FEED: process.env.TARO_APP_FEED_SERVICE_URL,
+    AI: process.env.TARO_APP_AI_SERVICE_URL,
+  },
+  WS_URL: process.env.TARO_APP_WS_URL,
+  GAME_CONTENT_URL: process.env.TARO_APP_GAME_CONTENT_URL,
   API_TIMEOUT: 30000,
 
   // Storage Keys

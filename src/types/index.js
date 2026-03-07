@@ -352,30 +352,13 @@
 
 
 // Dynamic API configuration based on environment
-const isProd = process.env.NODE_ENV === 'production';
-
-function getApiBaseUrl() {
-  if (process.env.TARO_ENV === 'weapp') {
-    return isProd ? 'https://api.playforge.com' : 'https://dev-api.playforge.com';
-  } else if (process.env.TARO_ENV === 'h5') {
-    return isProd ? 'https://api.playforge.com' : 'http://localhost:3000';
-  }
-  return isProd ? 'https://api.playforge.com' : 'http://localhost:3000';
-}
-
-function getWsUrl() {
-  if (process.env.TARO_ENV === 'weapp') {
-    return isProd ? 'wss://ws.playforge.com' : 'wss://dev-ws.playforge.com';
-  } else if (process.env.TARO_ENV === 'h5') {
-    return isProd ? 'wss://ws.playforge.com' : 'ws://localhost:3000';
-  }
-  return isProd ? 'wss://ws.playforge.com' : 'ws://localhost:3000';
-}
+import { ENV } from '../config/env';
 
 export const API_CONFIG = {
-  BASE_URL: getApiBaseUrl(),
-  API_BASE: getApiBaseUrl(),
-  WS_URL: getWsUrl(),
+  BASE_URL: ENV.API_BASE_URL,
+  API_BASE: ENV.API_BASE_URL,
+  SERVICE_URLS: ENV.SERVICE_URLS,
+  WS_URL: ENV.WS_URL,
   TIMEOUT: 30000,
   RETRY_COUNT: 3,
   RETRY_DELAY: 1000

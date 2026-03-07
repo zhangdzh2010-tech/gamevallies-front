@@ -105,9 +105,9 @@ export default function Profile() {
     });
   };
 
-  const handlePlay = (gameId) => {
+  const handlePlay = (game) => {
     navigation.push({
-      url: `/pages/game/detail/index?id=${gameId}`
+      url: `/pages/game/detail/index?id=${game.id}`
     });
   };
 
