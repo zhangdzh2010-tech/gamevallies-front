@@ -1,0 +1,129 @@
+.login-container {
+  background: #08080d;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+
+  .login-content {
+    width: 100%;
+    max-width: 400px;
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 48px;
+
+      .logo {
+        display: block;
+        font-size: 32px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+      }
+
+      .tagline {
+        display: block;
+        font-size: 14px;
+        color: #8b87a3;
+      }
+    }
+
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+
+      .input-field {
+        background: #111118;
+        border: 1px solid #252535;
+        border-radius: 14px;
+        padding: 12px 16px;
+        overflow: hidden;
+
+        .input {
+          font-size: 14px;
+          color: #eae8f4;
+
+          &::placeholder {
+            color: #55516e;
+          }
+        }
+      }
+
+      .login-btn {
+        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+        border-radius: 14px;
+        padding: 12px 16px;
+        text-align: center;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:active {
+          transform: scale(0.98);
+        }
+      }
+
+      .register-link {
+        text-align: center;
+        font-size: 12px;
+        color: #8b87a3;
+        margin-top: 8px;
+
+        .link {
+          color: #6e56ff;
+          margin-left: 4px;
+          cursor: pointer;
+          font-weight: 600;
+
+          &:active {
+            opacity: 0.8;
+          }
+        }
+      }
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 32px 0;
+
+      .divider-line {
+        flex: 1;
+        height: 1px;
+        background: #252535;
+      }
+
+      .divider-text {
+        color: #8b87a3;
+        font-size: 12px;
+      }
+    }
+
+    .wechat-btn {
+      background: #07c160;
+      border-radius: 14px;
+      padding: 12px 16px;
+      text-align: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:active {
+        background: #06ad50;
+        transform: scale(0.98);
+      }
+    }
+  }
+}

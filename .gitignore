@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+dist
+lib
+build
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Taro specific
+.taro
+.tarorc.js
+
+# Temporary files
+*.tmp
+.cache
+.parcel-cache
+
+# OS
+Thumbs.db
+desktop.ini

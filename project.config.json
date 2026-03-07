@@ -1,0 +1,15 @@
+{
+  "miniprogramRoot": "dist/weapp/",
+  "projectname": "PlayForge",
+  "description": "AI游戏创作社交平台",
+  "appid": "wx0000000000000000",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "compileHotReLoad": false,
+    "postcss": false,
+    "minified": false
+  },
+  "compileType": "miniprogram"
+}
