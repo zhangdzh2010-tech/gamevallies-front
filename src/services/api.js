@@ -48,6 +48,20 @@ function getAuthService() {
 }
 
 /**
+ * Resolve base URL by matching API path to the appropriate microservice
+ */
+function resolveBaseUrl(url) {
+  const s = API_CONFIG.SERVICE_URLS;
+  if (!s) return API_CONFIG.BASE_URL;
+  if (/\/api\/v\d+\/games\/[^/]+\/iterate/.test(url) || url.includes('/games/generate')) return s.AI;
+  if (url.startsWith('/api/v1/auth') || url.startsWith('/api/v1/users')) return s.AUTH;
+  if (url.startsWith('/api/v1/games')) return s.GAME;
+  if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications') || url.startsWith('/api/v1/creators')) return s.SOCIAL;
+  if (url.startsWith('/api/v1/feed') || url.startsWith('/api/v1/tags') || url.startsWith('/api/v1/challenges')) return s.FEED;
+  return API_CONFIG.BASE_URL;
+}
+
+/**
  * Create request with error handling and retry logic
  */
 export async function createRequest(
@@ -55,7 +69,7 @@ config,
 retryConfig = DEFAULT_RETRY_CONFIG)
 {
   const { method, url, data, timeout = API_CONFIG.TIMEOUT } = config;
-  const finalUrl = url.startsWith('http') ? url : `${API_CONFIG.BASE_URL}${url}`;
+  const finalUrl = url.startsWith('http') ? url : `${resolveBaseUrl(url)}${url}`;
 
   try {
     const headers = {

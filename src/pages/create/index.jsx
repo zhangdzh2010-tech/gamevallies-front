@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Input, Textarea } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import Taro from '@tarojs/taro';
+import { useGameStore } from '../../store/gameStore';
 import './index.scss';
 
 
@@ -53,6 +54,7 @@ const TEMPLATES = [
 
 export default function Create() {
   const navigation = useNavigation();
+  const { createGame, isGenerating, generationProgress } = useGameStore();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -60,7 +62,6 @@ export default function Create() {
     thumbnail: ''
   });
   const [showTemplates, setShowTemplates] = useState(true);
-  const [submitted, setSubmitted] = useState(false);
 
   const handleTemplateSelect = (templateId) => {
     setFormData((prev) => ({
@@ -103,37 +104,19 @@ export default function Create() {
     }
 
     try {
-      setSubmitted(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const prompt = `游戏名称：${formData.title}。模板：${selectedTemplate?.name || ''}。描述：${formData.description}`;
+      await createGame(prompt);
 
-      Taro.showToast({
-        title: '游戏创建成功！',
-        icon: 'success'
-      });
+      Taro.showToast({ title: '游戏生成中，请稍候...', icon: 'none' });
 
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        selectedTemplate: '',
-        thumbnail: ''
-      });
+      setFormData({ title: '', description: '', selectedTemplate: '', thumbnail: '' });
       setShowTemplates(true);
-      setSubmitted(false);
 
-      // Navigate back to home
       setTimeout(() => {
-        navigation.switchTab({
-          url: '/pages/index/index'
-        });
+        navigation.switchTab({ url: '/pages/index/index' });
       }, 1500);
     } catch (error) {
-      setSubmitted(false);
-      Taro.showToast({
-        title: '创建失败，请重试',
-        icon: 'none'
-      });
+      Taro.showToast({ title: error.message || '创建失败，请重试', icon: 'none' });
     }
   };
 
@@ -246,12 +229,12 @@ export default function Create() {
               className="submit-btn"
               onClick={handleSubmit}
               style={{
-                opacity: submitted ? 0.6 : 1,
-                pointerEvents: submitted ? 'none' : 'auto'
+                opacity: isGenerating ? 0.6 : 1,
+                pointerEvents: isGenerating ? 'none' : 'auto'
               }}>
-              
+
                 <Text>
-                  {submitted ? '创建中...' : '创建游戏'}
+                  {isGenerating ? (generationProgress ? `生成中 ${generationProgress.progress || 0}%...` : '生成中...') : '创建游戏'}
                 </Text>
               </View>
             </View>

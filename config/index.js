@@ -60,6 +60,29 @@ module.exports = defineConfig({
   h5: {
     publicPath: "/",
     staticDirectory: "static",
+    webpackChain(chain) {
+      // Explicitly define all process.env.* vars used in src/config/env.js
+      // so webpack replaces them at build time (process is not available in browser)
+      const webpack = require("webpack");
+      chain.plugin("process-env-define").use(webpack.DefinePlugin, [{
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
+        "process.env.TARO_ENV": JSON.stringify(process.env.TARO_ENV || "h5"),
+        "process.env.TARO_APP_AUTH_SERVICE_URL": JSON.stringify(process.env.TARO_APP_AUTH_SERVICE_URL || ""),
+        "process.env.TARO_APP_GAME_SERVICE_URL": JSON.stringify(process.env.TARO_APP_GAME_SERVICE_URL || ""),
+        "process.env.TARO_APP_SOCIAL_SERVICE_URL": JSON.stringify(process.env.TARO_APP_SOCIAL_SERVICE_URL || ""),
+        "process.env.TARO_APP_FEED_SERVICE_URL": JSON.stringify(process.env.TARO_APP_FEED_SERVICE_URL || ""),
+        "process.env.TARO_APP_AI_SERVICE_URL": JSON.stringify(process.env.TARO_APP_AI_SERVICE_URL || ""),
+        "process.env.TARO_APP_WS_URL": JSON.stringify(process.env.TARO_APP_WS_URL || ""),
+        "process.env.TARO_APP_GAME_CONTENT_URL": JSON.stringify(process.env.TARO_APP_GAME_CONTENT_URL || ""),
+        "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
+        "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY || ""),
+      }]);
+      chain.set("ignoreWarnings", [
+        { message: /legacy JS API/ },
+        { message: /Sass @import rules are deprecated/ },
+        { message: /webpackExports/ },
+      ]);
+    },
     postcss: {
       autoprefixer: { enable: true, config: {} },
       cssModules: {

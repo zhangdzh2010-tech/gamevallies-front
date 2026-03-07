@@ -1,7 +1,7 @@
 .game-card {
   background: #111118;
   border: 1px solid #252535;
-  border-radius: 16px;
+  border-radius: 27px;
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -12,7 +12,7 @@
 
   .game-preview {
     width: 100%;
-    height: 110px;
+    height: 210px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -20,7 +20,7 @@
     overflow: hidden;
 
     .game-emoji {
-      font-size: 48px;
+      font-size: 87px;
       z-index: 1;
     }
 
@@ -35,15 +35,15 @@
       transition: opacity 0.3s ease;
 
       .play-button {
-        width: 40px;
-        height: 40px;
+        width: 78px;
+        height: 78px;
         background: linear-gradient(135deg, #6e56ff 0%, #6e56ff 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 16px;
+        font-size: 30px;
         font-weight: bold;
       }
     }
@@ -54,27 +54,27 @@
 
     .hot-badge {
       position: absolute;
-      top: 8px;
-      right: 8px;
+      top: 15px;
+      right: 15px;
       background: linear-gradient(135deg, #ff5c8a 0%, #ff5c8a 100%);
       color: white;
-      padding: 4px 8px;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 8px 15px;
+      border-radius: 15px;
+      font-size: 21px;
       font-weight: 600;
       z-index: 2;
     }
   }
 
   .game-info {
-    padding: 12px;
+    padding: 24px;
 
     .game-title {
       display: block;
-      font-size: 15px;
+      font-size: 26px;
       font-weight: 600;
       color: #eae8f4;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -82,9 +82,9 @@
 
     .game-description {
       display: block;
-      font-size: 12px;
+      font-size: 21px;
       color: #8b87a3;
-      margin-bottom: 8px;
+      margin-bottom: 15px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -93,15 +93,15 @@
     .author-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
+      gap: 12px;
+      margin-bottom: 15px;
 
       .author-emoji {
-        font-size: 14px;
+        font-size: 26px;
       }
 
       .author-name {
-        font-size: 12px;
+        font-size: 21px;
         color: #8b87a3;
       }
     }
@@ -110,18 +110,18 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
 
       .stat {
         flex: 1;
-        padding: 6px 8px;
+        padding: 12px 15px;
         background: rgba(110, 86, 255, 0.08);
-        border-radius: 8px;
+        border-radius: 15px;
         text-align: center;
         transition: all 0.2s ease;
 
         .stat-label {
-          font-size: 11px;
+          font-size: 20px;
           color: #8b87a3;
           display: block;
 

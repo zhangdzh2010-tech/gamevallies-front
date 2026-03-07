@@ -34,6 +34,10 @@ build
 *.tmp
 .cache
 .parcel-cache
+.swc
+
+# Environment (development)
+.env.development
 
 # OS
 Thumbs.db

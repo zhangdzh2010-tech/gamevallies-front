@@ -28,10 +28,10 @@ export const GameCard = ({ game, onPlay, onFork }) => {
 
   const handlePlay = () => {
     if (onPlay) {
-      onPlay(game.id);
+      onPlay(game);
     } else {
       navigation.push({
-        url: `/pages/game/play/index?id=${game.id}`
+        url: `/pages/game/detail/index?id=${game.id}`
       });
     }
   };

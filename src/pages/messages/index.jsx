@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { CustomTabBar } from '../../components/common/CustomTabBar';
 import './index.scss';
 
 
@@ -168,6 +169,8 @@ export default function MessagesPage() {
           </View>
         }
       </ScrollView>
+
+      <CustomTabBar activeIndex={3} />
     </View>);
 
 }

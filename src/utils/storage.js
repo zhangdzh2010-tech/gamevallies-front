@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro';
-import { ENV } from '@/config/env';
+import { ENV } from '../config/env';
 
 
 

@@ -6,6 +6,10 @@ import Taro, { getCurrentInstance } from '@tarojs/taro';
 
 export function useNavigation() {
   return {
+    push: (config) => {
+      const url = typeof config === 'string' ? config : config?.url;
+      Taro.navigateTo({ url });
+    },
     navigate: (url, params) => {
       const query = params ?
       '?' + Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&') :
@@ -20,6 +24,18 @@ export function useNavigation() {
       '?' + Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&') :
       '';
       Taro.redirectTo({ url: url + query });
+    },
+    switchTab: (config) => {
+      const url = typeof config === 'string' ? config : config?.url;
+      // In H5, use redirectTo instead of switchTab for reliable navigation
+      try {
+        Taro.redirectTo({ url });
+      } catch (e) {
+        Taro.navigateTo({ url });
+      }
+    },
+    back: (delta = 1) => {
+      Taro.navigateBack({ delta });
     },
     navigateTo: (url) => {
       Taro.navigateTo({ url });

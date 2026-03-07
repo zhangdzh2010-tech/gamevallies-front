@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, Input, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { CustomTabBar } from '../../components/common/CustomTabBar';
+import * as feedService from '../../services/feed';
+import useGamePlayerStore from '../../stores/gamePlayer';
 import './index.scss';
-
-
 
 
 
@@ -22,91 +23,34 @@ import './index.scss';
 
 export default function DiscoverPage() {
   const [searchValue, setSearchValue] = useState('');
-  const [selectedTag, setSelectedTag] = useState('all');
+  const [selectedTag, setSelectedTag] = useState('全部');
+  const [topCreators, setTopCreators] = useState([]);
+  const [recommendedGames, setRecommendedGames] = useState([]);
+  const openGame = useGamePlayerStore((s) => s.openGame);
 
-  const trendingTags = [
-  '全部',
-  '太空冒险',
-  '休闲益智',
-  '射击游戏',
-  '跑酷',
-  '卡牌',
-  '竞速',
-  '恐怖'];
+  const trendingTags = ['全部', '太空冒险', '休闲益智', '射击游戏', '跑酷', '卡牌', '竞速', '恐怖'];
 
+  useEffect(() => {
+    feedService.getTrendingCreators(8).then((data) => {
+      setTopCreators(Array.isArray(data) ? data : (data?.items || []));
+    }).catch(() => {});
 
-  const topCreators = [
-  {
-    id: '1',
-    name: '太空游戏设计师',
-    avatar: '👨',
-    works: 24,
-    followers: '2.3万'
-  },
-  {
-    id: '2',
-    name: '休闲游戏大师',
-    avatar: '👩',
-    works: 18,
-    followers: '1.8万'
-  },
-  {
-    id: '3',
-    name: '创意鬼才',
-    avatar: '🧑',
-    works: 32,
-    followers: '3.1万'
-  },
-  {
-    id: '4',
-    name: '像素艺术师',
-    avatar: '👨',
-    works: 15,
-    followers: '1.2万'
-  }];
+    feedService.getFeaturedGames(10).then((data) => {
+      setRecommendedGames(Array.isArray(data) ? data : (data?.items || []));
+    }).catch(() => {});
+  }, []);
 
 
-  const recommendedGames = [
-  {
-    id: '1',
-    title: '太空躲避游戏',
-    emoji: '🚀',
-    creator: '太空游戏设计师',
-    plays: '2.3万',
-    category: '射击'
-  },
-  {
-    id: '2',
-    title: '接水果游戏',
-    emoji: '🍎',
-    creator: '休闲游戏大师',
-    plays: '1.8万',
-    category: '休闲'
-  },
-  {
-    id: '3',
-    title: '贪吃蛇进化',
-    emoji: '🐍',
-    creator: '创意鬼才',
-    plays: '1.5万',
-    category: '经典'
-  },
-  {
-    id: '4',
-    title: '弹跳小球',
-    emoji: '🧱',
-    creator: '像素艺术师',
-    plays: '1.2万',
-    category: '益智'
-  }];
-
-
-  const handleGameClick = (gameId) => {
-    Taro.navigateTo({ url: `/pages/game/detail?id=${gameId}` });
+  const handleGameClick = (game) => {
+    if (game.gameUrl) {
+      openGame(game.gameUrl, game.title);
+    } else {
+      Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+    }
   };
 
   const handleCreatorClick = (creatorId) => {
-    Taro.navigateTo({ url: `/pages/profile?id=${creatorId}` });
+    Taro.navigateTo({ url: `/pages/profile/index?id=${creatorId}` });
   };
 
   return (
@@ -177,19 +121,19 @@ export default function DiscoverPage() {
                 key={creator.id}
                 className="creator-card"
                 onClick={() => handleCreatorClick(creator.id)}>
-                
+
                   <View className="creator-avatar">
-                    {creator.avatar}
+                    {creator.avatar || creator.emoji || '👤'}
                   </View>
                   <Text className="creator-name">
-                    {creator.name}
+                    {creator.username || creator.name || '创作者'}
                   </Text>
                   <View className="creator-stats">
                     <Text className="stat-item">
-                      {creator.works} 作品
+                      {creator.gameCount || creator.works || 0} 作品
                     </Text>
                     <Text className="stat-item">
-                      {creator.followers}
+                      {creator.followerCount || creator.followers || 0}
                     </Text>
                   </View>
                 </View>
@@ -216,24 +160,24 @@ export default function DiscoverPage() {
             <View
               key={game.id}
               className="game-card"
-              onClick={() => handleGameClick(game.id)}>
-              
+              onClick={() => handleGameClick(game)}>
+
                 <View className="game-icon-area">
-                  {game.emoji}
+                  {game.emoji || '🎮'}
                 </View>
                 <View className="game-info">
                   <Text className="game-title">
                     {game.title}
                   </Text>
                   <Text className="game-creator">
-                    {game.creator}
+                    {game.author?.username || game.creator || ''}
                   </Text>
                   <View className="game-footer">
                     <Text className="game-plays">
-                      ▶ {game.plays}
+                      ▶ {game.plays || game.playCount || 0}
                     </Text>
                     <Text className="game-category">
-                      {game.category}
+                      {game.category || game.tags?.[0] || ''}
                     </Text>
                   </View>
                 </View>
@@ -242,8 +186,10 @@ export default function DiscoverPage() {
           </View>
         </View>
 
-        <View style={{ height: '32px' }}></View>
+        <View style={{ height: '80px' }}></View>
       </ScrollView>
+
+      <CustomTabBar activeIndex={1} />
     </View>);
 
 }

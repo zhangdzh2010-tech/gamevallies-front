@@ -34,8 +34,10 @@
     "@tarojs/runtime": "4.0.0",
     "@tarojs/shared": "4.0.0",
     "@tarojs/taro": "4.0.0",
+    "ajv": "^8.18.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "webpack": "^5.105.4",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

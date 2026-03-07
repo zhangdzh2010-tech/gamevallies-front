@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
-import { request } from '@/utils/request';
-import { storage } from '@/utils/storage';
-import { ENV } from '@/config/env';
+import { request } from '../utils/request';
+import { storage } from '../utils/storage';
+import { ENV } from '../config/env';
 
 
 

@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, WebView } from '@tarojs/components';
 import { useRoute, useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
+import * as gameService from '../../../services/game';
 import './index.scss';
-
-
 
 
 
@@ -17,21 +16,19 @@ export default function GamePlay() {
   const webViewRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [gameTitle, setGameTitle] = useState('游戏加载中...');
+  const [gameUrl, setGameUrl] = useState('');
   const [currentScore, setCurrentScore] = useState(0);
   const [error, setError] = useState('');
 
-  // Mock game titles
-  const GAME_TITLES = {
-    '1': '2048 数字游戏',
-    '2': '太空防御',
-    '3': '音乐节奏',
-    '4': '消消乐',
-    '5': '飞翔小鸟',
-    '6': '捕鱼大师'
-  };
-
   useEffect(() => {
-    setGameTitle(GAME_TITLES[gameId] || '游戏');
+    gameService.getGame(gameId).then((game) => {
+      setGameTitle(game.title || '游戏');
+      setGameUrl(game.gameUrl || '');
+      if (!game.gameUrl) setError('游戏地址不存在');
+    }).catch(() => {
+      setLoading(false);
+      setError('游戏加载失败，请检查网络连接或稍后重试');
+    });
   }, [gameId]);
 
   const handleWebViewMessage = (event) => {
@@ -75,9 +72,6 @@ export default function GamePlay() {
       menus: ['shareAppMessage', 'shareTimeline']
     });
   };
-
-  // Construct game URL - in a real app, this would come from a CDN
-  const gameUrl = `https://playforge.example.com/games/${gameId}/index.html`;
 
   return (
     <View className="game-play">

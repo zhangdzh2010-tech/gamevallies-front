@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  Input } from
-
-'@tarojs/components';
+  Input } from '@tarojs/components';
 import { useRoute, useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
+import * as gameService from '../../../services/game';
+import * as socialService from '../../../services/social';
+import { GamePlayer } from '../../../components/common/GamePlayer';
+import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
 import './index.scss';
 
 
@@ -17,158 +19,117 @@ import './index.scss';
 
 
 
-
-
-
-// Mock game data
-const GAMES_MAP = {
-  '1': {
-    id: '1',
-    title: '2048 数字游戏',
-    description: '通过滑动合并相同的数字，最终达到2048的目标。这是一个考验策略和反应速度的经典益智游戏。',
-    emoji: '🎮',
-    color: '#6e56ff',
-    plays: 23400,
-    likes: 5600,
-    forks: 234,
-    avgPlayTime: '8分钟',
-    author: '创意工厂',
-    authorEmoji: '🎨',
-    authorDesc: '专注于创意游戏开发的团队',
-    tags: ['益智', '休闲', '数字'],
-    comments: [
-    {
-      id: '1',
-      avatar: '👨‍💻',
-      username: '用户A',
-      content: '很有意思的游戏，美术风格很喜欢！',
-      timestamp: '2小时前',
-      likes: 12
-    },
-    {
-      id: '2',
-      avatar: '👩‍🎨',
-      username: '用户B',
-      content: '难度不错，玩了好久还没过关',
-      timestamp: '4小时前',
-      likes: 8
-    },
-    {
-      id: '3',
-      avatar: '🧑‍🚀',
-      username: '用户C',
-      content: '建议加入排行榜功能',
-      timestamp: '6小时前',
-      likes: 5
-    }]
-
-  },
-  '2': {
-    id: '2',
-    title: '太空防御',
-    description: '击落来临的陨石和敌舰，保护地球安全。支持多种武器和升级，提供丰富的游戏体验。',
-    emoji: '🚀',
-    color: '#2dd4a8',
-    plays: 18900,
-    likes: 4200,
-    forks: 189,
-    avgPlayTime: '15分钟',
-    author: '星空开发',
-    authorEmoji: '⭐',
-    authorDesc: '科幻游戏开发团队',
-    tags: ['射击', '动作', '科幻'],
-    comments: [
-    {
-      id: '1',
-      avatar: '🎮',
-      username: '游戏爱好者',
-      content: '爽到爆！特别喜欢爆炸效果',
-      timestamp: '1小时前',
-      likes: 20
-    }]
-
-  }
-};
-
 export default function GameDetail() {
   const route = useRoute();
   const navigation = useNavigation();
   const gameId = route.params?.id || '1';
 
-  const game = GAMES_MAP[gameId] || GAMES_MAP['1'];
-
+  const [game, setGame] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
-  const [liked, setLiked] = useState(game.likes);
+  const [liked, setLiked] = useState(0);
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState(game.comments || []);
+  const [comments, setComments] = useState([]);
+  const [playingUrl, setPlayingUrl] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [gameData, commentsData] = await Promise.all([
+          gameService.getGame(gameId),
+          socialService.getComments(gameId, 1, 20),
+        ]);
+        setGame(gameData);
+        setLiked(gameData.likes || 0);
+        setComments(commentsData?.items || []);
+      } catch (e) {
+        Taro.showToast({ title: '加载失败', icon: 'none' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [gameId]);
 
   const handlePlayClick = () => {
-    navigation.push({
-      url: `/pages/game/play/index?id=${gameId}`
-    });
+    if (game?.gameUrl) {
+      setPlayingUrl(resolveGameUrl(game.gameUrl));
+    } else {
+      Taro.showToast({ title: '游戏暂不可用', icon: 'none' });
+    }
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLiked(isLiked ? liked - 1 : liked + 1);
+  const handleLike = async () => {
+    try {
+      await socialService.likeGame('game', gameId);
+      setIsLiked(!isLiked);
+      setLiked((prev) => isLiked ? prev - 1 : prev + 1);
+    } catch (e) {
+      Taro.showToast({ title: '操作失败', icon: 'none' });
+    }
   };
 
-  const handleFork = () => {
-    Taro.showToast({
-      title: '已复制到创作区',
-      icon: 'success'
-    });
+  const handleFork = async () => {
+    try {
+      await gameService.forkGame(gameId);
+      Taro.showToast({ title: '已复制到创作区', icon: 'success' });
+    } catch (e) {
+      Taro.showToast({ title: 'Fork 失败', icon: 'none' });
+    }
   };
 
-  const handleFollow = () => {
-    Taro.showToast({
-      title: '已关注创作者',
-      icon: 'success'
-    });
+  const handleFollow = async () => {
+    if (!game?.author?.id) return;
+    try {
+      await socialService.followUser(game.author.id);
+      Taro.showToast({ title: '已关注创作者', icon: 'success' });
+    } catch (e) {
+      Taro.showToast({ title: '关注失败', icon: 'none' });
+    }
   };
 
-  const handleComment = () => {
+  const handleComment = async () => {
     if (!comment.trim()) {
-      Taro.showToast({
-        title: '请输入评论内容',
-        icon: 'none'
-      });
+      Taro.showToast({ title: '请输入评论内容', icon: 'none' });
       return;
     }
-
-    const newComment = {
-      id: Date.now().toString(),
-      avatar: '👤',
-      username: '你',
-      content: comment,
-      timestamp: '刚刚',
-      likes: 0
-    };
-
-    setComments([newComment, ...comments]);
-    setComment('');
-    Taro.showToast({
-      title: '评论发布成功',
-      icon: 'success'
-    });
+    try {
+      const newComment = await socialService.createComment(gameId, comment, null);
+      setComments([newComment, ...comments]);
+      setComment('');
+      Taro.showToast({ title: '评论发布成功', icon: 'success' });
+    } catch (e) {
+      Taro.showToast({ title: '评论失败', icon: 'none' });
+    }
   };
 
-  const handleCommentLike = (commentId) => {
-    setComments(
-      comments.map((c) =>
-      c.id === commentId ? { ...c, likes: c.likes + 1 } : c
-      )
-    );
+  const handleCommentLike = async (commentId) => {
+    try {
+      await socialService.likeGame('comment', commentId);
+      setComments(comments.map((c) =>
+        c.id === commentId ? { ...c, likes: (c.likes || 0) + 1 } : c
+      ));
+    } catch (e) {
+      // silent
+    }
   };
 
   const formatNumber = (num) => {
-    if (num >= 10000) {
-      return (num / 10000).toFixed(1) + '万';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
+    const n = Number(num) || 0;
+    if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return n.toString();
   };
+
+  if (loading || !game) {
+    return (
+      <View className="game-detail">
+        <View style={{ padding: '40px', textAlign: 'center' }}>
+          <Text>{loading ? '加载中...' : '游戏不存在'}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="game-detail">
@@ -177,10 +138,10 @@ export default function GameDetail() {
         <View
           className="preview-banner"
           style={{
-            background: `linear-gradient(135deg, ${game.color}30 0%, ${game.color}50 100%)`
+            background: `linear-gradient(135deg, #6e56ff30 0%, #6e56ff50 100%)`
           }}>
-          
-          <Text className="preview-emoji">{game.emoji}</Text>
+
+          <Text className="preview-emoji">{game.emoji || '🎮'}</Text>
         </View>
 
         {/* Back Button */}
@@ -201,10 +162,10 @@ export default function GameDetail() {
           {/* Author Row */}
           <View className="author-row">
             <View className="author-info">
-              <Text className="author-emoji">{game.authorEmoji}</Text>
+              <Text className="author-emoji">{game.author?.avatar || '👤'}</Text>
               <View className="author-details">
-                <Text className="author-name">{game.author}</Text>
-                <Text className="author-desc">{game.authorDesc}</Text>
+                <Text className="author-name">{game.author?.username || game.author || '未知'}</Text>
+                <Text className="author-desc">{game.author?.bio || ''}</Text>
               </View>
             </View>
             <View className="follow-btn" onClick={handleFollow}>
@@ -231,7 +192,7 @@ export default function GameDetail() {
             </View>
             <View className="stat-item">
               <Text className="stat-label">⏱</Text>
-              <Text className="stat-value">{game.avgPlayTime}</Text>
+              <Text className="stat-value">{game.avgPlayTime || '--'}</Text>
               <Text className="stat-text">平均时长</Text>
             </View>
           </View>
@@ -257,7 +218,7 @@ export default function GameDetail() {
 
           {/* Tags */}
           <View className="tags-section">
-            {game.tags.map((tag) =>
+            {(game.tags || []).map((tag) =>
             <View key={tag} className="tag">
                 {tag}
               </View>
@@ -273,11 +234,11 @@ export default function GameDetail() {
             <View className="comment-list">
               {comments.map((c) =>
               <View key={c.id} className="comment-item">
-                  <Text className="comment-avatar">{c.avatar}</Text>
+                  <Text className="comment-avatar">{c.author?.avatar || '👤'}</Text>
                   <View className="comment-body">
                     <View className="comment-header">
-                      <Text className="comment-name">{c.username}</Text>
-                      <Text className="comment-time">{c.timestamp}</Text>
+                      <Text className="comment-name">{c.author?.username || c.username || '用户'}</Text>
+                      <Text className="comment-time">{c.timestamp || c.createdAt || ''}</Text>
                     </View>
                     <Text className="comment-content">{c.content}</Text>
                     <View
@@ -305,11 +266,17 @@ export default function GameDetail() {
           placeholderStyle="color: #55516e"
           value={comment}
           onInput={(e) => setComment(e.detail.value)} />
-        
+
         <View className="comment-send" onClick={handleComment}>
           发送
         </View>
       </View>
+
+      <GamePlayer
+        gameUrl={playingUrl}
+        gameTitle={game?.title}
+        onClose={() => setPlayingUrl('')}
+      />
     </View>);
 
 }
