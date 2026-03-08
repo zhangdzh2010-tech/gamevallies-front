@@ -1,5 +1,16 @@
 const { defineConfig } = require("@tarojs/cli");
 const path = require("path");
+const dotenv = require("dotenv");
+const fs = require("fs");
+
+// Always load .env (base defaults)
+const baseEnv = path.resolve(__dirname, "../.env");
+if (fs.existsSync(baseEnv)) dotenv.config({ path: baseEnv });
+
+// Load .env.development if it exists (overrides base for local dev)
+// Works regardless of NODE_ENV so weapp builds also pick up local addresses
+const devEnv = path.resolve(__dirname, "../.env.development");
+if (fs.existsSync(devEnv)) dotenv.config({ path: devEnv, override: true });
 
 // Polyfill browser globals for Node.js environment during Taro H5 build
 const g = globalThis;
