@@ -1,136 +1,49 @@
-.game-play {
-  background: #08080d;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+.game-play-page {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: #000;
 
-  .play-header {
-    height: 96px;
-    background: rgba(17, 17, 24, 0.95);
-    border-bottom: 1px solid #252535;
+  // CoverView overlays on top of the WebView native component
+  .game-header-cover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 30px;
-    z-index: 10;
+    flex-direction: row;
+    align-items: flex-end;
+    padding-bottom: 12px;
+    background-color: rgba(8, 8, 13, 0.85);
+    z-index: 9999;
 
-    .header-left {
-      color: #6e56ff;
-      font-size: 24px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-
-      &:active {
-        opacity: 0.7;
-      }
+    .close-btn {
+      width: 72px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eae8f4;
+      font-size: 30px;
+      text-align: center;
+      line-height: 54px;
     }
 
-    .header-title {
+    .game-title-text {
+      flex: 1;
       color: #eae8f4;
       font-size: 26px;
       font-weight: 600;
-      flex: 1;
       text-align: center;
+      line-height: 54px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .header-right {
-      display: flex;
-      gap: 21px;
-      align-items: center;
-
-      .score-display {
-        font-size: 23px;
-        color: #8b87a3;
-        padding: 9px 15px;
-        background: rgba(110, 86, 255, 0.1);
-        border-radius: 12px;
-      }
-
-      .share-btn {
-        color: #6e56ff;
-        font-size: 24px;
-        font-weight: 600;
-        cursor: pointer;
-        padding: 9px 15px;
-        transition: all 0.3s ease;
-
-        &:active {
-          opacity: 0.7;
-        }
-      }
-    }
-  }
-
-  .webview-container {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    background: #000;
-
-    .loading-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-
-      .loading-text {
-        color: #eae8f4;
-        font-size: 26px;
-      }
-    }
-
-    .error-overlay {
-      position: absolute;
-      inset: 0;
-      background: #08080d;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-      gap: 30px;
-
-      .error-text {
-        color: #ff5c8a;
-        font-size: 26px;
-        text-align: center;
-        padding: 0 54px;
-      }
-
-      .retry-btn {
-        padding: 18px 36px;
-        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
-        border-radius: 15px;
-        color: white;
-        font-size: 23px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        &:active {
-          transform: scale(0.95);
-        }
-      }
-    }
-  }
-
-  .play-controls {
-    padding: 21px 30px;
-    background: rgba(17, 17, 24, 0.95);
-    border-top: 1px solid #252535;
-    text-align: center;
-
-    .control-hint {
-      font-size: 21px;
-      color: #8b87a3;
+    .header-spacer {
+      width: 72px;
+      height: 54px;
     }
   }
 }
