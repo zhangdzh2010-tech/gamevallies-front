@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, Input, ScrollView } from '@tarojs/components';
+import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import * as feedService from '../../services/feed';
@@ -123,7 +123,11 @@ export default function DiscoverPage() {
                 onClick={() => handleCreatorClick(creator.id)}>
 
                   <View className="creator-avatar">
-                    {creator.avatar || creator.emoji || '👤'}
+                    {(creator.avatar || '').startsWith('http') ? (
+                      <Image className="creator-avatar-img" src={creator.avatar} mode="aspectFill" />
+                    ) : (
+                      creator.avatar || creator.emoji || '👤'
+                    )}
                   </View>
                   <Text className="creator-name">
                     {creator.username || creator.name || '创作者'}
