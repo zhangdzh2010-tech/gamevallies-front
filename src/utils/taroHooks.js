@@ -27,12 +27,7 @@ export function useNavigation() {
     },
     switchTab: (config) => {
       const url = typeof config === 'string' ? config : config?.url;
-      // In H5, use redirectTo instead of switchTab for reliable navigation
-      try {
-        Taro.redirectTo({ url });
-      } catch (e) {
-        Taro.navigateTo({ url });
-      }
+      Taro.switchTab({ url });
     },
     back: (delta = 1) => {
       Taro.navigateBack({ delta });
