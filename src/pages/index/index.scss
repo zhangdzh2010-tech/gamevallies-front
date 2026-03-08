@@ -132,6 +132,8 @@
     .tabs-container {
       padding: 21px 30px;
       display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
       gap: 15px;
       white-space: nowrap;
 
@@ -145,6 +147,7 @@
         transition: all 0.3s ease;
         cursor: pointer;
         white-space: nowrap;
+        flex-shrink: 0;
 
         &.active {
           background: rgba(110, 86, 255, 0.15);
