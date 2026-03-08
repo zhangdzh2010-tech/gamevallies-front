@@ -65,14 +65,14 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#08080d',
-    navigationBarTitleText: 'PlayForge',
+    navigationBarTitleText: 'Gamevallies',
     navigationBarTextStyle: 'white',
     backgroundColor: '#08080d',
     navigationStyle: 'custom'
   },
   permission: {
     'scope.userLocation': {
-      desc: 'PlayForge需要您的位置信息来优化推荐内容'
+      desc: 'Gamevallies需要您的位置信息来优化推荐内容'
     }
   },
   requiredPrivateInfos: [],

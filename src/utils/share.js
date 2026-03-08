@@ -5,8 +5,8 @@
  */
 export function getShareConfig(game, score) {
   const title = score ?
-  `我在PlayForge玩《${game.title}》得分${score}分，快来挑战！` :
-  `来玩我制作的游戏《${game.title}》on PlayForge`;
+  `我在Gamevallies玩《${game.title}》得分${score}分，快来挑战！` :
+  `来玩我制作的游戏《${game.title}》on Gamevallies`;
 
   const path = `/pages/game/index?id=${game.id}${score ? `&score=${score}` : ''}`;
 
@@ -26,14 +26,14 @@ export function getShareConfig(game, score) {
 /**
  * Generate shareable game link
  */
-export function getGameShareLink(gameId, baseUrl = 'https://playforge.local') {
+export function getGameShareLink(gameId, baseUrl = 'https://gamevallies.local') {
   return `${baseUrl}/game/${gameId}`;
 }
 
 /**
  * Generate creator profile link
  */
-export function getCreatorShareLink(creatorId, baseUrl = 'https://playforge.local') {
+export function getCreatorShareLink(creatorId, baseUrl = 'https://gamevallies.local') {
   return `${baseUrl}/creator/${creatorId}`;
 }
 
@@ -47,7 +47,7 @@ export function generateShareText(game, includeAuthor = true) {
     text += ` by ${game.creator?.username || 'Unknown'}`;
   }
 
-  text += ` | PlayForge`;
+  text += ` | Gamevallies`;
 
   return text;
 }
@@ -110,7 +110,7 @@ export function generateSharePosterData(game, score) {
       x: 40,
       y: 1100,
       width: 670,
-      text: 'PlayForge',
+      text: 'Gamevallies',
       fontSize: 20,
       color: '#999999'
     },
@@ -120,7 +120,7 @@ export function generateSharePosterData(game, score) {
       y: 1150,
       width: 100,
       height: 100,
-      content: `https://playforge.local/game/${game.id}`
+      content: `https://gamevallies.local/game/${game.id}`
     }]
 
   };
@@ -159,7 +159,7 @@ export function formatShareStats(game) {
  * Generate hashtags for social media sharing
  */
 export function generateHashtags(game) {
-  const hashtags = ['#PlayForge', '#GameDev', `#${game.gameType}`];
+  const hashtags = ['#Gamevallies', '#GameDev', `#${game.gameType}`];
 
   if (game.tags && game.tags.length > 0) {
     hashtags.push(...game.tags.slice(0, 3).map((tag) => `#${tag}`));

@@ -16,13 +16,13 @@ export const ENV = {
 
   // Storage Keys
   STORAGE_KEYS: {
-    USER: 'playforge_user',
-    ACCESS_TOKEN: 'playforge_access_token',
-    REFRESH_TOKEN: 'playforge_refresh_token',
-    THEME: 'playforge_theme',
-    LANGUAGE: 'playforge_language',
-    LAST_GAME_ID: 'playforge_last_game_id',
-    DRAFT_GAMES: 'playforge_draft_games'
+    USER: 'gamevallies_user',
+    ACCESS_TOKEN: 'gamevallies_access_token',
+    REFRESH_TOKEN: 'gamevallies_refresh_token',
+    THEME: 'gamevallies_theme',
+    LANGUAGE: 'gamevallies_language',
+    LAST_GAME_ID: 'gamevallies_last_game_id',
+    DRAFT_GAMES: 'gamevallies_draft_games'
   },
 
   // Feature Flags

@@ -13,7 +13,7 @@ import { ENV } from '../config/env';
 
 
 class Storage {
-  prefix = 'playforge_';
+  prefix = 'gamevallies_';
 
   getKey(key) {
     return `${this.prefix}${key}`;
