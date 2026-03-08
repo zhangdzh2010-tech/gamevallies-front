@@ -30,6 +30,9 @@ build
 .taro
 .tarorc.js
 
+# WeChat DevTools private config
+project.private.config.json
+
 # Temporary files
 *.tmp
 .cache

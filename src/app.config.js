@@ -1,67 +1,66 @@
 export default defineAppConfig({
   pages: [
-  'pages/index/index',
-  'pages/login/index'],
+    'pages/index/index',
+    'pages/login/index',
+    'pages/discover/index',
+    'pages/create/index',
+    'pages/messages/index',
+    'pages/profile/index'
+  ],
 
   subPackages: [
-  {
-    root: 'pages/register',
-    pages: ['index']
-  },
-  {
-    root: 'pages/create',
-    pages: ['index']
-  },
-  {
-    root: 'pages/profile',
-    pages: ['index']
-  },
-  {
-    root: 'pages/game',
-    pages: ['detail/index', 'play/index']
-  },
-  {
-    root: 'pages/discover',
-    pages: ['index']
-  },
-  {
-    root: 'pages/messages',
-    pages: ['index']
-  }],
+    {
+      root: 'pages/register',
+      pages: ['index']
+    },
+    {
+      root: 'pages/game',
+      pages: ['detail/index', 'play/index']
+    }
+  ],
 
   preloadRule: {
     'pages/index/index': {
       network: 'all',
-      packages: ['pages/create', 'pages/game']
+      packages: ['pages/register', 'pages/game']
     }
   },
   tabBar: {
-    custom: true,
+    custom: false,
     color: '#55516e',
     selectedColor: '#6e56ff',
     backgroundColor: '#111118',
     list: [
     {
       pagePath: 'pages/index/index',
-      text: '广场'
+      text: '广场',
+      iconPath: 'images/tab-home.png',
+      selectedIconPath: 'images/tab-home-active.png'
     },
     {
       pagePath: 'pages/discover/index',
-      text: '发现'
+      text: '发现',
+      iconPath: 'images/tab-discover.png',
+      selectedIconPath: 'images/tab-discover-active.png'
     },
     {
       pagePath: 'pages/create/index',
-      text: '创作'
+      text: '创作',
+      iconPath: 'images/tab-create.png',
+      selectedIconPath: 'images/tab-create-active.png'
     },
     {
       pagePath: 'pages/messages/index',
-      text: '消息'
+      text: '消息',
+      iconPath: 'images/tab-messages.png',
+      selectedIconPath: 'images/tab-messages-active.png'
     },
     {
       pagePath: 'pages/profile/index',
-      text: '我的'
+      text: '我的',
+      iconPath: 'images/tab-profile.png',
+      selectedIconPath: 'images/tab-profile-active.png'
     }]
-
   },
   window: {
     backgroundTextStyle: 'dark',
@@ -90,13 +89,7 @@ export default defineAppConfig({
     uploadFile: 30000
   },
   debug: false,
-  functionalPages: [],
+  functionalPages: false,
   isNeedOpensoter: false,
-  entranceDeclare: [
-  {
-    groupIdKey: 'wx_group_id_001',
-    label: 'PlayForge官方交流群',
-    iconUrl: ''
-  }]
-
+  entranceDeclare: {}
 });
