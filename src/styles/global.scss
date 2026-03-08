@@ -1,22 +1,13 @@
 @import './variables.scss';
 @import './animations.scss';
 
-// Reset and base styles
-* {
+// Reset and base styles — use page selector (WXSS does not support * selector)
+page {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-}
-
-html,
-body {
   width: 100%;
   height: 100%;
-  background-color: $bg;
-  color: $text;
-}
-
-page {
   background-color: $bg;
   color: $text;
   font-family: $font-family;
