@@ -167,6 +167,14 @@
             align-items: center;
             justify-content: center;
             font-size: 39px;
+            overflow: hidden;
+
+            .creator-avatar-img {
+              width: 78px;
+              height: 78px;
+              border-radius: 50%;
+              display: block;
+            }
           }
 
           .creator-name {
