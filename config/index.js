@@ -32,9 +32,10 @@ if (typeof g.Event === "undefined") g.Event = class Event { constructor(type) { 
 module.exports = defineConfig({
   projectName: "gamevallies",
   date: "2026-3-5",
-  designWidth: 750,
+  designWidth: 500,
   deviceRatio: {
     640: 2.34 / 2,
+    500: 1,
     750: 1,
     828: 1.81 / 2,
   },
