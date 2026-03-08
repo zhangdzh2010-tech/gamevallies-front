@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import * as feedService from '../../services/feed';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import './index.scss';
@@ -197,6 +198,7 @@ export default function DiscoverPage() {
       </ScrollView>
 
       <CustomTabBar activeIndex={1} />
+      <GlobalGamePlayer />
     </View>);
 
 }
