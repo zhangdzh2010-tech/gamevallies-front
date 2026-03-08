@@ -56,8 +56,8 @@ function resolveBaseUrl(url) {
   if (/\/api\/v\d+\/games\/[^/]+\/iterate/.test(url) || url.includes('/games/generate')) return s.AI;
   if (url.startsWith('/api/v1/auth') || url.startsWith('/api/v1/users')) return s.AUTH;
   if (url.startsWith('/api/v1/games')) return s.GAME;
-  if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications') || url.startsWith('/api/v1/creators')) return s.SOCIAL;
-  if (url.startsWith('/api/v1/feed') || url.startsWith('/api/v1/tags') || url.startsWith('/api/v1/challenges')) return s.FEED;
+  if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications')) return s.SOCIAL;
+  if (url.startsWith('/api/v1/feed') || url.startsWith('/api/v1/tags') || url.startsWith('/api/v1/challenges') || url.startsWith('/api/v1/creators')) return s.FEED;
   return API_CONFIG.BASE_URL;
 }
 
