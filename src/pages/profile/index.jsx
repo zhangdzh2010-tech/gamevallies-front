@@ -74,6 +74,9 @@ export default function Profile() {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('created');
   const [profile, setProfile] = useState(USER_PROFILE);
+  const { windowHeight = 750 } = Taro.getSystemInfoSync();
+  // profile-header auto-height ≈ 400px scss + 120px tab bar
+  const scrollViewHeight = windowHeight - 400 - 120;
 
   const handleLogout = () => {
     Taro.showModal({
@@ -171,7 +174,7 @@ export default function Profile() {
         </View>
       </View>
 
-      <ScrollView className="profile-scroll" scrollY>
+      <ScrollView className="profile-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
         {/* Tabs */}
         <View className="tabs-container">
           <View

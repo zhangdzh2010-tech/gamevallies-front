@@ -14,6 +14,10 @@ import './index.scss';
 
 
 export default function MessagesPage() {
+  const { windowHeight = 750 } = Taro.getSystemInfoSync();
+  // 96px header + 120px custom tab bar
+  const scrollViewHeight = windowHeight - 96 - 120;
+
   const [notifications, setNotifications] = useState([
   {
     id: '1',
@@ -108,6 +112,7 @@ export default function MessagesPage() {
       {/* Notification List */}
       <ScrollView
         className="messages-list"
+        style={{ height: `${scrollViewHeight}px` }}
         scrollY
         ref={scrollViewRef}
         onScroll={() => {}}>

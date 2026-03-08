@@ -77,8 +77,11 @@
 
       .tags-container {
         display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
         gap: 18px;
         padding: 0;
+        white-space: nowrap;
 
         .tag-chip {
           padding: 15px 30px;
@@ -137,8 +140,11 @@
 
       .creators-container {
         display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
         gap: 21px;
         padding: 0;
+        white-space: nowrap;
 
         .creator-card {
           display: flex;
