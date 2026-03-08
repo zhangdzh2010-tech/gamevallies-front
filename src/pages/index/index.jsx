@@ -3,8 +3,8 @@ import Taro from '@tarojs/taro';
 import {
   View,
   Text,
-  ScrollView } from
-'@tarojs/components';
+  Image,
+  ScrollView } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -207,15 +207,21 @@ export default function Home() {
         <View className="creators-section">
           <Text className="section-title">🌟 热门创作者</Text>
           <ScrollView className="creators-scroll" scrollX>
-            {creators.map((creator) =>
-            <View key={creator.id} className="creator-card">
-                <View className="creator-emoji">{creator.avatar || '👤'}</View>
-                <Text className="creator-name">{creator.username || creator.name}</Text>
-                <Text className="creator-plays">
-                  {formatNumber(creator.gamesCount || creator.plays || 0)} 次游玩
-                </Text>
-              </View>
-            )}
+            <View className="creators-inner">
+              {creators.map((creator) =>
+              <View key={creator.id} className="creator-card">
+                  {creator.avatar && creator.avatar.startsWith('http') ? (
+                    <Image className="creator-avatar-img" src={creator.avatar} mode="aspectFill" />
+                  ) : (
+                    <View className="creator-emoji">{creator.avatar || '👤'}</View>
+                  )}
+                  <Text className="creator-name">{creator.username || creator.name}</Text>
+                  <Text className="creator-plays">
+                    {formatNumber(creator.gamesCount || creator.plays || 0)} 次游玩
+                  </Text>
+                </View>
+              )}
+            </View>
           </ScrollView>
         </View>
 
