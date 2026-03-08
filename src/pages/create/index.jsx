@@ -55,6 +55,9 @@ const TEMPLATES = [
 export default function Create() {
   const navigation = useNavigation();
   const { createGame, isGenerating, generationProgress } = useGameStore();
+  const { windowHeight = 750 } = Taro.getSystemInfoSync();
+  // create-header: padding 36+36 + title ~36 + subtitle ~23 ≈ 140px scss + 120px tab bar
+  const scrollViewHeight = windowHeight - 140 - 120;
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -132,7 +135,7 @@ export default function Create() {
         <Text className="header-subtitle">用AI助力你的游戏创意</Text>
       </View>
 
-      <ScrollView className="create-scroll" scrollY>
+      <ScrollView className="create-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
         {showTemplates ?
         // Template Selection
         <View className="template-section">

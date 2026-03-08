@@ -27,6 +27,9 @@ export default function DiscoverPage() {
   const [topCreators, setTopCreators] = useState([]);
   const [recommendedGames, setRecommendedGames] = useState([]);
   const openGame = useGamePlayerStore((s) => s.openGame);
+  const { windowHeight = 750 } = Taro.getSystemInfoSync();
+  // 96px header + 120px custom tab bar
+  const scrollViewHeight = windowHeight - 96 - 120;
 
   const trendingTags = ['全部', '太空冒险', '休闲益智', '射击游戏', '跑酷', '卡牌', '竞速', '恐怖'];
 
@@ -49,8 +52,8 @@ export default function DiscoverPage() {
     }
   };
 
-  const handleCreatorClick = (creatorId) => {
-    Taro.navigateTo({ url: `/pages/profile/index?id=${creatorId}` });
+  const handleCreatorClick = (_creatorId) => {
+    Taro.switchTab({ url: '/pages/profile/index' });
   };
 
   return (
@@ -61,7 +64,7 @@ export default function DiscoverPage() {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView className="discover-content" scrollY>
+      <ScrollView className="discover-content" style={{ height: `${scrollViewHeight}px` }} scrollY>
         {/* Search Bar */}
         <View className="search-section">
           <View className="search-bar">
@@ -105,7 +108,7 @@ export default function DiscoverPage() {
             <Text className="section-label">👑 热门创作者</Text>
             <Text
               className="view-all"
-              onClick={() => Taro.navigateTo({ url: '/pages/creators' })}>
+              onClick={() => Taro.showToast({ title: '敬请期待', icon: 'none' })}>
               
               全部 →
             </Text>
@@ -154,7 +157,7 @@ export default function DiscoverPage() {
             </Text>
             <Text
               className="view-all"
-              onClick={() => Taro.navigateTo({ url: '/pages/games' })}>
+              onClick={() => Taro.showToast({ title: '敬请期待', icon: 'none' })}>
               
               更多 →
             </Text>
