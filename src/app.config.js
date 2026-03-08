@@ -65,14 +65,14 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#08080d',
-    navigationBarTitleText: 'Gamevallies',
+    navigationBarTitleText: '创游谷',
     navigationBarTextStyle: 'white',
     backgroundColor: '#08080d',
     navigationStyle: 'custom'
   },
   permission: {
     'scope.userLocation': {
-      desc: 'Gamevallies需要您的位置信息来优化推荐内容'
+      desc: '创游谷需要您的位置信息来优化推荐内容'
     }
   },
   requiredPrivateInfos: [],
