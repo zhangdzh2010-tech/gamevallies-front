@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import Taro from '@tarojs/taro';
 import { ENV } from '../config/env';
 
 // Backend may return gameUrl with localhost — replace with actual server host
@@ -23,7 +24,6 @@ const useGamePlayerStore = create((set) => ({
     set({ gameUrl: resolved, gameTitle: title || '游戏' });
     // WeChat WebView always fills the full page — use a dedicated play page
     if (process.env.TARO_ENV === 'weapp') {
-      const Taro = require('@tarojs/taro').default;
       Taro.navigateTo({ url: '/pages/game/play/index' });
     }
   },

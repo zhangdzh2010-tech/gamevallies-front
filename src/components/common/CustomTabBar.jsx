@@ -2,8 +2,6 @@ import React from 'react';
 import { View, Text } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import { useRoute } from '@tarojs/hooks';
-import useGamePlayerStore from '../../stores/gamePlayer';
-import { GamePlayer } from './GamePlayer';
 import './CustomTabBar.scss';
 
 const TABS = [
@@ -19,7 +17,6 @@ export const CustomTabBar = ({
 }) => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { gameUrl, gameTitle, closeGame } = useGamePlayerStore();
 
   const getActiveIndex = () => {
     if (propActiveIndex !== undefined) return propActiveIndex;
@@ -39,32 +36,28 @@ export const CustomTabBar = ({
   };
 
   return (
-    <>
-      <View className="custom-tab-bar">
-        <View className="tab-container">
-          {TABS.map((tab, index) =>
-          <View
-            key={index}
-            className={`tab-item ${index === activeIndex ? 'active' : ''} ${
-            tab.isSpecial ? 'special' : ''}`
-            }
-            onClick={() => handleTabClick(index, tab)}>
+    <View className="custom-tab-bar">
+      <View className="tab-container">
+        {TABS.map((tab, index) =>
+        <View
+          key={index}
+          className={`tab-item ${index === activeIndex ? 'active' : ''} ${
+          tab.isSpecial ? 'special' : ''}`
+          }
+          onClick={() => handleTabClick(index, tab)}>
 
-              {tab.isSpecial ?
-            <View className="special-button">
-                  <Text className="tab-icon">{tab.icon}</Text>
-                </View> :
-            <>
-                  <Text className="tab-icon">{tab.icon}</Text>
-                  <Text className="tab-label">{tab.label}</Text>
-                </>
-            }
-            </View>
-          )}
-        </View>
+            {tab.isSpecial ?
+          <View className="special-button">
+                <Text className="tab-icon">{tab.icon}</Text>
+              </View> :
+          <>
+                <Text className="tab-icon">{tab.icon}</Text>
+                <Text className="tab-label">{tab.label}</Text>
+              </>
+          }
+          </View>
+        )}
       </View>
-
-      <GamePlayer gameUrl={gameUrl} gameTitle={gameTitle} onClose={closeGame} />
-    </>
+    </View>
   );
 };
