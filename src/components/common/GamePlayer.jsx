@@ -71,8 +71,10 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
   );
 }
 
-// Reads from global store — drop this anywhere to enable game overlay on that page
+// Reads from global store — drop this anywhere to enable game overlay on that page.
+// In weapp the dedicated play page handles rendering; only active on H5.
 export function GlobalGamePlayer() {
+  if (process.env.TARO_ENV === 'weapp') return null;
   const gameUrl = useGamePlayerStore((s) => s.gameUrl);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
   const closeGame = useGamePlayerStore((s) => s.closeGame);
