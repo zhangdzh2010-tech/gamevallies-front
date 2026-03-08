@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import Taro from '@tarojs/taro';
 import {
   View,
   Text,
@@ -30,6 +31,7 @@ function normalizeGame(game, index) {
 
 export default function Home() {
   const navigation = useNavigation();
+  const statusBarHeight = Taro.getSystemInfoSync().statusBarHeight || 44;
   const openGame = useGamePlayerStore((s) => s.openGame);
   const [activeTab, setActiveTab] = useState('推荐');
   const [refreshing, setRefreshing] = useState(false);
@@ -140,7 +142,7 @@ export default function Home() {
   return (
     <View className="home-container">
       {/* Header */}
-      <View className="header">
+      <View className="header" style={{ paddingTop: `${statusBarHeight}px` }}>
         <Text className="logo">创游谷</Text>
         <View className="header-actions">
           <View className="create-btn" onClick={handleCreateClick}>
