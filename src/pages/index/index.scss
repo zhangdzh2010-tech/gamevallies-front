@@ -131,11 +131,14 @@
 
     .tabs-container {
       padding: 21px 30px;
-      display: flex;
-      flex-direction: row;
-      flex-wrap: nowrap;
-      gap: 15px;
       white-space: nowrap;
+
+      .tabs-inner {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 15px;
+      }
 
       .tab-item {
         padding: 15px 27px;
