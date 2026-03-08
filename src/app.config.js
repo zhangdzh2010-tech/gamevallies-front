@@ -73,12 +73,6 @@ export default defineAppConfig({
   permission: {
     'scope.userLocation': {
       desc: 'PlayForge需要您的位置信息来优化推荐内容'
-    },
-    'scope.camera': {
-      desc: 'PlayForge需要您的摄像头权限来支持游戏功能'
-    },
-    'scope.record': {
-      desc: 'PlayForge需要您的麦克风权限来进行语音聊天'
     }
   },
   requiredPrivateInfos: [],
@@ -90,6 +84,5 @@ export default defineAppConfig({
   },
   debug: false,
   functionalPages: false,
-  isNeedOpensoter: false,
   entranceDeclare: {}
 });

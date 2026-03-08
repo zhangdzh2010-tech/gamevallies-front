@@ -47,6 +47,22 @@ module.exports = defineConfig({
     enable: false,
   },
   mini: {
+    webpackChain(chain) {
+      const webpack = require("webpack");
+      chain.plugin("process-env-define").use(webpack.DefinePlugin, [{
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "production"),
+        "process.env.TARO_ENV": JSON.stringify("weapp"),
+        "process.env.TARO_APP_AUTH_SERVICE_URL": JSON.stringify(process.env.TARO_APP_AUTH_SERVICE_URL || ""),
+        "process.env.TARO_APP_GAME_SERVICE_URL": JSON.stringify(process.env.TARO_APP_GAME_SERVICE_URL || ""),
+        "process.env.TARO_APP_SOCIAL_SERVICE_URL": JSON.stringify(process.env.TARO_APP_SOCIAL_SERVICE_URL || ""),
+        "process.env.TARO_APP_FEED_SERVICE_URL": JSON.stringify(process.env.TARO_APP_FEED_SERVICE_URL || ""),
+        "process.env.TARO_APP_AI_SERVICE_URL": JSON.stringify(process.env.TARO_APP_AI_SERVICE_URL || ""),
+        "process.env.TARO_APP_WS_URL": JSON.stringify(process.env.TARO_APP_WS_URL || ""),
+        "process.env.TARO_APP_GAME_CONTENT_URL": JSON.stringify(process.env.TARO_APP_GAME_CONTENT_URL || ""),
+        "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
+        "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY || ""),
+      }]);
+    },
     postcss: {
       pxtransform: { enable: true, config: {} },
       url: { enable: true, config: { limit: 1024 } },
