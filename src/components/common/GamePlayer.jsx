@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text, WebView } from '@tarojs/components';
+import useGamePlayerStore from '../../stores/gamePlayer';
 import './GamePlayer.scss';
 
 export function GamePlayer({ gameUrl, gameTitle, onClose }) {
@@ -68,4 +69,12 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
       </View>
     </View>
   );
+}
+
+// Reads from global store — drop this anywhere to enable game overlay on that page
+export function GlobalGamePlayer() {
+  const gameUrl = useGamePlayerStore((s) => s.gameUrl);
+  const gameTitle = useGamePlayerStore((s) => s.gameTitle);
+  const closeGame = useGamePlayerStore((s) => s.closeGame);
+  return <GamePlayer gameUrl={gameUrl} gameTitle={gameTitle} onClose={closeGame} />;
 }

@@ -9,8 +9,8 @@ import { useRoute, useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import * as gameService from '../../../services/game';
 import * as socialService from '../../../services/social';
-import { GamePlayer } from '../../../components/common/GamePlayer';
-import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
+import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
+import useGamePlayerStore from '../../../stores/gamePlayer';
 import './index.scss';
 
 
@@ -28,13 +28,14 @@ export default function GameDetail() {
   // detail-scroll fills window minus comment input bar (88px)
   const scrollViewHeight = windowHeight - 88;
 
+  const openGame = useGamePlayerStore((s) => s.openGame);
+
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [liked, setLiked] = useState(0);
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
-  const [playingUrl, setPlayingUrl] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -57,7 +58,7 @@ export default function GameDetail() {
 
   const handlePlayClick = () => {
     if (game?.gameUrl) {
-      setPlayingUrl(resolveGameUrl(game.gameUrl));
+      openGame(game.gameUrl, game.title);
     } else {
       Taro.showToast({ title: '游戏暂不可用', icon: 'none' });
     }
@@ -280,11 +281,7 @@ export default function GameDetail() {
         </View>
       </View>
 
-      <GamePlayer
-        gameUrl={playingUrl}
-        gameTitle={game?.title}
-        onClose={() => setPlayingUrl('')}
-      />
+      <GlobalGamePlayer />
     </View>);
 
 }

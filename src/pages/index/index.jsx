@@ -8,6 +8,7 @@ import {
 import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import * as feedService from '../../services/feed';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import './index.scss';
@@ -265,6 +266,7 @@ export default function Home() {
 
       {/* Custom TabBar */}
       <CustomTabBar activeIndex={0} />
+      <GlobalGamePlayer />
     </View>);
 
 }
