@@ -46,7 +46,7 @@ export default function Register() {
     <View className="register-container">
       <View className="register-content">
         <View className="logo-section">
-          <Text className="logo">PlayForge</Text>
+          <Text className="logo">Gamevallies</Text>
           <Text className="tagline">创建你的账号</Text>
         </View>
 

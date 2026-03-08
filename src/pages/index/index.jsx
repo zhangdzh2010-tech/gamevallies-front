@@ -134,7 +134,7 @@ export default function Home() {
     <View className="home-container">
       {/* Header */}
       <View className="header">
-        <Text className="logo">PlayForge</Text>
+        <Text className="logo">Gamevallies</Text>
         <View className="header-actions">
           <View className="create-btn" onClick={handleCreateClick}>
             <Text className="create-icon">＋</Text>

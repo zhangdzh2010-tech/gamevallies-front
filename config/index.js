@@ -30,7 +30,7 @@ if (typeof g.CustomEvent === "undefined") g.CustomEvent = class CustomEvent { co
 if (typeof g.Event === "undefined") g.Event = class Event { constructor(type) { this.type = type; } };
 
 module.exports = defineConfig({
-  projectName: "playforge",
+  projectName: "gamevallies",
   date: "2026-3-5",
   designWidth: 750,
   deviceRatio: {

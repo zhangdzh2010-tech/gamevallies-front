@@ -1,8 +1,8 @@
 {
-  "name": "playforge-miniprogram",
+  "name": "gamevallies-miniprogram",
   "version": "1.0.0",
   "private": true,
-  "description": "PlayForge - AI游戏创作平台微信小程序",
+  "description": "Gamevallies - AI游戏创作平台微信小程序",
   "templateInfo": {
     "name": "default",
     "typescript": false,
