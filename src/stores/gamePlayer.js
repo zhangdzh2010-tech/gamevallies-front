@@ -18,7 +18,15 @@ export function resolveGameUrl(url) {
 const useGamePlayerStore = create((set) => ({
   gameUrl: '',
   gameTitle: '',
-  openGame: (url, title) => set({ gameUrl: resolveGameUrl(url), gameTitle: title || '游戏' }),
+  openGame: (url, title) => {
+    const resolved = resolveGameUrl(url);
+    set({ gameUrl: resolved, gameTitle: title || '游戏' });
+    // WeChat WebView always fills the full page — use a dedicated play page
+    if (process.env.TARO_ENV === 'weapp') {
+      const Taro = require('@tarojs/taro').default;
+      Taro.navigateTo({ url: '/pages/game/play/index' });
+    }
+  },
   closeGame: () => set({ gameUrl: '', gameTitle: '' }),
 }));
 
