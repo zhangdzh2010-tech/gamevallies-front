@@ -42,11 +42,15 @@ export default function Home() {
   const [creators, setCreators] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [loadingGames, setLoadingGames] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const scrollViewRef = useRef(null);
 
   const CATEGORY_TABS = ['推荐', '✨ 最新', '🧩 益智', '🎯 动作', '🎲 休闲'];
 
   const fetchGames = useCallback(async (tab, pageNum, append = false) => {
+    if (!append) setLoadingGames(true);
+    setLoadError(false);
     try {
       let result;
       if (tab === '推荐') result = await feedService.getTrending(pageNum, 10);
@@ -59,6 +63,10 @@ export default function Home() {
       setHasMore(result?.hasMore ?? items.length >= 10);
     } catch (e) {
       console.error('fetchGames error:', e);
+      setLoadError(true);
+      Taro.showToast({ title: '加载失败，请下拉刷新重试', icon: 'none', duration: 3000 });
+    } finally {
+      setLoadingGames(false);
     }
   }, []);
 
@@ -192,19 +200,31 @@ export default function Home() {
           )}
         </ScrollView>
 
-        {/* Waterfall Layout */}
-        <View className="waterfall">
-          <View className="waterfall-col">
-            {leftCol.map((game) =>
-              <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+        {/* Games Grid */}
+        {loadingGames ? (
+          <View style={{ padding: '60px', textAlign: 'center' }}>
+            <Text style={{ color: '#8b87a3', fontSize: '26px' }}>加载中...</Text>
+          </View>
+        ) : loadError ? (
+          <View style={{ padding: '60px', textAlign: 'center' }}>
+            <Text style={{ color: '#8b87a3', fontSize: '26px', display: 'block', marginBottom: '24px' }}>加载失败</Text>
+            <View
+              style={{ display: 'inline-block', padding: '18px 36px', background: 'rgba(110,86,255,0.15)', borderRadius: '18px', color: '#6e56ff', fontSize: '26px' }}
+              onClick={() => fetchGames(activeTab, 1)}>
+              重试
+            </View>
+          </View>
+        ) : (
+          <View className="games-grid">
+            {games.map((game) =>
+            <GameCard
+              key={game.id}
+              game={game}
+              onPlay={handlePlay}
+              onFork={handleFork} />
             )}
           </View>
-          <View className="waterfall-col">
-            {rightCol.map((game) =>
-              <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
-            )}
-          </View>
-        </View>
+        )}
 
         {/* Trending Creators Section */}
         <View className="creators-section">
