@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Input } from '@tarojs/components';
 import { useRoute, useNavigation } from '@tarojs/hooks';
@@ -23,6 +24,9 @@ export default function GameDetail() {
   const route = useRoute();
   const navigation = useNavigation();
   const gameId = route.params?.id || '1';
+  const { statusBarHeight = 44, windowHeight = 750 } = Taro.getSystemInfoSync();
+  // detail-scroll fills window minus comment input bar (88px)
+  const scrollViewHeight = windowHeight - 88;
 
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -125,7 +129,7 @@ export default function GameDetail() {
     return (
       <View className="game-detail">
         <View style={{ padding: '40px', textAlign: 'center' }}>
-          <Text>{loading ? '加载中...' : '游戏不存在'}</Text>
+          <Text style={{ color: '#8b87a3', fontSize: '28px' }}>{loading ? '加载中...' : '游戏不存在'}</Text>
         </View>
       </View>
     );
@@ -133,7 +137,7 @@ export default function GameDetail() {
 
   return (
     <View className="game-detail">
-      <ScrollView className="detail-scroll" scrollY>
+      <ScrollView className="detail-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
         {/* Preview Banner */}
         <View
           className="preview-banner"
@@ -162,7 +166,11 @@ export default function GameDetail() {
           {/* Author Row */}
           <View className="author-row">
             <View className="author-info">
-              <Text className="author-emoji">{game.author?.avatar || '👤'}</Text>
+              {(game.author?.avatar || '').startsWith('http') ? (
+                <Image style={{ width: '60px', height: '60px', borderRadius: '50%' }} src={game.author.avatar} mode="aspectFill" />
+              ) : (
+                <Text className="author-emoji">{game.author?.avatar || '👤'}</Text>
+              )}
               <View className="author-details">
                 <Text className="author-name">{game.author?.username || game.author || '未知'}</Text>
                 <Text className="author-desc">{game.author?.bio || ''}</Text>

@@ -31,7 +31,9 @@ function normalizeGame(game, index) {
 
 export default function Home() {
   const navigation = useNavigation();
-  const statusBarHeight = Taro.getSystemInfoSync().statusBarHeight || 44;
+  const { statusBarHeight = 44, windowHeight = 750 } = Taro.getSystemInfoSync();
+  // home header base height (96px) + statusBar + tab bar (120px)
+  const scrollViewHeight = windowHeight - (statusBarHeight + 96) - 120;
   const openGame = useGamePlayerStore((s) => s.openGame);
   const [activeTab, setActiveTab] = useState('推荐');
   const [refreshing, setRefreshing] = useState(false);
@@ -157,6 +159,7 @@ export default function Home() {
 
       <ScrollView
         className="scroll-view"
+        style={{ height: `${scrollViewHeight}px` }}
         scrollY
         refresherEnabled
         refresherTriggered={refreshing}
