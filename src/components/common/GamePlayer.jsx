@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Taro from '@tarojs/taro';
 import { View, Text, WebView } from '@tarojs/components';
 import './GamePlayer.scss';
 
 export function GamePlayer({ gameUrl, gameTitle, onClose }) {
+  const statusBarHeight = Taro.getSystemInfoSync().statusBarHeight || 44;
   const [fullscreen, setFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(false);
@@ -40,7 +42,7 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
     <View className={`game-player-overlay${visible ? ' visible' : ''}`}>
       <View className="game-player-backdrop" onClick={onClose} />
       <View className={`game-player-panel${visible ? ' visible' : ''}${fullscreen ? ' fullscreen' : ''}`}>
-        <View className="player-header">
+        <View className="player-header" style={{ paddingTop: `${statusBarHeight}px` }}>
           <View className="player-btn close-btn" onClick={onClose}>✕</View>
           <Text className="player-title">{displayTitle}</Text>
           <View

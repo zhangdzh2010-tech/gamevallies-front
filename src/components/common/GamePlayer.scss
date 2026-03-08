@@ -61,12 +61,11 @@
     }
 
     .player-header {
-      height: 78px;
       min-height: 78px;
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       justify-content: space-between;
-      padding: 0 24px;
+      padding: 0 24px 12px;
       background: rgba(17, 17, 24, 0.98);
       border-bottom: 1px solid #252535;
       z-index: 1;
@@ -110,15 +109,15 @@
 
     .player-loading {
       position: absolute;
-      top: 78px;
+      top: 0;
       left: 0;
       right: 0;
       bottom: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #08080d;
-      z-index: 1;
+      background: rgba(8, 8, 13, 0.9);
+      z-index: 0;
 
       .loading-text {
         font-size: 26px;
