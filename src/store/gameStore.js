@@ -1,83 +1,136 @@
 import { create } from 'zustand';
-
 import * as gameService from '../services/game';
-import { getWebSocketManager } from '../services/websocket';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// Pipeline stages matching backend ai-engine stages
+const PIPELINE_STAGES = [
+  { key: 'submitting',        label: '提交创作请求',    pct: 5 },
+  { key: 'intent_parsing',    label: '解析游戏意图',    pct: 15 },
+  { key: 'designing',         label: '设计游戏参数',    pct: 25 },
+  { key: 'template_matching', label: '匹配游戏模板',    pct: 35 },
+  { key: 'code_generating',   label: '生成游戏代码',    pct: 55 },
+  { key: 'qa_checking',       label: '质量检测中',      pct: 75 },
+  { key: 'runtime_qa',        label: '运行时验证',      pct: 85 },
+  { key: 'code_review',       label: 'AI 代码审核',     pct: 92 },
+  { key: 'completed',         label: '生成完成！',      pct: 100 },
+];
 
 export const useGameStore = create((set, get) => ({
   currentGame: null,
   myGames: [],
   isGenerating: false,
+  // { stageIndex, stageKey, stageLabel, pct }
   generationProgress: null,
+  generatingGameId: null,
   isLoading: false,
   error: null,
 
   /**
-   * Create new game from description
+   * Create new game from description — uses polling instead of WebSocket
    */
   createGame: async (description) => {
-    set({ isLoading: true, isGenerating: true, error: null });
+    set({
+      isLoading: true,
+      isGenerating: true,
+      error: null,
+      generationProgress: { stageIndex: 0, stageKey: 'submitting', stageLabel: '提交创作请求', pct: 5 },
+    });
 
     try {
       const gameId = await gameService.generateGame(description);
+      set({ generatingGameId: gameId, isLoading: false });
 
-      // Connect to WebSocket to listen for generation progress
-      const ws = getWebSocketManager();
-      const { token } = require('../store/authStore').default.getState();
+      // Start simulated progress + polling
+      get()._startProgressPolling(gameId);
 
-      if (token && !ws.getIsConnected()) {
-        await ws.connect(token);
-      }
-
-      // Listen for progress updates
-      ws.onProgress(gameId, (progress) => {
-        set({ generationProgress: progress });
-      });
-
-      // Listen for completion
-      ws.onComplete(gameId, (result) => {
-        if (result.success && result.game) {
-          set({
-            currentGame: result.game,
-            isGenerating: false,
-            generationProgress: null,
-            error: null
-          });
-        } else {
-          set({
-            isGenerating: false,
-            error: result.error || 'Game generation failed'
-          });
-        }
-      });
-
-      set({ isLoading: false });
       return gameId;
     } catch (error) {
       set({
         isLoading: false,
         isGenerating: false,
-        error: error.message || 'Game creation failed'
+        generationProgress: null,
+        error: error.message || 'Game creation failed',
       });
       throw error;
     }
+  },
+
+  /**
+   * Internal: simulate pipeline stage progress while polling backend for actual status
+   */
+  _startProgressPolling: (gameId) => {
+    let stageIdx = 1; // start from intent_parsing (stage 1)
+    const totalSimStages = PIPELINE_STAGES.length - 1; // exclude 'completed'
+
+    // Simulate stage progression — advance one stage every ~8s
+    const simInterval = setInterval(() => {
+      if (stageIdx < totalSimStages) {
+        const stage = PIPELINE_STAGES[stageIdx];
+        set({
+          generationProgress: {
+            stageIndex: stageIdx,
+            stageKey: stage.key,
+            stageLabel: stage.label,
+            pct: stage.pct,
+          },
+        });
+        stageIdx++;
+      }
+    }, 8000);
+
+    // Poll backend for actual completion every 5s
+    const pollInterval = setInterval(async () => {
+      try {
+        const game = await gameService.getGame(gameId);
+        const status = game?.status;
+
+        if (status === 'ready' || status === 'draft' || status === 'published') {
+          // Done!
+          clearInterval(simInterval);
+          clearInterval(pollInterval);
+          const doneStage = PIPELINE_STAGES[PIPELINE_STAGES.length - 1];
+          set({
+            generationProgress: {
+              stageIndex: PIPELINE_STAGES.length - 1,
+              stageKey: doneStage.key,
+              stageLabel: doneStage.label,
+              pct: 100,
+            },
+            currentGame: game,
+          });
+          // Keep showing 100% for 1.5s then reset
+          setTimeout(() => {
+            set({ isGenerating: false, generationProgress: null, generatingGameId: null });
+          }, 1500);
+        } else if (status === 'failed') {
+          clearInterval(simInterval);
+          clearInterval(pollInterval);
+          set({
+            isGenerating: false,
+            generationProgress: null,
+            generatingGameId: null,
+            error: '游戏生成失败，请重试',
+          });
+        }
+        // else still 'generating' — keep polling
+      } catch (e) {
+        // Network error — keep polling
+      }
+    }, 5000);
+
+    // Safety timeout after 3 minutes
+    setTimeout(() => {
+      clearInterval(simInterval);
+      clearInterval(pollInterval);
+      const { isGenerating } = get();
+      if (isGenerating) {
+        set({
+          isGenerating: false,
+          generationProgress: null,
+          generatingGameId: null,
+          error: '生成超时，请稍后查看"我的游戏"',
+        });
+      }
+    }, 180000);
   },
 
   /**
@@ -85,131 +138,61 @@ export const useGameStore = create((set, get) => ({
    */
   iterateGame: async (gameId, feedback) => {
     set({ isLoading: true, isGenerating: true, error: null });
-
     try {
-      const iterationId = await gameService.iterateGame(gameId, feedback);
-
-      // Listen for iteration progress via WebSocket
-      const ws = getWebSocketManager();
-      ws.onProgress(gameId, (progress) => {
-        set({ generationProgress: progress });
-      });
-
-      ws.onComplete(gameId, (result) => {
-        if (result.success && result.game) {
-          set({
-            currentGame: result.game,
-            isGenerating: false,
-            generationProgress: null
-          });
-        } else {
-          set({
-            isGenerating: false,
-            error: result.error || 'Game iteration failed'
-          });
-        }
-      });
-
+      await gameService.iterateGame(gameId, feedback);
       set({ isLoading: false });
+      get()._startProgressPolling(gameId);
     } catch (error) {
       set({
         isLoading: false,
         isGenerating: false,
-        error: error.message || 'Game iteration failed'
+        error: error.message || 'Game iteration failed',
       });
       throw error;
     }
   },
 
-  /**
-   * Fork (copy) a game
-   */
   forkGame: async (gameId) => {
     set({ isLoading: true, error: null });
-
     try {
       const newGameId = await gameService.forkGame(gameId);
       const game = await gameService.getGame(newGameId);
-
-      set({
-        currentGame: game,
-        isLoading: false
-      });
-
+      set({ currentGame: game, isLoading: false });
       return newGameId;
     } catch (error) {
-      set({
-        isLoading: false,
-        error: error.message || 'Game fork failed'
-      });
+      set({ isLoading: false, error: error.message || 'Game fork failed' });
       throw error;
     }
   },
 
-  /**
-   * Publish game
-   */
   publishGame: async (gameId, data) => {
     set({ isLoading: true, error: null });
-
     try {
       const publishedGame = await gameService.publishGame(gameId, data);
-
-      set({
-        currentGame: publishedGame,
-        isLoading: false
-      });
+      set({ currentGame: publishedGame, isLoading: false });
     } catch (error) {
-      set({
-        isLoading: false,
-        error: error.message || 'Game publish failed'
-      });
+      set({ isLoading: false, error: error.message || 'Game publish failed' });
       throw error;
     }
   },
 
-  /**
-   * Fetch user's games
-   */
   fetchMyGames: async (page = 1, limit = 10) => {
     set({ isLoading: true, error: null });
-
     try {
       const result = await gameService.getMyGames(page, limit);
-
       set({
         myGames: page === 1 ? result.items : [...get().myGames, ...result.items],
-        isLoading: false
+        isLoading: false,
       });
     } catch (error) {
-      set({
-        isLoading: false,
-        error: error.message || 'Failed to fetch games'
-      });
+      set({ isLoading: false, error: error.message || 'Failed to fetch games' });
       throw error;
     }
   },
 
-  /**
-   * Set current game
-   */
-  setCurrentGame: (game) => {
-    set({ currentGame: game });
-  },
-
-  /**
-   * Set generation progress
-   */
-  setGenerationProgress: (progress) => {
-    set({ generationProgress: progress });
-  },
-
-  /**
-   * Clear error
-   */
-  clearError: () => {
-    set({ error: null });
-  }
+  setCurrentGame: (game) => set({ currentGame: game }),
+  clearError: () => set({ error: null }),
 }));
 
+export { PIPELINE_STAGES };
 export default useGameStore;

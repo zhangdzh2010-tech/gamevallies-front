@@ -41,7 +41,7 @@ export default function Login() {
       <View className="login-content">
         {/* Logo */}
         <View className="logo-section">
-          <Text className="logo">创游谷</Text>
+          <Text className="logo">智了空间</Text>
           <Text className="tagline">AI驱动的全民游戏创作平台</Text>
         </View>
 

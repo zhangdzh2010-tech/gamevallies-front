@@ -154,7 +154,7 @@ export default function Home() {
     <View className="home-container">
       {/* Header */}
       <View className="header" style={{ paddingTop: `${statusBarHeight}px` }}>
-        <Text className="logo">创游谷</Text>
+        <Text className="logo">智了空间</Text>
         <View className="header-actions">
           <View className="create-btn" onClick={handleCreateClick}>
             <Text className="create-icon">＋</Text>
