@@ -3,8 +3,6 @@ import {
   View,
   Text,
   ScrollView } from
-
-
 '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
@@ -13,27 +11,27 @@ import * as feedService from '../../services/feed';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import './index.scss';
 
-const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
-const GAME_EMOJIS = ['🎮', '🚀', '🎵', '💎', '🐦', '🎣', '🧩', '🎯'];
+const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6', '#06b6d4', '#ec4899'];
+const GAME_EMOJIS = ['🎮', '🚀', '🎵', '💎', '🐦', '🎣', '🧩', '🎯', '⚔️', '🏰'];
 
 function normalizeGame(game, index) {
   return {
     ...game,
+    plays: game.plays || game.playCount || 0,
+    likes: game.likes || game.likeCount || 0,
+    forks: game.forks || game.forkCount || 0,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
-    author: game.author?.username || game.author || '未知创作者',
+    author: game.author?.displayName || game.author?.username || game.author || '创作者',
     authorEmoji: game.authorEmoji || '👤',
-    isHot: game.plays > 10000,
+    isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
-
-
-
 
 export default function Home() {
   const navigation = useNavigation();
   const openGame = useGamePlayerStore((s) => s.openGame);
-  const [activeTab, setActiveTab] = useState('🔥 热门');
+  const [activeTab, setActiveTab] = useState('推荐');
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [games, setGames] = useState([]);
@@ -42,18 +40,19 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const scrollViewRef = useRef(null);
 
-  const CATEGORY_TABS = ['🔥 热门', '✨ 最新', '🚀 太空', '🎵 音乐'];
+  const CATEGORY_TABS = ['推荐', '✨ 最新', '🧩 益智', '🎯 动作', '🎲 休闲'];
 
   const fetchGames = useCallback(async (tab, pageNum, append = false) => {
     try {
       let result;
-      if (tab === '🔥 热门') result = await feedService.getTrending(pageNum, 10);
+      if (tab === '推荐') result = await feedService.getTrending(pageNum, 10);
       else if (tab === '✨ 最新') result = await feedService.getLatest(pageNum, 10);
-      else if (tab === '🚀 太空') result = await feedService.searchGames('', { gameType: 'space', page: pageNum, limit: 10 });
-      else if (tab === '🎵 音乐') result = await feedService.searchGames('', { gameType: 'music', page: pageNum, limit: 10 });
+      else if (tab === '🧩 益智') result = await feedService.searchGames('', { gameType: 'puzzle', page: pageNum, limit: 10 });
+      else if (tab === '🎯 动作') result = await feedService.searchGames('', { gameType: 'action', page: pageNum, limit: 10 });
+      else if (tab === '🎲 休闲') result = await feedService.searchGames('', { gameType: 'casual', page: pageNum, limit: 10 });
       const items = (result?.items || []).map(normalizeGame);
       setGames((prev) => append ? [...prev, ...items] : items);
-      setHasMore(result?.hasMore ?? false);
+      setHasMore(result?.hasMore ?? items.length >= 10);
     } catch (e) {
       console.error('fetchGames error:', e);
     }
@@ -77,6 +76,7 @@ export default function Home() {
     setActiveTab(tab);
     setPage(1);
     setHasMore(true);
+    setGames([]);
     fetchGames(tab, 1);
   };
 
@@ -105,7 +105,6 @@ export default function Home() {
   };
 
   const handleFork = (gameId) => {
-    // Toast or modal for fork
     console.log('Fork game:', gameId);
   };
 
@@ -130,6 +129,14 @@ export default function Home() {
     return num.toString();
   };
 
+  // Split into two columns for waterfall
+  const leftCol = [];
+  const rightCol = [];
+  games.forEach((g, i) => {
+    if (i % 2 === 0) leftCol.push(g);
+    else rightCol.push(g);
+  });
+
   return (
     <View className="home-container">
       {/* Header */}
@@ -153,8 +160,8 @@ export default function Home() {
         refresherTriggered={refreshing}
         onRefresherRefresh={handleRefresh}
         onScrollToLower={handleLoadMore}
-        lowerThreshold={200}>
-        
+        lowerThreshold={300}>
+
         {/* Weekly Challenge Banner */}
         <View className="challenge-banner">
           <View className="challenge-content">
@@ -174,22 +181,24 @@ export default function Home() {
             key={tab}
             className={`tab-item ${activeTab === tab ? 'active' : ''}`}
             onClick={() => handleTabChange(tab)}>
-            
+
               <Text>{tab}</Text>
             </View>
           )}
         </ScrollView>
 
-        {/* Games Grid */}
-        <View className="games-grid">
-          {games.map((game) =>
-          <GameCard
-            key={game.id}
-            game={game}
-            onPlay={handlePlay}
-            onFork={handleFork} />
-
-          )}
+        {/* Waterfall Layout */}
+        <View className="waterfall">
+          <View className="waterfall-col">
+            {leftCol.map((game) =>
+              <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+            )}
+          </View>
+          <View className="waterfall-col">
+            {rightCol.map((game) =>
+              <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+            )}
+          </View>
         </View>
 
         {/* Trending Creators Section */}
@@ -212,6 +221,11 @@ export default function Home() {
         {isLoadingMore &&
         <View className="loading-indicator">
             <Text>加载中...</Text>
+          </View>
+        }
+        {!hasMore && games.length > 0 &&
+        <View className="loading-indicator">
+            <Text style={{color: '#555'}}>— 已经到底了 —</Text>
           </View>
         }
 
