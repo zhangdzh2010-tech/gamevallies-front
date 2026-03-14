@@ -1,5 +1,5 @@
 # ---- H5 Build ----
-FROM node:20-alpine AS h5-builder
+FROM node:20 AS h5-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build:h5
 
 # ---- Weapp Build ----
-FROM node:20-alpine AS weapp-builder
+FROM node:20 AS weapp-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
