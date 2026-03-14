@@ -1,0 +1,139 @@
+name: 部署前端到火山引擎函数服务
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  VOLCENGINE_REGION:             cn-shanghai
+  VOLCENGINE_REGISTRY:           gamevallies-repo-cn-shanghai.cr.volces.com
+  VOLCENGINE_REGISTRY_NAMESPACE: gamevallies
+  FUNCTION_NAME:                 gv-frontend
+  PORT:                          8080
+
+jobs:
+  build-and-deploy:
+    name: 构建镜像 & 部署 H5
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录火山引擎容器镜像服务 (VCR)
+        run: |
+          echo "${{ secrets.VOLCENGINE_REGISTRY_PASSWORD }}" | \
+            docker login ${{ env.VOLCENGINE_REGISTRY }} \
+              -u "${{ secrets.VOLCENGINE_REGISTRY_USERNAME }}" \
+              --password-stdin
+
+      - name: 构建并推送前端镜像 (H5)
+        run: |
+          IMAGE=${{ env.VOLCENGINE_REGISTRY }}/${{ env.VOLCENGINE_REGISTRY_NAMESPACE }}/${{ env.FUNCTION_NAME }}:${{ github.sha }}
+          docker build \
+            --platform linux/amd64 \
+            --target h5-builder \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            -f Dockerfile \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            -t tmp-h5 .
+          docker build \
+            --platform linux/amd64 \
+            -t $IMAGE .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: 配置 Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: 安装部署依赖
+        run: pip install volcengine-python-sdk
+
+      - name: 部署到火山引擎函数服务
+        env:
+          VOLCENGINE_ACCESS_KEY:        ${{ secrets.VOLCENGINE_ACCESS_KEY }}
+          VOLCENGINE_SECRET_KEY:        ${{ secrets.VOLCENGINE_SECRET_KEY }}
+          VOLCENGINE_REGISTRY_USERNAME: ${{ secrets.VOLCENGINE_REGISTRY_USERNAME }}
+          VOLCENGINE_REGISTRY_PASSWORD: ${{ secrets.VOLCENGINE_REGISTRY_PASSWORD }}
+        run: |
+          python - <<'EOF'
+          import os, sys, time
+          import warnings; warnings.filterwarnings("ignore")
+          import volcenginesdkvefaas, volcenginesdkcore
+
+          AK       = os.environ["VOLCENGINE_ACCESS_KEY"]
+          SK       = os.environ["VOLCENGINE_SECRET_KEY"]
+          REGION   = "${{ env.VOLCENGINE_REGION }}"
+          IMAGE    = "${{ env.IMAGE }}"
+          NAME     = "${{ env.FUNCTION_NAME }}"
+          PORT     = int("${{ env.PORT }}")
+          USERNAME = os.environ["VOLCENGINE_REGISTRY_USERNAME"]
+          PASSWORD = os.environ["VOLCENGINE_REGISTRY_PASSWORD"]
+
+          cfg = volcenginesdkcore.Configuration()
+          cfg.ak, cfg.sk, cfg.region = AK, SK, REGION
+          api = volcenginesdkvefaas.VEFAASApi(volcenginesdkcore.ApiClient(cfg))
+
+          # 查找函数
+          resp = api.list_functions(volcenginesdkvefaas.ListFunctionsRequest(page_size=100))
+          func_id = next((f.id for f in (resp.items or []) if f.name == NAME), "")
+
+          access = volcenginesdkvefaas.SourceAccessConfigForCreateFunctionInput(
+              username=USERNAME, password=PASSWORD)
+
+          if func_id:
+              print(f"更新函数 {NAME} (id={func_id})...")
+              api.update_function(volcenginesdkvefaas.UpdateFunctionRequest(
+                  id=func_id,
+                  source_type="image",
+                  source=IMAGE,
+                  source_access_config=volcenginesdkvefaas.SourceAccessConfigForUpdateFunctionInput(
+                      username=USERNAME, password=PASSWORD),
+                  command=f"nginx -g 'daemon off;'",
+              ))
+          else:
+              print(f"创建函数 {NAME}...")
+              r = api.create_function(volcenginesdkvefaas.CreateFunctionRequest(
+                  name=NAME,
+                  runtime="native/v1",
+                  source_type="image",
+                  source=IMAGE,
+                  source_access_config=access,
+                  port=PORT,
+                  command=f"nginx -g 'daemon off;'",
+              ))
+              func_id = r.id
+              print(f"函数已创建 (id={func_id})")
+
+          # 等待镜像缓存就绪
+          print("等待镜像缓存就绪...")
+          deadline = time.time() + 300
+          while time.time() < deadline:
+              try:
+                  sync = api.get_image_sync_status(
+                      volcenginesdkvefaas.GetImageSyncStatusRequest(function_id=func_id, source=IMAGE))
+                  status = getattr(sync, "status", "") or ""
+                  cache  = getattr(sync, "image_cache_status", "") or ""
+                  if cache.lower() == "ready" or status.lower() == "succeeded":
+                      print(f"镜像就绪 (status={status})")
+                      break
+                  if status.lower() == "failed":
+                      print(f"镜像同步失败"); sys.exit(1)
+              except Exception: pass
+              print(f"  等待中... status={status} cache={cache}")
+              time.sleep(10)
+          else:
+              print("等待超时"); sys.exit(1)
+
+          # 发布
+          rel = api.release(volcenginesdkvefaas.ReleaseRequest(function_id=func_id, revision_number=0))
+          print(f"发布成功 版本={rel.new_revision_number} 状态={rel.status}")
+          EOF
