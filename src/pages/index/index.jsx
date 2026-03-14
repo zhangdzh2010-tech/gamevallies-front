@@ -201,7 +201,7 @@ export default function Home() {
           )}
         </ScrollView>
 
-        {/* Games Grid */}
+        {/* Waterfall Layout */}
         {loadingGames ? (
           <View style={{ padding: '60px', textAlign: 'center' }}>
             <Text style={{ color: '#8b87a3', fontSize: '26px' }}>加载中...</Text>
@@ -216,14 +216,17 @@ export default function Home() {
             </View>
           </View>
         ) : (
-          <View className="games-grid">
-            {games.map((game) =>
-            <GameCard
-              key={game.id}
-              game={game}
-              onPlay={handlePlay}
-              onFork={handleFork} />
-            )}
+          <View className="waterfall">
+            <View className="waterfall-col">
+              {leftCol.map((game) =>
+                <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+              )}
+            </View>
+            <View className="waterfall-col">
+              {rightCol.map((game) =>
+                <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+              )}
+            </View>
           </View>
         )}
 
