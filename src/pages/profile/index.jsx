@@ -1,82 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import { GlobalGamePlayer } from '../../components/common/GamePlayer';
+import { Storage } from '../../utils/storage';
+import * as authService from '../../services/auth';
+import * as gameService from '../../services/game';
+import useGamePlayerStore from '../../stores/gamePlayer';
 import Taro from '@tarojs/taro';
 import './index.scss';
 
+const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
+const GAME_EMOJIS = ['🎮', '🚀', '🎵', '💎', '🐦', '🎣', '🧩', '🎯'];
 
-
-
-
-
-
-
-
-
-
-const USER_PROFILE = {
-  name: '游戏创作者',
-  avatar: '👤',
-  bio: '热爱游戏创作的开发者',
-  followers: 2345,
-  following: 567,
-  totalGames: 12,
-  totalPlays: 156000
-};
-
-const USER_GAMES = [
-{
-  id: '1',
-  title: '2048 数字游戏',
-  description: '合并相同数字达到2048',
-  emoji: '🎮',
-  color: '#6e56ff',
-  plays: 23400,
-  likes: 5600,
-  author: 'Me',
-  authorEmoji: '👤',
-  isHot: true,
-  forks: 234
-},
-{
-  id: '2',
-  title: '太空防御',
-  description: '击落来临的陨石',
-  emoji: '🚀',
-  color: '#2dd4a8',
-  plays: 18900,
-  likes: 4200,
-  author: 'Me',
-  authorEmoji: '👤',
-  isHot: true,
-  forks: 189
-},
-{
-  id: '3',
-  title: '音乐节奏',
-  description: '跟随节奏点击',
-  emoji: '🎵',
-  color: '#fbbf24',
-  plays: 15600,
-  likes: 3800,
-  author: 'Me',
-  authorEmoji: '👤',
-  isHot: false,
-  forks: 156
-}];
-
-
-
+function normalizeGame(game, index) {
+  return {
+    ...game,
+    emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
+    color: game.color || GAME_COLORS[index % GAME_COLORS.length],
+    author: game.author?.username || game.author || '我',
+    authorEmoji: game.authorEmoji || '👤',
+    isHot: (game.plays || 0) > 10000,
+  };
+}
 
 export default function Profile() {
-  const navigation = useNavigation();
+  const openGame = useGamePlayerStore((s) => s.openGame);
   const [activeTab, setActiveTab] = useState('created');
-  const [profile, setProfile] = useState(USER_PROFILE);
+  const [profile, setProfile] = useState({
+    name: '',
+    avatar: '👤',
+    bio: '',
+    followers: 0,
+    following: 0,
+    totalGames: 0,
+    totalPlays: 0,
+  });
+  const [myGames, setMyGames] = useState([]);
+  const [loadingGames, setLoadingGames] = useState(false);
   const { windowHeight = 750 } = Taro.getSystemInfoSync();
-  // profile-header auto-height ≈ 400px scss + 120px tab bar
   const scrollViewHeight = windowHeight - 400 - 120;
+
+  useEffect(() => {
+    const token = Storage.getToken();
+    if (!token) {
+      Taro.showToast({ title: '请先登录', icon: 'none', duration: 1500 });
+      setTimeout(() => {
+        Taro.navigateTo({ url: '/pages/login/index' });
+      }, 500);
+      return;
+    }
+
+    // Load cached user
+    const storedUser = Storage.getUser();
+    if (storedUser) {
+      setProfile((prev) => ({
+        ...prev,
+        name: storedUser.username || storedUser.displayName || '用户',
+        bio: storedUser.bio || '这个人很懒，什么都没写',
+      }));
+    }
+
+    // Fetch fresh profile
+    authService.getMe().then((user) => {
+      if (user) {
+        setProfile((prev) => ({
+          ...prev,
+          name: user.username || user.displayName || prev.name,
+          bio: user.bio || prev.bio,
+          followers: user.followerCount || 0,
+          following: user.followingCount || 0,
+        }));
+      }
+    }).catch(() => {});
+
+    fetchMyGames();
+  }, []);
+
+  const fetchMyGames = async () => {
+    setLoadingGames(true);
+    try {
+      const result = await gameService.getMyGames(1, 20);
+      const items = (result?.items || []).map(normalizeGame);
+      setMyGames(items);
+      setProfile((prev) => ({
+        ...prev,
+        totalGames: result?.total || items.length,
+        totalPlays: items.reduce((sum, g) => sum + (g.plays || 0), 0),
+      }));
+    } catch (e) {
+      console.error('fetchMyGames error:', e);
+    } finally {
+      setLoadingGames(false);
+    }
+  };
 
   const handleLogout = () => {
     Taro.showModal({
@@ -84,17 +101,12 @@ export default function Profile() {
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          Taro.removeStorage({
-            key: 'authToken'
-          });
-          Taro.showToast({
-            title: '已退出登录',
-            icon: 'success'
-          });
+          Storage.removeToken();
+          Storage.removeRefreshToken();
+          Storage.removeUser();
+          Taro.showToast({ title: '已退出登录', icon: 'success' });
           setTimeout(() => {
-            navigation.push({
-              url: '/pages/login/index'
-            });
+            Taro.navigateTo({ url: '/pages/login/index' });
           }, 1000);
         }
       }
@@ -102,16 +114,13 @@ export default function Profile() {
   };
 
   const handleEditProfile = () => {
-    Taro.showToast({
-      title: '编辑功能开发中',
-      icon: 'none'
-    });
+    Taro.showToast({ title: '编辑功能开发中', icon: 'none' });
   };
 
   const handlePlay = (game) => {
-    navigation.push({
-      url: `/pages/game/detail/index?id=${game.id}`
-    });
+    if (game.gameUrl) {
+      openGame(game.gameUrl, game.title);
+    }
   };
 
   const handleFork = (gameId) => {
@@ -119,46 +128,34 @@ export default function Profile() {
   };
 
   const formatNumber = (num) => {
-    if (num >= 10000) {
-      return (num / 10000).toFixed(1) + '万';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
+    if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+    return String(num);
   };
 
   return (
     <View className="profile-container">
-      {/* Header */}
       <View className="profile-header">
         <View className="header-top">
-          <Text className="avatar">{profile.avatar}</Text>
+          <Text className="avatar">{profile.avatar || '👤'}</Text>
           <View className="header-actions">
-            <View className="edit-btn" onClick={handleEditProfile}>
-              编辑资料
-            </View>
-            <View className="logout-btn" onClick={handleLogout}>
-              退出
-            </View>
+            <View className="edit-btn" onClick={handleEditProfile}>编辑资料</View>
+            <View className="logout-btn" onClick={handleLogout}>退出</View>
           </View>
         </View>
 
         <View className="user-info">
-          <Text className="user-name">{profile.name}</Text>
-          <Text className="user-bio">{profile.bio}</Text>
+          <Text className="user-name">{profile.name || '用户'}</Text>
+          <Text className="user-bio">{profile.bio || '这个人很懒，什么都没写'}</Text>
         </View>
 
         <View className="stats-row">
           <View className="stat">
-            <Text className="stat-value">
-              {formatNumber(profile.followers)}
-            </Text>
+            <Text className="stat-value">{formatNumber(profile.followers)}</Text>
             <Text className="stat-label">粉丝</Text>
           </View>
           <View className="stat">
-            <Text className="stat-value">
-              {formatNumber(profile.following)}
-            </Text>
+            <Text className="stat-value">{formatNumber(profile.following)}</Text>
             <Text className="stat-label">关注</Text>
           </View>
           <View className="stat">
@@ -166,72 +163,61 @@ export default function Profile() {
             <Text className="stat-label">游戏</Text>
           </View>
           <View className="stat">
-            <Text className="stat-value">
-              {formatNumber(profile.totalPlays)}
-            </Text>
+            <Text className="stat-value">{formatNumber(profile.totalPlays)}</Text>
             <Text className="stat-label">总玩数</Text>
           </View>
         </View>
       </View>
 
       <ScrollView className="profile-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
-        {/* Tabs */}
         <View className="tabs-container">
           <View
             className={`tab-item ${activeTab === 'created' ? 'active' : ''}`}
-            onClick={() => setActiveTab('created')}>
-            
+            onClick={() => setActiveTab('created')}
+          >
             <Text>创建的游戏 ({profile.totalGames})</Text>
           </View>
           <View
             className={`tab-item ${activeTab === 'liked' ? 'active' : ''}`}
-            onClick={() => setActiveTab('liked')}>
-            
+            onClick={() => setActiveTab('liked')}
+          >
             <Text>赞过的游戏</Text>
-          </View>
-          <View
-            className={`tab-item ${activeTab === 'forked' ? 'active' : ''}`}
-            onClick={() => setActiveTab('forked')}>
-            
-            <Text>复制的游戏</Text>
           </View>
         </View>
 
-        {/* Games Grid */}
-        {activeTab === 'created' &&
-        <View className="games-section">
-            <View className="games-grid">
-              {USER_GAMES.map((game) =>
-            <GameCard
-              key={game.id}
-              game={game}
-              onPlay={handlePlay}
-              onFork={handleFork} />
-
+        {activeTab === 'created' && (
+          <View className="games-section">
+            {loadingGames ? (
+              <View className="empty-state">
+                <Text className="empty-text">加载中...</Text>
+              </View>
+            ) : myGames.length > 0 ? (
+              <View className="games-grid">
+                {myGames.map((game) => (
+                  <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+                ))}
+              </View>
+            ) : (
+              <View className="empty-state">
+                <Text className="empty-icon">🎮</Text>
+                <Text className="empty-text">还没有创建游戏</Text>
+                <View className="empty-action" onClick={() => Taro.switchTab({ url: '/pages/create/index' })}>
+                  <Text>去创作</Text>
+                </View>
+              </View>
             )}
-            </View>
           </View>
-        }
+        )}
 
-        {activeTab === 'liked' &&
-        <View className="games-section">
+        {activeTab === 'liked' && (
+          <View className="games-section">
             <View className="empty-state">
               <Text className="empty-icon">♥</Text>
               <Text className="empty-text">暂无赞过的游戏</Text>
             </View>
           </View>
-        }
+        )}
 
-        {activeTab === 'forked' &&
-        <View className="games-section">
-            <View className="empty-state">
-              <Text className="empty-icon">🔀</Text>
-              <Text className="empty-text">暂无复制的游戏</Text>
-            </View>
-          </View>
-        }
-
-        {/* Additional Info */}
         <View className="additional-info">
           <View className="info-section">
             <Text className="section-title">设置</Text>
@@ -244,15 +230,11 @@ export default function Profile() {
               <Text className="info-value">已启用</Text>
             </View>
           </View>
-
           <View className="info-section">
             <Text className="section-title">关于</Text>
             <View className="info-item">
               <Text className="info-label">版本</Text>
               <Text className="info-value">1.0.0</Text>
-            </View>
-            <View className="info-item">
-              <Text className="info-label">隐私政策</Text>
             </View>
           </View>
         </View>
@@ -260,8 +242,8 @@ export default function Profile() {
         <View className="bottom-spacer" />
       </ScrollView>
 
-      {/* Custom TabBar */}
       <CustomTabBar activeIndex={4} />
-    </View>);
-
+      <GlobalGamePlayer />
+    </View>
+  );
 }

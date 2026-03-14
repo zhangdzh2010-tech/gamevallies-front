@@ -29,12 +29,13 @@ export async function login(account, password) {
     password
   });
 
-  // Save tokens and user (backend returns accessToken, not token)
-  Storage.setToken(response.accessToken);
+  // Backend returns { token, refreshToken, user } — normalize to accessToken
+  const accessToken = response.accessToken || response.token;
+  Storage.setToken(accessToken);
   Storage.setRefreshToken(response.refreshToken);
   Storage.setUser(response.user);
 
-  return response;
+  return { ...response, accessToken };
 }
 
 /**

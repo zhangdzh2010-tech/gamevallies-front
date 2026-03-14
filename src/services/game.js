@@ -1,6 +1,5 @@
 import { post, get } from './api';
 
-
 /**
  * Generate a new game from a prompt
  */
@@ -9,6 +8,13 @@ export async function generateGame(prompt) {
     prompt
   });
   return response.gameId;
+}
+
+/**
+ * Get single game by ID (used for polling generation status)
+ */
+export async function getGame(id) {
+  return get(`/api/v1/games/${id}`);
 }
 
 /**
@@ -36,37 +42,24 @@ export async function forkGame(gameId) {
 /**
  * Publish a game
  */
-export async function publishGame(
-gameId,
-data)
-{
+export async function publishGame(gameId, data) {
   return post(`/api/v1/games/${gameId}/publish`, data || {});
 }
 
 /**
  * Get current user's games
  */
-export async function getMyGames(
-page = 1,
-limit = 10)
-{
+export async function getMyGames(page = 1, limit = 10) {
   return get('/api/v1/games/my', {
     data: { page, limit }
   });
 }
 
-/**
- * Get single game by ID
- */
-export async function getGame(id) {
-  return get(`/api/v1/games/${id}`);
-}
-
 export default {
   generateGame,
+  getGame,
   iterateGame,
   forkGame,
   publishGame,
   getMyGames,
-  getGame
 };

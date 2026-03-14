@@ -196,6 +196,40 @@ class Storage {
     }
   }
 
+  static getUser() {
+    try {
+      const key = ENV.STORAGE_KEYS.USER;
+      const itemStr = Taro.getStorageSync(key);
+      if (!itemStr) return null;
+      try {
+        const item = JSON.parse(itemStr);
+        if (item.ttl && Date.now() - item.timestamp > item.ttl) {
+          Taro.removeStorageSync(key);
+          return null;
+        }
+        return item.data;
+      } catch {
+        return itemStr;
+      }
+    } catch (error) {
+      console.error('Failed to get user', error);
+      return null;
+    }
+  }
+
+  static setUser(user) {
+    try {
+      const key = ENV.STORAGE_KEYS.USER;
+      const item = {
+        data: user,
+        timestamp: Date.now()
+      };
+      Taro.setStorageSync(key, JSON.stringify(item));
+    } catch (error) {
+      console.error('Failed to set user', error);
+    }
+  }
+
   static removeUser() {
     try {
       Taro.removeStorageSync(ENV.STORAGE_KEYS.USER);

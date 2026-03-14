@@ -5,8 +5,8 @@
  */
 export function getShareConfig(game, score) {
   const title = score ?
-  `我在创游谷玩《${game.title}》得分${score}分，快来挑战！` :
-  `来玩我制作的游戏《${game.title}》on 创游谷`;
+  `我在智了空间玩《${game.title}》得分${score}分，快来挑战！` :
+  `来玩我制作的游戏《${game.title}》on 智了空间`;
 
   const path = `/pages/game/index?id=${game.id}${score ? `&score=${score}` : ''}`;
 
@@ -47,7 +47,7 @@ export function generateShareText(game, includeAuthor = true) {
     text += ` by ${game.creator?.username || 'Unknown'}`;
   }
 
-  text += ` | 创游谷`;
+  text += ` | 智了空间`;
 
   return text;
 }
@@ -110,7 +110,7 @@ export function generateSharePosterData(game, score) {
       x: 40,
       y: 1100,
       width: 670,
-      text: '创游谷',
+      text: '智了空间',
       fontSize: 20,
       color: '#999999'
     },
@@ -159,7 +159,7 @@ export function formatShareStats(game) {
  * Generate hashtags for social media sharing
  */
 export function generateHashtags(game) {
-  const hashtags = ['#创游谷', '#GameDev', `#${game.gameType}`];
+  const hashtags = ['#智了空间', '#GameDev', `#${game.gameType}`];
 
   if (game.tags && game.tags.length > 0) {
     hashtags.push(...game.tags.slice(0, 3).map((tag) => `#${tag}`));
