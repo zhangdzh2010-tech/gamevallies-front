@@ -3,7 +3,6 @@ import Taro from '@tarojs/taro';
 import {
   View,
   Text,
-  Image,
   ScrollView } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
@@ -40,7 +39,6 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [games, setGames] = useState([]);
-  const [creators, setCreators] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingGames, setLoadingGames] = useState(true);
@@ -71,18 +69,8 @@ export default function Home() {
     }
   }, []);
 
-  const fetchCreators = useCallback(async () => {
-    try {
-      const result = await feedService.getTrendingCreators(5);
-      setCreators(result?.items || []);
-    } catch (e) {
-      console.error('fetchCreators error:', e);
-    }
-  }, []);
-
   useEffect(() => {
     fetchGames(activeTab, 1);
-    fetchCreators();
   }, []);
 
   const handleTabChange = (tab) => {
@@ -229,28 +217,6 @@ export default function Home() {
             </View>
           </View>
         )}
-
-        {/* Trending Creators Section */}
-        <View className="creators-section">
-          <Text className="section-title">🌟 热门创作者</Text>
-          <ScrollView className="creators-scroll" scrollX>
-            <View className="creators-inner">
-              {creators.map((creator) =>
-              <View key={creator.id} className="creator-card">
-                  {creator.avatar && creator.avatar.startsWith('http') ? (
-                    <Image className="creator-avatar-img" src={creator.avatar} mode="aspectFill" />
-                  ) : (
-                    <View className="creator-emoji">{creator.avatar || '👤'}</View>
-                  )}
-                  <Text className="creator-name">{creator.username || creator.name}</Text>
-                  <Text className="creator-plays">
-                    {formatNumber(creator.gamesCount || creator.plays || 0)} 次游玩
-                  </Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        </View>
 
         {/* Loading indicator */}
         {isLoadingMore &&
