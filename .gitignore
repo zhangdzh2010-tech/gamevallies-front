@@ -25,6 +25,7 @@ build
 .env
 .env.local
 .env.*.local
+.env.deploy
 
 # Taro specific
 .taro
