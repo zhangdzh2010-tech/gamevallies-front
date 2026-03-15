@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Taro from '@tarojs/taro';
 import {
   View,
@@ -35,7 +35,6 @@ export default function Home() {
   // home header base height (96px) + statusBar + tab bar (120px)
   const scrollViewHeight = windowHeight - (statusBarHeight + 96) - 120;
   const openGame = useGamePlayerStore((s) => s.openGame);
-  const [activeTab, setActiveTab] = useState('推荐');
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [games, setGames] = useState([]);
@@ -43,20 +42,12 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingGames, setLoadingGames] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const scrollViewRef = useRef(null);
 
-  const CATEGORY_TABS = ['推荐', '✨ 最新', '🧩 益智', '🎯 动作', '🎲 休闲'];
-
-  const fetchGames = useCallback(async (tab, pageNum, append = false) => {
+  const fetchGames = useCallback(async (pageNum, append = false) => {
     if (!append) setLoadingGames(true);
     setLoadError(false);
     try {
-      let result;
-      if (tab === '推荐') result = await feedService.getTrending(pageNum, 10);
-      else if (tab === '✨ 最新') result = await feedService.getLatest(pageNum, 10);
-      else if (tab === '🧩 益智') result = await feedService.searchGames('', { gameType: 'puzzle', page: pageNum, limit: 10 });
-      else if (tab === '🎯 动作') result = await feedService.searchGames('', { gameType: 'action', page: pageNum, limit: 10 });
-      else if (tab === '🎲 休闲') result = await feedService.searchGames('', { gameType: 'casual', page: pageNum, limit: 10 });
+      const result = await feedService.getTrending(pageNum, 10);
       const items = (result?.items || []).map(normalizeGame);
       setGames((prev) => append ? [...prev, ...items] : items);
       setHasMore(result?.hasMore ?? items.length >= 10);
@@ -70,21 +61,13 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    fetchGames(activeTab, 1);
+    fetchGames(1);
   }, []);
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setPage(1);
-    setHasMore(true);
-    setGames([]);
-    fetchGames(tab, 1);
-  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     setPage(1);
-    await fetchGames(activeTab, 1);
+    await fetchGames(1);
     setRefreshing(false);
   };
 
@@ -92,7 +75,7 @@ export default function Home() {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
     const nextPage = page + 1;
-    await fetchGames(activeTab, nextPage, true);
+    await fetchGames(nextPage, true);
     setPage(nextPage);
     setIsLoadingMore(false);
   };
@@ -176,19 +159,6 @@ export default function Home() {
           <View className="challenge-action">参加→</View>
         </View>
 
-        {/* Category Tabs */}
-        <ScrollView className="tabs-container" scrollX>
-          {CATEGORY_TABS.map((tab) =>
-          <View
-            key={tab}
-            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => handleTabChange(tab)}>
-
-              <Text>{tab}</Text>
-            </View>
-          )}
-        </ScrollView>
-
         {/* Waterfall Layout */}
         {loadingGames ? (
           <View style={{ padding: '60px', textAlign: 'center' }}>
@@ -199,7 +169,7 @@ export default function Home() {
             <Text style={{ color: '#8b87a3', fontSize: '26px', display: 'block', marginBottom: '24px' }}>加载失败</Text>
             <View
               style={{ display: 'inline-block', padding: '18px 36px', background: 'rgba(110,86,255,0.15)', borderRadius: '18px', color: '#6e56ff', fontSize: '26px' }}
-              onClick={() => fetchGames(activeTab, 1)}>
+              onClick={() => fetchGames(1)}>
               重试
             </View>
           </View>
