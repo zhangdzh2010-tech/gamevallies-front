@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, Textarea, Input } from '@tarojs/components';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
-import ChatInterface from './components/ChatInterface';
 import Taro from '@tarojs/taro';
 import { useGameStore, PIPELINE_STAGES } from '../../store/gameStore';
 import useGamePlayerStore from '../../stores/gamePlayer';
+import { Storage } from '../../utils/storage';
+import * as gameService from '../../services/game';
 import './index.scss';
 
 const EXAMPLE_PROMPTS = [
@@ -17,147 +18,65 @@ const EXAMPLE_PROMPTS = [
   { emoji: '🏃', text: '无尽跑酷游戏，点击屏幕跳跃躲避障碍，速度越来越快，收集金币加分' },
 ];
 
-// AI clarification questions based on missing details
-function generateClarifications(prompt) {
-  const questions = [];
-  const lower = prompt.toLowerCase();
-
-  if (!lower.match(/风格|美术|画面|像素|卡通|3d|2d|写实/)) {
-    questions.push({
-      id: 'style',
-      text: '你希望游戏是什么画面风格？',
-      options: ['像素复古', '卡通可爱', '简约扁平', '炫酷霓虹', '不限，AI决定'],
-    });
-  }
-  if (!lower.match(/难度|简单|困难|容易|挑战/)) {
-    questions.push({
-      id: 'difficulty',
-      text: '游戏难度偏好？',
-      options: ['轻松休闲', '适中', '有挑战性', '不限'],
-    });
-  }
-  if (!lower.match(/计分|得分|分数|排行|成绩/)) {
-    questions.push({
-      id: 'scoring',
-      text: '需要计分系统吗？',
-      options: ['需要，有分数排行', '简单计分就好', '不需要计分'],
-    });
-  }
-  return questions;
-}
-
-let msgIdCounter = 0;
-function mkMsg(type, content) {
-  return { id: ++msgIdCounter, type, content };
-}
-
 export default function Create() {
   const { createGame, isGenerating, generationProgress, currentGame, error, clearError } = useGameStore();
   const openGame = useGamePlayerStore((s) => s.openGame);
-  const { windowHeight = 750 } = Taro.getSystemInfoSync();
-  const scrollViewHeight = windowHeight - 140 - 120;
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
 
-  // Chat-based clarification state
-  const [chatMode, setChatMode] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [pendingQuestions, setPendingQuestions] = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [finalPrompt, setFinalPrompt] = useState('');
-  const [extraDetails, setExtraDetails] = useState({});
-  const scrollRef = useRef(null);
+  // New 3-step flow state
+  const [step, setStep] = useState('input'); // 'input' | 'confirm' | 'generating' | 'done'
+  const [expandedPrompt, setExpandedPrompt] = useState('');
+  const [isExpanding, setIsExpanding] = useState(false);
 
   const handleExampleClick = (text) => {
     setPrompt(text);
   };
 
-  // Start the creation flow: check if we need clarification
-  const handleSubmit = () => {
-    if (!prompt.trim()) {
+  // Step 1 → Step 2: Expand prompt
+  const handleSubmit = async () => {
+    const token = Storage.getToken();
+    if (!token) {
+      Taro.showToast({ title: '请先登录后再创作', icon: 'none', duration: 2000 });
+      setTimeout(() => Taro.navigateTo({ url: '/pages/login/index' }), 1000);
+      return;
+    }
+    if (!prompt.trim() || prompt.trim().length < 5) {
       Taro.showToast({ title: '请输入游戏描述', icon: 'none' });
       return;
     }
-    if (prompt.trim().length < 10) {
-      Taro.showToast({ title: '描述太短了，请详细一些', icon: 'none' });
-      return;
-    }
     clearError();
+    setIsExpanding(true);
 
-    const clarifications = generateClarifications(prompt.trim());
-    if (clarifications.length > 0) {
-      // Enter chat mode for clarification
-      setChatMode(true);
-      const initialMsgs = [
-        mkMsg('user', prompt.trim()),
-        mkMsg('ai', `好的，我来帮你创作${gameName ? `「${gameName}」` : '这个游戏'}！为了让游戏更符合你的期待，我想确认几个细节：`),
-      ];
-      setMessages(initialMsgs);
-      setPendingQuestions(clarifications.slice(1));
-      setCurrentQuestion(clarifications[0]);
-      setFinalPrompt(prompt.trim());
-      setExtraDetails({});
-    } else {
-      // Prompt is detailed enough, go directly
-      doCreate(prompt.trim());
-    }
-  };
-
-  // Handle user selecting a clarification option
-  const handleOptionSelect = (option) => {
-    if (!currentQuestion) return;
-
-    const newMsgs = [
-      ...messages,
-      mkMsg('ai', currentQuestion.text),
-      mkMsg('user', option),
-    ];
-    const newDetails = { ...extraDetails, [currentQuestion.id]: option };
-    setExtraDetails(newDetails);
-    setMessages(newMsgs);
-
-    if (pendingQuestions.length > 0) {
-      setCurrentQuestion(pendingQuestions[0]);
-      setPendingQuestions(pendingQuestions.slice(1));
-    } else {
-      // All questions answered — build enhanced prompt and create
-      setCurrentQuestion(null);
-      const enhanced = buildEnhancedPrompt(finalPrompt, newDetails);
-      const finalMsgs = [
-        ...newMsgs,
-        mkMsg('ai', '明白了！开始为你创作游戏...'),
-      ];
-      setMessages(finalMsgs);
-      setTimeout(() => doCreate(enhanced), 600);
-    }
-  };
-
-  // Skip remaining clarifications
-  const handleSkipClarify = () => {
-    setCurrentQuestion(null);
-    setPendingQuestions([]);
-    const skipMsgs = [...messages, mkMsg('ai', '好的，直接开始创作！')];
-    setMessages(skipMsgs);
-    const enhanced = buildEnhancedPrompt(finalPrompt, extraDetails);
-    setTimeout(() => doCreate(enhanced), 400);
-  };
-
-  function buildEnhancedPrompt(base, details) {
-    let extra = '';
-    if (details.style && details.style !== '不限，AI决定') extra += `，画面风格：${details.style}`;
-    if (details.difficulty && details.difficulty !== '不限') extra += `，难度：${details.difficulty}`;
-    if (details.scoring) extra += `，${details.scoring}`;
-    return base + extra;
-  }
-
-  async function doCreate(description) {
-    setChatMode(false);
     try {
-      await createGame(description);
+      const expanded = await gameService.expandPrompt(prompt.trim());
+      setExpandedPrompt(expanded);
+      setStep('confirm');
     } catch (err) {
-      Taro.showToast({ title: err.message || '创建失败', icon: 'none' });
+      Taro.showToast({ title: (err && err.message) || 'AI扩展失败', icon: 'none' });
+      // Fallback: use original prompt
+      setExpandedPrompt(prompt.trim());
+      setStep('confirm');
+    } finally {
+      setIsExpanding(false);
     }
-  }
+  };
+
+  // Step 2 → Step 3: Confirm and generate
+  const handleConfirmGenerate = async () => {
+    setStep('generating');
+    try {
+      await createGame(expandedPrompt);
+    } catch (err) {
+      Taro.showToast({ title: (err && err.message) || '创建失败', icon: 'none' });
+    }
+  };
+
+  // Back to editing
+  const handleBackToEdit = () => {
+    setStep('input');
+    setExpandedPrompt('');
+  };
 
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
@@ -168,42 +87,66 @@ export default function Create() {
   const handleNewGame = () => {
     setPrompt('');
     setGameName('');
-    setChatMode(false);
-    setMessages([]);
-    setCurrentQuestion(null);
-    setPendingQuestions([]);
+    setStep('input');
+    setExpandedPrompt('');
     clearError();
   };
 
-  // ── Chat clarification view ──
-  if (chatMode && !isGenerating) {
+  // ── Expanding prompt view ──
+  if (isExpanding) {
     return (
       <View className="create-container">
         <View className="create-header">
-          <Text className="header-title">AI 助手确认</Text>
-          <Text className="header-subtitle">完善你的创作需求</Text>
+          <Text className="header-title">AI 正在构思...</Text>
+          <Text className="header-subtitle">根据你的想法设计详细的游戏方案</Text>
+        </View>
+        <View className="expanding-panel">
+          <View className="expanding-spinner" />
+          <Text className="expanding-text">AI 策划师正在分析你的创意并扩展为详细方案...</Text>
+        </View>
+        <CustomTabBar activeIndex={2} />
+      </View>
+    );
+  }
+
+  // ── Confirm expanded prompt view ──
+  if (step === 'confirm') {
+    return (
+      <View className="create-container">
+        <View className="create-header">
+          <Text className="header-title">确认游戏方案</Text>
+          <Text className="header-subtitle">AI 已为你扩展了详细的游戏设计，可以编辑调整</Text>
         </View>
 
-        <ScrollView className="chat-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY scrollIntoView="chat-bottom">
-          <ChatInterface messages={messages} isGenerating={false} />
+        <ScrollView className="create-scroll" scrollY>
+          <View className="confirm-section">
+            <View className="original-prompt">
+              <Text className="section-label">你的原始想法</Text>
+              <Text className="original-text">{prompt}</Text>
+            </View>
 
-          {/* Current question with options */}
-          {currentQuestion && (
-            <View className="clarify-block">
-              <Text className="clarify-question">{currentQuestion.text}</Text>
-              <View className="clarify-options">
-                {currentQuestion.options.map((opt) => (
-                  <View key={opt} className="clarify-option" onClick={() => handleOptionSelect(opt)}>
-                    <Text>{opt}</Text>
-                  </View>
-                ))}
+            <View className="expanded-prompt">
+              <Text className="section-label">AI 扩展方案</Text>
+              <Textarea
+                className="expanded-textarea"
+                value={expandedPrompt}
+                onInput={(e) => setExpandedPrompt(e.detail.value)}
+                autoHeight
+                maxLength={1000}
+              />
+              <Text className="char-count">{expandedPrompt.length}/1000</Text>
+            </View>
+
+            <View className="confirm-actions">
+              <View className="confirm-btn" onClick={handleConfirmGenerate}>
+                <Text>🚀 确认生成游戏</Text>
               </View>
-              <View className="clarify-skip" onClick={handleSkipClarify}>
-                <Text className="skip-text">跳过，直接创作</Text>
+              <View className="back-btn" onClick={handleBackToEdit}>
+                <Text>← 返回修改</Text>
               </View>
             </View>
-          )}
-          <View id="chat-bottom" />
+          </View>
+          <View className="bottom-spacer" />
         </ScrollView>
 
         <CustomTabBar activeIndex={2} />
@@ -212,17 +155,16 @@ export default function Create() {
   }
 
   // ── Generating progress view ──
-  if (isGenerating) {
+  if (isGenerating || step === 'generating') {
     const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
     return (
       <View className="create-container">
         <View className="create-header">
           <Text className="header-title">AI 创作中</Text>
-          <Text className="header-subtitle">正在为你生成{gameName ? `「${gameName}」` : '游戏'}，请耐心等待</Text>
+          <Text className="header-subtitle">正在生成游戏，预计需要60-90秒</Text>
         </View>
 
         <View className="progress-panel">
-          {/* Progress bar */}
           <View className="progress-bar-wrapper">
             <View className="progress-bar-bg">
               <View className="progress-bar-fill" style={{ width: `${progress.pct}%` }} />
@@ -230,14 +172,12 @@ export default function Create() {
             <Text className="progress-pct">{progress.pct}%</Text>
           </View>
 
-          {/* Stage list */}
           <View className="stage-list">
             {PIPELINE_STAGES.map((stage, idx) => {
               const isDone = idx < progress.stageIndex;
               const isCurrent = idx === progress.stageIndex;
-              const isPending = idx > progress.stageIndex;
               return (
-                <View key={stage.key} className={`stage-item ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''} ${isPending ? 'pending' : ''}`}>
+                <View key={stage.key} className={`stage-item ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''} ${!isDone && !isCurrent ? 'pending' : ''}`}>
                   <View className="stage-indicator">
                     {isDone ? <Text className="stage-check">✓</Text> : isCurrent ? <View className="stage-pulse" /> : <View className="stage-dot" />}
                   </View>
@@ -266,9 +206,6 @@ export default function Create() {
         <View className="completion-panel">
           <Text className="completion-emoji">🎉</Text>
           <Text className="completion-title">{currentGame.title || gameName || '新游戏'}</Text>
-          {currentGame.qualityScore && (
-            <Text className="completion-score">质量评分: {currentGame.qualityScore}/10</Text>
-          )}
 
           <View className="completion-actions">
             <View className="action-btn play-btn" onClick={handlePlayGame}>
@@ -286,16 +223,15 @@ export default function Create() {
     );
   }
 
-  // ── Main create form ──
+  // ── Main create form (Step 1) ──
   return (
     <View className="create-container">
       <View className="create-header">
         <Text className="header-title">✨ 创作新游戏</Text>
-        <Text className="header-subtitle">用自然语言描述你想要的游戏，AI 帮你生成</Text>
+        <Text className="header-subtitle">描述你的游戏想法，AI 帮你设计并生成</Text>
       </View>
 
-      <ScrollView className="create-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
-        {/* Form inputs */}
+      <ScrollView className="create-scroll" scrollY>
         <View className="form-section">
           <View className="form-group">
             <Text className="form-label">游戏名称</Text>
@@ -313,7 +249,7 @@ export default function Create() {
             <Text className="form-label">描述你的游戏创意</Text>
             <Textarea
               className="form-textarea"
-              placeholder="详细描述你想要的游戏玩法、操作方式、画面风格等..."
+              placeholder="简单描述你想要的游戏，AI 会帮你扩展为详细方案..."
               placeholderStyle="color: #55516e"
               value={prompt}
               onInput={(e) => setPrompt(e.detail.value)}
@@ -332,12 +268,11 @@ export default function Create() {
 
           <View className="form-actions">
             <View className="submit-btn" onClick={handleSubmit}>
-              <Text>🚀 开始创作</Text>
+              <Text>🚀 AI 策划方案</Text>
             </View>
           </View>
         </View>
 
-        {/* Example prompts */}
         <View className="examples-section">
           <Text className="section-title">💡 创意样例 <Text className="section-hint">点击直接使用</Text></Text>
           <View className="example-list">
@@ -350,18 +285,11 @@ export default function Create() {
           </View>
         </View>
 
-        {/* Tips */}
         <View className="tips-section">
-          <Text className="tips-title">📝 创作技巧</Text>
-          <View className="tip-item">
-            <Text className="tip-text">描述越详细，AI 生成的游戏越贴合你的想法</Text>
-          </View>
-          <View className="tip-item">
-            <Text className="tip-text">可以指定玩法、操控方式、美术风格、难度等</Text>
-          </View>
-          <View className="tip-item">
-            <Text className="tip-text">所有游戏自动适配触屏操作，无需物理键盘</Text>
-          </View>
+          <Text className="tips-title">📝 创作流程</Text>
+          <View className="tip-item"><Text className="tip-text">1. 描述你的游戏想法（可以很简短）</Text></View>
+          <View className="tip-item"><Text className="tip-text">2. AI 策划师会扩展为详细的游戏方案</Text></View>
+          <View className="tip-item"><Text className="tip-text">3. 确认方案后，AI 自动生成可玩的游戏</Text></View>
         </View>
 
         <View className="bottom-spacer" />

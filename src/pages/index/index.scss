@@ -1,24 +1,24 @@
 .home-container {
   background: #08080d;
-  min-height: 100vh;
+  height: 100vh;
+  max-width: 100vw;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   .header {
-    position: sticky;
-    top: 0;
+    flex-shrink: 0;
     z-index: 100;
-    height: 96px;
-    background: rgba(17, 17, 24, 0.8);
+    background: rgba(17, 17, 24, 0.95);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(37, 37, 53, 0.5);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 30px;
+    padding: 20px 24px;
 
     .logo {
-      font-size: 33px;
+      font-size: 36px;
       font-weight: 700;
       background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
       -webkit-background-clip: text;
@@ -26,52 +26,10 @@
       background-clip: text;
     }
 
-    .header-actions {
-      display: flex;
-      gap: 21px;
-      align-items: center;
-
-      .create-btn {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
-        border-radius: 15px;
-        color: white;
-        font-size: 23px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-
-        .create-icon {
-          font-size: 26px;
-        }
-
-        .create-text {
-          font-size: 23px;
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-      }
-
-      .avatar {
-        width: 66px;
-        height: 66px;
-        border-radius: 50%;
-        background: rgba(110, 86, 255, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 30px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        &:active {
-          background: rgba(110, 86, 255, 0.3);
-          transform: scale(0.95);
-        }
+    .header-stats {
+      .header-count {
+        font-size: 22px;
+        color: #6b6882;
       }
     }
   }
@@ -81,47 +39,49 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 
-    .challenge-banner {
-      margin: 30px;
-      padding: 30px;
-      background: linear-gradient(135deg, rgba(110, 86, 255, 0.2) 0%, rgba(45, 212, 168, 0.2) 100%);
-      border: 1px solid rgba(110, 86, 255, 0.3);
-      border-radius: 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    // Section header
+    .section-header {
+      padding: 20px 20px 8px;
 
-      .challenge-content {
-        flex: 1;
-
-        .challenge-title {
-          display: block;
-          font-size: 27px;
-          font-weight: 600;
-          color: #eae8f4;
-          margin-bottom: 15px;
-        }
-
-        .challenge-meta {
-          display: flex;
-          gap: 21px;
-
-          .meta-item {
-            font-size: 21px;
-            color: #8b87a3;
-          }
-        }
+      .section-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: #eae8f4;
       }
+    }
 
-      .challenge-action {
-        font-size: 23px;
-        color: #6e56ff;
-        font-weight: 600;
-        cursor: pointer;
-        padding: 15px 24px;
+    // Waterfall grid
+    .waterfall {
+      display: flex;
+      gap: 12px;
+      padding: 10px 20px;
+      align-items: flex-start;
+
+      .waterfall-col {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
+
+    // Loading & error states
+    .loading-state {
+      padding: 80px 40px;
+      text-align: center;
+
+      .retry-btn {
+        display: inline-block;
+        margin-top: 24px;
+        padding: 16px 40px;
         background: rgba(110, 86, 255, 0.15);
-        border-radius: 15px;
-        transition: all 0.3s ease;
+        border-radius: 16px;
+
+        .retry-text {
+          font-size: 26px;
+          color: #6e56ff;
+        }
 
         &:active {
           background: rgba(110, 86, 255, 0.25);
@@ -129,63 +89,23 @@
       }
     }
 
-    .tabs-container {
-      padding: 21px 30px;
-      white-space: nowrap;
-
-      .tabs-inner {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        gap: 15px;
-      }
-
-      .tab-item {
-        padding: 15px 27px;
-        border-radius: 33px;
-        background: transparent;
-        color: #8b87a3;
-        font-size: 23px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        white-space: nowrap;
-        flex-shrink: 0;
-
-        &.active {
-          background: rgba(110, 86, 255, 0.15);
-          color: #6e56ff;
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-      }
-    }
-
-    .waterfall {
-      display: flex;
-      gap: 16px;
-      padding: 0 20px;
-      align-items: flex-start;
-
-      .waterfall-col {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
+    .loading-text {
+      font-size: 26px;
+      color: #8b87a3;
     }
 
     .loading-indicator {
       text-align: center;
-      padding: 36px;
-      color: #8b87a3;
-      font-size: 21px;
+      padding: 28px;
+    }
+
+    .end-text {
+      font-size: 22px;
+      color: #55516e;
     }
 
     .bottom-spacer {
-      height: 144px;
+      height: 140px;
     }
   }
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -8,43 +8,78 @@ import * as feedService from '../../services/feed';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import './index.scss';
 
-const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
+const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
 const GAME_EMOJIS = ['🎮', '🚀', '🎵', '💎', '🐦', '🎣', '🧩', '🎯'];
 
 function normalizeGame(game, index) {
   return {
     ...game,
+    plays: game.plays || game.playCount || 0,
+    likes: game.likes || game.likeCount || 0,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
-    author: game.author?.username || game.author || '未知创作者',
-    authorEmoji: game.authorEmoji || '👤',
-    isHot: (game.plays || 0) > 10000,
+    author: game.author?.displayName || game.author?.username || game.author || '创作者',
+    isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
 
-export default function DiscoverPage() {
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedTag, setSelectedTag] = useState('全部');
+export default function FollowPage() {
+  const [activeTab, setActiveTab] = useState('推荐关注');
   const [topCreators, setTopCreators] = useState([]);
-  const [recommendedGames, setRecommendedGames] = useState([]);
+  const [followedGames, setFollowedGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const openGame = useGamePlayerStore((s) => s.openGame);
-  const { windowHeight = 750 } = Taro.getSystemInfoSync();
-  const scrollViewHeight = windowHeight - 96 - 120;
 
-  const trendingTags = ['全部', '太空冒险', '休闲益智', '射击游戏', '跑酷', '卡牌', '竞速', '恐怖'];
+  const tabs = ['推荐关注', '最新动态'];
 
-  useEffect(() => {
-    feedService.getTrendingCreators(8).then((data) => {
-      setTopCreators(Array.isArray(data) ? data : (data?.items || []));
-    }).catch(() => {});
+  const fetchData = useCallback(async (pageNum = 1, append = false) => {
+    if (!append) setLoading(true);
+    try {
+      const [creatorsRes, gamesRes] = await Promise.all([
+        pageNum === 1 ? feedService.getTrendingCreators(10) : Promise.resolve(null),
+        feedService.getLatest(pageNum, 10),
+      ]);
 
-    feedService.getFeaturedGames(10).then((data) => {
-      const raw = Array.isArray(data) ? data : (data?.items || []);
-      setRecommendedGames(raw.map(normalizeGame));
-    }).catch(() => {});
+      if (creatorsRes) {
+        const creators = Array.isArray(creatorsRes) ? creatorsRes : (creatorsRes?.items || []);
+        setTopCreators(creators);
+      }
+
+      const items = (gamesRes?.items || []).map(normalizeGame);
+      setFollowedGames(prev => append ? [...prev, ...items] : items);
+      setHasMore(gamesRes?.hasMore ?? items.length >= 10);
+    } catch (e) {
+      console.error('fetchData error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleGamePlay = (game) => {
+  useEffect(() => {
+    fetchData(1);
+  }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setPage(1);
+    await fetchData(1);
+    setRefreshing(false);
+  };
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    const nextPage = page + 1;
+    await fetchData(nextPage, true);
+    setPage(nextPage);
+    setIsLoadingMore(false);
+  };
+
+  const handlePlay = (game) => {
     if (game.gameUrl) {
       openGame(game.gameUrl, game.title);
     } else {
@@ -52,119 +87,142 @@ export default function DiscoverPage() {
     }
   };
 
-  const handleFork = (gameId) => {
-    console.log('Fork game:', gameId);
-  };
-
-  const handleCreatorClick = (_creatorId) => {
-    Taro.switchTab({ url: '/pages/profile/index' });
-  };
+  const leftCol = [];
+  const rightCol = [];
+  followedGames.forEach((g, i) => {
+    if (i % 2 === 0) leftCol.push(g);
+    else rightCol.push(g);
+  });
 
   return (
-    <View className="discover-page">
-      <View className="discover-header">
-        <Text className="header-title">发现</Text>
+    <View className="follow-page">
+      {/* Header */}
+      <View className="follow-header">
+        <Text className="header-title">关注</Text>
+        <View className="header-tabs">
+          {tabs.map(tab => (
+            <Text
+              key={tab}
+              className={`header-tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </Text>
+          ))}
+        </View>
       </View>
 
-      <ScrollView className="discover-content" style={{ height: `${scrollViewHeight}px` }} scrollY>
-        {/* Search Bar */}
-        <View className="search-section">
-          <View className="search-bar">
-            <Text className="search-icon">🔍</Text>
-            <Input
-              className="search-input"
-              placeholder="搜索游戏或创作者..."
-              value={searchValue}
-              onInput={(e) => setSearchValue(e.detail.value)}
-            />
-          </View>
-        </View>
-
-        {/* Trending Tags */}
-        <View className="tags-section">
-          <Text className="section-label">📌 热门标签</Text>
-          <ScrollView className="tags-scroll" scrollX scrollWithAnimation>
-            <View className="tags-container">
-              {trendingTags.map((tag) => (
-                <View
-                  key={tag}
-                  className={`tag-chip ${selectedTag === tag ? 'active' : ''}`}
-                  onClick={() => setSelectedTag(tag)}
-                >
-                  <Text>{tag}</Text>
+      <ScrollView
+        className="follow-content"
+        scrollY
+        refresherEnabled
+        refresherTriggered={refreshing}
+        onRefresherRefresh={handleRefresh}
+        onScrollToLower={handleLoadMore}
+        lowerThreshold={300}
+      >
+        {activeTab === '推荐关注' && (
+          <>
+            {/* Recommended Creators */}
+            <View className="section">
+              <View className="section-head">
+                <Text className="section-title">热门创作者</Text>
+              </View>
+              <ScrollView className="creators-scroll" scrollX>
+                <View className="creators-list">
+                  {topCreators.map((creator) => (
+                    <View key={creator.id} className="creator-card">
+                      <View className="creator-avatar">
+                        {(creator.avatar || '').startsWith('http') ? (
+                          <Image className="avatar-img" src={creator.avatar} mode="aspectFill" />
+                        ) : (
+                          <Text className="avatar-text">{(creator.username || '?')[0]}</Text>
+                        )}
+                      </View>
+                      <Text className="creator-name">
+                        {creator.username || creator.name || '创作者'}
+                      </Text>
+                      <Text className="creator-meta">
+                        {creator.gameCount || creator.works || 0} 作品
+                      </Text>
+                      <View className="follow-btn">
+                        <Text className="follow-btn-text">关注</Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              ))}
+              </ScrollView>
             </View>
-          </ScrollView>
-        </View>
 
-        {/* Top Creators */}
-        <View className="creators-section">
-          <View className="section-header">
-            <Text className="section-label">👑 热门创作者</Text>
-            <Text
-              className="view-all"
-              onClick={() => Taro.showToast({ title: '敬请期待', icon: 'none' })}
-            >
-              全部 →
-            </Text>
-          </View>
-          <ScrollView className="creators-scroll" scrollX scrollWithAnimation>
-            <View className="creators-container">
-              {topCreators.map((creator) => (
-                <View
-                  key={creator.id}
-                  className="creator-card"
-                  onClick={() => handleCreatorClick(creator.id)}
-                >
-                  <View className="creator-avatar">
-                    {(creator.avatar || '').startsWith('http') ? (
-                      <Image className="creator-avatar-img" src={creator.avatar} mode="aspectFill" />
-                    ) : (
-                      creator.avatar || creator.emoji || '👤'
+            {/* Recommended games */}
+            <View className="section">
+              <View className="section-head">
+                <Text className="section-title">你可能喜欢</Text>
+              </View>
+              {loading ? (
+                <View className="empty-state">
+                  <Text className="empty-text">加载中...</Text>
+                </View>
+              ) : (
+                <View className="waterfall">
+                  <View className="waterfall-col">
+                    {leftCol.map(game =>
+                      <GameCard key={game.id} game={game} onPlay={handlePlay} />
                     )}
                   </View>
-                  <Text className="creator-name">
-                    {creator.username || creator.name || '创作者'}
-                  </Text>
-                  <View className="creator-stats">
-                    <Text className="stat-item">
-                      {creator.gameCount || creator.works || 0} 作品
-                    </Text>
-                    <Text className="stat-item">
-                      {creator.followerCount || creator.followers || 0}
-                    </Text>
+                  <View className="waterfall-col">
+                    {rightCol.map(game =>
+                      <GameCard key={game.id} game={game} onPlay={handlePlay} />
+                    )}
                   </View>
                 </View>
-              ))}
+              )}
             </View>
-          </ScrollView>
-        </View>
+          </>
+        )}
 
-        {/* Recommended Games — 2-column grid like home page */}
-        <View className="recommended-section">
-          <View className="section-header">
-            <Text className="section-label">🎮 推荐游戏</Text>
-            <Text
-              className="view-all"
-              onClick={() => Taro.showToast({ title: '敬请期待', icon: 'none' })}
-            >
-              更多 →
-            </Text>
+        {activeTab === '最新动态' && (
+          <View className="section">
+            {loading ? (
+              <View className="empty-state">
+                <Text className="empty-text">加载中...</Text>
+              </View>
+            ) : followedGames.length === 0 ? (
+              <View className="empty-state">
+                <Text className="empty-icon">⭐</Text>
+                <Text className="empty-title">还没有关注的创作者</Text>
+                <Text className="empty-text">关注创作者后，这里会显示他们的最新作品</Text>
+              </View>
+            ) : (
+              <View className="waterfall">
+                <View className="waterfall-col">
+                  {leftCol.map(game =>
+                    <GameCard key={game.id} game={game} onPlay={handlePlay} />
+                  )}
+                </View>
+                <View className="waterfall-col">
+                  {rightCol.map(game =>
+                    <GameCard key={game.id} game={game} onPlay={handlePlay} />
+                  )}
+                </View>
+              </View>
+            )}
           </View>
-          <View className="games-grid">
-            {recommendedGames.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                onPlay={handleGamePlay}
-                onFork={handleFork}
-              />
-            ))}
-          </View>
-        </View>
+        )}
 
-        <View style={{ height: '80px' }} />
+        {/* Loading more */}
+        {isLoadingMore && (
+          <View className="load-more">
+            <Text className="load-more-text">加载中...</Text>
+          </View>
+        )}
+        {!hasMore && followedGames.length > 0 && (
+          <View className="load-more">
+            <Text className="load-more-end">— 已经到底了 —</Text>
+          </View>
+        )}
+
+        <View className="bottom-spacer" />
       </ScrollView>
 
       <CustomTabBar activeIndex={1} />

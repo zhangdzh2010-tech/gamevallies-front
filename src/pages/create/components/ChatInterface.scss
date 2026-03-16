@@ -1,24 +1,15 @@
 .chat-interface {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
 
   .message-bubble {
     display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    animation: slideIn 0.3s ease-out;
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
 
     &.user {
       justify-content: flex-end;
@@ -26,44 +17,45 @@
 
     &.ai {
       justify-content: flex-start;
+      align-items: flex-start;
     }
 
     .ai-avatar {
-      width: 30px;
-      height: 30px;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
       border-radius: 50%;
       background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(110, 86, 255, 0.35);
 
       .avatar-emoji {
-        font-size: 14px;
+        font-size: 22px;
       }
     }
 
     .bubble-content {
-      max-width: 78%;
-      padding: 12px 16px;
-      border-radius: 18px;
-      font-size: 14px;
-      line-height: 1.65;
+      max-width: 80%;
+      padding: 16px 20px;
+      font-size: 24px;
+      line-height: 1.6;
+      word-break: break-word;
+      overflow-wrap: break-word;
       white-space: pre-wrap;
-      word-wrap: break-word;
 
       &.user {
         background: #6e56ff;
         color: white;
-        border-radius: 18px 6px 18px 18px;
+        border-radius: 20px 4px 20px 20px;
       }
 
       &.ai {
         background: #15151e;
         border: 1px solid #252535;
         color: #eae8f4;
-        border-radius: 6px 18px 18px 18px;
+        border-radius: 4px 20px 20px 20px;
       }
 
       .message-text {
@@ -75,51 +67,41 @@
   .generating-indicator {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    margin-left: 30px;
+    gap: 10px;
+    padding: 16px 20px;
+    margin-left: 54px;
 
     .spinner {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
 
       .dot {
-        width: 6px;
-        height: 6px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         background: #6e56ff;
         animation: bounce 1.4s infinite;
 
-        &.dot-1 {
-          animation-delay: 0s;
-        }
-
-        &.dot-2 {
-          animation-delay: 0.2s;
-        }
-
-        &.dot-3 {
-          animation-delay: 0.4s;
-        }
+        &.dot-1 { animation-delay: 0s; }
+        &.dot-2 { animation-delay: 0.2s; }
+        &.dot-3 { animation-delay: 0.4s; }
       }
 
       @keyframes bounce {
-        0%,
-        80%,
-        100% {
+        0%, 80%, 100% {
           transform: translateY(0);
           opacity: 1;
         }
         40% {
-          transform: translateY(-8px);
+          transform: translateY(-10px);
           opacity: 0.7;
         }
       }
     }
 
     .generating-text {
-      font-size: 12px;
+      font-size: 22px;
       color: #8b87a3;
     }
   }

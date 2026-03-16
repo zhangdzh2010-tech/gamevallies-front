@@ -38,6 +38,10 @@ export default function Login() {
 
   return (
     <View className="login-container">
+      <View className="back-header" onClick={() => navigation.back()}>
+        <Text className="back-arrow">‹</Text>
+        <Text className="back-text">返回</Text>
+      </View>
       <View className="login-content">
         {/* Logo */}
         <View className="logo-section">

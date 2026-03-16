@@ -1,6 +1,14 @@
 import { post, get } from './api';
 
 /**
+ * Expand a short description into a detailed game design prompt
+ */
+export async function expandPrompt(description) {
+  const response = await post('/api/v1/games/expand-prompt', { description });
+  return response?.expanded_prompt || description;
+}
+
+/**
  * Generate a new game from a prompt
  */
 export async function generateGame(prompt) {
@@ -56,6 +64,7 @@ export async function getMyGames(page = 1, limit = 10) {
 }
 
 export default {
+  expandPrompt,
   generateGame,
   getGame,
   iterateGame,

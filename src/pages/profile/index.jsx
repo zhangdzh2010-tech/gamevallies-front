@@ -194,7 +194,7 @@ export default function Profile() {
             ) : myGames.length > 0 ? (
               <View className="games-grid">
                 {myGames.map((game) => (
-                  <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+                  <GameCard key={game.id} game={game} onPlay={handlePlay} />
                 ))}
               </View>
             ) : (
