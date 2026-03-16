@@ -9,64 +9,62 @@
   .tab-container {
     display: flex;
     justify-content: space-around;
-    align-items: flex-end;
-    background: rgba(17, 17, 24, 0.8);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid #252535;
-    height: 120px;
+    align-items: center;
+    background: rgba(12, 12, 18, 0.97);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(110, 86, 255, 0.08);
+    height: 90px;
     padding-bottom: env(safe-area-inset-bottom);
 
     .tab-item {
       flex: 1;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 120px;
-      color: #8b87a3;
-      transition: all 0.3s ease;
-      position: relative;
+      height: 90px;
       cursor: pointer;
 
-      .tab-icon {
-        font-size: 39px;
-        margin-bottom: 8px;
-      }
-
       .tab-label {
-        font-size: 20px;
-        color: #8b87a3;
-        transition: color 0.3s ease;
+        font-size: 24px;
+        color: #55516e;
+        font-weight: 500;
+        letter-spacing: 1px;
       }
 
-      &.active {
-        color: #6e56ff;
-
-        .tab-label {
-          color: #6e56ff;
-        }
+      &.active .tab-label {
+        color: #c4b5fd;
+        font-weight: 600;
       }
 
-      &.special {
-        margin-top: -21px;
+      &:not(.create):active {
+        opacity: 0.6;
+      }
 
-        .special-button {
-          width: 78px;
-          height: 78px;
-          background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
-          border-radius: 24px;
+      // Create button - inline but distinct
+      &.create {
+        flex: 1;
+
+        .create-btn {
+          width: 52px;
+          height: 52px;
+          background: linear-gradient(145deg, #7c3aed 0%, #6e56ff 50%, #a78bfa 100%);
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
-          font-size: 42px;
-          box-shadow: 0 4px 16px rgba(110, 86, 255, 0.3);
-          transition: all 0.3s ease;
+          box-shadow: 0 2px 12px rgba(110, 86, 255, 0.35);
 
-          &:active {
-            transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(110, 86, 255, 0.2);
+          .create-icon {
+            font-size: 36px;
+            color: white;
+            font-weight: 300;
+            line-height: 1;
           }
+        }
+
+        &:active .create-btn {
+          transform: scale(0.9);
+          box-shadow: 0 1px 6px rgba(110, 86, 255, 0.25);
         }
       }
     }

@@ -1,11 +1,15 @@
 .create-container {
   background: #08080d;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   .create-header {
-    padding: 36px 30px;
+    flex-shrink: 0;
+    padding: 20px 24px;
     background: linear-gradient(135deg, rgba(110, 86, 255, 0.1) 0%, rgba(45, 212, 168, 0.1) 100%);
     border-bottom: 1px solid #252535;
 
@@ -14,12 +18,12 @@
       font-size: 36px;
       font-weight: 700;
       color: #eae8f4;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .header-subtitle {
       display: block;
-      font-size: 23px;
+      font-size: 22px;
       color: #8b87a3;
     }
   }
@@ -28,57 +32,53 @@
   .chat-scroll {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .chat-scroll {
-    padding: 24px 30px;
+    padding: 20px 24px;
   }
 
+  // ── Form ──
   .form-section {
-    padding: 30px;
+    padding: 20px 24px;
 
     .form-group {
-      margin-bottom: 30px;
+      margin-bottom: 24px;
 
       .form-label {
         display: block;
         font-size: 26px;
         font-weight: 600;
         color: #eae8f4;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
       }
 
       .form-input {
         width: 100%;
         background: #111118;
         border: 1px solid #252535;
-        border-radius: 18px;
-        padding: 20px 24px;
+        border-radius: 16px;
+        padding: 18px 20px;
         font-size: 26px;
         color: #eae8f4;
         box-sizing: border-box;
-
-        &::placeholder {
-          color: #55516e;
-        }
       }
 
       .form-textarea {
         width: 100%;
         background: #111118;
         border: 1px solid #252535;
-        border-radius: 18px;
-        padding: 20px 24px;
+        border-radius: 16px;
+        padding: 18px 20px;
         font-size: 26px;
         color: #eae8f4;
         box-sizing: border-box;
-        min-height: 240px;
+        min-height: 180px;
         line-height: 1.6;
-
-        &::placeholder {
-          color: #55516e;
-        }
       }
 
       .input-count {
@@ -86,7 +86,7 @@
         text-align: right;
         font-size: 20px;
         color: #8b87a3;
-        margin-top: 8px;
+        margin-top: 6px;
       }
     }
 
@@ -96,9 +96,9 @@
       justify-content: space-between;
       background: rgba(255, 77, 77, 0.12);
       border: 1px solid rgba(255, 77, 77, 0.25);
-      border-radius: 16px;
-      padding: 18px 24px;
-      margin-bottom: 24px;
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
 
       .error-text {
         font-size: 22px;
@@ -115,20 +115,15 @@
     }
 
     .form-actions {
-      display: flex;
-      gap: 21px;
-
       .submit-btn {
-        flex: 1;
         background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
-        border-radius: 21px;
-        padding: 26px;
+        border-radius: 18px;
+        padding: 22px;
         text-align: center;
         color: white;
         font-size: 28px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.3s ease;
 
         &:active {
           transform: scale(0.98);
@@ -137,15 +132,16 @@
     }
   }
 
+  // ── Examples ──
   .examples-section {
-    padding: 0 30px 36px;
+    padding: 0 24px 24px;
 
     .section-title {
       display: block;
       font-size: 28px;
       font-weight: 600;
       color: #eae8f4;
-      margin-bottom: 21px;
+      margin-bottom: 16px;
 
       .section-hint {
         font-size: 20px;
@@ -157,18 +153,17 @@
     .example-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
 
       .example-card {
         display: flex;
         align-items: flex-start;
-        gap: 16px;
+        gap: 14px;
         background: #111118;
         border: 1px solid #252535;
-        border-radius: 18px;
-        padding: 22px 24px;
+        border-radius: 16px;
+        padding: 18px 20px;
         cursor: pointer;
-        transition: all 0.2s ease;
 
         &:active {
           background: #19192a;
@@ -176,7 +171,7 @@
         }
 
         .example-emoji {
-          font-size: 36px;
+          font-size: 32px;
           flex-shrink: 0;
           line-height: 1.2;
         }
@@ -190,19 +185,20 @@
     }
   }
 
+  // ── Tips ──
   .tips-section {
-    padding: 0 30px 36px;
+    padding: 0 24px 24px;
 
     .tips-title {
       display: block;
       font-size: 26px;
       font-weight: 600;
       color: #eae8f4;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
     .tip-item {
-      padding: 10px 0;
+      padding: 8px 0;
 
       .tip-text {
         font-size: 22px;
@@ -213,80 +209,144 @@
   }
 
   .bottom-spacer {
-    height: 144px;
+    height: 140px;
   }
 
-  // ── Chat clarification styles ──
-  .clarify-block {
-    padding: 16px 0;
-    margin-top: 12px;
+  // ── Expanding spinner ──
+  .expanding-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 80px 40px;
 
-    .clarify-question {
-      display: block;
-      font-size: 24px;
-      font-weight: 600;
-      color: #eae8f4;
-      margin-bottom: 18px;
+    .expanding-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(110, 86, 255, 0.2);
+      border-top-color: #6e56ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
     }
 
-    .clarify-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 18px;
+    .expanding-text {
+      font-size: 24px;
+      color: #8b87a3;
+      text-align: center;
+      line-height: 1.6;
+    }
+  }
 
-      .clarify-option {
-        padding: 14px 24px;
-        background: rgba(110, 86, 255, 0.12);
-        border: 1px solid rgba(110, 86, 255, 0.3);
-        border-radius: 30px;
-        font-size: 22px;
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  // ── Confirm section ──
+  .confirm-section {
+    padding: 20px 24px;
+
+    .section-label {
+      display: block;
+      font-size: 22px;
+      font-weight: 600;
+      color: #8b87a3;
+      margin-bottom: 10px;
+    }
+
+    .original-prompt {
+      margin-bottom: 24px;
+      padding: 16px 20px;
+      background: rgba(110, 86, 255, 0.08);
+      border: 1px solid rgba(110, 86, 255, 0.15);
+      border-radius: 14px;
+
+      .original-text {
+        font-size: 24px;
         color: #c4bfff;
+        line-height: 1.5;
+      }
+    }
+
+    .expanded-prompt {
+      margin-bottom: 24px;
+
+      .expanded-textarea {
+        width: 100%;
+        background: #111118;
+        border: 1px solid #252535;
+        border-radius: 16px;
+        padding: 18px 20px;
+        font-size: 24px;
+        color: #eae8f4;
+        box-sizing: border-box;
+        min-height: 200px;
+        line-height: 1.6;
+      }
+
+      .char-count {
+        display: block;
+        text-align: right;
+        font-size: 20px;
+        color: #55516e;
+        margin-top: 6px;
+      }
+    }
+
+    .confirm-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+
+      .confirm-btn {
+        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+        border-radius: 18px;
+        padding: 22px;
+        text-align: center;
+        color: white;
+        font-size: 28px;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
 
         &:active {
-          background: rgba(110, 86, 255, 0.3);
-          border-color: #6e56ff;
-          color: #fff;
+          transform: scale(0.98);
+        }
+      }
+
+      .back-btn {
+        text-align: center;
+        padding: 16px;
+        font-size: 24px;
+        color: #8b87a3;
+        cursor: pointer;
+
+        &:active {
+          color: #c4bfff;
         }
       }
     }
-
-    .clarify-skip {
-      text-align: center;
-      padding: 14px 0;
-      cursor: pointer;
-
-      .skip-text {
-        font-size: 22px;
-        color: #8b87a3;
-        text-decoration: underline;
-      }
-    }
   }
 
-  // ── Progress panel (generating view) ──
+  // ── Progress panel ──
   .progress-panel {
-    padding: 48px 30px;
+    padding: 40px 24px;
 
     .progress-bar-wrapper {
       display: flex;
       align-items: center;
-      gap: 18px;
-      margin-bottom: 42px;
+      gap: 16px;
+      margin-bottom: 36px;
 
       .progress-bar-bg {
         flex: 1;
-        height: 12px;
+        height: 10px;
         background: #1a1a2e;
-        border-radius: 6px;
+        border-radius: 5px;
         overflow: hidden;
 
         .progress-bar-fill {
           height: 100%;
           background: linear-gradient(90deg, #6e56ff, #2dd4a8);
-          border-radius: 6px;
+          border-radius: 5px;
           transition: width 0.6s ease;
         }
       }
@@ -295,7 +355,7 @@
         font-size: 26px;
         font-weight: 700;
         color: #2dd4a8;
-        min-width: 60px;
+        min-width: 55px;
         text-align: right;
       }
     }
@@ -303,17 +363,16 @@
     .stage-list {
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 14px;
 
       .stage-item {
         display: flex;
         align-items: center;
-        gap: 18px;
-        padding: 16px 20px;
+        gap: 14px;
+        padding: 14px 18px;
         border-radius: 14px;
         background: #111118;
         border: 1px solid #1a1a2e;
-        transition: all 0.3s ease;
 
         &.done {
           opacity: 0.6;
@@ -330,30 +389,30 @@
         }
 
         .stage-indicator {
-          width: 32px;
-          height: 32px;
+          width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
 
           .stage-check {
-            font-size: 24px;
+            font-size: 22px;
             color: #2dd4a8;
             font-weight: 700;
           }
 
           .stage-pulse {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             background: #6e56ff;
             animation: pulse 1.2s ease-in-out infinite;
           }
 
           .stage-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #333;
           }
@@ -379,41 +438,40 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 60px 30px;
+    padding: 50px 24px;
 
     .completion-emoji {
-      font-size: 80px;
-      margin-bottom: 24px;
+      font-size: 72px;
+      margin-bottom: 20px;
     }
 
     .completion-title {
       font-size: 32px;
       font-weight: 700;
       color: #eae8f4;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       text-align: center;
     }
 
     .completion-score {
       font-size: 22px;
       color: #2dd4a8;
-      margin-bottom: 42px;
+      margin-bottom: 36px;
     }
 
     .completion-actions {
       display: flex;
-      gap: 24px;
+      gap: 16px;
       width: 100%;
 
       .action-btn {
         flex: 1;
-        padding: 24px;
-        border-radius: 21px;
+        padding: 22px;
+        border-radius: 18px;
         text-align: center;
         font-size: 26px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
 
         &:active {
           transform: scale(0.97);

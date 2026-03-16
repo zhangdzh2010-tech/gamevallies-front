@@ -53,7 +53,8 @@ function getAuthService() {
 function resolveBaseUrl(url) {
   const s = API_CONFIG.SERVICE_URLS;
   if (!s) return API_CONFIG.BASE_URL;
-  if (/\/api\/v\d+\/games\/[^/]+\/iterate/.test(url) || url.includes('/games/generate')) return s.AI;
+  // /games/* (including /generate, /iterate) all go to GAME service
+  // game-service proxies to ai-engine internally
   if (url.startsWith('/api/v1/auth') || url.startsWith('/api/v1/users')) return s.AUTH;
   if (url.startsWith('/api/v1/games')) return s.GAME;
   if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications')) return s.SOCIAL;
@@ -94,7 +95,7 @@ retryConfig = DEFAULT_RETRY_CONFIG)
     // Handle response
     const result = response.data;
 
-    // Handle unauthorized - try to refresh token
+    // Handle unauthorized
     if (response.statusCode === 401) {
       if (!isRefreshing) {
         isRefreshing = true;
@@ -109,29 +110,28 @@ retryConfig = DEFAULT_RETRY_CONFIG)
             const newToken = Storage.getToken();
             if (newToken) {
               onTokenRefreshed(newToken);
-              // Retry original request with new token
               return createRequest(config, { ...retryConfig, count: 0 });
             }
-          } catch (error) {
+          } catch (refreshErr) {
             isRefreshing = false;
-            // Refresh failed, redirect to login
-            require('../store/authStore').default.setState({ isAuthenticated: false });
-            Taro.redirectTo({ url: '/pages/login/index' });
-            throw new Error('Token refresh failed');
           }
         } else {
           isRefreshing = false;
-          Taro.redirectTo({ url: '/pages/login/index' });
-          throw new Error('No refresh token available');
         }
+
+        // No token or refresh failed — navigate to login
+        try {
+          Taro.navigateTo({ url: '/pages/login/index' });
+        } catch (_e) {
+          // ignore navigation error
+        }
+        throw new Error('请先登录');
       } else {
-        // Wait for token refresh to complete
         return new Promise((resolve, reject) => {
           subscribeTokenRefresh((token) => {
-            // Retry with new token
-            createRequest(config, { ...retryConfig, count: 0 }).
-            then(resolve).
-            catch(reject);
+            createRequest(config, { ...retryConfig, count: 0 })
+              .then(resolve)
+              .catch(reject);
           });
         });
       }
@@ -139,20 +139,21 @@ retryConfig = DEFAULT_RETRY_CONFIG)
 
     // Handle other HTTP errors
     if (response.statusCode >= 400) {
-      const error = new Error(result.message || `HTTP ${response.statusCode}`);
-      error.code = result.code;
+      const msg = (result && result.message) || `HTTP ${response.statusCode}`;
+      const error = new Error(msg);
+      error.code = result && result.code;
       error.statusCode = response.statusCode;
       throw error;
     }
 
     // Handle API-level errors
-    if (result.code !== 0 && result.code !== 200) {
-      const error = new Error(result.message || 'API Error');
+    if (result && result.code !== undefined && result.code !== 0 && result.code !== 200) {
+      const error = new Error((result && result.message) || 'API Error');
       error.code = result.code;
       throw error;
     }
 
-    return result.data;
+    return result ? result.data : null;
   } catch (error) {
     // Retry logic for network errors
     if (retryConfig.count > 0 && isNetworkError(error)) {

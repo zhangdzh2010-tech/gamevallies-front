@@ -1,9 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import Taro from '@tarojs/taro';
-import {
-  View,
-  Text,
-  ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -20,20 +17,15 @@ function normalizeGame(game, index) {
     ...game,
     plays: game.plays || game.playCount || 0,
     likes: game.likes || game.likeCount || 0,
-    forks: game.forks || game.forkCount || 0,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
     author: game.author?.displayName || game.author?.username || game.author || '创作者',
-    authorEmoji: game.authorEmoji || '👤',
     isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
 
 export default function Home() {
   const navigation = useNavigation();
-  const { statusBarHeight = 44, windowHeight = 750 } = Taro.getSystemInfoSync();
-  // home header base height (96px) + statusBar + tab bar (120px)
-  const scrollViewHeight = windowHeight - (statusBarHeight + 96) - 120;
   const openGame = useGamePlayerStore((s) => s.openGame);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -88,31 +80,6 @@ export default function Home() {
     }
   };
 
-  const handleFork = (gameId) => {
-    console.log('Fork game:', gameId);
-  };
-
-  const handleCreateClick = () => {
-    navigation.switchTab({
-      url: '/pages/create/index'
-    });
-  };
-
-  const handleAvatarClick = () => {
-    navigation.switchTab({
-      url: '/pages/profile/index'
-    });
-  };
-
-  const formatNumber = (num) => {
-    if (num >= 10000) {
-      return (num / 10000).toFixed(1) + '万';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
-  };
-
   // Split into two columns for waterfall
   const leftCol = [];
   const rightCol = [];
@@ -123,23 +90,16 @@ export default function Home() {
 
   return (
     <View className="home-container">
-      {/* Header */}
-      <View className="header" style={{ paddingTop: `${statusBarHeight}px` }}>
+      {/* Header - logo + game count */}
+      <View className="header">
         <Text className="logo">智了空间</Text>
-        <View className="header-actions">
-          <View className="create-btn" onClick={handleCreateClick}>
-            <Text className="create-icon">＋</Text>
-            <Text className="create-text">创作</Text>
-          </View>
-          <View className="avatar" onClick={handleAvatarClick}>
-            👤
-          </View>
+        <View className="header-stats">
+          <Text className="header-count">AI驱动的游戏创作平台</Text>
         </View>
       </View>
 
       <ScrollView
         className="scroll-view"
-        style={{ height: `${scrollViewHeight}px` }}
         scrollY
         refresherEnabled
         refresherTriggered={refreshing}
@@ -147,65 +107,55 @@ export default function Home() {
         onScrollToLower={handleLoadMore}
         lowerThreshold={300}>
 
-        {/* Weekly Challenge Banner */}
-        <View className="challenge-banner">
-          <View className="challenge-content">
-            <Text className="challenge-title">🏆 本周挑战：超级跳跃王</Text>
-            <View className="challenge-meta">
-              <Text className="meta-item">👥 45人参加</Text>
-              <Text className="meta-item">⏰ 剩余3天</Text>
-            </View>
-          </View>
-          <View className="challenge-action">参加→</View>
+        {/* Section title */}
+        <View className="section-header">
+          <Text className="section-title">推荐游戏</Text>
         </View>
 
         {/* Waterfall Layout */}
         {loadingGames ? (
-          <View style={{ padding: '60px', textAlign: 'center' }}>
-            <Text style={{ color: '#8b87a3', fontSize: '26px' }}>加载中...</Text>
+          <View className="loading-state">
+            <Text className="loading-text">加载中...</Text>
           </View>
         ) : loadError ? (
-          <View style={{ padding: '60px', textAlign: 'center' }}>
-            <Text style={{ color: '#8b87a3', fontSize: '26px', display: 'block', marginBottom: '24px' }}>加载失败</Text>
-            <View
-              style={{ display: 'inline-block', padding: '18px 36px', background: 'rgba(110,86,255,0.15)', borderRadius: '18px', color: '#6e56ff', fontSize: '26px' }}
-              onClick={() => fetchGames(1)}>
-              重试
+          <View className="loading-state">
+            <Text className="loading-text">加载失败</Text>
+            <View className="retry-btn" onClick={() => fetchGames(1)}>
+              <Text className="retry-text">重试</Text>
             </View>
           </View>
         ) : (
           <View className="waterfall">
             <View className="waterfall-col">
               {leftCol.map((game) =>
-                <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+                <GameCard key={game.id} game={game} onPlay={handlePlay} />
               )}
             </View>
             <View className="waterfall-col">
               {rightCol.map((game) =>
-                <GameCard key={game.id} game={game} onPlay={handlePlay} onFork={handleFork} />
+                <GameCard key={game.id} game={game} onPlay={handlePlay} />
               )}
             </View>
           </View>
         )}
 
-        {/* Loading indicator */}
+        {/* Loading more */}
         {isLoadingMore &&
-        <View className="loading-indicator">
-            <Text>加载中...</Text>
+          <View className="loading-indicator">
+            <Text className="loading-text">加载中...</Text>
           </View>
         }
         {!hasMore && games.length > 0 &&
-        <View className="loading-indicator">
-            <Text style={{color: '#555'}}>— 已经到底了 —</Text>
+          <View className="loading-indicator">
+            <Text className="end-text">— 已经到底了 —</Text>
           </View>
         }
 
         <View className="bottom-spacer" />
       </ScrollView>
 
-      {/* Custom TabBar */}
       <CustomTabBar activeIndex={0} />
       <GlobalGamePlayer />
-    </View>);
-
+    </View>
+  );
 }

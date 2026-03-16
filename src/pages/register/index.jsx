@@ -44,6 +44,10 @@ export default function Register() {
 
   return (
     <View className="register-container">
+      <View className="back-header" onClick={() => navigation.back()}>
+        <Text className="back-arrow">‹</Text>
+        <Text className="back-text">返回</Text>
+      </View>
       <View className="register-content">
         <View className="logo-section">
           <Text className="logo">智了空间</Text>

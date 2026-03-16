@@ -44,13 +44,14 @@ export const useGameStore = create((set, get) => ({
 
       return gameId;
     } catch (error) {
+      const msg = (error && error.message) ? error.message : '游戏创建失败，请稍后重试';
       set({
         isLoading: false,
         isGenerating: false,
         generationProgress: null,
-        error: error.message || 'Game creation failed',
+        error: msg,
       });
-      throw error;
+      throw new Error(msg);
     }
   },
 
@@ -146,7 +147,7 @@ export const useGameStore = create((set, get) => ({
       set({
         isLoading: false,
         isGenerating: false,
-        error: error.message || 'Game iteration failed',
+        error: (error && error.message) || '迭代失败，请重试',
       });
       throw error;
     }
@@ -160,7 +161,7 @@ export const useGameStore = create((set, get) => ({
       set({ currentGame: game, isLoading: false });
       return newGameId;
     } catch (error) {
-      set({ isLoading: false, error: error.message || 'Game fork failed' });
+      set({ isLoading: false, error: (error && error.message) || '复制失败' });
       throw error;
     }
   },
@@ -171,7 +172,7 @@ export const useGameStore = create((set, get) => ({
       const publishedGame = await gameService.publishGame(gameId, data);
       set({ currentGame: publishedGame, isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: error.message || 'Game publish failed' });
+      set({ isLoading: false, error: (error && error.message) || '发布失败' });
       throw error;
     }
   },
@@ -185,7 +186,7 @@ export const useGameStore = create((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
-      set({ isLoading: false, error: error.message || 'Failed to fetch games' });
+      set({ isLoading: false, error: (error && error.message) || '加载失败' });
       throw error;
     }
   },
