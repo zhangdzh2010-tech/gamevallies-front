@@ -110,14 +110,15 @@ export const useFeedStore = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const result = await feedService.searchGames(query, { ...filters, page: 1, limit: 10 });
+      const page = filters?.page || 1;
+      const result = await feedService.searchGames(query, { ...filters, page, limit: 10 });
 
-      set({
-        searchResults: result.items,
+      set((state) => ({
+        searchResults: page === 1 ? (result.items || []) : [...state.searchResults, ...(result.items || [])],
         hasMore: result.hasMore,
-        page: 1,
+        page,
         isLoading: false
-      });
+      }));
     } catch (error) {
       set({
         isLoading: false,

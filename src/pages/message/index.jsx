@@ -1,103 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
+import Taro from '@tarojs/taro';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import * as socialService from '../../services/social';
 import './index.scss';
-
-
-
-
-
-
-
-
-
-
-
 
 export default function Message() {
   const navigation = useNavigation();
-  const [messages, setMessages] = useState([
-  {
-    id: '1',
-    type: 'like',
-    avatar: '👨‍💻',
-    name: '用户A',
-    content: '赞了你的游戏《2048数字游戏》',
-    timestamp: '2小时前',
-    read: false,
-    gameId: '1'
-  },
-  {
-    id: '2',
-    type: 'comment',
-    avatar: '👩‍🎨',
-    name: '用户B',
-    content: '在《太空防御》评论: "很棒的游戏！"',
-    timestamp: '4小时前',
-    read: false,
-    gameId: '2'
-  },
-  {
-    id: '3',
-    type: 'follow',
-    avatar: '🧑‍🚀',
-    name: '用户C',
-    content: '关注了你',
-    timestamp: '昨天',
-    read: true
-  },
-  {
-    id: '4',
-    type: 'fork',
-    avatar: '👨‍🎓',
-    name: '用户D',
-    content: '复制了你的游戏《消消乐》',
-    timestamp: '3天前',
-    read: true,
-    gameId: '4'
-  },
-  {
-    id: '5',
-    type: 'system',
-    avatar: '🎮',
-    name: '系统消息',
-    content: '您的游戏《2048数字游戏》已通过审核，现已上线',
-    timestamp: '5天前',
-    read: true
-  }]
-  );
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleMessageClick = (message) => {
-    // Mark as read
-    setMessages(
-      messages.map((m) =>
-      m.id === message.id ? { ...m, read: true } : m
-      )
-    );
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const result = await socialService.getNotifications(1, 50);
+        const items = result?.items || result || [];
+        setMessages(items);
+      } catch (e) {
+        Taro.showToast({ title: '加载消息失败', icon: 'none' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
-    // Navigate if there's a game
-    if (message.gameId) {
+  const handleMessageClick = async (message) => {
+    if (!message.read) {
+      try {
+        await socialService.markNotificationsAsRead([message.id]);
+        setMessages(messages.map((m) => m.id === message.id ? { ...m, read: true } : m));
+      } catch (e) {
+        // best-effort mark-read
+      }
+    }
+    if (message.gameId || message.targetId) {
       navigation.push({
-        url: `/pages/game/detail/index?id=${message.gameId}`
+        url: `/pages/game/detail/index?id=${message.gameId || message.targetId}`
       });
     }
   };
 
   const getIcon = (type) => {
     switch (type) {
-      case 'like':
-        return '♥';
-      case 'comment':
-        return '💬';
-      case 'follow':
-        return '👥';
-      case 'fork':
-        return '🔀';
-      case 'system':
-        return '📢';
-      default:
-        return '📬';
+      case 'like': return '♥';
+      case 'comment': return '💬';
+      case 'follow': return '👥';
+      case 'fork': return '🔀';
+      case 'system': return '📢';
+      default: return '📬';
     }
   };
 
@@ -105,55 +57,49 @@ export default function Message() {
 
   return (
     <View className="message-container">
-      {/* Header */}
       <View className="message-header">
         <Text className="header-title">🔔 消息</Text>
-        {unreadCount > 0 &&
-        <View className="unread-badge">{unreadCount}</View>
-        }
+        {unreadCount > 0 && <View className="unread-badge">{unreadCount}</View>}
       </View>
 
       <ScrollView className="message-scroll" scrollY>
-        {messages.length > 0 ?
-        <View className="message-list">
-            {messages.map((message) =>
-          <View
-            key={message.id}
-            className={`message-item ${!message.read ? 'unread' : ''}`}
-            onClick={() => handleMessageClick(message)}>
-            
-                <View className="message-avatar">{message.avatar}</View>
+        {loading ? (
+          <View className="empty-state">
+            <Text className="empty-text">加载中...</Text>
+          </View>
+        ) : messages.length > 0 ? (
+          <View className="message-list">
+            {messages.map((message) => (
+              <View
+                key={message.id}
+                className={`message-item ${!message.read ? 'unread' : ''}`}
+                onClick={() => handleMessageClick(message)}
+              >
+                <View className="message-avatar">{message.senderAvatar || message.avatar || '👤'}</View>
                 <View className="message-content">
                   <View className="message-header-row">
-                    <Text className="message-name">{message.name}</Text>
-                    <Text className="message-time">{message.timestamp}</Text>
+                    <Text className="message-name">{message.senderName || message.name || '用户'}</Text>
+                    <Text className="message-time">{message.createdAt || message.timestamp || ''}</Text>
                   </View>
-                  <Text className="message-text">{message.content}</Text>
+                  <Text className="message-text">{message.body || message.content || ''}</Text>
                 </View>
-                <View className="message-icon">
-                  {getIcon(message.type)}
-                </View>
-                {!message.read &&
-            <View className="unread-dot" />
-            }
+                <View className="message-icon">{getIcon(message.type)}</View>
+                {!message.read && <View className="unread-dot" />}
               </View>
-          )}
-          </View> :
-
-        <View className="empty-state">
+            ))}
+          </View>
+        ) : (
+          <View className="empty-state">
             <Text className="empty-icon">📭</Text>
             <Text className="empty-text">暂无消息</Text>
-            <Text className="empty-desc">
-              当有人赞、评论或关注你时，会在这里显示
-            </Text>
+            <Text className="empty-desc">当有人赞、评论或关注你时，会在这里显示</Text>
           </View>
-        }
+        )}
 
         <View className="bottom-spacer" />
       </ScrollView>
 
-      {/* Custom TabBar */}
       <CustomTabBar activeIndex={3} />
-    </View>);
-
+    </View>
+  );
 }

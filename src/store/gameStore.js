@@ -14,6 +14,17 @@ const PIPELINE_STAGES = [
   { key: 'completed',         label: '生成完成！',      pct: 100 },
 ];
 
+// Active polling handles — cleared before any new poll to prevent concurrent loops
+let _activeSimInterval = null;
+let _activePollInterval = null;
+let _activeTimeoutId = null;
+
+function _clearActivePolling() {
+  if (_activeSimInterval) { clearInterval(_activeSimInterval); _activeSimInterval = null; }
+  if (_activePollInterval) { clearInterval(_activePollInterval); _activePollInterval = null; }
+  if (_activeTimeoutId) { clearTimeout(_activeTimeoutId); _activeTimeoutId = null; }
+}
+
 export const useGameStore = create((set, get) => ({
   currentGame: null,
   myGames: [],
@@ -27,7 +38,7 @@ export const useGameStore = create((set, get) => ({
   /**
    * Create new game from description — uses polling instead of WebSocket
    */
-  createGame: async (description) => {
+  createGame: async (description, title) => {
     set({
       isLoading: true,
       isGenerating: true,
@@ -36,7 +47,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     try {
-      const gameId = await gameService.generateGame(description);
+      const gameId = await gameService.generateGame(description, title);
       set({ generatingGameId: gameId, isLoading: false });
 
       // Start simulated progress + polling
@@ -59,11 +70,14 @@ export const useGameStore = create((set, get) => ({
    * Internal: simulate pipeline stage progress while polling backend for actual status
    */
   _startProgressPolling: (gameId) => {
+    // Cancel any previous polling before starting new one
+    _clearActivePolling();
+
     let stageIdx = 1; // start from intent_parsing (stage 1)
     const totalSimStages = PIPELINE_STAGES.length - 1; // exclude 'completed'
 
-    // Simulate stage progression — advance one stage every ~8s
-    const simInterval = setInterval(() => {
+    // Simulate stage progression — advance one stage every ~12s (pipeline takes ~80s total, 7 stages)
+    _activeSimInterval = setInterval(() => {
       if (stageIdx < totalSimStages) {
         const stage = PIPELINE_STAGES[stageIdx];
         set({
@@ -76,18 +90,17 @@ export const useGameStore = create((set, get) => ({
         });
         stageIdx++;
       }
-    }, 8000);
+    }, 12000);
 
     // Poll backend for actual completion every 5s
-    const pollInterval = setInterval(async () => {
+    _activePollInterval = setInterval(async () => {
       try {
         const game = await gameService.getGame(gameId);
         const status = game?.status;
 
-        if (status === 'ready' || status === 'draft' || status === 'published') {
+        if (status === 'ready' || status === 'draft' || status === 'published' || status === 'review') {
           // Done!
-          clearInterval(simInterval);
-          clearInterval(pollInterval);
+          _clearActivePolling();
           const doneStage = PIPELINE_STAGES[PIPELINE_STAGES.length - 1];
           set({
             generationProgress: {
@@ -103,8 +116,7 @@ export const useGameStore = create((set, get) => ({
             set({ isGenerating: false, generationProgress: null, generatingGameId: null });
           }, 1500);
         } else if (status === 'failed') {
-          clearInterval(simInterval);
-          clearInterval(pollInterval);
+          _clearActivePolling();
           set({
             isGenerating: false,
             generationProgress: null,
@@ -118,10 +130,9 @@ export const useGameStore = create((set, get) => ({
       }
     }, 5000);
 
-    // Safety timeout after 3 minutes
-    setTimeout(() => {
-      clearInterval(simInterval);
-      clearInterval(pollInterval);
+    // Safety timeout after 20 minutes (AI engine max: 11min, no retry on timeout)
+    _activeTimeoutId = setTimeout(() => {
+      _clearActivePolling();
       const { isGenerating } = get();
       if (isGenerating) {
         set({
@@ -131,7 +142,7 @@ export const useGameStore = create((set, get) => ({
           error: '生成超时，请稍后查看"我的游戏"',
         });
       }
-    }, 180000);
+    }, 1200000);
   },
 
   /**

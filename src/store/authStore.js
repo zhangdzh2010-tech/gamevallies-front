@@ -86,6 +86,34 @@ export const useAuthStore = create((set, get) => ({
   },
 
   /**
+   * 手机号短信登录
+   */
+  loginByPhone: async (phone, smsCode) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.loginByPhone(phone, smsCode);
+      set({ user: response.user, token: response.accessToken, refreshToken: response.refreshToken, isAuthenticated: true, isLoading: false, error: null });
+    } catch (error) {
+      set({ isLoading: false, error: error.message || '登录失败' });
+      throw error;
+    }
+  },
+
+  /**
+   * 手机号短信注册
+   */
+  registerByPhone: async (phone, smsCode, nickname, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.registerByPhone(phone, smsCode, nickname, password);
+      set({ user: response.user, token: response.accessToken, refreshToken: response.refreshToken, isAuthenticated: true, isLoading: false, error: null });
+    } catch (error) {
+      set({ isLoading: false, error: error.message || '注册失败' });
+      throw error;
+    }
+  },
+
+  /**
    * Register new user
    */
   register: async (data) => {

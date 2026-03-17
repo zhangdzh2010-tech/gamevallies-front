@@ -2,6 +2,43 @@ import { post, get, patch } from './api';
 
 import { Storage } from '../utils/storage';
 
+// ── 手机号短信登录/注册 ─────────────────────────────────────────
+
+/**
+ * 发送手机验证码
+ * @param {string} phone - 11位手机号
+ * @param {'register'|'login'|'reset_password'} type
+ */
+export async function sendSmsCode(phone, type) {
+  return post('/api/v1/auth/sms/send-code', { phone, type });
+}
+
+/**
+ * 手机号注册（验证码 + 昵称）
+ */
+export async function registerByPhone(phone, smsCode, nickname, password) {
+  const response = await post('/api/v1/auth/sms/register', { phone, smsCode, nickname, password });
+  const accessToken = response.accessToken || response.token;
+  Storage.setToken(accessToken);
+  Storage.setRefreshToken(response.refreshToken);
+  Storage.setUser(response.user);
+  return { ...response, accessToken };
+}
+
+/**
+ * 手机号登录（验证码）
+ */
+export async function loginByPhone(phone, smsCode) {
+  const response = await post('/api/v1/auth/sms/login', { phone, smsCode });
+  const accessToken = response.accessToken || response.token;
+  Storage.setToken(accessToken);
+  Storage.setRefreshToken(response.refreshToken);
+  Storage.setUser(response.user);
+  return { ...response, accessToken };
+}
+
+// ── 原有邮箱方法（保留兼容）────────────────────────────────────
+
 /**
  * Register new user
  */

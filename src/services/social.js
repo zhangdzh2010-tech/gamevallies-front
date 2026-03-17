@@ -61,6 +61,13 @@ limit = 10)
 }
 
 /**
+ * Toggle like on a comment
+ */
+export async function likeComment(commentId) {
+  return post(`/api/v1/comments/${commentId}/like`, {});
+}
+
+/**
  * Create comment
  */
 export async function createComment(

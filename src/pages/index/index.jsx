@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
@@ -34,6 +34,7 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingGames, setLoadingGames] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [challenge, setChallenge] = useState(null);
 
   const fetchGames = useCallback(async (pageNum, append = false) => {
     if (!append) setLoadingGames(true);
@@ -54,6 +55,9 @@ export default function Home() {
 
   useEffect(() => {
     fetchGames(1);
+    feedService.getCurrentChallenge().then((data) => {
+      if (data) setChallenge(data);
+    }).catch(() => {});
   }, []);
 
   const handleRefresh = async () => {
@@ -78,6 +82,40 @@ export default function Home() {
     } else {
       navigation.push({ url: `/pages/game/detail/index?id=${game.id}` });
     }
+  };
+
+  const handleFork = (gameId) => {
+    console.log('Fork game:', gameId);
+  };
+
+  const handleChallengeJoin = () => {
+    const targetId = challenge?.gameId || challenge?.id;
+    if (targetId) {
+      navigation.push({ url: `/pages/game/detail/index?id=${targetId}` });
+    } else {
+      Taro.showToast({ title: '挑战暂未开放，敬请期待', icon: 'none' });
+    }
+  };
+
+  const handleCreateClick = () => {
+    navigation.switchTab({
+      url: '/pages/create/index'
+    });
+  };
+
+  const handleAvatarClick = () => {
+    navigation.switchTab({
+      url: '/pages/profile/index'
+    });
+  };
+
+  const formatNumber = (num) => {
+    if (num >= 10000) {
+      return (num / 10000).toFixed(1) + '万';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'k';
+    }
+    return num.toString();
   };
 
   // Split into two columns for waterfall
@@ -107,9 +145,19 @@ export default function Home() {
         onScrollToLower={handleLoadMore}
         lowerThreshold={300}>
 
-        {/* Section title */}
-        <View className="section-header">
-          <Text className="section-title">推荐游戏</Text>
+        {/* Weekly Challenge Banner */}
+        <View className="challenge-banner" onClick={handleChallengeJoin}>
+          <View className="challenge-content">
+            <Text className="challenge-title">
+              🏆 {challenge ? `本周挑战：${challenge.title || challenge.name}` : '本周挑战：超级跳跃王'}
+            </Text>
+            <View className="challenge-meta">
+              <Text className="meta-item">👥 {challenge?.participantCount ?? 45}人参加</Text>
+              <Text className="meta-item">⏰ {challenge?.daysLeft != null ? `剩余${challenge.daysLeft}天` : '剩余3天'}</Text>
+            </View>
+          </View>
+          <View className="challenge-action">参加→</View>
+
         </View>
 
         {/* Waterfall Layout */}
