@@ -29,14 +29,17 @@ FUNC_NAME = "gv-frontend"
 FUNC_ID   = "tsrtwmbw"
 PORT      = 8080
 
-AK           = os.environ.get("VOLCENGINE_ACCESS_KEY",         "")
-SK           = os.environ.get("VOLCENGINE_SECRET_KEY",         "")
-REGION       = os.environ.get("VOLCENGINE_REGION",             "cn-shanghai")
-REGISTRY     = os.environ.get("VOLCENGINE_REGISTRY",           "gamevallies-repo-cn-shanghai.cr.volces.com")
-NAMESPACE    = os.environ.get("VOLCENGINE_REGISTRY_NAMESPACE", "gamevallies")
-IMAGE_TAG    = os.environ.get("IMAGE_TAG",                     "latest")
-VCR_USERNAME = os.environ.get("VOLCENGINE_REGISTRY_USERNAME",  "")
-VCR_PASSWORD = os.environ.get("VOLCENGINE_REGISTRY_PASSWORD",  "")
+AK                = os.environ.get("VOLCENGINE_ACCESS_KEY",         "")
+SK                = os.environ.get("VOLCENGINE_SECRET_KEY",         "")
+REGION            = os.environ.get("VOLCENGINE_REGION",             "cn-shanghai")
+REGISTRY          = os.environ.get("VOLCENGINE_REGISTRY",           "gamevallies-repo-cn-shanghai.cr.volces.com")
+NAMESPACE         = os.environ.get("VOLCENGINE_REGISTRY_NAMESPACE", "gamevallies")
+IMAGE_TAG         = os.environ.get("IMAGE_TAG",                     "latest")
+VCR_USERNAME      = os.environ.get("VOLCENGINE_REGISTRY_USERNAME",  "")
+VCR_PASSWORD      = os.environ.get("VOLCENGINE_REGISTRY_PASSWORD",  "")
+VPC_ID            = os.environ.get("VOLCENGINE_VPC_ID",             "")
+SUBNET_ID         = os.environ.get("VOLCENGINE_SUBNET_ID",          "")
+SECURITY_GROUP_ID = os.environ.get("VOLCENGINE_SECURITY_GROUP_ID",  "")
 
 
 def shell(cmd: list) -> bool:
@@ -64,6 +67,9 @@ def main():
     print(f"   函数名:   {FUNC_NAME} (ID: {FUNC_ID})")
     print(f"   地域:     {REGION}")
     print(f"   镜像:     {image}")
+    print(f"   VPC ID:   {VPC_ID or '未设置'}")
+    print(f"   Subnet:   {SUBNET_ID or '未设置'}")
+    print(f"   SecGroup: {SECURITY_GROUP_ID or '未设置'}")
 
     # 1. docker login
     # VCR 用户名含 '#'，通过 stdin 传密码避免 shell 解析问题（见 DEPLOY_RUNBOOK §6.1）
@@ -96,7 +102,7 @@ def main():
     api = get_api()
     print(f"\n🔄 更新函数 {FUNC_NAME} (ID: {FUNC_ID})...")
     try:
-        api.update_function(volcenginesdkvefaas.UpdateFunctionRequest(
+        update_req = volcenginesdkvefaas.UpdateFunctionRequest(
             id=FUNC_ID,
             source_type="image",
             source=image,
@@ -104,7 +110,15 @@ def main():
                 username=VCR_USERNAME,
                 password=VCR_PASSWORD,
             ),
-        ))
+        )
+        if VPC_ID and SUBNET_ID and SECURITY_GROUP_ID:
+            update_req.vpc_config = volcenginesdkvefaas.VpcConfigForUpdateFunctionInput(
+                enable_vpc=True,
+                vpc_id=VPC_ID,
+                subnet_ids=[SUBNET_ID],
+                security_group_ids=[SECURITY_GROUP_ID],
+            )
+        api.update_function(update_req)
         print("✅ 函数配置已更新")
     except Exception as e:
         print(f"❌ 更新函数失败: {e}")

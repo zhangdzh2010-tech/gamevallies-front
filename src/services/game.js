@@ -1,4 +1,4 @@
-import { post, get } from './api';
+import { post, get, del, patch } from './api';
 
 /**
  * Expand a short description into a detailed game design prompt
@@ -11,9 +11,10 @@ export async function expandPrompt(description) {
 /**
  * Generate a new game from a prompt
  */
-export async function generateGame(prompt) {
+export async function generateGame(prompt, title) {
   const response = await post('/api/v1/games/generate', {
-    prompt
+    prompt,
+    ...(title ? { title } : {}),
   });
   return response.gameId;
 }
@@ -63,6 +64,20 @@ export async function getMyGames(page = 1, limit = 10) {
   });
 }
 
+/**
+ * Delete a game by ID
+ */
+export async function deleteGame(gameId) {
+  return del(`/api/v1/games/${gameId}`);
+}
+
+/**
+ * Update game visibility/permission settings
+ */
+export async function updateGameSettings(gameId, settings) {
+  return patch(`/api/v1/games/${gameId}/settings`, settings);
+}
+
 export default {
   expandPrompt,
   generateGame,
@@ -71,4 +86,6 @@ export default {
   forkGame,
   publishGame,
   getMyGames,
+  deleteGame,
+  updateGameSettings,
 };

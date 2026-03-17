@@ -147,11 +147,11 @@ export async function generateSharePoster(game, score) {
  */
 export function formatShareStats(game) {
   return {
-    likes: game.likeCount,
-    comments: game.commentCount,
-    plays: game.playCount,
-    shares: game.shareCount,
-    forks: game.forkCount
+    likes: game.likes || game.likeCount || 0,
+    comments: game.comments || game.commentCount || 0,
+    plays: game.plays || game.playCount || 0,
+    shares: game.shares || game.shareCount || 0,
+    forks: game.forks || game.forkCount || 0,
   };
 }
 

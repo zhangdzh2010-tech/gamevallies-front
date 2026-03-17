@@ -192,17 +192,26 @@ function formatErrorMessage(error) {
 }
 
 /**
- * GET request
+ * GET request — query params are explicitly appended to the URL
  */
 export async function get(
 url,
 config)
 {
+  let finalUrl = url;
+  const { data: queryParams, ...restConfig } = config || {};
+  if (queryParams && typeof queryParams === 'object') {
+    const entries = Object.entries(queryParams).filter(([, v]) => v !== undefined && v !== null);
+    if (entries.length > 0) {
+      const qs = entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+      finalUrl = `${url}?${qs}`;
+    }
+  }
   return createRequest(
     {
       method: 'GET',
-      url,
-      ...config
+      url: finalUrl,
+      ...restConfig
     },
     config?.timeout ? { count: 0, delay: 0, maxDelay: 0 } : DEFAULT_RETRY_CONFIG
   );
