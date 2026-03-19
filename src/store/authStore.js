@@ -1,24 +1,8 @@
 import { create } from 'zustand';
+import Taro from '@tarojs/taro';
 
 import * as authService from '../services/auth';
 import { Storage } from '../utils/storage';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -28,9 +12,6 @@ export const useAuthStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
-  /**
-   * Load auth state from storage on init
-   */
   loadFromStorage: () => {
     const token = Storage.getToken();
     const refreshToken = Storage.getRefreshToken();
@@ -40,28 +21,23 @@ export const useAuthStore = create((set, get) => ({
       token,
       refreshToken,
       user,
-      isAuthenticated: !!(token && user)
+      isAuthenticated: !!(token && user),
     });
 
-    // If we have tokens but no user, fetch user info
     if (token && !user) {
-      authService.
-      getMe().
-      then((userData) => {
-        set({ user: userData, isAuthenticated: true });
-        Storage.setUser(userData);
-      }).
-      catch((error) => {
-        console.error('Failed to fetch user info:', error);
-        // If fetching user fails, clear auth
-        get().logout();
-      });
+      authService
+        .getMe()
+        .then((userData) => {
+          set({ user: userData, isAuthenticated: true });
+          Storage.setUser(userData);
+        })
+        .catch((error) => {
+          console.error('Failed to fetch user info:', error);
+          get().logout();
+        });
     }
   },
 
-  /**
-   * Login with account and password
-   */
   login: async (account, password) => {
     set({ isLoading: true, error: null });
 
@@ -74,48 +50,81 @@ export const useAuthStore = create((set, get) => ({
         refreshToken: response.refreshToken,
         isAuthenticated: true,
         isLoading: false,
-        error: null
+        error: null,
       });
     } catch (error) {
       set({
         isLoading: false,
-        error: error.message || 'Login failed'
+        error: error.message || '登录失败',
       });
       throw error;
     }
   },
 
-  /**
-   * 手机号短信登录
-   */
   loginByPhone: async (phone, smsCode) => {
     set({ isLoading: true, error: null });
     try {
       const response = await authService.loginByPhone(phone, smsCode);
-      set({ user: response.user, token: response.accessToken, refreshToken: response.refreshToken, isAuthenticated: true, isLoading: false, error: null });
+      set({
+        user: response.user,
+        token: response.accessToken,
+        refreshToken: response.refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
     } catch (error) {
       set({ isLoading: false, error: error.message || '登录失败' });
       throw error;
     }
   },
 
-  /**
-   * 手机号短信注册
-   */
+  loginByWechatMiniapp: async (nickname, avatarUrl) => {
+    set({ isLoading: true, error: null });
+    try {
+      const loginResult = await Taro.login();
+      if (!loginResult?.code) {
+        throw new Error('未获取到微信登录 code');
+      }
+
+      const response = await authService.loginByWechatMiniapp(
+        loginResult.code,
+        nickname,
+        avatarUrl,
+      );
+
+      set({
+        user: response.user,
+        token: response.accessToken,
+        refreshToken: response.refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({ isLoading: false, error: error.message || '微信登录失败' });
+      throw error;
+    }
+  },
+
   registerByPhone: async (phone, smsCode, nickname, password) => {
     set({ isLoading: true, error: null });
     try {
       const response = await authService.registerByPhone(phone, smsCode, nickname, password);
-      set({ user: response.user, token: response.accessToken, refreshToken: response.refreshToken, isAuthenticated: true, isLoading: false, error: null });
+      set({
+        user: response.user,
+        token: response.accessToken,
+        refreshToken: response.refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
     } catch (error) {
       set({ isLoading: false, error: error.message || '注册失败' });
       throw error;
     }
   },
 
-  /**
-   * Register new user
-   */
   register: async (data) => {
     set({ isLoading: true, error: null });
 
@@ -128,20 +137,17 @@ export const useAuthStore = create((set, get) => ({
         refreshToken: response.refreshToken,
         isAuthenticated: true,
         isLoading: false,
-        error: null
+        error: null,
       });
     } catch (error) {
       set({
         isLoading: false,
-        error: error.message || 'Registration failed'
+        error: error.message || '注册失败',
       });
       throw error;
     }
   },
 
-  /**
-   * Logout
-   */
   logout: async () => {
     try {
       await authService.logout();
@@ -154,13 +160,10 @@ export const useAuthStore = create((set, get) => ({
       token: null,
       refreshToken: null,
       isAuthenticated: false,
-      error: null
+      error: null,
     });
   },
 
-  /**
-   * Refresh authentication tokens
-   */
   refreshAuth: async () => {
     const { refreshToken } = get();
 
@@ -172,7 +175,7 @@ export const useAuthStore = create((set, get) => ({
       const newToken = await authService.refreshTokenRequest(refreshToken);
 
       set({
-        token: newToken
+        token: newToken,
       });
     } catch (error) {
       set({ isAuthenticated: false });
@@ -180,20 +183,14 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  /**
-   * Set user data
-   */
   setUser: (user) => {
     set({ user });
     Storage.setUser(user);
   },
 
-  /**
-   * Clear error message
-   */
   clearError: () => {
     set({ error: null });
-  }
+  },
 }));
 
 export default useAuthStore;

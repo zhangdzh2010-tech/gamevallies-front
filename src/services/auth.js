@@ -1,12 +1,9 @@
 import { post, get, patch } from './api';
-
 import { Storage } from '../utils/storage';
-
-// ── 手机号短信登录/注册 ─────────────────────────────────────────
 
 /**
  * 发送手机验证码
- * @param {string} phone - 11位手机号
+ * @param {string} phone - 11 位手机号
  * @param {'register'|'login'|'reset_password'} type
  */
 export async function sendSmsCode(phone, type) {
@@ -14,7 +11,7 @@ export async function sendSmsCode(phone, type) {
 }
 
 /**
- * 手机号注册（验证码 + 昵称）
+ * 手机号注册
  */
 export async function registerByPhone(phone, smsCode, nickname, password) {
   const response = await post('/api/v1/auth/sms/register', { phone, smsCode, nickname, password });
@@ -26,7 +23,7 @@ export async function registerByPhone(phone, smsCode, nickname, password) {
 }
 
 /**
- * 手机号登录（验证码）
+ * 手机号验证码登录
  */
 export async function loginByPhone(phone, smsCode) {
   const response = await post('/api/v1/auth/sms/login', { phone, smsCode });
@@ -37,7 +34,21 @@ export async function loginByPhone(phone, smsCode) {
   return { ...response, accessToken };
 }
 
-// ── 原有邮箱方法（保留兼容）────────────────────────────────────
+/**
+ * 微信小程序登录
+ */
+export async function loginByWechatMiniapp(code, nickname, avatarUrl) {
+  const response = await post('/api/v1/auth/wechat/miniapp-login', {
+    code,
+    nickname,
+    avatarUrl,
+  });
+  const accessToken = response.accessToken || response.token;
+  Storage.setToken(accessToken);
+  Storage.setRefreshToken(response.refreshToken);
+  Storage.setUser(response.user);
+  return { ...response, accessToken };
+}
 
 /**
  * Register new user
@@ -50,7 +61,6 @@ export async function register(data) {
   };
 
   const response = await post('/api/v1/auth/register', payload);
-  // Backend returns same shape as login: { accessToken, refreshToken, user }
   Storage.setToken(response.accessToken);
   Storage.setRefreshToken(response.refreshToken);
   Storage.setUser(response.user);
@@ -63,10 +73,9 @@ export async function register(data) {
 export async function login(account, password) {
   const response = await post('/api/v1/auth/login', {
     account,
-    password
+    password,
   });
 
-  // Backend returns { token, refreshToken, user } — normalize to accessToken
   const accessToken = response.accessToken || response.token;
   Storage.setToken(accessToken);
   Storage.setRefreshToken(response.refreshToken);
@@ -81,10 +90,9 @@ export async function login(account, password) {
 export async function refreshTokenRequest(refreshToken) {
   const response = await post(
     '/api/v1/auth/refresh',
-    { refreshToken }
+    { refreshToken },
   );
 
-  // Update stored tokens (backend returns accessToken, not token)
   Storage.setToken(response.accessToken);
   Storage.setRefreshToken(response.refreshToken);
 
@@ -103,7 +111,6 @@ export async function logout() {
   } catch (error) {
     console.error('Logout request failed:', error);
   } finally {
-    // Always clear local storage
     Storage.removeToken();
     Storage.removeRefreshToken();
     Storage.removeUser();
@@ -123,7 +130,7 @@ export async function getMe() {
 export async function sendVerificationCode(target, type) {
   await post('/api/v1/auth/send-code', {
     target,
-    type
+    type,
   });
 }
 
@@ -133,7 +140,7 @@ export async function sendVerificationCode(target, type) {
 export async function verifyCode(target, code) {
   const result = await post('/api/v1/auth/verify-code', {
     target,
-    code
+    code,
   });
 
   return result.valid;
@@ -142,15 +149,11 @@ export async function verifyCode(target, code) {
 /**
  * Reset password with verification code
  */
-export async function resetPassword(
-target,
-code,
-newPassword)
-{
+export async function resetPassword(target, code, newPassword) {
   await post('/api/v1/auth/reset-password', {
     target,
     code,
-    newPassword
+    newPassword,
   });
 }
 
@@ -160,7 +163,7 @@ newPassword)
 export async function changePassword(currentPassword, newPassword) {
   await post('/api/v1/auth/change-password', {
     currentPassword,
-    newPassword
+    newPassword,
   });
 }
 
@@ -183,10 +186,8 @@ export async function updateProfile(data) {
  * TODO: Implement multipart form data upload when backend endpoint is ready
  */
 export async function uploadAvatar(filePath) {
-  // Note: This would typically use a different approach with multipart form data
-  // For now, returning a placeholder
   const response = await post('/api/v1/users/avatar', {
-    filePath
+    filePath,
   });
 
   return response.url;
@@ -195,6 +196,7 @@ export async function uploadAvatar(filePath) {
 export default {
   register,
   login,
+  loginByWechatMiniapp,
   refreshTokenRequest,
   logout,
   getMe,
@@ -204,5 +206,5 @@ export default {
   changePassword,
   getUserProfile,
   updateProfile,
-  uploadAvatar
+  uploadAvatar,
 };

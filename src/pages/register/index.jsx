@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
@@ -30,7 +30,10 @@ export default function Register() {
       setCountdown(COOLDOWN);
       timerRef.current = setInterval(() => {
         setCountdown((c) => {
-          if (c <= 1) { clearInterval(timerRef.current); return 0; }
+          if (c <= 1) {
+            clearInterval(timerRef.current);
+            return 0;
+          }
           return c - 1;
         });
       }, 1000);
@@ -41,23 +44,28 @@ export default function Register() {
 
   const handleRegister = async () => {
     if (!isPhoneValid) {
-      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' }); return;
+      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
+      return;
     }
     if (code.length !== 6) {
-      Taro.showToast({ title: '请输入6位验证码', icon: 'none' }); return;
+      Taro.showToast({ title: '请输入 6 位验证码', icon: 'none' });
+      return;
     }
     if (!nickname.trim()) {
-      Taro.showToast({ title: '请输入你的昵称', icon: 'none' }); return;
+      Taro.showToast({ title: '请输入你的昵称', icon: 'none' });
+      return;
     }
     if (password.length < 6) {
-      Taro.showToast({ title: '密码至少6位', icon: 'none' }); return;
+      Taro.showToast({ title: '密码至少 6 位', icon: 'none' });
+      return;
     }
     if (password !== confirmPassword) {
-      Taro.showToast({ title: '两次密码输入不一致', icon: 'none' }); return;
+      Taro.showToast({ title: '两次密码输入不一致', icon: 'none' });
+      return;
     }
     try {
       await registerByPhone(phone, code, nickname.trim(), password);
-      Taro.showToast({ title: '注册成功！', icon: 'success' });
+      Taro.showToast({ title: '注册成功', icon: 'success' });
       setTimeout(() => navigation.switchTab({ url: '/pages/index/index' }), 800);
     } catch (e) {
       Taro.showToast({ title: e.message || '注册失败，请重试', icon: 'none' });
@@ -73,12 +81,11 @@ export default function Register() {
 
       <View className="register-content">
         <View className="logo-section">
-          <Text className="logo">智了空间</Text>
+          <Text className="logo">智乐空间</Text>
           <Text className="tagline">创建你的账号</Text>
         </View>
 
         <View className="form-section">
-          {/* 手机号 */}
           <View className="input-field">
             <Text className="field-prefix">+86</Text>
             <Input
@@ -92,7 +99,6 @@ export default function Register() {
             />
           </View>
 
-          {/* 验证码 */}
           <View className="input-field code-field">
             <Input
               className="input"
@@ -111,7 +117,6 @@ export default function Register() {
             </View>
           </View>
 
-          {/* 昵称 */}
           <View className="input-field">
             <Input
               className="input"
@@ -124,13 +129,12 @@ export default function Register() {
             />
           </View>
 
-          {/* 密码 */}
           <View className="input-field">
             <Input
               className="input"
               type="safe-password"
               password
-              placeholder="设置登录密码（至少6位）"
+              placeholder="设置登录密码（至少 6 位）"
               placeholderStyle="color: #55516e"
               maxlength={128}
               value={password}
@@ -138,7 +142,6 @@ export default function Register() {
             />
           </View>
 
-          {/* 确认密码 */}
           <View className="input-field">
             <Input
               className="input"
