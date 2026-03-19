@@ -66,6 +66,12 @@
         font-size: 26px;
         color: #eae8f4;
         box-sizing: border-box;
+        line-height: 1.4;
+
+        &:focus {
+          border-color: #3a3950;
+          background: #111118;
+        }
       }
 
       .form-textarea {
@@ -79,6 +85,36 @@
         box-sizing: border-box;
         min-height: 180px;
         line-height: 1.6;
+        display: block;
+
+        &:focus-within {
+          border-color: #3a3950;
+          background: #111118;
+        }
+
+        textarea {
+          width: 100%;
+          min-height: 144px;
+          padding: 0;
+          margin: 0;
+          border: 0;
+          outline: 0;
+          resize: none;
+          background: transparent;
+          color: inherit;
+          font: inherit;
+          line-height: inherit;
+          box-sizing: border-box;
+
+          &::placeholder {
+            color: #55516e;
+          }
+
+          &:focus {
+            border: 0;
+            background: transparent;
+          }
+        }
       }
 
       .input-count {
