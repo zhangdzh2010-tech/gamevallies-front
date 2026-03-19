@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
@@ -12,10 +12,8 @@ export default function Login() {
   const navigation = useNavigation();
   const { login, loginByPhone, loginByWechatMiniapp, isLoading } = useAuthStore();
   const [mode, setMode] = useState('password');
-
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
-
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -24,8 +22,22 @@ export default function Login() {
   const isPhoneValid = /^1[3-9]\d{9}$/.test(phone);
   const canSend = isPhoneValid && countdown === 0;
 
+  useEffect(() => () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  }, []);
+
   const handleSendCode = async () => {
-    if (!canSend) return;
+    if (!isPhoneValid) {
+      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
+      return;
+    }
+
+    if (countdown > 0) {
+      Taro.showToast({ title: `${countdown} 秒后可重新获取`, icon: 'none' });
+      return;
+    }
 
     try {
       await authService.sendSmsCode(phone, 'login');
@@ -35,6 +47,7 @@ export default function Login() {
         setCountdown((current) => {
           if (current <= 1) {
             clearInterval(timerRef.current);
+            timerRef.current = null;
             return 0;
           }
           return current - 1;
@@ -111,7 +124,7 @@ export default function Login() {
   return (
     <View className="login-container">
       <View className="back-header" onClick={() => navigation.back()}>
-        <Text className="back-arrow">‹</Text>
+        <Text className="back-arrow">{'<'}</Text>
         <Text className="back-text">返回</Text>
       </View>
 
