@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
@@ -22,23 +22,39 @@ export default function Register() {
   const isPhoneValid = /^1[3-9]\d{9}$/.test(phone);
   const canSend = isPhoneValid && countdown === 0;
 
+  useEffect(() => () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  }, []);
+
   const handleSendCode = async () => {
-    if (!canSend) return;
+    if (!isPhoneValid) {
+      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
+      return;
+    }
+
+    if (countdown > 0) {
+      Taro.showToast({ title: `${countdown} 秒后可重新获取`, icon: 'none' });
+      return;
+    }
+
     try {
       await authService.sendSmsCode(phone, 'register');
       Taro.showToast({ title: '验证码已发送', icon: 'success', duration: 1500 });
       setCountdown(COOLDOWN);
       timerRef.current = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
+        setCountdown((current) => {
+          if (current <= 1) {
             clearInterval(timerRef.current);
+            timerRef.current = null;
             return 0;
           }
-          return c - 1;
+          return current - 1;
         });
       }, 1000);
-    } catch (e) {
-      Taro.showToast({ title: e.message || '发送失败，请重试', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: error.message || '发送失败，请重试', icon: 'none' });
     }
   };
 
@@ -47,35 +63,40 @@ export default function Register() {
       Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
       return;
     }
+
     if (code.length !== 6) {
       Taro.showToast({ title: '请输入 6 位验证码', icon: 'none' });
       return;
     }
+
     if (!nickname.trim()) {
       Taro.showToast({ title: '请输入你的昵称', icon: 'none' });
       return;
     }
+
     if (password.length < 6) {
       Taro.showToast({ title: '密码至少 6 位', icon: 'none' });
       return;
     }
+
     if (password !== confirmPassword) {
       Taro.showToast({ title: '两次密码输入不一致', icon: 'none' });
       return;
     }
+
     try {
       await registerByPhone(phone, code, nickname.trim(), password);
       Taro.showToast({ title: '注册成功', icon: 'success' });
       setTimeout(() => navigation.switchTab({ url: '/pages/index/index' }), 800);
-    } catch (e) {
-      Taro.showToast({ title: e.message || '注册失败，请重试', icon: 'none' });
+    } catch (error) {
+      Taro.showToast({ title: error.message || '注册失败，请重试', icon: 'none' });
     }
   };
 
   return (
     <View className="register-container">
       <View className="back-header" onClick={() => navigation.back()}>
-        <Text className="back-arrow">‹</Text>
+        <Text className="back-arrow">{'<'}</Text>
         <Text className="back-text">返回</Text>
       </View>
 
