@@ -1,5 +1,6 @@
 FROM nginx:alpine
 COPY dist/h5 /usr/share/nginx/html
+COPY 33zqDBay4T.txt /usr/share/nginx/html/33zqDBay4T.txt
 # 预读所有静态文件，避免 FaaS overlay 文件系统懒加载导致首次 I/O 超时
 RUN find /usr/share/nginx/html -type f -exec cat {} + > /dev/null
 RUN echo 'server { \
