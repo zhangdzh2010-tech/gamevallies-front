@@ -1,0 +1,271 @@
+.subscription-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #08080d;
+  overflow: hidden;
+}
+
+.subscription-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 32rpx;
+}
+
+/* Quota Card */
+.quota-card {
+  background: #1a1a2e;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  margin-top: 32rpx;
+}
+
+.quota-card-title {
+  font-size: 28rpx;
+  color: #8b87a3;
+  margin-bottom: 28rpx;
+}
+
+.quota-progress-wrap {
+  margin-bottom: 32rpx;
+}
+
+.quota-progress-bg {
+  height: 16rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin-bottom: 12rpx;
+}
+
+.quota-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6e56ff, #2dd4a8);
+  border-radius: 8rpx;
+  transition: width 0.3s ease;
+}
+
+.quota-progress-text {
+  font-size: 24rpx;
+  color: #55516e;
+}
+
+.quota-remaining {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+
+.quota-remaining-num {
+  font-size: 64rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.quota-remaining-label {
+  font-size: 28rpx;
+  color: #8b87a3;
+}
+
+/* Subscription Status Card */
+.sub-status-card {
+  background: #1a1a2e;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  margin-top: 24rpx;
+}
+
+.sub-status-title {
+  font-size: 28rpx;
+  color: #8b87a3;
+  margin-bottom: 24rpx;
+}
+
+.sub-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.sub-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-info-label {
+  font-size: 28rpx;
+  color: #c4c1d4;
+}
+
+.sub-info-value {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* Plans Section */
+.plans-section {
+  margin-top: 48rpx;
+}
+
+.plans-section-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 28rpx;
+}
+
+.plans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.plan-card {
+  background: #1a1a2e;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.06);
+  position: relative;
+
+  &.recommended {
+    border-color: rgba(110, 86, 255, 0.4);
+    background: linear-gradient(135deg, rgba(110, 86, 255, 0.08) 0%, rgba(110, 86, 255, 0.02) 100%);
+  }
+}
+
+.plan-card-badge {
+  position: absolute;
+  top: -2rpx;
+  right: 32rpx;
+  background: linear-gradient(135deg, #6e56ff, #2dd4a8);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 6rpx 20rpx;
+  border-radius: 0 0 16rpx 16rpx;
+}
+
+.plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16rpx;
+}
+
+.plan-card-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.plan-card-price {
+  display: flex;
+  align-items: baseline;
+}
+
+.plan-card-currency {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.plan-card-amount {
+  font-size: 52rpx;
+  color: #ffffff;
+  font-weight: 700;
+  margin: 0 2rpx;
+}
+
+.plan-card-period {
+  font-size: 26rpx;
+  color: #8b87a3;
+}
+
+.plan-card-quota {
+  font-size: 26rpx;
+  color: #2dd4a8;
+  font-weight: 500;
+  margin-bottom: 28rpx;
+}
+
+.plan-card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.plan-card-feature {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.feature-dot {
+  font-size: 28rpx;
+  color: #2dd4a8;
+}
+
+.feature-text {
+  font-size: 26rpx;
+  color: #c4c1d4;
+}
+
+.plan-card-subscribe-btn {
+  width: 100%;
+  padding: 28rpx 0;
+  border-radius: 24rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+  box-shadow: 0 8rpx 24rpx rgba(110, 86, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  &.subscribing {
+    background: #55516e;
+    box-shadow: none;
+    cursor: not-allowed;
+    
+    &:active {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    cursor: not-allowed;
+
+    &:active {
+      opacity: 0.55;
+      transform: none;
+    }
+  }
+}
+
+/* Subscriber Bar */
+.subscriber-bar {
+  text-align: center;
+  padding: 32rpx 0 16rpx;
+}
+
+.subscriber-bar text {
+  font-size: 24rpx;
+  color: #55516e;
+}
+
+.bottom-spacer {
+  height: 200rpx;
+}

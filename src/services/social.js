@@ -96,15 +96,6 @@ limit = 10)
 }
 
 /**
- * Update comment
- */
-export async function updateComment(commentId, content) {
-  return post(`/api/v1/comments/${commentId}`, {
-    content
-  });
-}
-
-/**
  * Delete comment
  */
 export async function deleteComment(commentId) {
@@ -210,7 +201,7 @@ export async function getTrendingCreators(limit = 10) {
  */
 export async function checkFollowStatus(userId) {
   const result = await get(`/api/v1/social/follow-status/${userId}`);
-  return result.following;
+  return result?.isFollowing ?? result?.following ?? false;
 }
 
 /**
@@ -229,7 +220,6 @@ export default {
   getFollowing,
   createComment,
   getComments,
-  updateComment,
   deleteComment,
   getCommentReplies,
   getShareData,

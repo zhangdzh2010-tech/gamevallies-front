@@ -1,26 +1,148 @@
 import { post, get, del, patch } from './api';
 
-/**
- * Expand a short description into a detailed game design prompt
- */
-export async function expandPrompt(description) {
-  const response = await post('/api/v1/games/expand-prompt', { description });
-  return response?.expanded_prompt || description;
+function normalizeGenerationTask(task) {
+  if (!task || typeof task !== 'object') {
+    return null;
+  }
+
+  const progressPct = Number(task.progressPct ?? task.progress ?? 0);
+  const errorMessage = task.errorMessage || task.terminalError?.message || '';
+
+  return {
+    taskId: task.taskId || task.id || '',
+    taskType: task.taskType || task.type || '',
+    status: task.status || 'queued',
+    region: task.region || '',
+    gameId: task.gameId || task.game_id || '',
+    version: task.version ?? null,
+    progressPct: Number.isFinite(progressPct) ? progressPct : 0,
+    cancelRequested: task.cancelRequested === true,
+    currentStage: task.currentStage || task.progressStage || task.stage || null,
+    currentStepKey: task.currentStepKey || task.stepKey || null,
+    progressMessage: task.progressMessage || '',
+    errorMessage,
+    failedStage: task.failedStage || null,
+    taskTimeoutS: task.taskTimeoutS ?? task.timeoutS ?? null,
+    wsChannel: task.wsChannel || null,
+    pollUrl: task.pollUrl || null,
+    eventsUrl: task.eventsUrl || null,
+    cancelUrl: task.cancelUrl || null,
+    startedAt: task.startedAt || null,
+    completedAt: task.completedAt || null,
+    terminalError: task.terminalError || (errorMessage ? {
+      message: errorMessage,
+      errorCode: task.failedStage || 'task_failed',
+    } : null),
+  };
+}
+
+function normalizeTaskEvent(event, index = 0) {
+  if (!event || typeof event !== 'object') {
+    return null;
+  }
+
+  const seqNo = Number(event.seqNo ?? event.seq_no ?? event.sequence ?? index + 1);
+
+  return {
+    id: event.id || '',
+    seqNo: Number.isFinite(seqNo) ? seqNo : 0,
+    eventType: event.eventType || event.type || '',
+    stage: event.stage || null,
+    stepKey: event.stepKey || event.stage || null,
+    percentage: Number(event.percentage ?? event.progressPct ?? event.progress ?? 0) || 0,
+    status: event.status || event.eventType || 'info',
+    message: event.message || event.progressMessage || '',
+    detail: event.detail || event.details || null,
+    createdAt: event.createdAt || null,
+  };
+}
+
+function normalizeTaskEventsResponse(response) {
+  const rawItems = Array.isArray(response)
+    ? response
+    : Array.isArray(response?.items)
+      ? response.items
+      : Array.isArray(response?.data)
+        ? response.data
+        : [];
+
+  const items = rawItems.map((event, index) => normalizeTaskEvent(event, index)).filter(Boolean);
+
+  return {
+    items,
+    nextCursor: response?.nextCursor ?? response?.cursor ?? (items.length ? items[items.length - 1].seqNo : 0),
+    hasMore: response?.hasMore === true,
+  };
+}
+
+function normalizeGenerateResponse(response, fallbackGameId = '') {
+  if (typeof response === 'string') {
+    return {
+      gameId: response,
+      title: '',
+      description: '',
+      status: 'generating',
+      canPlay: true,
+      quotaRemaining: null,
+      requireSubscription: false,
+      generationTask: null,
+    };
+  }
+
+  return {
+    gameId: response?.gameId || response?.id || fallbackGameId || '',
+    title: response?.title || '',
+    description: response?.description || response?.prompt || '',
+    status: response?.status || 'generating',
+    canPlay: response?.canPlay !== false,
+    quotaRemaining: response?.quotaRemaining ?? null,
+    requireSubscription: response?.requireSubscription === true,
+    generationTask: normalizeGenerationTask(response?.generationTask),
+  };
+}
+
+function normalizeIterateResponse(response, fallbackGameId = '') {
+  if (!response || typeof response !== 'object') {
+    return {
+      gameId: fallbackGameId,
+      version: null,
+      status: 'iterating',
+      iterationId: null,
+      generationTask: null,
+    };
+  }
+
+  return {
+    gameId: response.gameId || fallbackGameId,
+    version: response.version ?? null,
+    status: response.status || 'iterating',
+    iterationId: response.iterationId || null,
+    generationTask: normalizeGenerationTask(response.generationTask),
+  };
 }
 
 /**
  * Generate a new game from a prompt
  */
-export async function generateGame(prompt, title) {
+export async function generateGame(prompt, title, type) {
   const response = await post('/api/v1/games/generate', {
+    description: prompt,
     prompt,
     ...(title ? { title } : {}),
+    ...(type ? { type } : {}),
   });
-  return response.gameId;
+  return normalizeGenerateResponse(response);
 }
 
 /**
- * Get single game by ID (used for polling generation status)
+ * Get supported game types
+ */
+export async function getGameTypes() {
+  return get('/api/v1/games/game-types');
+}
+
+/**
+ * Get single game by ID
  */
 export async function getGame(id) {
   return get(`/api/v1/games/${id}`);
@@ -34,7 +156,36 @@ export async function iterateGame(gameId, feedback) {
     `/api/v1/games/${gameId}/iterate`,
     { feedback }
   );
-  return response.iterationId;
+  return normalizeIterateResponse(response, gameId);
+}
+
+/**
+ * Query generation task details
+ */
+export async function getGenerationTask(taskId) {
+  const response = await get(`/api/v1/games/tasks/${taskId}`);
+  return normalizeGenerationTask(response);
+}
+
+/**
+ * Query generation task events
+ */
+export async function getGenerationTaskEvents(taskId, cursor, limit = 50) {
+  const response = await get(`/api/v1/games/tasks/${taskId}/events`, {
+    data: {
+      ...(cursor ? { cursor } : {}),
+      limit,
+    },
+  });
+
+  return normalizeTaskEventsResponse(response);
+}
+
+/**
+ * Cancel an active generation task
+ */
+export async function cancelGenerationTask(taskId) {
+  return post(`/api/v1/games/tasks/${taskId}/cancel`, {});
 }
 
 /**
@@ -79,10 +230,13 @@ export async function updateGameSettings(gameId, settings) {
 }
 
 export default {
-  expandPrompt,
   generateGame,
+  getGameTypes,
   getGame,
   iterateGame,
+  getGenerationTask,
+  getGenerationTaskEvents,
+  cancelGenerationTask,
   forkGame,
   publishGame,
   getMyGames,

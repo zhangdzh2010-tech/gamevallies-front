@@ -1,20 +1,11 @@
 import Taro from '@tarojs/taro';
 import { API_CONFIG } from '../types';
 
-
-
-
-
-
-
-
-
-
-
 class WebSocketManager {
   socketUrl = API_CONFIG.WS_URL;
   isConnected = false;
   isConnecting = false;
+  listenersBound = false;
   reconnectCount = 0;
   reconnectDelay = 1000;
   maxReconnectDelay = 30000;
@@ -47,7 +38,6 @@ class WebSocketManager {
           },
           success: () => {
             this.isConnecting = false;
-            console.log('[WebSocket] Connected');
             resolve();
           },
           fail: (error) => {
@@ -57,31 +47,7 @@ class WebSocketManager {
           }
         });
 
-        // Handle incoming messages
-        Taro.onSocketMessage((message) => {
-          this.handleMessage(message);
-        });
-
-        // Handle connection open
-        Taro.onSocketOpen(() => {
-          this.isConnected = true;
-          this.reconnectCount = 0;
-          this.startHeartbeat();
-          console.log('[WebSocket] Socket opened');
-        });
-
-        // Handle errors
-        Taro.onSocketError((error) => {
-          console.error('[WebSocket] Error:', error);
-        });
-
-        // Handle connection close
-        Taro.onSocketClose(() => {
-          this.isConnected = false;
-          this.stopHeartbeat();
-          this.attemptReconnect(token);
-          console.log('[WebSocket] Socket closed');
-        });
+        this.bindSocketListeners(token);
       } catch (error) {
         this.isConnecting = false;
         console.error('[WebSocket] Connection error:', error);
@@ -215,6 +181,34 @@ class WebSocketManager {
     return this.isConnected;
   }
 
+  bindSocketListeners(token) {
+    if (this.listenersBound) {
+      return;
+    }
+
+    this.listenersBound = true;
+
+    Taro.onSocketMessage((message) => {
+      this.handleMessage(message);
+    });
+
+    Taro.onSocketOpen(() => {
+      this.isConnected = true;
+      this.reconnectCount = 0;
+      this.startHeartbeat();
+    });
+
+    Taro.onSocketError((error) => {
+      console.error('[WebSocket] Error:', error);
+    });
+
+    Taro.onSocketClose(() => {
+      this.isConnected = false;
+      this.stopHeartbeat();
+      this.attemptReconnect(token);
+    });
+  }
+
   /**
    * Handle incoming message
    */
@@ -228,7 +222,9 @@ class WebSocketManager {
         data = message.data;
       }
 
-      const { type, gameId, data: payload } = data;
+      const type = data?.type;
+      const payload = data?.data || data?.payload || data;
+      const gameId = data?.gameId || payload?.gameId || null;
 
       // Handle game generation progress
       if (type === 'gen:progress' && gameId) {
@@ -297,7 +293,6 @@ class WebSocketManager {
     );
 
     this.reconnectCount++;
-    console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectCount})`);
 
     setTimeout(() => {
       this.connect(token).catch((error) => {

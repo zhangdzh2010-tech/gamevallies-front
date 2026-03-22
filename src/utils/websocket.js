@@ -39,7 +39,6 @@ export class WebSocketManager {
         this.socket = new WebSocket(url.toString());
 
         this.socket.onopen = () => {
-          console.log('[WebSocket] Connected');
           this.reconnectAttempts = 0;
           this.startHeartbeat();
           this.flushMessageQueue();
@@ -63,7 +62,6 @@ export class WebSocketManager {
         };
 
         this.socket.onclose = () => {
-          console.log('[WebSocket] Disconnected');
           this.stopHeartbeat();
           this.notifyStatusChange('disconnected');
           this.attemptReconnect();
@@ -153,7 +151,6 @@ export class WebSocketManager {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      console.log(`[WebSocket] Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
       setTimeout(() => {
         this.connect().catch((error) => {

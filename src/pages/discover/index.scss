@@ -142,13 +142,13 @@
       }
 
       .follow-btn {
-        padding: 8px 24px;
+        padding: 6px 17px;
         background: rgba(110, 86, 255, 0.15);
         border: 1px solid rgba(110, 86, 255, 0.25);
-        border-radius: 14px;
+        border-radius: 10px;
 
         .follow-btn-text {
-          font-size: 20px;
+          font-size: 14px;
           color: #a78bfa;
           font-weight: 600;
         }
@@ -218,6 +218,76 @@
   }
 
   .bottom-spacer {
-    height: 140px;
+    height: calc(220px + env(safe-area-inset-bottom));
+  }
+}
+
+.follow-page.follow-page--weapp {
+  .follow-header {
+    .header-title {
+      font-size: 38rpx;
+    }
+
+    .header-tabs {
+      gap: 12rpx;
+
+      .header-tab {
+        font-size: 28rpx;
+        padding: 10rpx 22rpx;
+      }
+    }
+  }
+
+  .section {
+    .section-head {
+      .section-title {
+        font-size: 32rpx;
+      }
+    }
+  }
+
+  .creators-list {
+    .creator-card {
+      min-width: 176rpx;
+
+      .creator-avatar {
+        .avatar-text {
+          font-size: 34rpx;
+        }
+      }
+
+      .creator-name {
+        font-size: 28rpx;
+      }
+
+      .creator-meta {
+        font-size: 24rpx;
+      }
+
+      .follow-btn {
+        padding: 10rpx 24rpx;
+
+        .follow-btn-text {
+          font-size: 22rpx;
+        }
+      }
+    }
+  }
+
+  .empty-state {
+    .empty-title {
+      font-size: 32rpx;
+    }
+
+    .empty-text {
+      font-size: 26rpx;
+    }
+  }
+
+  .load-more {
+    .load-more-text,
+    .load-more-end {
+      font-size: 24rpx;
+    }
   }
 }

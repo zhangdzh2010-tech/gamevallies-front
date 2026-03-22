@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
   GAMES_LIST: '/api/v1/games',
   GAMES_DETAIL: '/api/v1/games/:gameId',
   GAMES_MY: '/api/v1/games/my',
+  GAMES_TYPES: '/api/v1/games/types',
   GAMES_PUBLISH: '/api/v1/games/:gameId/publish',
   GAMES_ITERATE: '/api/v1/games/:gameId/iterate',
   GAMES_FORK: '/api/v1/games/:gameId/fork',
@@ -46,11 +47,9 @@ export const API_ENDPOINTS = {
 
 // Game types
 export const GAME_TYPES = {
-  SPACE: 'space',
-  MUSIC: 'music',
+  CASUAL: 'casual',
   PUZZLE: 'puzzle',
-  ACTION: 'action',
-  CASUAL: 'casual'
+  EDUCATION: 'education'
 };
 
 // Notification types
@@ -75,8 +74,9 @@ export const GAME_STATUS = {
 export const FEED_TABS = {
   HOT: 'hot',
   NEW: 'new',
-  SPACE: 'space',
-  MUSIC: 'music'
+  CASUAL: 'casual',
+  PUZZLE: 'puzzle',
+  EDUCATION: 'education'
 };
 
 // Pagination

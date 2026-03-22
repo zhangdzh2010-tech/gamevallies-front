@@ -131,25 +131,27 @@ export const useFeedStore = create((set, get) => ({
    * Set current tab
    */
   setTab: (tab) => {
-    const { page } = get();
     set({ currentTab: tab, page: 1, hasMore: true });
 
     // Fetch data for the tab
-    switch (tab) {
-      case 'hot':
-        get().fetchTrending(1);
-        break;
-      case 'new':
-        get().fetchLatest(1);
-        break;
-      case 'space':
-        get().searchGames('', { gameType: 'space' });
-        break;
-      case 'music':
-        get().searchGames('', { gameType: 'music' });
-        break;
-    }
-  },
+      switch (tab) {
+        case 'hot':
+          get().fetchTrending(1);
+          break;
+        case 'new':
+          get().fetchLatest(1);
+          break;
+        case 'casual':
+          get().searchGames('', { type: 'casual' });
+          break;
+        case 'puzzle':
+          get().searchGames('', { type: 'puzzle' });
+          break;
+        case 'education':
+          get().searchGames('', { type: 'education' });
+          break;
+      }
+    },
 
   /**
    * Load more (infinite scroll)
@@ -169,11 +171,14 @@ export const useFeedStore = create((set, get) => ({
         case 'new':
           await get().fetchLatest(nextPage);
           break;
-        case 'space':
-          await get().searchGames('', { gameType: 'space', page: nextPage });
+        case 'casual':
+          await get().searchGames('', { type: 'casual', page: nextPage });
           break;
-        case 'music':
-          await get().searchGames('', { gameType: 'music', page: nextPage });
+        case 'puzzle':
+          await get().searchGames('', { type: 'puzzle', page: nextPage });
+          break;
+        case 'education':
+          await get().searchGames('', { type: 'education', page: nextPage });
           break;
       }
     } catch (error) {
@@ -197,11 +202,14 @@ export const useFeedStore = create((set, get) => ({
         case 'new':
           await get().fetchLatest(1);
           break;
-        case 'space':
-          await get().searchGames('', { gameType: 'space' });
+        case 'casual':
+          await get().searchGames('', { type: 'casual' });
           break;
-        case 'music':
-          await get().searchGames('', { gameType: 'music' });
+        case 'puzzle':
+          await get().searchGames('', { type: 'puzzle' });
+          break;
+        case 'education':
+          await get().searchGames('', { type: 'education' });
           break;
       }
     } catch (error) {

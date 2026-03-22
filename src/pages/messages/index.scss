@@ -183,3 +183,63 @@
     }
   }
 }
+
+.messages-page.messages-page--weapp {
+  .messages-header {
+    .header-content {
+      .header-title {
+        font-size: 34rpx;
+      }
+
+      .unread-badge {
+        font-size: 22rpx;
+      }
+    }
+  }
+
+  .messages-list {
+    .empty-state {
+      .empty-text {
+        font-size: 28rpx;
+      }
+    }
+
+    .notifications {
+      .notification-item {
+        padding: 26rpx;
+
+        .notification-left {
+          .notification-icon {
+            font-size: 36rpx;
+          }
+        }
+
+        .notification-content {
+          .notification-header {
+            .actor-name {
+              font-size: 28rpx;
+            }
+
+            .notification-time {
+              font-size: 24rpx;
+            }
+          }
+
+          .notification-action {
+            font-size: 26rpx;
+          }
+        }
+
+        .notification-arrow {
+          font-size: 32rpx;
+        }
+      }
+
+      .load-more-container {
+        .load-more-btn {
+          font-size: 26rpx;
+        }
+      }
+    }
+  }
+}

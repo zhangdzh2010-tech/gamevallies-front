@@ -2,15 +2,19 @@ const { defineConfig } = require("@tarojs/cli");
 const path = require("path");
 const dotenv = require("dotenv");
 const fs = require("fs");
+const isWatchMode = process.argv.includes("--watch");
+const buildTypeIndex = process.argv.findIndex((arg) => arg === "--type");
+const buildType = buildTypeIndex >= 0 ? process.argv[buildTypeIndex + 1] : process.env.TARO_ENV;
+const outputRoot = buildType === "h5" ? "dist/h5" : "dist/weapp";
 
 // Always load .env (base defaults)
 const baseEnv = path.resolve(__dirname, "../.env");
 if (fs.existsSync(baseEnv)) dotenv.config({ path: baseEnv });
 
-// Load .env.development if it exists (overrides base for local dev)
-// Works regardless of NODE_ENV so weapp builds also pick up local addresses
+// Only let local development override base values in watch mode.
+// Production builds should keep the public endpoints from .env.
 const devEnv = path.resolve(__dirname, "../.env.development");
-if (fs.existsSync(devEnv)) dotenv.config({ path: devEnv, override: true });
+if (isWatchMode && fs.existsSync(devEnv)) dotenv.config({ path: devEnv, override: true });
 
 // Polyfill browser globals for Node.js environment during Taro H5 build
 const g = globalThis;
@@ -51,7 +55,7 @@ module.exports = defineConfig({
     828: 1.81 / 2,
   },
   sourceRoot: "src",
-  outputRoot: `dist/${process.env.TARO_ENV}`,
+  outputRoot,
   plugins: ["@tarojs/plugin-framework-react"],
   framework: "react",
   compiler: "webpack5",

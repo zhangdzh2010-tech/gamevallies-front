@@ -58,6 +58,22 @@ class Request {
     return headers;
   }
 
+  shouldRecoverUnauthorized(url) {
+    if (!url) return false;
+
+    const guardedUrls = [
+      '/users/me',
+      '/users/avatar',
+      '/users/profile',
+      '/notifications',
+      '/comments',
+      '/social',
+      '/follow'
+    ];
+
+    return guardedUrls.some((path) => url.includes(path));
+  }
+
   async handleResponse(response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       const data = response.data;
@@ -69,13 +85,19 @@ class Request {
           message: data.error?.message || 'Unknown error occurred'
         };
       }
-    } else if (response.statusCode === 401) {
+    } else if (response.statusCode === 401 && this.shouldRecoverUnauthorized(response.request?.url || '')) {
       this.clearToken();
       // Trigger re-authentication
       Taro.navigateTo({ url: '/pages/login/index' }).catch(() => {});
       throw {
         code: 'UNAUTHORIZED',
         message: 'Session expired, please login again'
+      };
+    } else if (response.statusCode === 401) {
+      const data = response.data;
+      throw {
+        code: data?.error?.code || 'UNAUTHORIZED',
+        message: data?.error?.message || 'Unauthorized'
       };
     } else {
       const data = response.data;
@@ -107,6 +129,8 @@ class Request {
         timeout,
         ...rest
       });
+
+      response.request = { url };
 
       return this.handleResponse(response);
     } catch (error) {
@@ -173,6 +197,7 @@ class Request {
   }
 
   download(url, fileName) {
+    void fileName;
     return Taro.downloadFile({
       url
     });

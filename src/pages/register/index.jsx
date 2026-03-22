@@ -8,7 +8,15 @@ import './index.scss';
 
 const COOLDOWN = 60;
 
+function getSmsErrorMessage(error) {
+  if (error?.code === 'HTTP_500') {
+    return '短信服务暂不可用，请稍后再试';
+  }
+  return error?.message || '发送失败，请重试';
+}
+
 export default function Register() {
+  const isWeapp = process.env.TARO_ENV === 'weapp';
   const navigation = useNavigation();
   const { registerByPhone, isLoading } = useAuthStore();
   const [phone, setPhone] = useState('');
@@ -19,30 +27,27 @@ export default function Register() {
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef(null);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
   const isPhoneValid = /^1[3-9]\d{9}$/.test(phone);
   const canSend = isPhoneValid && countdown === 0;
 
-  useEffect(() => () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-  }, []);
-
   const handleSendCode = async () => {
-    if (!isPhoneValid) {
-      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
-      return;
-    }
-
-    if (countdown > 0) {
-      Taro.showToast({ title: `${countdown} 秒后可重新获取`, icon: 'none' });
-      return;
-    }
-
+    if (!canSend) return;
     try {
       await authService.sendSmsCode(phone, 'register');
       Taro.showToast({ title: '验证码已发送', icon: 'success', duration: 1500 });
       setCountdown(COOLDOWN);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
       timerRef.current = setInterval(() => {
         setCountdown((current) => {
           if (current <= 1) {
@@ -54,7 +59,7 @@ export default function Register() {
         });
       }, 1000);
     } catch (error) {
-      Taro.showToast({ title: error.message || '发送失败，请重试', icon: 'none' });
+      Taro.showToast({ title: getSmsErrorMessage(error), icon: 'none' });
     }
   };
 
@@ -63,22 +68,18 @@ export default function Register() {
       Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
       return;
     }
-
     if (code.length !== 6) {
-      Taro.showToast({ title: '请输入 6 位验证码', icon: 'none' });
+      Taro.showToast({ title: '请输入6位验证码', icon: 'none' });
       return;
     }
-
     if (!nickname.trim()) {
       Taro.showToast({ title: '请输入你的昵称', icon: 'none' });
       return;
     }
-
     if (password.length < 6) {
-      Taro.showToast({ title: '密码至少 6 位', icon: 'none' });
+      Taro.showToast({ title: '密码至少6位', icon: 'none' });
       return;
     }
-
     if (password !== confirmPassword) {
       Taro.showToast({ title: '两次密码输入不一致', icon: 'none' });
       return;
@@ -94,15 +95,15 @@ export default function Register() {
   };
 
   return (
-    <View className="register-container">
+    <View className={`register-container${isWeapp ? ' register-container--weapp' : ''}`}>
       <View className="back-header" onClick={() => navigation.back()}>
-        <Text className="back-arrow">{'<'}</Text>
+        <Text className="back-arrow">‹</Text>
         <Text className="back-text">返回</Text>
       </View>
 
       <View className="register-content">
         <View className="logo-section">
-          <Text className="logo">智乐空间</Text>
+          <Text className="logo">智了空间</Text>
           <Text className="tagline">创建你的账号</Text>
         </View>
 
@@ -130,10 +131,7 @@ export default function Register() {
               value={code}
               onInput={(e) => setCode(e.detail.value)}
             />
-            <View
-              className={`send-code-btn ${!canSend ? 'disabled' : ''}`}
-              onClick={handleSendCode}
-            >
+            <View className={`send-code-btn ${!canSend ? 'disabled' : ''}`} onClick={handleSendCode}>
               <Text>{countdown > 0 ? `${countdown}s` : '获取验证码'}</Text>
             </View>
           </View>
@@ -153,9 +151,9 @@ export default function Register() {
           <View className="input-field">
             <Input
               className="input"
-              type="safe-password"
+              type="text"
               password
-              placeholder="设置登录密码（至少 6 位）"
+              placeholder="设置登录密码（至少6位）"
               placeholderStyle="color: #55516e"
               maxlength={128}
               value={password}
@@ -166,7 +164,7 @@ export default function Register() {
           <View className="input-field">
             <Input
               className="input"
-              type="safe-password"
+              type="text"
               password
               placeholder="再次输入密码"
               placeholderStyle="color: #55516e"

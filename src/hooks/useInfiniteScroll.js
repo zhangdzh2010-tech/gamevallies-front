@@ -22,13 +22,12 @@ export function useInfiniteScroll(
 fetchFn,
 options = {})
 {
+  void options;
   const [data, setData] = useState([]);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState(null);
-
-  const { threshold = 0.1, rootMargin = '100px' } = options;
 
   /**
    * Load more items

@@ -2,7 +2,7 @@ const isProd = process.env.NODE_ENV === 'production';
 
 export const ENV = {
   // API Configuration — read from .env / .env.development
-  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL,
+  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL || 'https://www.gamevallies.com',
   SERVICE_URLS: {
     AUTH: process.env.TARO_APP_AUTH_SERVICE_URL,
     GAME: process.env.TARO_APP_GAME_SERVICE_URL,
@@ -19,6 +19,9 @@ export const ENV = {
     USER: 'gamevallies_user',
     ACCESS_TOKEN: 'gamevallies_access_token',
     REFRESH_TOKEN: 'gamevallies_refresh_token',
+    POST_LOGIN_REDIRECT: 'gamevallies_post_login_redirect',
+    CREATE_ENTRY_INTENT: 'gamevallies_create_entry_intent',
+    PROFILE_ACTIVE_TAB: 'gamevallies_profile_active_tab',
     THEME: 'gamevallies_theme',
     LANGUAGE: 'gamevallies_language',
     LAST_GAME_ID: 'gamevallies_last_game_id',

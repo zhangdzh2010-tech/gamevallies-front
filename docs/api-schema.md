@@ -1,846 +1,830 @@
-# API Schema
+# Frontend API Schema
 
-前端调用的所有接口文档，包含请求体、响应体和错误码。
+当前文档描述 `gamevallies-backend` 对前端实际暴露的接口契约，覆盖：
 
----
+- C 端前台：认证、用户、订阅、游戏生成、Feed、社交
+- 管理后台：生成任务、LLM 网关、云 Region Target
 
-## 服务地址
-
-| 服务 | 开发环境 | 生产环境 | 环境变量 |
-|------|---------|---------|---------|
-| 用户/认证 | `http://172.16.30.179:3001` | `https://api.playforge.com` | `TARO_APP_AUTH_SERVICE_URL` |
-| 游戏 | `http://172.16.30.179:3002` | `https://api.playforge.com` | `TARO_APP_GAME_SERVICE_URL` |
-| 社交 | `http://172.16.30.179:3003` | `https://api.playforge.com` | `TARO_APP_SOCIAL_SERVICE_URL` |
-| Feed | `http://172.16.30.179:3004` | `https://api.playforge.com` | `TARO_APP_FEED_SERVICE_URL` |
-| AI | `http://172.16.30.179:8001` | `https://api.playforge.com` | `TARO_APP_AI_SERVICE_URL` |
-| WebSocket | `ws://172.16.30.179:3001` | `wss://ws.playforge.com` | `TARO_APP_WS_URL` |
-| 游戏内容 | `http://172.16.30.179:3002` | `https://cdn.playforge.com` | `TARO_APP_GAME_CONTENT_URL` |
+更新时间：`2026-03-22`
 
 ---
 
-## 通用规范
+## 1. Base URL
 
-### 请求头
+生产统一入口：
 
-所有接口（除登录/注册外）须携带：
-
+```text
+https://www.gamevallies.com/api/v1
 ```
+
+常用补充地址：
+
+- 游戏预览页：`https://www.gamevallies.com/games/:gameId/preview`
+- 游戏实际运行页：`https://www.gamevallies.com/games/:gameId/index.html`
+- 管理后台页面：`https://www.gamevallies.com/admin`
+
+---
+
+## 2. 通用规范
+
+### 2.1 鉴权
+
+除登录、短信验证码、微信小程序登录、公开游戏/Feed 浏览外，默认携带：
+
+```http
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-### 响应体格式
+管理后台额外使用：
 
-前端存在两套 HTTP 工具，响应格式不同：
+```http
+x-admin-token: <admin_token>
+```
 
-**格式 A** — `services/api.js`（认证、游戏、Feed、社交服务使用）
+### 2.2 响应包裹格式
+
+#### 格式 A：主业务接口
 
 ```json
 {
   "code": 0,
   "message": "success",
-  "data": { ... }
+  "data": {}
 }
 ```
 
-> `code` 为 `0` 或 `200` 时视为成功，其余为业务错误。
+#### 格式 B：用户兼容接口
 
-**格式 B** — `utils/request.js`（用户、评论服务使用）
+少量 `users/*` 历史兼容接口仍返回：
 
 ```json
 {
   "success": true,
-  "data": { ... }
+  "data": {}
 }
 ```
 
-失败时：
+### 2.3 分页对象
+
+#### 形式 1：`items + hasMore`
 
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "错误描述"
-  }
-}
-```
-
-### 分页响应
-
-```json
-{
-  "items": [ ... ],
+  "items": [],
   "hasMore": true,
   "page": 1,
-  "limit": 10,
+  "limit": 20,
   "total": 100
 }
 ```
 
----
+#### 形式 2：`data + pagination`
 
-## 错误码标准
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "pages": 5
+  }
+}
+```
 
-### HTTP 状态码
-
-| 状态码 | 说明 | 前端处理 |
-|--------|------|---------|
-| 200 | 成功 | — |
-| 400 | 请求参数错误 | 显示错误信息 |
-| 401 | 未授权 / Token 过期 | 自动刷新 Token，失败则跳登录页 |
-| 403 | 无权限 | 显示无权限提示 |
-| 404 | 资源不存在 | 显示 404 |
-| 429 | 请求过于频繁 | 显示限流提示 |
-| 500 | 服务端错误 | 显示服务器错误 |
-
-### 业务错误码（格式 A）
-
-| code | 说明 |
-|------|------|
-| 0 / 200 | 成功 |
-| 1001 | 参数缺失或格式错误 |
-| 1002 | 资源不存在 |
-| 1003 | 无操作权限 |
-| 2001 | 账号不存在 |
-| 2002 | 密码错误 |
-| 2003 | 账号已被禁用 |
-| 2004 | Token 无效或已过期 |
-| 2005 | 验证码错误或已过期 |
-| 3001 | 游戏生成失败 |
-| 3002 | 游戏不存在 |
-| 3003 | 游戏已发布，不可修改 |
-
-### 业务错误码（格式 B）
-
-| code | 说明 |
-|------|------|
-| `UNAUTHORIZED` | 未登录或 Token 失效 |
-| `UNKNOWN_ERROR` | 未知错误 |
-| `HTTP_400` | 请求错误 |
-| `HTTP_403` | 无权限 |
-| `HTTP_404` | 资源不存在 |
-| `HTTP_500` | 服务端错误 |
+前端消费时，统一按实际接口返回为准，不要假设所有分页接口完全同形。
 
 ---
 
-## 数据模型
+## 3. 核心对象
 
-### User
+### 3.1 User
 
 ```json
 {
   "id": "string",
   "username": "string",
-  "email": "string",
-  "phone": "string",
-  "avatar": "string (url)",
+  "email": "string | undefined",
+  "phone": "string | undefined",
+  "avatar": "string",
+  "avatarUrl": "string",
   "bio": "string",
-  "createdAt": "ISO8601"
+  "displayName": "string",
+  "createdAt": "ISO8601",
+  "followerCount": 0,
+  "followingCount": 0,
+  "gameCount": 0,
+  "totalPlays": 0
 }
 ```
 
-### Game
+### 3.2 GameSummary
 
 ```json
 {
   "id": "string",
   "title": "string",
   "description": "string",
-  "status": "draft | generating | ready | published",
-  "gameUrl": "string (url)",
-  "coverUrl": "string (url)",
+  "status": "ready | generating | published | banned | failed",
+  "gameUrl": "string",
+  "previewUrl": "string",
+  "coverUrl": "string",
   "tags": ["string"],
-  "type": "space | music | puzzle | action | casual",
+  "type": "casual | puzzle | education | string",
   "plays": 0,
   "likes": 0,
   "forks": 0,
-  "authorId": "string",
-  "author": { "id": "string", "username": "string", "avatar": "string" },
+  "commentCount": 0,
+  "qualityScore": 0,
+  "canPlay": true,
+  "requireSubscription": false,
+  "authorId": "string | null",
+  "author": {
+    "id": "string",
+    "username": "string",
+    "avatar": "string"
+  },
   "createdAt": "ISO8601",
-  "publishedAt": "ISO8601"
+  "updatedAt": "ISO8601",
+  "publishedAt": "ISO8601 | null"
 }
 ```
 
-### Comment
+### 3.3 GenerationTask
+
+```json
+{
+  "taskId": "string",
+  "taskType": "pipeline_run | pipeline_iterate",
+  "region": "cn_shanghai | ap_southeast_johor",
+  "status": "queued | running | succeeded | failed | canceled | timed_out",
+  "timeoutS": 600,
+  "wsChannel": "game:<gameId>",
+  "pollUrl": "/api/v1/games/tasks/<taskId>",
+  "eventsUrl": "/api/v1/games/tasks/<taskId>/events",
+  "cancelUrl": "/api/v1/games/tasks/<taskId>/cancel",
+  "gameId": "string",
+  "version": 1,
+  "progressStage": "string | null",
+  "progressPct": 0,
+  "progressMessage": "string | null",
+  "failedStage": "string | null",
+  "errorMessage": "string | null",
+  "retryCount": 0,
+  "fallback": "string | null",
+  "cancelRequested": false,
+  "previewUrl": "string | null",
+  "gatewayConfigVersion": 12,
+  "routeSnapshot": {},
+  "resultSummary": {},
+  "startedAt": "ISO8601 | null",
+  "completedAt": "ISO8601 | null",
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+### 3.4 GenerationTaskEvent
+
+```json
+{
+  "id": "string",
+  "taskId": "string",
+  "gameId": "string",
+  "userId": "string",
+  "eventType": "status | progress | note | error | llm_call",
+  "stage": "string | null",
+  "percentage": 0,
+  "message": "string",
+  "details": {},
+  "createdAt": "ISO8601"
+}
+```
+
+### 3.5 SubscriptionPlan
+
+```json
+{
+  "id": "plan_monthly_basic",
+  "name": "基础月卡",
+  "price": 990,
+  "priceDisplay": "9.9",
+  "currency": "CNY",
+  "period": "monthly | yearly",
+  "periodLabel": "月 | 年",
+  "quota": 10,
+  "quotaLabel": "10次/月",
+  "features": ["string"],
+  "recommended": false,
+  "badge": "string | null"
+}
+```
+
+### 3.6 SubscriptionStatus
+
+```json
+{
+  "active": true,
+  "planId": "string | null",
+  "planName": "string | null",
+  "expiresAt": "ISO8601 | null",
+  "usedThisPeriod": 0,
+  "quotaThisPeriod": 0,
+  "autoRenew": false
+}
+```
+
+### 3.7 SubscriptionOrderStatus
+
+```json
+{
+  "orderId": "string",
+  "status": "pending | paid | canceled | failed | refunded",
+  "planId": "string",
+  "planName": "string",
+  "amount": 990,
+  "currency": "CNY",
+  "gameIdToUnlock": "string | null",
+  "paidAt": "ISO8601 | null",
+  "expiresAt": "ISO8601 | null",
+  "quotaRemaining": 9,
+  "subscriptionActive": true
+}
+```
+
+### 3.8 Comment
 
 ```json
 {
   "id": "string",
   "gameId": "string",
   "content": "string",
-  "authorId": "string",
-  "author": { "id": "string", "username": "string", "avatar": "string" },
+  "authorId": "string | null",
+  "author": { "...User": "..." },
   "likes": 0,
   "parentId": "string | null",
   "replyCount": 0,
-  "createdAt": "ISO8601"
+  "createdAt": "ISO8601",
+  "replies": []
 }
 ```
 
-### Notification
+### 3.9 Notification
 
 ```json
 {
   "id": "string",
-  "type": "like | comment | follow | fork | mention | system",
+  "type": "like | comment | follow | fork | system",
   "title": "string",
   "body": "string",
   "isRead": false,
-  "data": { "gameId": "string", "userId": "string" },
-  "createdAt": "ISO8601"
-}
-```
-
----
-
-## 认证服务 (port 3001)
-
-### POST `/api/v1/auth/register` — 注册
-
-**Request Body:**
-```json
-{
-  "username": "string (3-20位字母数字)",
-  "email": "string (email格式)",
-  "phone": "string (可选)",
-  "password": "string (min 8位)",
-  "verificationCode": "string (可选)"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
   "data": {
-    "user": { ...User }
-  }
+    "targetId": "string | null",
+    "userId": "string | null",
+    "gameId": "string | null"
+  },
+  "createdAt": "ISO8601",
+  "actor": { "...User": "..." }
 }
 ```
 
 ---
 
-### POST `/api/v1/auth/login` — 登录
+## 4. C 端前台 API
 
-**Request Body:**
+### 4.1 Auth
+
+#### `POST /auth/login`
+
+请求：
+
 ```json
 {
-  "account": "string (邮箱或用户名)",
+  "account": "string",
   "password": "string"
 }
 ```
 
-**Response:**
+响应：
+
 ```json
 {
   "code": 0,
   "data": {
-    "token": "string (JWT)",
+    "token": "string",
     "refreshToken": "string",
-    "user": { ...User }
+    "user": { "...User": "..." }
   }
 }
 ```
 
----
+#### `POST /auth/refresh`
 
-### POST `/api/v1/auth/refresh` — 刷新 Token
-
-**Request Body:**
 ```json
 {
   "refreshToken": "string"
 }
 ```
 
-**Response:**
+#### `POST /auth/logout`
+
+说明：
+
+- 需要登录
+- 可从请求头 `x-refresh-token` 读取旧 refresh token 并吊销
+
+#### `POST /auth/sms/send-code`
+
+请求：
+
+```json
+{
+  "phone": "13800138000",
+  "type": "register | login | reset_password"
+}
+```
+
+成功响应：
+
+```json
+{
+  "code": 0,
+  "data": null
+}
+```
+
+常见业务错误：
+
+- `400` 手机号不合法
+- `429` 发送过于频繁
+- `503` Redis / 短信服务不可用
+
+#### `POST /auth/sms/register`
+
+```json
+{
+  "phone": "13800138000",
+  "smsCode": "123456",
+  "nickname": "string",
+  "password": "string"
+}
+```
+
+响应同 `login`
+
+#### `POST /auth/sms/login`
+
+```json
+{
+  "phone": "13800138000",
+  "smsCode": "123456"
+}
+```
+
+响应同 `login`
+
+#### `POST /auth/wechat/miniapp-login`
+
+```json
+{
+  "code": "wx.login() 返回的 code",
+  "nickname": "string",
+  "avatarUrl": "string"
+}
+```
+
+响应同 `login`
+
+#### `GET /auth/profile`
+
+返回当前登录用户：
+
+```json
+{
+  "code": 0,
+  "data": { "...User": "..." }
+}
+```
+
+---
+
+### 4.2 User
+
+#### `GET /users/me`
+
+返回当前登录用户。
+
+#### `PATCH /users/profile`
+
+说明：
+
+- 需要登录
+- 用于昵称、头像、简介等资料更新
+- 具体可更新字段以 `UpdateProfileDto` 为准，前端当前主要使用 `displayName`、`bio`、`avatarUrl`
+
+建议请求：
+
+```json
+{
+  "displayName": "string",
+  "bio": "string",
+  "avatarUrl": "string"
+}
+```
+
+#### `POST /users/avatar`
+
+```json
+{
+  "filePath": "string"
+}
+```
+
+#### `GET /users/quota`
+
+响应：
+
 ```json
 {
   "code": 0,
   "data": {
-    "token": "string",
-    "refreshToken": "string"
+    "freeQuota": 5,
+    "freeQuotaUsed": 1,
+    "freeQuotaRemaining": 4,
+    "subscriptionActive": true,
+    "subscriptionQuota": 10,
+    "subscriptionUsed": 2,
+    "subscriptionRemaining": 8,
+    "totalRemaining": 12,
+    "expiresAt": "ISO8601 | null"
   }
 }
 ```
 
----
+#### `GET /users/search?q=<keyword>&page=1&limit=20`
 
-### POST `/api/v1/auth/logout` — 登出
+返回格式 B：
 
-**Request Body:** `{}`
-
-**Response:**
-```json
-{ "code": 0, "data": null }
-```
-
----
-
-### POST `/api/v1/auth/send-code` — 发送验证码
-
-**Request Body:**
-```json
-{
-  "target": "string (邮箱或手机号)",
-  "type": "register | reset_password | verify"
-}
-```
-
-**Response:**
-```json
-{ "code": 0, "data": null }
-```
-
----
-
-### POST `/api/v1/auth/verify-code` — 验证验证码
-
-**Request Body:**
-```json
-{
-  "target": "string",
-  "code": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "valid": true }
-}
-```
-
----
-
-### POST `/api/v1/auth/reset-password` — 重置密码
-
-**Request Body:**
-```json
-{
-  "target": "string",
-  "code": "string",
-  "newPassword": "string"
-}
-```
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-### POST `/api/v1/auth/change-password` — 修改密码
-
-**Request Body:**
-```json
-{
-  "currentPassword": "string",
-  "newPassword": "string"
-}
-```
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-## 用户服务 (port 3001)
-
-### GET `/api/v1/users/me` — 获取当前用户
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { ...User }
-}
-```
-
----
-
-### GET `/api/v1/users/:userId` — 获取用户信息
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { ...User }
-}
-```
-
----
-
-### PATCH `/api/v1/users/profile` — 更新资料
-
-**Request Body:**
-```json
-{
-  "username": "string (可选)",
-  "bio": "string (可选)",
-  "avatar": "string url (可选)"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { ...User }
-}
-```
-
----
-
-### POST `/api/v1/users/avatar` — 上传头像
-
-**Request Body:**
-```json
-{
-  "filePath": "string (本地文件路径)"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "url": "string" }
-}
-```
-
----
-
-### GET `/users/:userId/followers` — 获取粉丝列表
-
-**Query Params:** `page=1&limit=20`
-
-**Response:**
 ```json
 {
   "success": true,
   "data": {
-    "items": [ { ...User } ],
+    "items": [{ "...User": "..." }],
     "hasMore": true,
+    "page": 1,
+    "limit": 20,
     "total": 100
   }
 }
 ```
 
----
+#### `GET /users/:id/profile`
 
-### GET `/users/:userId/following` — 获取关注列表
+公开用户资料页。
 
-**Query Params:** `page=1&limit=20`
+#### `GET /users/:id/stats`
 
-**Response:** 同上
+返回用户维度统计数据。
 
----
+#### `GET /users/:id/followers`
+#### `GET /users/:id/following`
 
-### POST `/users/:userId/follow` — 关注用户
+返回格式 B，分页对象内为 `User[]`。
 
-**Request Body:** `{}`
+#### `POST /users/:id/follow`
+#### `DELETE /users/:id/follow`
 
-**Response:** `{ "success": true, "data": null }`
+返回格式 B：
 
----
-
-### DELETE `/users/:userId/follow` — 取消关注
-
-**Response:** `{ "success": true, "data": null }`
-
----
-
-### GET `/users/search` — 搜索用户
-
-**Query Params:** `q=string&limit=20`
-
-**Response:**
 ```json
 {
   "success": true,
-  "data": { "items": [ { ...User } ] }
+  "data": null
 }
 ```
 
 ---
 
-### GET `/users/:userId/stats` — 用户统计
+### 4.3 Subscription / Billing
 
-**Response:**
+#### `GET /subscription/plans`
+
+响应：
+
 ```json
 {
-  "success": true,
+  "code": 0,
   "data": {
-    "gamesCreated": 0,
-    "totalPlays": 0,
-    "totalLikes": 0,
-    "followers": 0,
-    "following": 0
+    "plans": [{ "...SubscriptionPlan": "..." }],
+    "subscriberCount": 123
   }
 }
 ```
 
----
+#### `POST /subscription/order`
 
-## 游戏服务 (port 3002)
+请求：
 
-### GET `/api/v1/games/:gameId` — 获取游戏详情
-
-**Response:**
 ```json
 {
-  "code": 0,
-  "data": { ...Game }
+  "planId": "plan_monthly_pro",
+  "gameId": "string"
 }
 ```
 
----
+响应：
 
-### GET `/api/v1/games/my` — 我的游戏列表
-
-**Query Params:** `page=1&limit=10`
-
-**Response:**
 ```json
 {
   "code": 0,
   "data": {
-    "items": [ { ...Game } ],
+    "orderId": "order_xxx",
+    "payment": {
+      "timeStamp": "string",
+      "nonceStr": "string",
+      "package": "prepay_id=xxx",
+      "signType": "RSA",
+      "paySign": "string"
+    }
+  }
+}
+```
+
+说明：
+
+- 真实微信支付时，前端直接把 `payment` 传给 `wx.requestPayment`
+- 接口成功状态是 `HTTP 200 + code=0`
+
+#### `GET /subscription/status`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": { "...SubscriptionStatus": "..." }
+}
+```
+
+#### `GET /subscription/orders/:id`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": { "...SubscriptionOrderStatus": "..." }
+}
+```
+
+#### `POST /subscription/orders/:id/mock-pay`
+
+仅本地 / mock 支付环境使用。
+
+---
+
+### 4.4 Games
+
+#### `POST /games/expand-prompt`
+
+请求：
+
+```json
+{
+  "description": "做一个点击躲避障碍物的小游戏",
+  "regionHint": "cn_shanghai"
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "expanded_prompt": "string"
+  }
+}
+```
+
+#### `POST /games/generate`
+
+请求：
+
+```json
+{
+  "description": "做一个点击躲避障碍物的小游戏",
+  "prompt": "string",
+  "title": "障碍躲避",
+  "regionHint": "cn_shanghai | ap_southeast_johor",
+  "timeoutS": 600
+}
+```
+
+说明：
+
+- `description` 和 `prompt` 二选一
+- `timeoutS` 允许范围 `30-3600`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "id": "gameId",
+    "title": "障碍躲避",
+    "description": "string",
+    "status": "generating",
+    "version": 1,
+    "previewUrl": "string",
+    "canPlay": true,
+    "quotaRemaining": 4,
+    "requireSubscription": false,
+    "generationTask": { "...GenerationTask": "..." }
+  }
+}
+```
+
+#### `GET /games/:id/generation-status`
+
+用于旧前端或简单轮询。
+
+响应示例：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "taskId": "string",
+    "taskType": "pipeline_run",
+    "status": "running",
+    "stage": "intent_parsing",
+    "gameId": "string",
+    "version": 1,
+    "wsChannel": "game:<gameId>",
+    "pollUrl": "/api/v1/games/<gameId>/generation-status",
+    "previewUrl": "string",
+    "gameStatus": "generating",
+    "canPlay": true,
+    "requireSubscription": false,
+    "failedStage": null,
+    "failedReason": null,
+    "retryCount": 0,
+    "lastErrorAt": null
+  }
+}
+```
+
+#### `GET /games/tasks/:taskId`
+
+返回 `GenerationTask`
+
+#### `GET /games/tasks/:taskId/events?limit=200`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": [{ "...GenerationTaskEvent": "..." }]
+}
+```
+
+#### `POST /games/tasks/:taskId/cancel`
+
+返回最新 `GenerationTask`
+
+#### `GET /games/my/games?page=1&limit=10`
+#### `GET /games/my?page=1&limit=10`
+
+返回当前用户自己的游戏列表，分页对象中的元素为 `GameSummary[]`。
+
+#### `GET /games/explore/published?page=1&limit=10`
+
+公开游戏广场，返回 `GameSummary[]`。
+
+#### `GET /games/game-types`
+
+返回前端可展示的游戏分类字典。
+
+#### `GET /games/:id`
+
+返回单个 `GameSummary`
+
+#### `GET /games/:id/play`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "htmlCode": "<!DOCTYPE html>...</html>",
+    "gameId": "string"
+  }
+}
+```
+
+#### `POST /games/:id/unlock`
+
+需要登录。用于订阅后解锁或消耗可用额度解锁。
+
+#### `POST /games/:id/iterate`
+
+请求：
+
+```json
+{
+  "feedback": "把主角移动速度调快一点，并增加得分动画",
+  "regionHint": "cn_shanghai",
+  "timeoutS": 600
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "gameId": "string",
+    "version": 2,
+    "status": "iterating",
+    "generationTask": { "...GenerationTask": "..." }
+  }
+}
+```
+
+#### `POST /games/:id/publish`
+
+发布游戏。
+
+#### `PATCH /games/:id/settings`
+
+前端用于更新游戏设置、可见性等。
+
+#### `DELETE /games/:id`
+
+删除自己的游戏。
+
+#### `GET /games/:id/share-data`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "title": "string",
+    "description": "string",
+    "thumbnailUrl": "string | null",
+    "url": "string",
+    "author": "string",
+    "stats": {
+      "plays": 0,
+      "likes": 0,
+      "qualityScore": 0
+    }
+  }
+}
+```
+
+#### `GET /games/creator/:creatorId/reputation`
+
+返回创作者声誉相关信息，供创作者主页或后台展示。
+
+---
+
+### 4.5 Feed / Discovery
+
+以下接口统一返回格式 A，分页对象中的元素为 `GameSummary[]`：
+
+- `GET /feed/trending?page=1&limit=20`
+- `GET /feed/latest?page=1&limit=20`
+- `GET /feed/featured?page=1&limit=20`
+- `GET /feed/following?page=1&limit=20`（需登录）
+- `GET /feed/category?category=casual&page=1&limit=20`
+- `GET /feed/by-type/:type?page=1&limit=20`
+
+分页响应示例：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [{ "...GameSummary": "..." }],
     "hasMore": true,
-    "page": 1
+    "page": 1,
+    "limit": 20,
+    "total": 100
   }
 }
 ```
 
----
+#### `GET /challenges/current`
 
-### POST `/api/v1/games/:gameId/fork` — Fork 游戏
-
-**Request Body:** `{}`
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "gameId": "string" }
-}
-```
-
----
-
-### POST `/api/v1/games/:gameId/publish` — 发布游戏
-
-**Request Body:**
-```json
-{
-  "title": "string (可选，覆盖默认标题)",
-  "description": "string (可选)",
-  "tags": ["string"]
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { ...Game }
-}
-```
-
----
-
-## AI 服务 (port 8001)
-
-### POST `/api/v1/games/generate` — AI 生成游戏
-
-**Request Body:**
-```json
-{
-  "prompt": "string (游戏描述，自然语言)"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "gameId": "string" }
-}
-```
-
-> 生成进度通过 WebSocket 事件 `gen:progress` / `gen:complete` 推送。
-
----
-
-### POST `/api/v1/games/:gameId/iterate` — AI 迭代优化
-
-**Request Body:**
-```json
-{
-  "feedback": "string (修改意见，自然语言)"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "iterationId": "string" }
-}
-```
-
----
-
-## 社交服务 (port 3003)
-
-### POST `/api/v1/social/like` — 切换点赞
-
-**Request Body:**
-```json
-{
-  "targetType": "game | comment",
-  "targetId": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "liked": true, "likes": 100 }
-}
-```
-
----
-
-### POST `/api/v1/social/follow` — 关注用户
-
-**Request Body:**
-```json
-{
-  "targetId": "string (userId)"
-}
-```
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-### DELETE `/api/v1/social/follow/:userId` — 取消关注
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-### GET `/api/v1/social/followers/:userId` — 粉丝列表
-
-**Query Params:** `page=1&limit=10`
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "items": [ { ...User } ], "hasMore": true }
-}
-```
-
----
-
-### GET `/api/v1/social/follow-status/:userId` — 查询关注状态
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "following": true }
-}
-```
-
----
-
-### GET `/api/v1/social/like-status/:type/:id` — 查询点赞状态
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "liked": true }
-}
-```
-
----
-
-### POST `/api/v1/comments` — 创建评论
-
-**Request Body:**
-```json
-{
-  "gameId": "string",
-  "content": "string (1-500字)",
-  "parentId": "string | null (回复时传)"
-}
-```
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { ...Comment }
-}
-```
-
----
-
-### GET `/api/v1/comments/games/:gameId` — 获取游戏评论
-
-**Query Params:** `page=1&limit=10`
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "items": [ { ...Comment } ], "hasMore": true }
-}
-```
-
----
-
-### DELETE `/api/v1/comments/:commentId` — 删除评论
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-### GET `/api/v1/comments/:commentId/replies` — 获取回复
-
-**Query Params:** `limit=5`
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "items": [ { ...Comment } ] }
-}
-```
-
----
-
-### GET `/api/v1/notifications` — 通知列表
-
-**Query Params:** `page=1&limit=10`
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "items": [ { ...Notification } ], "hasMore": true }
-}
-```
-
----
-
-### POST `/api/v1/notifications/mark-read` — 标记已读
-
-**Request Body:**
-```json
-{
-  "ids": ["string"]
-}
-```
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-### POST `/api/v1/notifications/mark-all-read` — 全部已读
-
-**Request Body:** `{}`
-
-**Response:** `{ "code": 0, "data": null }`
-
----
-
-### GET `/api/v1/notifications/unread-count` — 未读数量
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "count": 5 }
-}
-```
-
----
-
-## Feed 服务 (port 3004)
-
-所有 Feed 接口 **Query Params** 通用格式：`page=1&limit=10`
-
-### GET `/api/v1/feed/trending` — 热门游戏
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "items": [ { ...Game } ], "hasMore": true, "page": 1 }
-}
-```
-
----
-
-### GET `/api/v1/feed/latest` — 最新游戏
-
-**Response:** 同上
-
----
-
-### GET `/api/v1/feed/following` — 关注动态
-
-**Response:** 同上
-
----
-
-### GET `/api/v1/feed/featured` — 精选游戏
-
-**Query Params:** `limit=6`
-
-**Response:** 同上
-
----
-
-### GET `/api/v1/feed/search` — 搜索游戏
-
-**Query Params:** `q=string&page=1&limit=10&gameType=space`
-
-**Response:** 同上
-
----
-
-### GET `/api/v1/feed/category` — 按分类
-
-**Query Params:** `category=string&page=1&limit=10`
-
-**Response:** 同上
-
----
-
-### GET `/api/v1/tags/trending` — 热门标签
-
-**Query Params:** `limit=10`
-
-**Response:**
-```json
-{
-  "code": 0,
-  "data": { "items": [ { "tag": "string", "count": 100 } ] }
-}
-```
-
----
-
-### GET `/api/v1/challenges/current` — 当前挑战
-
-**Response:**
 ```json
 {
   "code": 0,
@@ -848,101 +832,386 @@ Content-Type: application/json
     "id": "string",
     "title": "string",
     "description": "string",
-    "endsAt": "ISO8601"
+    "endsAt": "ISO8601",
+    "startDate": "ISO8601",
+    "participantCount": 0,
+    "rules": ["string"]
   }
 }
 ```
 
----
+#### `GET /challenges/:id/games?page=1&limit=20`
 
-### GET `/api/v1/creators/trending` — 热门创作者
+挑战赛关联游戏列表，分页对象中的元素为 `GameSummary[]`。
 
-**Query Params:** `limit=10`
+#### `GET /tags/trending?page=1&limit=20`
+#### `GET /tags/all?page=1&limit=20`
 
-**Response:**
 ```json
 {
   "code": 0,
-  "data": { "items": [ { ...User, "gamesCount": 10, "totalPlays": 5000 } ] }
-}
-```
-
----
-
-## WebSocket (port 3001)
-
-### 连接
-
-```
-ws://172.16.30.179:3001?token=<access_token>
-```
-
-心跳：客户端每 30 秒发送 `{ "type": "ping" }`，服务端回 `{ "type": "pong" }`。
-断线重连：指数退避，最多 5 次。
-
----
-
-### 服务端 → 客户端事件
-
-#### `gen:progress` — 游戏生成进度
-
-```json
-{
-  "type": "gen:progress",
-  "gameId": "string",
   "data": {
-    "progress": 60,
-    "message": "正在生成游戏逻辑..."
+    "items": [
+      {
+        "tag": "casual",
+        "count": 128
+      }
+    ],
+    "hasMore": true,
+    "page": 1,
+    "limit": 20,
+    "total": 100
   }
 }
 ```
 
-#### `gen:complete` — 游戏生成完成
+#### `GET /creators/trending?page=1&limit=20`
 
 ```json
 {
-  "type": "gen:complete",
-  "gameId": "string",
+  "code": 0,
   "data": {
-    "success": true,
-    "game": { ...Game },
-    "error": "string (失败时)"
+    "items": [
+      {
+        "id": "string",
+        "username": "string",
+        "avatar": "string",
+        "bio": "string",
+        "gamesCount": 0,
+        "totalPlays": 0,
+        "followerCount": 0
+      }
+    ],
+    "hasMore": true,
+    "page": 1,
+    "limit": 20,
+    "total": 100
   }
 }
 ```
 
-#### `notification` — 推送通知
+---
+
+### 4.6 Social / Comment / Notification
+
+#### `POST /social/follow`
 
 ```json
 {
-  "type": "notification",
-  "data": { ...Notification }
+  "targetId": "user_id"
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": null
+}
+```
+
+#### `DELETE /social/follow/:userId`
+
+取消关注。
+
+#### `GET /social/followers/:userId?page=1&limit=20`
+#### `GET /social/following/:userId?page=1&limit=20`
+
+返回分页 `User[]`
+
+#### `GET /social/follow-status/:userId`
+
+```json
+{
+  "code": 0,
+  "data": {
+    "isFollowing": true
+  }
+}
+```
+
+#### `POST /social/like`
+
+```json
+{
+  "targetType": "game | comment",
+  "targetId": "string"
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "liked": true,
+    "likes": 12
+  }
+}
+```
+
+#### `GET /social/like-status/:type/:id`
+
+返回当前用户是否已点赞。
+
+#### `POST /comments`
+
+```json
+{
+  "gameId": "string",
+  "content": "string",
+  "parentId": "string | null"
+}
+```
+
+响应为 `Comment`
+
+#### `GET /comments/games/:gameId?page=1&limit=20`
+
+返回分页 `Comment[]`
+
+#### `GET /comments/:commentId/replies?page=1&limit=5`
+
+返回分页 `Comment[]`
+
+#### `DELETE /comments/:id`
+
+删除评论。
+
+#### `POST /comments/:id/like`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "liked": true,
+    "likes": 3
+  }
+}
+```
+
+#### `GET /notifications?page=1&limit=20`
+
+返回分页 `Notification[]`
+
+#### `POST /notifications/mark-read`
+
+```json
+{
+  "ids": ["notification_id"]
+}
+```
+
+#### `POST /notifications/mark-all-read`
+
+全部已读。
+
+#### `GET /notifications/unread-count`
+
+```json
+{
+  "code": 0,
+  "data": {
+    "count": 3
+  }
 }
 ```
 
 ---
 
-### 客户端 → 服务端事件
+## 5. 管理后台 API
 
-| type | 说明 | payload |
-|------|------|---------|
-| `ping` | 心跳 | `{}` |
+说明：
+
+- 所有管理接口前缀为 `/api/v1/admin/*`
+- 统一请求头：`x-admin-token`
+- 当前服务端做了简单 IP 限流：`20 次 / 分钟 / IP`
+
+### 5.1 生成任务
+
+#### `GET /admin/tasks?page=1&limit=20&status=&search=`
+
+返回任务分页列表。
+
+#### `GET /admin/tasks/:id`
+
+返回任务详情，包含：
+
+- `game`
+- `user`
+- `events`
+- `llmCallLogs`
+
+#### `GET /admin/tasks/:id/events?limit=100`
+
+返回：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [{ "...GenerationTaskEvent": "..." }]
+  }
+}
+```
+
+### 5.2 云 Region Target
+
+#### `GET /admin/cloud/accounts`
+
+返回云账号列表。
+
+#### `GET /admin/cloud/regions`
+
+返回云 Region 目录。
+
+#### `GET /admin/cloud/ai-engine-region-targets?providerSelectableOnly=true`
+
+返回 `ai-engine` 的 Region Target 列表。前端做 Provider 下拉时，使用 `providerSelectableOnly=true`。
+
+#### `POST /admin/cloud/ai-engine-region-targets`
+#### `PUT /admin/cloud/ai-engine-region-targets/:id`
+
+核心字段：
+
+```json
+{
+  "accountId": "string",
+  "regionCatalogId": "string",
+  "executionRegion": "cn_shanghai | ap_southeast_johor",
+  "displayName": "string",
+  "functionName": "gv-ai-engine-cn",
+  "registry": "string",
+  "registryNamespace": "string",
+  "imageRepository": "string",
+  "serviceRegionEnv": "cn_shanghai",
+  "deployEnabled": true
+}
+```
+
+#### `POST /admin/cloud/ai-engine-region-targets/sync-deploy`
+
+部署脚本回写 Region Target 状态时使用。
+
+### 5.3 LLM Gateway
+
+#### `GET /admin/llm/providers`
+
+返回 Provider 列表，字段包含：
+
+```json
+{
+  "id": "string",
+  "name": "Deepseek-cn-上海",
+  "providerType": "openai_compatible | anthropic",
+  "region": "cn_shanghai",
+  "regionTargetId": "string",
+  "regionDisplayName": "cn_shanghai",
+  "baseUrl": "string",
+  "model": "string",
+  "fastModel": "string | null",
+  "requestTimeoutS": 600,
+  "connectTimeoutS": 15,
+  "priority": 100,
+  "enabled": true,
+  "apiKeySet": true,
+  "apiKeyMasked": "sk-xxxx...yyyy"
+}
+```
+
+#### `POST /admin/llm/providers`
+#### `PUT /admin/llm/providers/:id`
+
+请求体：
+
+```json
+{
+  "name": "string",
+  "providerType": "openai_compatible | anthropic",
+  "regionTargetId": "string",
+  "priority": 100,
+  "baseUrl": "string",
+  "apiKey": "string",
+  "model": "string",
+  "fastModel": "string | null",
+  "requestTimeoutS": 600,
+  "connectTimeoutS": 15,
+  "description": "string",
+  "enabled": true
+}
+```
+
+#### `DELETE /admin/llm/providers/:id`
+#### `POST /admin/llm/providers/:id/test`
+
+#### `GET /admin/llm/steps`
+
+返回固定步骤字典：
+
+```json
+{
+  "id": "string",
+  "stepKey": "intent_parse",
+  "stepOrder": 30,
+  "stageLabel": "Stage 02",
+  "displayName": "意图解析",
+  "description": "将自然语言描述解析成 GameSpec",
+  "enabled": true
+}
+```
+
+#### `GET /admin/llm/routes?executionRegion=cn_shanghai`
+
+返回固定步骤与当前 Provider 绑定关系列表。
+
+#### `GET /admin/llm/routes/:id`
+
+返回单条绑定详情，当前后台切换步骤模型时会用到这个接口。
+
+#### `POST /admin/llm/routes`
+#### `PUT /admin/llm/routes/:id`
+
+请求体：
+
+```json
+{
+  "stepKey": "intent_parse",
+  "executionRegion": "cn_shanghai",
+  "providerId": "string",
+  "enabled": true
+}
+```
+
+#### `DELETE /admin/llm/routes/:id`
+#### `POST /admin/llm/refresh`
 
 ---
 
-## 游戏内容文件
+## 6. WebSocket 事件
 
-游戏 HTML 通过 WebView 直接加载，不走 API 鉴权：
+当前生成进度推送仍通过 `game-service` WebSocket：
 
-```
-GET {TARO_APP_GAME_CONTENT_URL}/games/:gameId/index.html
-```
+- 频道：`game:<gameId>`
+- 用户侧事件：
+  - `gen:progress`
+  - `gen:complete`
+  - `gen:error`
+
+推荐前端策略：
+
+1. 创建生成任务后，先保存 `generationTask.taskId`
+2. 优先订阅 WebSocket 进度
+3. 同时保留 `GET /games/tasks/:taskId` 和 `GET /games/tasks/:taskId/events` 轮询兜底
+4. 老前端仍可继续用 `GET /games/:id/generation-status`
 
 ---
 
-## 注意事项
+## 7. 说明与边界
 
-1. **两套请求工具并存**：`services/api.js` 用于认证/游戏/Feed/社交，响应格式 A；`utils/request.js` 用于用户/评论，响应格式 B。后端需确认统一。
-2. **路径前缀不一致**：`user.js`/`comment.js` 的路径无 `/api/v1` 前缀，需与后端对齐。
-3. **Token 自动刷新**：401 时前端自动用 `refreshToken` 换新 token，换失败则跳登录页。
-4. **`switchTab` 导航**：登录成功后跳转 Tab 页需使用 `navigation.switchTab()`，当前 `taroHooks.js` 中尚未实现该方法。
+- `ai-engine` 的 `/api/v1/ai/*` 更多是服务间接口，普通前端不建议直接依赖
+- 文档优先描述“当前代码已经实现并对前端可用”的接口，不展开内部回调
+- 若字段与代码实现发生冲突，以控制器、Presenter、DTO 和线上真实返回为准

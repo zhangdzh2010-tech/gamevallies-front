@@ -1,48 +1,86 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Input } from '@tarojs/components';
-import { useNavigation } from '@tarojs/hooks';
+import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { useAuthStore } from '../../store/authStore';
 import * as authService from '../../services/auth';
+import { handleLoginBackNavigation, navigateAfterLogin } from '../../utils/authNavigation';
 import './index.scss';
 
 const COOLDOWN = 60;
 
+function getSmsErrorMessage(error) {
+  if (error?.code === 'HTTP_500') {
+    return '短信服务暂不可用，请先使用微信登录或密码登录';
+  }
+  return error?.message || '发送失败，请重试';
+}
+
+function buildWechatUserInfo(nickname, avatarUrl) {
+  const safeNickname = typeof nickname === 'string' ? nickname.trim() : '';
+  const safeAvatarUrl = typeof avatarUrl === 'string' ? avatarUrl.trim() : '';
+
+  if (!safeNickname && !safeAvatarUrl) {
+    return null;
+  }
+
+  return {
+    nickName: safeNickname,
+    avatarUrl: safeAvatarUrl,
+  };
+}
+
 export default function Login() {
-  const navigation = useNavigation();
-  const { login, loginByPhone, loginByWechatMiniapp, isLoading } = useAuthStore();
+  const isWeapp = process.env.TARO_ENV === 'weapp';
   const [mode, setMode] = useState('password');
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [loadingAction, setLoadingAction] = useState(null);
+  const [wechatNickname, setWechatNickname] = useState('');
+  const [wechatAvatarUrl, setWechatAvatarUrl] = useState('');
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   const isPhoneValid = /^1[3-9]\d{9}$/.test(phone);
   const canSend = isPhoneValid && countdown === 0;
+  const isBusy = loadingAction !== null;
 
-  useEffect(() => () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+  const finishLogin = () => {
+    setTimeout(() => {
+      navigateAfterLogin('/pages/index/index');
+    }, 800);
+  };
+
+  const handleChooseAvatar = (event) => {
+    const avatarUrl = event?.detail?.avatarUrl || '';
+
+    if (!avatarUrl) {
+      Taro.showToast({ title: '头像选择失败，请重试', icon: 'none' });
+      return;
     }
-  }, []);
+
+    setWechatAvatarUrl(avatarUrl);
+  };
 
   const handleSendCode = async () => {
-    if (!isPhoneValid) {
-      Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
-      return;
-    }
-
-    if (countdown > 0) {
-      Taro.showToast({ title: `${countdown} 秒后可重新获取`, icon: 'none' });
-      return;
-    }
+    if (!canSend || isBusy) return;
 
     try {
       await authService.sendSmsCode(phone, 'login');
       Taro.showToast({ title: '验证码已发送', icon: 'success', duration: 1500 });
       setCountdown(COOLDOWN);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
       timerRef.current = setInterval(() => {
         setCountdown((current) => {
           if (current <= 1) {
@@ -54,13 +92,15 @@ export default function Login() {
         });
       }, 1000);
     } catch (error) {
-      Taro.showToast({ title: error.message || '发送失败，请重试', icon: 'none' });
+      Taro.showToast({ title: getSmsErrorMessage(error), icon: 'none' });
     }
   };
 
   const handlePasswordLogin = async () => {
+    if (isBusy) return;
+
     if (!account.trim()) {
-      Taro.showToast({ title: '请输入手机号、用户名或邮箱', icon: 'none' });
+      Taro.showToast({ title: '请输入手机号或用户名', icon: 'none' });
       return;
     }
 
@@ -70,82 +110,107 @@ export default function Login() {
     }
 
     try {
-      await login(account.trim(), password);
+      setLoadingAction('password');
+      await authService.login(account.trim(), password);
       Taro.showToast({ title: '登录成功', icon: 'success' });
-      setTimeout(() => navigation.switchTab({ url: '/pages/index/index' }), 800);
+      finishLogin();
     } catch (error) {
       Taro.showToast({ title: error.message || '账号或密码错误', icon: 'none' });
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const handleSmsLogin = async () => {
+    if (isBusy) return;
+
     if (!isPhoneValid) {
       Taro.showToast({ title: '请输入正确的手机号', icon: 'none' });
       return;
     }
 
     if (code.length !== 6) {
-      Taro.showToast({ title: '请输入 6 位验证码', icon: 'none' });
+      Taro.showToast({ title: '请输入6位验证码', icon: 'none' });
       return;
     }
 
     try {
-      await loginByPhone(phone, code);
+      setLoadingAction('sms');
+      await authService.loginByPhone(phone, code);
       Taro.showToast({ title: '登录成功', icon: 'success' });
-      setTimeout(() => navigation.switchTab({ url: '/pages/index/index' }), 800);
+      finishLogin();
     } catch (error) {
       Taro.showToast({ title: error.message || '登录失败', icon: 'none' });
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const handleWechatLogin = async () => {
-    if (process.env.TARO_ENV !== 'weapp') {
-      Taro.showToast({ title: '请在微信小程序中使用微信登录', icon: 'none' });
+    if (isBusy) return;
+
+    if (!isWeapp) {
+      Taro.showToast({ title: '请在微信小程序中使用', icon: 'none' });
+      return;
+    }
+
+    if (!wechatNickname.trim()) {
+      Taro.showToast({ title: '请先填写微信昵称', icon: 'none' });
+      return;
+    }
+
+    if (!wechatAvatarUrl.trim()) {
+      Taro.showToast({ title: '请先选择微信头像', icon: 'none' });
       return;
     }
 
     try {
-      const profile = await new Promise((resolve) => {
-        Taro.getUserProfile({
-          desc: '用于完善你的账号资料',
-          success: (res) => resolve(res.userInfo || {}),
-          fail: () => resolve({}),
-        });
-      });
+      setLoadingAction('wechat');
+      const loginResult = await Taro.login();
+      if (!loginResult.code) {
+        throw new Error('未获取到微信登录 code');
+      }
 
-      await loginByWechatMiniapp(profile?.nickName, profile?.avatarUrl);
-      Taro.showToast({ title: '登录成功', icon: 'success' });
-      setTimeout(() => navigation.switchTab({ url: '/pages/index/index' }), 800);
+      const wechatUserInfo = buildWechatUserInfo(wechatNickname, wechatAvatarUrl);
+      await authService.loginByWechatMiniapp(loginResult.code, wechatUserInfo);
+      Taro.showToast({ title: '微信登录成功', icon: 'success' });
+      finishLogin();
     } catch (error) {
       Taro.showToast({ title: error.message || '微信登录失败', icon: 'none' });
+    } finally {
+      setLoadingAction(null);
     }
   };
 
+  const passwordBtnText = loadingAction === 'password' ? '登录中...' : '登录';
+  const smsBtnText = loadingAction === 'sms' ? '登录中...' : '登录';
+  const wechatBtnText = loadingAction === 'wechat' ? '登录中...' : '微信一键登录';
+
   return (
-    <View className="login-container">
-      <View className="back-header" onClick={() => navigation.back()}>
-        <Text className="back-arrow">{'<'}</Text>
+    <View className={`login-container${isWeapp ? ' login-container--weapp' : ''}`}>
+      <View className="back-header" onClick={handleLoginBackNavigation}>
+        <Text className="back-arrow">←</Text>
         <Text className="back-text">返回</Text>
       </View>
 
       <View className="login-content">
         <View className="logo-section">
-          <Text className="logo">智乐空间</Text>
-          <Text className="tagline">支持密码、手机号验证码和微信登录</Text>
+          <Text className="logo">智趣空间</Text>
+          <Text className="tagline">AI 驱动的全民游戏创作平台</Text>
         </View>
 
         <View className="login-tabs">
           <View
             className={`login-tab ${mode === 'password' ? 'active' : ''}`}
-            onClick={() => setMode('password')}
+            onClick={() => !isBusy && setMode('password')}
           >
             <Text>密码登录</Text>
           </View>
           <View
             className={`login-tab ${mode === 'sms' ? 'active' : ''}`}
-            onClick={() => setMode('sms')}
+            onClick={() => !isBusy && setMode('sms')}
           >
-            <Text>手机号登录</Text>
+            <Text>短信登录</Text>
           </View>
         </View>
 
@@ -156,7 +221,7 @@ export default function Login() {
                 <Input
                   className="input"
                   type="text"
-                  placeholder="手机号、用户名或邮箱"
+                  placeholder="手机号或用户名"
                   placeholderStyle="color: #55516e"
                   value={account}
                   onInput={(e) => setAccount(e.detail.value)}
@@ -166,7 +231,7 @@ export default function Login() {
               <View className="input-field">
                 <Input
                   className="input"
-                  type="safe-password"
+                  type="text"
                   password
                   placeholder="请输入密码"
                   placeholderStyle="color: #55516e"
@@ -177,11 +242,11 @@ export default function Login() {
               </View>
 
               <View
-                className="login-btn"
+                className={`login-btn ${isBusy && loadingAction !== 'password' ? 'is-disabled' : ''}`}
                 onClick={handlePasswordLogin}
-                style={{ opacity: isLoading ? 0.6 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}
+                style={{ pointerEvents: isBusy ? 'none' : 'auto' }}
               >
-                <Text>{isLoading ? '登录中...' : '密码登录'}</Text>
+                <Text>{passwordBtnText}</Text>
               </View>
             </>
           ) : (
@@ -210,7 +275,7 @@ export default function Login() {
                   onInput={(e) => setCode(e.detail.value)}
                 />
                 <View
-                  className={`send-code-btn ${!canSend ? 'disabled' : ''}`}
+                  className={`send-code-btn ${!canSend || isBusy ? 'disabled' : ''}`}
                   onClick={handleSendCode}
                 >
                   <Text>{countdown > 0 ? `${countdown}s` : '获取验证码'}</Text>
@@ -218,19 +283,19 @@ export default function Login() {
               </View>
 
               <View
-                className="login-btn"
+                className={`login-btn ${isBusy && loadingAction !== 'sms' ? 'is-disabled' : ''}`}
                 onClick={handleSmsLogin}
-                style={{ opacity: isLoading ? 0.6 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}
+                style={{ pointerEvents: isBusy ? 'none' : 'auto' }}
               >
-                <Text>{isLoading ? '登录中...' : '手机号登录'}</Text>
+                <Text>{smsBtnText}</Text>
               </View>
             </>
           )}
 
           <View className="register-link">
             <Text>没有账号？</Text>
-            <Text className="link" onClick={() => navigation.push({ url: '/pages/register/index' })}>
-              手机号注册
+            <Text className="link" onClick={() => !isBusy && Taro.navigateTo({ url: '/pages/register/index' })}>
+              注册
             </Text>
           </View>
         </View>
@@ -241,8 +306,51 @@ export default function Login() {
           <View className="divider-line" />
         </View>
 
-        <View className="wechat-btn" onClick={handleWechatLogin}>
-          <Text>{process.env.TARO_ENV === 'weapp' ? '微信一键登录' : '在小程序中使用微信登录'}</Text>
+        {isWeapp && (
+          <View className="wechat-profile-card">
+            <View className="wechat-profile-card__header">
+              <Text className="wechat-profile-card__title">完善微信资料</Text>
+              <Text className="wechat-profile-card__desc">登录前先选择头像并填写昵称</Text>
+            </View>
+
+            <View className="wechat-profile-card__row">
+              <Button
+                className="wechat-avatar-picker"
+                openType="chooseAvatar"
+                onChooseAvatar={handleChooseAvatar}
+              >
+                {wechatAvatarUrl ? (
+                  <Image className="wechat-avatar-picker__image" src={wechatAvatarUrl} mode="aspectFill" />
+                ) : (
+                  <Text className="wechat-avatar-picker__placeholder">选择头像</Text>
+                )}
+              </Button>
+
+              <View className="wechat-nickname-field">
+                <Input
+                  className="input"
+                  type="nickname"
+                  placeholder="请输入微信昵称"
+                  placeholderStyle="color: #55516e"
+                  maxlength={20}
+                  value={wechatNickname}
+                  onInput={(e) => setWechatNickname(e.detail.value)}
+                />
+              </View>
+            </View>
+
+            <Text className="wechat-profile-card__tip">
+              微信小程序已不再直接返回真实头像和昵称，需要由用户主动选择后再同步到账号资料。
+            </Text>
+          </View>
+        )}
+
+        <View
+          className={`wechat-btn ${isBusy && loadingAction !== 'wechat' ? 'is-disabled' : ''}`}
+          onClick={handleWechatLogin}
+          style={{ pointerEvents: isBusy ? 'none' : 'auto' }}
+        >
+          <Text>{wechatBtnText}</Text>
         </View>
       </View>
     </View>

@@ -13,6 +13,7 @@
 """
 
 import os
+import shutil
 import sys
 import time
 import subprocess
@@ -23,6 +24,7 @@ import volcenginesdkvefaas
 import volcenginesdkcore
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIST_DIR = os.path.join(ROOT_DIR, "dist", "h5")
 
 # 前端函数信息（见 DEPLOY_RUNBOOK.md §1.1）
 FUNC_NAME = "gv-frontend"
@@ -45,6 +47,27 @@ SECURITY_GROUP_ID = os.environ.get("VOLCENGINE_SECURITY_GROUP_ID",  "")
 def shell(cmd: list) -> bool:
     result = subprocess.run(cmd, cwd=ROOT_DIR)
     return result.returncode == 0
+
+
+def sync_root_txt_assets():
+    if not os.path.isdir(DIST_DIR):
+        print(f"❌ 缺少 H5 构建产物: {DIST_DIR}")
+        print("   请先执行 npm run build:h5")
+        sys.exit(1)
+
+    txt_files = [
+        name for name in os.listdir(ROOT_DIR)
+        if name.lower().endswith(".txt") and os.path.isfile(os.path.join(ROOT_DIR, name))
+    ]
+    if not txt_files:
+        return
+
+    print("\n🗂️ 同步站点根目录校验文件...")
+    for name in txt_files:
+        src = os.path.join(ROOT_DIR, name)
+        dst = os.path.join(DIST_DIR, name)
+        shutil.copy2(src, dst)
+        print(f"   已同步: {name}")
 
 
 def get_api():
@@ -70,6 +93,8 @@ def main():
     print(f"   VPC ID:   {VPC_ID or '未设置'}")
     print(f"   Subnet:   {SUBNET_ID or '未设置'}")
     print(f"   SecGroup: {SECURITY_GROUP_ID or '未设置'}")
+
+    sync_root_txt_assets()
 
     # 1. docker login
     # VCR 用户名含 '#'，通过 stdin 传密码避免 shell 解析问题（见 DEPLOY_RUNBOOK §6.1）
