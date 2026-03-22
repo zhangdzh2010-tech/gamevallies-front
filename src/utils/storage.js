@@ -1,17 +1,6 @@
 import Taro from '@tarojs/taro';
 import { ENV } from '../config/env';
 
-
-
-
-
-
-
-
-
-
-
-
 class Storage {
   prefix = 'gamevallies_';
 
@@ -25,6 +14,7 @@ class Storage {
   }
 
   async getItem(key, options = {}) {
+    void options;
     try {
       const fullKey = this.getKey(key);
       const itemStr = Taro.getStorageSync(fullKey);

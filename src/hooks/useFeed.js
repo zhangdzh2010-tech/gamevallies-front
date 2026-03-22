@@ -14,9 +14,6 @@ export function useFeed() {
     isLoading,
     hasMore,
     error,
-    fetchTrending,
-    fetchLatest,
-    fetchFollowing,
     searchGames,
     setTab,
     loadMore,
@@ -31,8 +28,9 @@ export function useFeed() {
         return trending;
       case 'new':
         return latest;
-      case 'space':
-      case 'music':
+      case 'casual':
+      case 'puzzle':
+      case 'education':
         return searchResults;
       default:
         return following;

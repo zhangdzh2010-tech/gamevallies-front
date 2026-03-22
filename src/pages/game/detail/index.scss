@@ -135,6 +135,16 @@
           cursor: pointer;
           .btn-icon { font-size: 30px; }
           &:active { transform: scale(0.98); }
+
+          &.locked {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #8b87a3;
+
+            &:active {
+              background: rgba(255, 255, 255, 0.1);
+            }
+          }
         }
 
         .icon-btn {
@@ -153,7 +163,22 @@
           justify-content: center;
           gap: 8px;
           .count { font-size: 23px; }
+          &.fork-btn {
+            .count {
+              font-size: 0;
+            }
+
+            .count.count--overlay {
+              font-size: 23px;
+            }
+          }
           &.like-btn.liked { color: #ff5c8a; border-color: #ff5c8a; }
+          &.bookmark-btn.bookmarked { color: #fbbf24; border-color: #fbbf24; }
+          &.disabled {
+            color: #55516e;
+            border-color: #1d1d28;
+            background: rgba(17, 17, 24, 0.72);
+          }
           &:active { background: #15151e; }
         }
       }
@@ -332,7 +357,7 @@
   .comment-input-bar {
     background: #111118;
     border-top: 1px solid #252535;
-    padding: 0 0 env(safe-area-inset-bottom, 0);
+    padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
 
     .reply-hint {
       display: flex;

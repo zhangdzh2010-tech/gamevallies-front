@@ -51,7 +51,7 @@ export function isValidPassword(password, requireSpecial = false) {
   if (!/\d/.test(password)) return false;
 
   // Special character (optional)
-  if (requireSpecial && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (requireSpecial && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     return false;
   }
 
@@ -69,7 +69,7 @@ export function getPasswordStrength(password) {
   if (password.length >= 12) strength++;
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
   if (/\d/.test(password)) strength++;
-  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) strength++;
+  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) strength++;
 
   if (strength <= 2) return 'weak';
   if (strength <= 3) return 'medium';

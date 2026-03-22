@@ -1,8 +1,8 @@
 {
   "miniprogramRoot": "dist/weapp/",
   "projectname": "Gamevallies",
-  "description": "AI游戏创作社交平台",
-  "appid": "wx77f601f29a6765c9",
+  "description": "AI 驱动的全民创意创作与社交平台",
+  "appid": "wx77918f137dc7f5a5",
   "setting": {
     "urlCheck": false,
     "es6": false,
@@ -13,13 +13,6 @@
     "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,
-  "packNpmManually": true,
-  "packNpmRelationList": [
-    {
-      "packageJsonPath": "./package.json",
-      "miniprogramNpmDistDir": "./dist/weapp"
-    }
-  ],
     "minifyWXSS": true,
     "minifyWXML": true,
     "localPlugins": false,
@@ -32,8 +25,17 @@
       "ignore": [],
       "disablePlugins": [],
       "outputPath": ""
-    }
+    },
+    "packNpmManually": false,
+    "packNpmRelationList": []
   },
+  "packNpmManually": true,
+  "packNpmRelationList": [
+    {
+      "packageJsonPath": "./package.json",
+      "miniprogramNpmDistDir": "./dist/weapp"
+    }
+  ],
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {

@@ -1,30 +1,43 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
+import { AppTopBar } from '../../components/common/AppTopBar';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
+import { FloatingPlayer } from '../../components/common/FloatingPlayer';
+import { PaywallPopup } from '../../components/common/PaywallPopup';
 import * as feedService from '../../services/feed';
+import * as socialService from '../../services/social';
 import useGamePlayerStore from '../../stores/gamePlayer';
+import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
+import { buildGameDetailPath } from '../../utils/share';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
-const GAME_EMOJIS = ['🎮', '🚀', '🎵', '💎', '🐦', '🎣', '🧩', '🎯'];
+const GAME_EMOJIS = ['\ud83c\udfae', '\ud83d\ude80', '\ud83c\udfb2', '\ud83c\udfaf', '\ud83c\udf1f', '\u26a1', '\ud83e\udde9', '\ud83d\udd79\ufe0f'];
+const TAB_RECOMMENDED = '\u63a8\u8350\u5173\u6ce8';
+const TAB_LATEST = '\u6700\u65b0\u52a8\u6001';
 
 function normalizeGame(game, index) {
   return {
     ...game,
     plays: game.plays || game.playCount || 0,
     likes: game.likes || game.likeCount || 0,
+    comments: game.comments || game.commentCount || 0,
+    bookmarks: game.bookmarks || game.bookmarkCount || game.favoriteCount || game.favorites || 0,
+    viewerHasLiked: game.viewerHasLiked === true || game.liked === true,
+    viewerHasBookmarked: game.viewerHasBookmarked === true,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
-    author: game.author?.displayName || game.author?.username || game.author || '创作者',
+    author: game.author?.displayName || game.author?.username || game.author || '\u521b\u4f5c\u8005',
     isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
 
 export default function FollowPage() {
-  const [activeTab, setActiveTab] = useState('推荐关注');
+  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const [activeTab, setActiveTab] = useState(TAB_RECOMMENDED);
   const [topCreators, setTopCreators] = useState([]);
   const [followedGames, setFollowedGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +47,7 @@ export default function FollowPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const openGame = useGamePlayerStore((s) => s.openGame);
 
-  const tabs = ['推荐关注', '最新动态'];
+  const tabs = [TAB_RECOMMENDED, TAB_LATEST];
 
   const fetchData = useCallback(async (pageNum = 1, append = false) => {
     if (!append) setLoading(true);
@@ -49,11 +62,15 @@ export default function FollowPage() {
         setTopCreators(creators);
       }
 
-      const items = (gamesRes?.items || []).map(normalizeGame);
-      setFollowedGames(prev => append ? [...prev, ...items] : items);
+      const items = mergeBookmarkedFlags((gamesRes?.items || []).map(normalizeGame));
+      setFollowedGames((prev) => (append ? [...prev, ...items] : items));
       setHasMore(gamesRes?.hasMore ?? items.length >= 10);
-    } catch (e) {
-      console.error('fetchData error:', e);
+    } catch (error) {
+      console.error('fetchData error:', error);
+      Taro.showToast({
+        title: '\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5',
+        icon: 'none',
+      });
     } finally {
       setLoading(false);
     }
@@ -61,7 +78,11 @@ export default function FollowPage() {
 
   useEffect(() => {
     fetchData(1);
-  }, []);
+  }, [fetchData]);
+
+  useDidShow(() => {
+    setFollowedGames((prev) => mergeBookmarkedFlags(prev));
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -82,25 +103,76 @@ export default function FollowPage() {
   const handlePlay = (game) => {
     if (game.gameUrl) {
       openGame(game.gameUrl, game.title);
-    } else {
-      Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+      return;
     }
+
+    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+  };
+
+  const handleComment = (game) => {
+    Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) }).catch(() => {});
+  };
+
+  const handleToggleLike = async (targetGame) => {
+    try {
+      const result = await socialService.likeGame('game', targetGame.id);
+      const nextLiked = typeof result?.liked === 'boolean'
+        ? result.liked
+        : !targetGame.viewerHasLiked;
+      const nextLikes = Number.isFinite(Number(result?.likes))
+        ? Number(result.likes)
+        : Math.max(0, (Number(targetGame.likes) || 0) + (nextLiked ? 1 : -1));
+
+      setFollowedGames((prev) => prev.map((game) => (
+        game.id === targetGame.id
+          ? { ...game, likes: nextLikes, viewerHasLiked: nextLiked }
+          : game
+      )));
+
+      return { liked: nextLiked, likes: nextLikes };
+    } catch (error) {
+      Taro.showToast({
+        title: error?.message || '\u70b9\u8d5e\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5',
+        icon: 'none',
+      });
+      throw error;
+    }
+  };
+
+  const handleToggleBookmark = async (targetGame) => {
+    const nextBookmarked = !targetGame.viewerHasBookmarked;
+    const nextBookmarks = Math.max(0, (Number(targetGame.bookmarks) || 0) + (nextBookmarked ? 1 : -1));
+    setGameBookmarked(targetGame, nextBookmarked);
+    setFollowedGames((prev) => prev.map((game) => (
+      game.id === targetGame.id
+        ? { ...game, viewerHasBookmarked: nextBookmarked, bookmarks: nextBookmarks }
+        : game
+    )));
+    Taro.showToast({
+      title: nextBookmarked ? '\u5df2\u6536\u85cf' : '\u5df2\u53d6\u6d88\u6536\u85cf',
+      icon: 'none',
+    });
+    return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
   const leftCol = [];
   const rightCol = [];
-  followedGames.forEach((g, i) => {
-    if (i % 2 === 0) leftCol.push(g);
-    else rightCol.push(g);
+  followedGames.forEach((game, index) => {
+    if (index % 2 === 0) {
+      leftCol.push(game);
+    } else {
+      rightCol.push(game);
+    }
   });
 
   return (
-    <View className="follow-page">
-      {/* Header */}
+    <View className={`follow-page${isWeapp ? ' follow-page--weapp' : ''}`}>
+      <AppTopBar />
+
       <View className="follow-header">
-        <Text className="header-title">关注</Text>
+        <Text className="header-title">{'\u5173\u6ce8'}</Text>
         <View className="header-tabs">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <Text
               key={tab}
               className={`header-tab ${activeTab === tab ? 'active' : ''}`}
@@ -121,12 +193,11 @@ export default function FollowPage() {
         onScrollToLower={handleLoadMore}
         lowerThreshold={300}
       >
-        {activeTab === '推荐关注' && (
+        {activeTab === TAB_RECOMMENDED && (
           <>
-            {/* Recommended Creators */}
             <View className="section">
               <View className="section-head">
-                <Text className="section-title">热门创作者</Text>
+                <Text className="section-title">{'\u70ed\u95e8\u521b\u4f5c\u8005'}</Text>
               </View>
               <ScrollView className="creators-scroll" scrollX>
                 <View className="creators-list">
@@ -140,13 +211,13 @@ export default function FollowPage() {
                         )}
                       </View>
                       <Text className="creator-name">
-                        {creator.username || creator.name || '创作者'}
+                        {creator.username || creator.name || '\u521b\u4f5c\u8005'}
                       </Text>
                       <Text className="creator-meta">
-                        {creator.gameCount || creator.works || 0} 作品
+                        {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
                       </Text>
                       <View className="follow-btn">
-                        <Text className="follow-btn-text">关注</Text>
+                        <Text className="follow-btn-text">{'\u5173\u6ce8'}</Text>
                       </View>
                     </View>
                   ))}
@@ -154,26 +225,39 @@ export default function FollowPage() {
               </ScrollView>
             </View>
 
-            {/* Recommended games */}
             <View className="section">
               <View className="section-head">
-                <Text className="section-title">你可能喜欢</Text>
+                <Text className="section-title">{'\u4f60\u53ef\u80fd\u559c\u6b22'}</Text>
               </View>
               {loading ? (
                 <View className="empty-state">
-                  <Text className="empty-text">加载中...</Text>
+                  <Text className="empty-text">{'\u52a0\u8f7d\u4e2d...'}</Text>
                 </View>
               ) : (
                 <View className="waterfall">
                   <View className="waterfall-col">
-                    {leftCol.map(game =>
-                      <GameCard key={game.id} game={game} onPlay={handlePlay} />
-                    )}
+                    {leftCol.map((game) => (
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        onPlay={handlePlay}
+                        onComment={handleComment}
+                        onToggleLike={handleToggleLike}
+                        onToggleBookmark={handleToggleBookmark}
+                      />
+                    ))}
                   </View>
                   <View className="waterfall-col">
-                    {rightCol.map(game =>
-                      <GameCard key={game.id} game={game} onPlay={handlePlay} />
-                    )}
+                    {rightCol.map((game) => (
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        onPlay={handlePlay}
+                        onComment={handleComment}
+                        onToggleLike={handleToggleLike}
+                        onToggleBookmark={handleToggleBookmark}
+                      />
+                    ))}
                   </View>
                 </View>
               )}
@@ -181,44 +265,58 @@ export default function FollowPage() {
           </>
         )}
 
-        {activeTab === '最新动态' && (
+        {activeTab === TAB_LATEST && (
           <View className="section">
             {loading ? (
               <View className="empty-state">
-                <Text className="empty-text">加载中...</Text>
+                <Text className="empty-text">{'\u52a0\u8f7d\u4e2d...'}</Text>
               </View>
             ) : followedGames.length === 0 ? (
               <View className="empty-state">
-                <Text className="empty-icon">⭐</Text>
-                <Text className="empty-title">还没有关注的创作者</Text>
-                <Text className="empty-text">关注创作者后，这里会显示他们的最新作品</Text>
+                <Text className="empty-icon">{'\u2728'}</Text>
+                <Text className="empty-title">{'\u8fd8\u6ca1\u6709\u5173\u6ce8\u7684\u521b\u4f5c\u8005'}</Text>
+                <Text className="empty-text">{'\u5173\u6ce8\u521b\u4f5c\u8005\u540e\uff0c\u8fd9\u91cc\u4f1a\u663e\u793a\u4ed6\u4eec\u7684\u6700\u65b0\u4f5c\u54c1'}</Text>
               </View>
             ) : (
               <View className="waterfall">
                 <View className="waterfall-col">
-                  {leftCol.map(game =>
-                    <GameCard key={game.id} game={game} onPlay={handlePlay} />
-                  )}
+                  {leftCol.map((game) => (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      onPlay={handlePlay}
+                      onComment={handleComment}
+                      onToggleLike={handleToggleLike}
+                      onToggleBookmark={handleToggleBookmark}
+                    />
+                  ))}
                 </View>
                 <View className="waterfall-col">
-                  {rightCol.map(game =>
-                    <GameCard key={game.id} game={game} onPlay={handlePlay} />
-                  )}
+                  {rightCol.map((game) => (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      onPlay={handlePlay}
+                      onComment={handleComment}
+                      onToggleLike={handleToggleLike}
+                      onToggleBookmark={handleToggleBookmark}
+                    />
+                  ))}
                 </View>
               </View>
             )}
           </View>
         )}
 
-        {/* Loading more */}
         {isLoadingMore && (
           <View className="load-more">
-            <Text className="load-more-text">加载中...</Text>
+            <Text className="load-more-text">{'\u52a0\u8f7d\u4e2d...'}</Text>
           </View>
         )}
+
         {!hasMore && followedGames.length > 0 && (
           <View className="load-more">
-            <Text className="load-more-end">— 已经到底了 —</Text>
+            <Text className="load-more-end">{'\u2014 \u5df2\u7ecf\u5230\u5e95\u4e86 \u2014'}</Text>
           </View>
         )}
 
@@ -227,6 +325,8 @@ export default function FollowPage() {
 
       <CustomTabBar activeIndex={1} />
       <GlobalGamePlayer />
+      <FloatingPlayer />
+      <PaywallPopup />
     </View>
   );
 }

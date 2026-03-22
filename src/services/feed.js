@@ -66,12 +66,12 @@ filters)
  * Get games by type
  */
 export async function getGamesByType(
-gameType,
+type,
 page = 1,
 limit = 10)
 {
-  return get('/api/v1/games/by-type', {
-    data: { gameType, page, limit }
+  return get(`/api/v1/feed/by-type/${encodeURIComponent(type)}`, {
+    data: { page, limit }
   });
 }
 
@@ -112,22 +112,6 @@ export async function getTrendingCreators(limit = 10) {
 }
 
 /**
- * Get current challenge
- */
-export async function getCurrentChallenge()
-
-
-
-
-
-
-
-
-{
-  return get('/api/v1/challenges/current');
-}
-
-/**
  * Get challenge games
  */
 export async function getChallengeGames(
@@ -150,28 +134,6 @@ export async function getFeaturedGames(limit = 6) {
 }
 
 /**
- * Get category games
- */
-export async function getCategoryGames(
-category,
-page = 1,
-limit = 10)
-{
-  return get('/api/v1/feed/category', {
-    data: { category, page, limit }
-  });
-}
-
-/**
- * Get recommended games (AI-based)
- */
-export async function getRecommendedGames(limit = 10) {
-  return get('/api/v1/feed/recommended', {
-    data: { limit }
-  });
-}
-
-/**
  * Get games by creator
  */
 export async function getCreatorGames(
@@ -180,30 +142,6 @@ page = 1,
 limit = 10)
 {
   return get(`/api/v1/creators/${creatorId}/games`, {
-    data: { page, limit }
-  });
-}
-
-/**
- * Get user's favorite games
- */
-export async function getFavoriteGames(
-page = 1,
-limit = 10)
-{
-  return get('/api/v1/feed/favorites', {
-    data: { page, limit }
-  });
-}
-
-/**
- * Get game history (recently played)
- */
-export async function getGameHistory(
-page = 1,
-limit = 10)
-{
-  return get('/api/v1/feed/history', {
     data: { page, limit }
   });
 }
@@ -217,12 +155,7 @@ export default {
   getGamesByTag,
   getTrendingTags,
   getTrendingCreators,
-  getCurrentChallenge,
   getChallengeGames,
   getFeaturedGames,
-  getCategoryGames,
-  getRecommendedGames,
-  getCreatorGames,
-  getFavoriteGames,
-  getGameHistory
+  getCreatorGames
 };

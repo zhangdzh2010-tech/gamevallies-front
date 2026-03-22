@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import './index.scss';
 
@@ -14,10 +15,7 @@ import './index.scss';
 
 
 export default function MessagesPage() {
-  const { windowHeight = 750 } = Taro.getSystemInfoSync();
-  // 96px header + 120px custom tab bar
-  const scrollViewHeight = windowHeight - 96 - 120;
-
+  const isWeapp = process.env.TARO_ENV === 'weapp';
   const [notifications, setNotifications] = useState([
   {
     id: '1',
@@ -70,14 +68,6 @@ export default function MessagesPage() {
   );
 
   const scrollViewRef = useRef(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handlePullToRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
-  };
 
   const handleMarkAsRead = (notificationId) => {
     setNotifications((prev) =>
@@ -98,7 +88,8 @@ export default function MessagesPage() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <View className="messages-page">
+    <View className={`messages-page${isWeapp ? ' messages-page--weapp' : ''}`}>
+      <AppTopBar />
       {/* Header */}
       <View className="messages-header">
         <View className="header-content">
@@ -112,7 +103,6 @@ export default function MessagesPage() {
       {/* Notification List */}
       <ScrollView
         className="messages-list"
-        style={{ height: `${scrollViewHeight}px` }}
         scrollY
         ref={scrollViewRef}
         onScroll={() => {}}>

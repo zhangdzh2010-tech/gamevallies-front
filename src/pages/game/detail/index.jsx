@@ -1,13 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import { useRoute, useNavigation } from '@tarojs/hooks';
-import Taro from '@tarojs/taro';
+import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import * as gameService from '../../../services/game';
 import * as socialService from '../../../services/social';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
+import { PaywallPopup } from '../../../components/common/PaywallPopup';
+import { SharePanel } from '../../../components/common/SharePanel';
 import useGamePlayerStore from '../../../stores/gamePlayer';
+import useQuotaStore from '../../../stores/quotaStore';
+import {
+  openForkCreatePageWithAuth,
+  openResumeCreatePageWithAuth,
+} from '../../../utils/authNavigation';
+import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { Storage } from '../../../utils/storage';
+import { getShareConfig } from '../../../utils/share';
 import './index.scss';
+
+const COMMENTS_SECTION_ID = 'game-comments-section';
 
 function formatTime(dateStr) {
   if (!dateStr) return '';
@@ -24,16 +35,32 @@ function formatTime(dateStr) {
 
 function formatNumber(num) {
   const n = Number(num) || 0;
-  if (n >= 10000) return (n / 10000).toFixed(1) + '万';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return n.toString();
 }
 
-// Single comment row (used for both top-level and replies)
+function applyCommentLikeDelta(list, commentId, delta) {
+  return (list || []).map((comment) => {
+    if (comment.id === commentId) {
+      return {
+        ...comment,
+        likes: Math.max(0, (comment.likes || 0) + delta),
+      };
+    }
+
+    return {
+      ...comment,
+      replies: applyCommentLikeDelta(comment.replies, commentId, delta),
+    };
+  });
+}
+
 function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply, onDelete }) {
   const isLiked = likedIds.has(comment.id);
-  const isOwn = currentUserId && comment.authorId === currentUserId;
-  const avatar = comment.author?.avatar || '';
+  const isOwn = currentUserId && String(comment.authorId || comment.author?.id || '') === String(currentUserId);
+  const avatar = comment.author?.avatar || comment.author?.avatarUrl || '';
+  const displayName = comment.author?.displayName || comment.author?.username || '用户';
 
   return (
     <View className={`comment-item ${isReply ? 'is-reply' : ''}`}>
@@ -46,7 +73,7 @@ function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply
       </View>
       <View className="comment-body">
         <View className="comment-header">
-          <Text className="comment-name">{comment.author?.username || '用户'}</Text>
+          <Text className="comment-name">{displayName}</Text>
           <Text className="comment-time">{formatTime(comment.createdAt)}</Text>
         </View>
         <Text className="comment-content">{comment.content}</Text>
@@ -77,8 +104,9 @@ export default function GameDetail() {
   const route = useRoute();
   const navigation = useNavigation();
   const gameId = route.params?.id;
-  const { windowHeight = 750 } = Taro.getSystemInfoSync();
-  const scrollViewHeight = windowHeight - 96; // minus input bar height
+  const { windowHeight = 750, safeArea } = Taro.getSystemInfoSync();
+  const safeBottomInset = safeArea ? Math.max(windowHeight - safeArea.bottom, 0) : 0;
+  const scrollViewHeight = windowHeight - 96;
 
   const openGame = useGamePlayerStore((s) => s.openGame);
   const currentUser = Storage.getUser();
@@ -88,54 +116,173 @@ export default function GameDetail() {
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
-  // Comments state
   const [comments, setComments] = useState([]);
   const [totalComments, setTotalComments] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentPage, setCommentPage] = useState(1);
 
-  // Reply state: { id, username } or null
   const [replyingTo, setReplyingTo] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  // Like tracking for comments
   const [likedCommentIds, setLikedCommentIds] = useState(new Set());
-
-  // Expanded replies: { [commentId]: allReplies[] }
   const [expandedReplies, setExpandedReplies] = useState({});
   const [loadingReplies, setLoadingReplies] = useState({});
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [commentInputFocused, setCommentInputFocused] = useState(false);
+  const [commentScrollTarget, setCommentScrollTarget] = useState('');
+
+  const shareConfig = getShareConfig(game || { id: gameId, title: '游戏' });
+  const authorId = game?.author?.id || game?.authorId;
+  const isOwnGame = Boolean(currentUserId && String(currentUserId) === String(authorId || ''));
+  const canForkGame = Boolean(game && !isOwnGame && game.allowFork !== false);
+  const continueCreateLabel = isOwnGame
+    ? '继续优化'
+    : (canForkGame ? 'Fork 后继续创作' : '作者未开放 Fork');
+  const continueCreateDisabled = Boolean(game) && !isOwnGame && !canForkGame;
+
+  const reportShare = (platform) => {
+    if (!gameId) {
+      return;
+    }
+
+    socialService.recordShare(gameId, platform).catch(() => {});
+  };
+
+  useShareAppMessage(() => ({
+    ...shareConfig,
+    success: () => reportShare('weapp_session'),
+  }));
+
+  useShareTimeline(() => ({
+    title: shareConfig.title,
+    query: shareConfig.query,
+    imageUrl: shareConfig.imageUrl,
+    success: () => reportShare('weapp_timeline'),
+  }));
 
   useEffect(() => {
-    if (!gameId) { setLoading(false); return; }
+    if (!gameId) {
+      setLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
     const load = async () => {
       try {
         const gameData = await gameService.getGame(gameId);
+        if (cancelled) {
+          return;
+        }
+
         setGame(gameData);
         setLikeCount(gameData?.likes || 0);
+        setIsLiked(Boolean(gameData?.viewerHasLiked));
+
+        const bookmarked = Boolean(gameData?.viewerHasBookmarked) || isGameBookmarked(gameData?.id || gameId);
+        setIsBookmarked(bookmarked);
+
+        if (bookmarked) {
+          setGameBookmarked({ ...gameData, viewerHasBookmarked: true }, true);
+        }
+
+        if (Storage.getToken()) {
+          try {
+            const liked = await socialService.checkLikeStatus('game', gameId);
+            if (!cancelled) {
+              setIsLiked(Boolean(liked));
+            }
+          } catch {
+            // Ignore like-status failures and keep server fallback.
+          }
+        }
       } catch {
-        Taro.showToast({ title: '加载失败', icon: 'none' });
+        if (!cancelled) {
+          Taro.showToast({ title: '加载失败', icon: 'none' });
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
+
     load();
     loadComments(1, false);
+
+    return () => {
+      cancelled = true;
+    };
   }, [gameId]);
 
-  const loadComments = async (pg, append) => {
+  useEffect(() => {
+    if (!Storage.getToken() || !authorId || isOwnGame) {
+      setIsFollowing(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    socialService.checkFollowStatus(authorId)
+      .then((following) => {
+        if (!cancelled) {
+          setIsFollowing(Boolean(following));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authorId, isOwnGame]);
+
+  useEffect(() => {
+    if (process.env.TARO_ENV !== 'weapp') return;
+
+    Taro.showShareMenu({
+      withShareTicket: true,
+      showShareItems: ['shareAppMessage', 'shareTimeline'],
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!game || route.params?.openShare !== '1') return;
+    setShowSharePanel(true);
+  }, [game, route.params?.openShare]);
+
+  useEffect(() => {
+    if (route.params?.openComment !== '1' || loading) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setCommentScrollTarget(COMMENTS_SECTION_ID);
+      setCommentInputFocused(true);
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [route.params?.openComment, loading]);
+
+  const loadComments = async (page, append) => {
+    if (!gameId) {
+      return;
+    }
+
     setLoadingComments(true);
     try {
-      const result = await socialService.getComments(gameId, pg, 20);
+      const result = await socialService.getComments(gameId, page, 20);
       const items = result?.items || [];
-      setComments((prev) => append ? [...prev, ...items] : items);
+      setComments((prev) => (append ? [...prev, ...items] : items));
       setTotalComments(result?.total || 0);
       setHasMore(result?.hasMore || false);
-      setCommentPage(pg);
+      setCommentPage(page);
     } catch {
-      // ignore
+      // Ignore comments loading failures.
     } finally {
       setLoadingComments(false);
     }
@@ -148,10 +295,14 @@ export default function GameDetail() {
 
   const handleExpandReplies = async (comment) => {
     if (expandedReplies[comment.id]) {
-      // Collapse
-      setExpandedReplies((prev) => { const n = { ...prev }; delete n[comment.id]; return n; });
+      setExpandedReplies((prev) => {
+        const next = { ...prev };
+        delete next[comment.id];
+        return next;
+      });
       return;
     }
+
     setLoadingReplies((prev) => ({ ...prev, [comment.id]: true }));
     try {
       const result = await socialService.getCommentReplies(comment.id, 1, 50);
@@ -166,29 +317,31 @@ export default function GameDetail() {
   const handleSend = async () => {
     const text = commentText.trim();
     if (!text) return;
+
     if (!Storage.getToken()) {
       Taro.showToast({ title: '请先登录后再评论', icon: 'none' });
       return;
     }
+
     setSubmitting(true);
     try {
       const parentId = replyingTo?.id || null;
       const newComment = await socialService.createComment(gameId, text, parentId);
+
       if (parentId) {
-        // Append reply under parent
-        setComments((prev) => prev.map((c) =>
-          c.id === parentId
-            ? { ...c, replyCount: (c.replyCount || 0) + 1, replies: [...(c.replies || []), newComment] }
-            : c
-        ));
-        // Also update expanded replies if open
-        setExpandedReplies((prev) =>
+        setComments((prev) => prev.map((comment) => (
+          comment.id === parentId
+            ? { ...comment, replyCount: (comment.replyCount || 0) + 1, replies: [...(comment.replies || []), newComment] }
+            : comment
+        )));
+        setExpandedReplies((prev) => (
           prev[parentId] ? { ...prev, [parentId]: [...prev[parentId], newComment] } : prev
-        );
+        ));
       } else {
         setComments((prev) => [newComment, ...prev]);
         setTotalComments((prev) => prev + 1);
       }
+
       setCommentText('');
       setReplyingTo(null);
     } catch {
@@ -201,37 +354,56 @@ export default function GameDetail() {
   const handleCommentLike = async (commentId) => {
     const isCurrentlyLiked = likedCommentIds.has(commentId);
     const delta = isCurrentlyLiked ? -1 : 1;
-    // Optimistic
+
     setLikedCommentIds((prev) => {
       const next = new Set(prev);
-      isCurrentlyLiked ? next.delete(commentId) : next.add(commentId);
+      if (isCurrentlyLiked) {
+        next.delete(commentId);
+      } else {
+        next.add(commentId);
+      }
       return next;
     });
-    const applyDelta = (list) => (list || []).map((c) => {
-      if (c.id === commentId) return { ...c, likes: Math.max(0, (c.likes || 0) + delta) };
-      return { ...c, replies: applyDelta(c.replies) };
-    });
-    setComments((prev) => applyDelta(prev));
+
+    setComments((prev) => applyCommentLikeDelta(prev, commentId, delta));
     setExpandedReplies((prev) => {
       const next = { ...prev };
-      Object.keys(next).forEach((k) => { next[k] = applyDelta(next[k]); });
+      Object.keys(next).forEach((key) => {
+        next[key] = applyCommentLikeDelta(next[key], commentId, delta);
+      });
       return next;
     });
+
     try {
       const result = await socialService.likeComment(commentId);
       setLikedCommentIds((prev) => {
         const next = new Set(prev);
-        result?.liked ? next.add(commentId) : next.delete(commentId);
+        if (result?.liked) {
+          next.add(commentId);
+        } else {
+          next.delete(commentId);
+        }
         return next;
       });
     } catch {
-      // rollback
       setLikedCommentIds((prev) => {
         const next = new Set(prev);
-        isCurrentlyLiked ? next.add(commentId) : next.delete(commentId);
+        if (isCurrentlyLiked) {
+          next.add(commentId);
+        } else {
+          next.delete(commentId);
+        }
         return next;
       });
-      setComments((prev) => applyDelta(prev)); // re-apply original
+
+      setComments((prev) => applyCommentLikeDelta(prev, commentId, -delta));
+      setExpandedReplies((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          next[key] = applyCommentLikeDelta(next[key], commentId, -delta);
+        });
+        return next;
+      });
     }
   };
 
@@ -242,19 +414,20 @@ export default function GameDetail() {
       confirmColor: '#ff5c8a',
       success: async (res) => {
         if (!res.confirm) return;
+
         try {
           await socialService.deleteComment(commentId);
-          setComments((prev) =>
-            prev
-              .filter((c) => c.id !== commentId)
-              .map((c) => ({
-                ...c,
-                replies: (c.replies || []).filter((r) => r.id !== commentId),
-              }))
-          );
+          setComments((prev) => prev
+            .filter((comment) => comment.id !== commentId)
+            .map((comment) => ({
+              ...comment,
+              replies: (comment.replies || []).filter((reply) => reply.id !== commentId),
+            })));
           setExpandedReplies((prev) => {
             const next = { ...prev };
-            Object.keys(next).forEach((k) => { next[k] = next[k].filter((r) => r.id !== commentId); });
+            Object.keys(next).forEach((key) => {
+              next[key] = next[key].filter((reply) => reply.id !== commentId);
+            });
             return next;
           });
           setTotalComments((prev) => Math.max(0, prev - 1));
@@ -267,38 +440,110 @@ export default function GameDetail() {
   };
 
   const handleReply = (comment) => {
-    setReplyingTo({ id: comment.id, username: comment.author?.username || '用户' });
+    setReplyingTo({
+      id: comment.id,
+      username: comment.author?.displayName || comment.author?.username || '用户',
+    });
     setCommentText('');
   };
 
   const handleLikeGame = async () => {
+    if (likeLoading) {
+      return;
+    }
+
     try {
-      await socialService.likeGame('game', gameId);
-      setIsLiked((prev) => {
-        setLikeCount((c) => prev ? c - 1 : c + 1);
-        return !prev;
-      });
+      setLikeLoading(true);
+      const result = await socialService.likeGame('game', gameId);
+      const nextLiked = typeof result?.liked === 'boolean' ? result.liked : !isLiked;
+      const nextLikes = Number.isFinite(Number(result?.likes))
+        ? Number(result.likes)
+        : Math.max(0, likeCount + (nextLiked ? 1 : -1));
+
+      setIsLiked(nextLiked);
+      setLikeCount(nextLikes);
+      setGame((prev) => (prev ? { ...prev, likes: nextLikes, viewerHasLiked: nextLiked } : prev));
     } catch {
       Taro.showToast({ title: '操作失败', icon: 'none' });
+    } finally {
+      setLikeLoading(false);
     }
   };
 
-  const handleFork = async () => {
-    try {
-      await gameService.forkGame(gameId);
-      Taro.showToast({ title: '已复制到创作区', icon: 'success' });
-    } catch {
-      Taro.showToast({ title: 'Fork 失败', icon: 'none' });
+  const handleBookmarkGame = () => {
+    if (!game) {
+      return;
     }
+
+    const nextBookmarked = !isBookmarked;
+    setGameBookmarked(game, nextBookmarked);
+    setIsBookmarked(nextBookmarked);
+    setGame((prev) => (prev ? { ...prev, viewerHasBookmarked: nextBookmarked } : prev));
+    Taro.showToast({ title: nextBookmarked ? '已收藏' : '已取消收藏', icon: 'none' });
+  };
+
+  const handleForkAction = async () => {
+    if (!Storage.getToken()) {
+      openForkCreatePageWithAuth(gameId);
+      return;
+    }
+
+    if (isOwnGame) {
+      Taro.showToast({ title: '不能 Fork 自己的作品', icon: 'none' });
+      return;
+    }
+
+    if (!canForkGame) {
+      Taro.showToast({ title: '作者未开放 Fork 权限', icon: 'none' });
+      return;
+    }
+
+    try {
+      const forkedGameId = await gameService.forkGame(gameId);
+      const forkedGame = await gameService.getGame(forkedGameId);
+      Taro.showToast({ title: '已 Fork 到你的创作区', icon: 'success' });
+      setTimeout(() => {
+        openResumeCreatePageWithAuth(forkedGame, forkedGameId);
+      }, 300);
+    } catch (error) {
+      Taro.showToast({ title: error?.message || 'Fork 失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleContinueCreate = async () => {
+    if (isOwnGame) {
+      openResumeCreatePageWithAuth(game, game?.id);
+      return;
+    }
+
+    await handleForkAction();
   };
 
   const handleFollow = async () => {
-    if (!game?.author?.id) return;
+    if (!authorId || isOwnGame || followLoading) {
+      return;
+    }
+
+    if (!Storage.getToken()) {
+      Taro.showToast({ title: '请先登录后再关注', icon: 'none' });
+      return;
+    }
+
     try {
-      await socialService.followUser(game.author.id);
-      Taro.showToast({ title: '已关注创作者', icon: 'success' });
+      setFollowLoading(true);
+      if (isFollowing) {
+        await socialService.unfollowUser(authorId);
+        setIsFollowing(false);
+        Taro.showToast({ title: '已取消关注', icon: 'success' });
+      } else {
+        await socialService.followUser(authorId);
+        setIsFollowing(true);
+        Taro.showToast({ title: '已关注创作者', icon: 'success' });
+      }
     } catch {
-      Taro.showToast({ title: '关注失败', icon: 'none' });
+      Taro.showToast({ title: isFollowing ? '取消关注失败' : '关注失败', icon: 'none' });
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -306,8 +551,8 @@ export default function GameDetail() {
     const expanded = expandedReplies[comment.id];
     const inlineReplies = expanded || comment.replies || [];
     const replyCount = comment.replyCount || 0;
-    const isExpanded = !!expanded;
-    const isLoadingR = loadingReplies[comment.id];
+    const isExpanded = Boolean(expanded);
+    const isLoadingReplies = loadingReplies[comment.id];
 
     return (
       <View className="replies-container">
@@ -325,12 +570,12 @@ export default function GameDetail() {
         ))}
         {replyCount > 3 && !isExpanded && (
           <View className="expand-replies" onClick={() => handleExpandReplies(comment)}>
-            <Text>{isLoadingR ? '加载中...' : `查看全部 ${replyCount} 条回复 ›`}</Text>
+            <Text>{isLoadingReplies ? '加载中...' : `查看全部 ${replyCount} 条回复`}</Text>
           </View>
         )}
         {isExpanded && replyCount > 3 && (
           <View className="expand-replies" onClick={() => handleExpandReplies(comment)}>
-            <Text>收起回复 ›</Text>
+            <Text>收起回复</Text>
           </View>
         )}
         <View className="reply-shortcut" onClick={() => handleReply(comment)}>
@@ -352,79 +597,107 @@ export default function GameDetail() {
 
   return (
     <View className="game-detail">
-      <ScrollView className="detail-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
-        {/* Preview Banner */}
+      <ScrollView
+        className="detail-scroll"
+        style={{ height: `${scrollViewHeight}px` }}
+        scrollY
+        scrollWithAnimation
+        scrollIntoView={commentScrollTarget}
+      >
         <View className="preview-banner" style={{ background: 'linear-gradient(135deg, #6e56ff30 0%, #6e56ff50 100%)' }}>
           <Text className="preview-emoji">{game.emoji || '🎮'}</Text>
         </View>
 
-        {/* Back Button */}
         <View className="back-btn" onClick={() => navigation.back()}>←</View>
 
         <View className="detail-content">
-          {/* Title and Description */}
           <View className="title-section">
             <Text className="title">{game.title}</Text>
             <Text className="description">{game.description}</Text>
           </View>
 
-          {/* Author Row */}
           <View className="author-row">
             <View className="author-info">
-              {(game.author?.avatar || '').startsWith('http') ? (
-                <Image style={{ width: '60px', height: '60px', borderRadius: '50%' }} src={game.author.avatar} mode="aspectFill" />
+              {(game.author?.avatar || game.author?.avatarUrl || '').startsWith('http') ? (
+                <Image style={{ width: '60px', height: '60px', borderRadius: '50%' }} src={game.author.avatar || game.author.avatarUrl} mode="aspectFill" />
               ) : (
-                <Text className="author-emoji">{game.author?.avatar || '👤'}</Text>
+                <Text className="author-emoji">{game.author?.avatar || game.author?.avatarUrl || '👤'}</Text>
               )}
               <View className="author-details">
-                <Text className="author-name">{game.author?.username || game.author || '未知'}</Text>
+                <Text className="author-name">{game.author?.displayName || game.author?.username || game.author || '未知作者'}</Text>
                 <Text className="author-desc">{game.author?.bio || ''}</Text>
               </View>
             </View>
-            <View className="follow-btn" onClick={handleFollow}>关注</View>
+            {!isOwnGame ? (
+              <View className="follow-btn" onClick={handleFollow}>
+                {followLoading ? '处理中...' : (isFollowing ? '已关注' : '关注')}
+              </View>
+            ) : null}
           </View>
 
-          {/* Stats Row */}
           <View className="stats-row">
             {[
               { icon: '▶', value: formatNumber(game.plays), label: '次游玩' },
               { icon: '♥', value: formatNumber(game.likes), label: '次点赞' },
-              { icon: '🔀', value: formatNumber(game.forks), label: '次复制' },
+              { icon: '⎇', value: formatNumber(game.forks), label: '次复刻' },
               { icon: '⏱', value: game.avgPlayTime || '--', label: '平均时长' },
-            ].map((s) => (
-              <View key={s.label} className="stat-item">
-                <Text className="stat-label">{s.icon}</Text>
-                <Text className="stat-value">{s.value}</Text>
-                <Text className="stat-text">{s.label}</Text>
+            ].map((stat) => (
+              <View key={stat.label} className="stat-item">
+                <Text className="stat-label">{stat.icon}</Text>
+                <Text className="stat-value">{stat.value}</Text>
+                <Text className="stat-text">{stat.label}</Text>
               </View>
             ))}
           </View>
 
-          {/* Action Buttons */}
           <View className="action-buttons">
-            <View className="play-btn" onClick={() => game?.gameUrl ? openGame(game.gameUrl, game.title) : Taro.showToast({ title: '游戏暂不可用', icon: 'none' })}>
-              <Text className="btn-icon">▶</Text>
-              <Text className="btn-text">试玩</Text>
+            <View
+              className={`play-btn ${!game.canPlay ? 'locked' : ''}`}
+              onClick={() => {
+                if (game.canPlay === false && currentUserId === game.author?.id) {
+                  useQuotaStore.getState().openPaywall(game.id);
+                  return;
+                }
+                if (game?.gameUrl) {
+                  openGame(game.gameUrl, game.title, '', {
+                    canPlay: game.canPlay !== false,
+                    isOwnGame: currentUserId === game.author?.id,
+                    gameId: game.id,
+                  });
+                  return;
+                }
+                Taro.showToast({ title: '游戏暂不可用', icon: 'none' });
+              }}
+            >
+              <Text className="btn-icon">{game.canPlay === false && currentUserId === game.author?.id ? '🔒' : '▶'}</Text>
+              <Text className="btn-text">{game.canPlay === false && currentUserId === game.author?.id ? '订阅后试玩' : '试玩'}</Text>
             </View>
             <View className={`icon-btn like-btn ${isLiked ? 'liked' : ''}`} onClick={handleLikeGame}>
               <Text>♥</Text>
-              <Text className="count">{formatNumber(likeCount)}</Text>
+              <Text className="count">{likeLoading ? '...' : formatNumber(likeCount)}</Text>
             </View>
-            <View className="icon-btn fork-btn" onClick={handleFork}>
-              <Text>🔀</Text>
-              <Text className="count">Fork</Text>
+            <View className={`icon-btn bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`} onClick={handleBookmarkGame}>
+              <Text>{isBookmarked ? '★' : '☆'}</Text>
+              <Text className="count">{isBookmarked ? '已收藏' : '收藏'}</Text>
+            </View>
+            <View className="icon-btn share-btn" onClick={() => setShowSharePanel(true)}>
+              <Text>分享</Text>
+              <Text className="count">分享</Text>
+            </View>
+            <View className={`icon-btn fork-btn ${canForkGame ? '' : 'disabled'}`} onClick={handleForkAction}>
+              <Text className="count count--overlay">{canForkGame ? 'Fork' : (isOwnGame ? '自己' : '未授权')}</Text>
+              <Text>⎇</Text>
+              <Text className="count">{canForkGame ? 'Fork' : (isOwnGame ? '自己' : '未授权')}</Text>
             </View>
           </View>
 
-          {/* Tags */}
           {(game.tags || []).length > 0 && (
             <View className="tags-section">
               {game.tags.map((tag) => <View key={tag} className="tag">{tag}</View>)}
             </View>
           )}
 
-          {/* Comments Section */}
-          <View className="comments-section">
+          <View id={COMMENTS_SECTION_ID} className="comments-section">
             <Text className="comments-title">
               💬 评论 {totalComments > 0 ? `(${formatNumber(totalComments)})` : ''}
             </Text>
@@ -441,10 +714,10 @@ export default function GameDetail() {
             )}
 
             <View className="comment-list">
-              {comments.map((c) => (
-                <View key={c.id} className="comment-thread">
+              {comments.map((comment) => (
+                <View key={comment.id} className="comment-thread">
                   <CommentRow
-                    comment={c}
+                    comment={comment}
                     currentUserId={currentUserId}
                     isReply={false}
                     likedIds={likedCommentIds}
@@ -452,7 +725,7 @@ export default function GameDetail() {
                     onReply={handleReply}
                     onDelete={handleDelete}
                   />
-                  {renderReplies(c)}
+                  {renderReplies(comment)}
                 </View>
               ))}
             </View>
@@ -464,11 +737,10 @@ export default function GameDetail() {
             )}
           </View>
 
-          <View className="bottom-spacer" />
+          <View className="bottom-spacer" style={{ height: `${Math.max(180, 132 + safeBottomInset)}px` }} />
         </View>
       </ScrollView>
 
-      {/* Comment Input Bar */}
       <View className="comment-input-bar">
         {replyingTo && (
           <View className="reply-hint">
@@ -484,7 +756,10 @@ export default function GameDetail() {
             type="text"
             placeholder={replyingTo ? `回复 @${replyingTo.username}...` : '写下你的想法...'}
             placeholderStyle="color: #55516e"
+            focus={commentInputFocused}
             value={commentText}
+            onFocus={() => setCommentInputFocused(true)}
+            onBlur={() => setCommentInputFocused(false)}
             onInput={(e) => setCommentText(e.detail.value)}
             confirmType="send"
             onConfirm={handleSend}
@@ -499,6 +774,15 @@ export default function GameDetail() {
       </View>
 
       <GlobalGamePlayer />
+      <PaywallPopup />
+      <SharePanel
+        visible={showSharePanel}
+        game={game}
+        onClose={() => setShowSharePanel(false)}
+        onContinueCreate={handleContinueCreate}
+        continueLabel={continueCreateLabel}
+        continueDisabled={continueCreateDisabled}
+      />
     </View>
   );
 }

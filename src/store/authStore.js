@@ -1,8 +1,17 @@
 import { create } from 'zustand';
-import Taro from '@tarojs/taro';
-
 import * as authService from '../services/auth';
 import { Storage } from '../utils/storage';
+
+function setAuthedState(set, response) {
+  set({
+    user: response.user,
+    token: response.accessToken,
+    refreshToken: response.refreshToken,
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+  });
+}
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -43,15 +52,7 @@ export const useAuthStore = create((set, get) => ({
 
     try {
       const response = await authService.login(account, password);
-
-      set({
-        user: response.user,
-        token: response.accessToken,
-        refreshToken: response.refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+      setAuthedState(set, response);
     } catch (error) {
       set({
         isLoading: false,
@@ -63,64 +64,45 @@ export const useAuthStore = create((set, get) => ({
 
   loginByPhone: async (phone, smsCode) => {
     set({ isLoading: true, error: null });
+
     try {
       const response = await authService.loginByPhone(phone, smsCode);
-      set({
-        user: response.user,
-        token: response.accessToken,
-        refreshToken: response.refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+      setAuthedState(set, response);
     } catch (error) {
-      set({ isLoading: false, error: error.message || '登录失败' });
+      set({
+        isLoading: false,
+        error: error.message || '登录失败',
+      });
       throw error;
     }
   },
 
-  loginByWechatMiniapp: async (nickname, avatarUrl) => {
+  loginByWechatMiniapp: async (code, userInfo) => {
     set({ isLoading: true, error: null });
+
     try {
-      const loginResult = await Taro.login();
-      if (!loginResult?.code) {
-        throw new Error('未获取到微信登录 code');
-      }
-
-      const response = await authService.loginByWechatMiniapp(
-        loginResult.code,
-        nickname,
-        avatarUrl,
-      );
-
-      set({
-        user: response.user,
-        token: response.accessToken,
-        refreshToken: response.refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+      const response = await authService.loginByWechatMiniapp(code, userInfo);
+      setAuthedState(set, response);
     } catch (error) {
-      set({ isLoading: false, error: error.message || '微信登录失败' });
+      set({
+        isLoading: false,
+        error: error.message || '微信登录失败',
+      });
       throw error;
     }
   },
 
   registerByPhone: async (phone, smsCode, nickname, password) => {
     set({ isLoading: true, error: null });
+
     try {
       const response = await authService.registerByPhone(phone, smsCode, nickname, password);
-      set({
-        user: response.user,
-        token: response.accessToken,
-        refreshToken: response.refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+      setAuthedState(set, response);
     } catch (error) {
-      set({ isLoading: false, error: error.message || '注册失败' });
+      set({
+        isLoading: false,
+        error: error.message || '注册失败',
+      });
       throw error;
     }
   },
@@ -130,15 +112,7 @@ export const useAuthStore = create((set, get) => ({
 
     try {
       const response = await authService.register(data);
-
-      set({
-        user: response.user,
-        token: response.accessToken,
-        refreshToken: response.refreshToken,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
+      setAuthedState(set, response);
     } catch (error) {
       set({
         isLoading: false,
@@ -173,10 +147,7 @@ export const useAuthStore = create((set, get) => ({
 
     try {
       const newToken = await authService.refreshTokenRequest(refreshToken);
-
-      set({
-        token: newToken,
-      });
+      set({ token: newToken });
     } catch (error) {
       set({ isAuthenticated: false });
       throw error;

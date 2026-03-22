@@ -140,3 +140,53 @@
     }
   }
 }
+
+.register-container.register-container--weapp {
+  .back-header {
+    .back-arrow {
+      font-size: 44rpx;
+    }
+
+    .back-text {
+      font-size: 28rpx;
+    }
+  }
+
+  .register-content {
+    .logo-section {
+      .logo {
+        font-size: 64rpx;
+      }
+
+      .tagline {
+        font-size: 28rpx;
+      }
+    }
+
+    .form-section {
+      .input-field {
+        .field-prefix {
+          font-size: 28rpx;
+        }
+
+        .input {
+          font-size: 30rpx;
+        }
+
+        &.code-field {
+          .send-code-btn {
+            font-size: 24rpx;
+          }
+        }
+      }
+
+      .register-btn {
+        font-size: 30rpx;
+      }
+
+      .login-link {
+        font-size: 24rpx;
+      }
+    }
+  }
+}
