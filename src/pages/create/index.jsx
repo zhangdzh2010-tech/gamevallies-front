@@ -79,6 +79,63 @@ const TASK_STATUS_LABELS = {
   timed_out: '超时',
 };
 
+const PIPELINE_MESSAGE_PATTERNS = [
+  { pattern: /(started|queued|submitting|提交|request)/i, stageKey: 'submitting' },
+  { pattern: /(slot extraction|slot_extract|dialogue|intent parsing|intent_parse|json|解析意图|意图解析)/i, stageKey: 'intent_parsing' },
+  { pattern: /(design|parameter|参数|设计方案)/i, stageKey: 'designing' },
+  { pattern: /(template|模板)/i, stageKey: 'template_matching' },
+  { pattern: /(code|代码生成|生成代码)/i, stageKey: 'code_generating' },
+  { pattern: /(qa|quality|质量检查)/i, stageKey: 'qa_checking' },
+  { pattern: /(runtime|运行时)/i, stageKey: 'runtime_qa' },
+  { pattern: /(review|审查|审阅)/i, stageKey: 'code_review' },
+  { pattern: /(complete|completed|succeeded|完成)/i, stageKey: 'completed' },
+];
+
+function getPipelineStageLabel(stageKey, fallback = '处理中') {
+  const stage = PIPELINE_STAGES.find((item) => item.key === stageKey);
+  return stage?.label || fallback;
+}
+
+function inferPipelineStageLabel(rawMessage = '', explicitStageKey = '', fallback = '处理中') {
+  if (explicitStageKey) {
+    return getPipelineStageLabel(explicitStageKey, fallback);
+  }
+
+  const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+  if (!message) {
+    return fallback;
+  }
+
+  const matchedStage = PIPELINE_MESSAGE_PATTERNS.find((item) => item.pattern.test(message));
+  if (matchedStage) {
+    return getPipelineStageLabel(matchedStage.stageKey, fallback);
+  }
+
+  return fallback;
+}
+
+function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
+  const source = typeof rawError === 'string' ? rawError.trim() : '';
+  if (!source) {
+    return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
+  }
+
+  if (/已取消|canceled|cancelled/i.test(source)) {
+    return '创作任务已取消';
+  }
+
+  const stageLabel = inferPipelineStageLabel(source, '', fallbackStageLabel);
+  if (/超时|timeout|timed out/i.test(source)) {
+    return `${stageLabel}阶段处理超时，请稍后重试`;
+  }
+
+  if (stageLabel === '解析游戏意图') {
+    return '解析游戏意图阶段遇到问题，请换一种更直接的描述后重试';
+  }
+
+  return `${stageLabel}阶段遇到问题，请稍后重试`;
+}
+
 export default function Create() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const {
@@ -384,7 +441,7 @@ export default function Create() {
     try {
       await createGame(description, title);
     } catch (err) {
-      Taro.showToast({ title: (err && err.message) || '创建失败，请重试', icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, 'AI 规划方案'), icon: 'none' });
     }
   }
 
@@ -418,7 +475,7 @@ export default function Create() {
       await iterateGame(currentGame.id, iterateFeedback.trim());
       setIterateFeedback('');
     } catch (err) {
-      Taro.showToast({ title: err.message || '优化失败，请重试', icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '优化游戏'), icon: 'none' });
     } finally {
       setIsIterating(false);
     }
@@ -520,12 +577,17 @@ export default function Create() {
     const taskTypeLabel = currentTask?.taskType === 'pipeline_iterate' ? '优化任务' : '创建任务';
     const taskIdSuffix = currentTask?.taskId ? String(currentTask.taskId).slice(-8) : '';
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
+    const currentStageLabel = inferPipelineStageLabel(
+      latestTaskMessage,
+      progress.stageKey,
+      getPipelineStageLabel(progress.stageKey, '正在生成游戏')
+    );
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
         <View className="create-header">
           <Text className="header-title">AI 创作中</Text>
-          <Text className="header-subtitle">{latestTaskMessage || '正在生成游戏，预计需要 3-10 分钟'}</Text>
+          <Text className="header-subtitle">{`当前阶段：${currentStageLabel}`}</Text>
         </View>
 
         <View className="progress-panel">
@@ -580,7 +642,13 @@ export default function Create() {
                   className="task-event-item"
                 >
                   <Text className="task-event-dot" />
-                  <Text className="task-event-text">{event.message}</Text>
+                  <Text className="task-event-text">
+                    {inferPipelineStageLabel(
+                      event.message,
+                      event.stepKey || event.stage,
+                      currentStageLabel
+                    )}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -617,7 +685,9 @@ export default function Create() {
 
           {error ? (
             <View className="completion-error-banner">
-              <Text className="completion-error-text">{terminalError?.message || error}</Text>
+              <Text className="completion-error-text">
+                {getUserFacingCreateError(terminalError?.message || error, 'AI 创作')}
+              </Text>
             </View>
           ) : null}
 
@@ -710,7 +780,7 @@ export default function Create() {
 
           {error && (
             <View className="error-banner">
-              <Text className="error-text">{error}</Text>
+              <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, 'AI 规划方案')}</Text>
               <Text className="error-dismiss" onClick={clearError}>×</Text>
             </View>
           )}

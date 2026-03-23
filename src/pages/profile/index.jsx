@@ -55,6 +55,67 @@ function formatNumber(num) {
   return String(num);
 }
 
+function normalizeAvatarSource(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
+
+  if (
+    /^https?:\/\//i.test(trimmed) ||
+    /^data:image\//i.test(trimmed) ||
+    /^blob:/i.test(trimmed) ||
+    /^wxfile:\/\//i.test(trimmed) ||
+    /^file:\/\//i.test(trimmed)
+  ) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/')) {
+    return `${ENV.API_BASE_URL.replace(/\/$/, '')}${trimmed}`;
+  }
+
+  return '';
+}
+
+function isPersistableAvatarUrl(value) {
+  return /^https?:\/\//i.test(value || '');
+}
+
+function getAvatarFallback(value, name) {
+  const avatarText = typeof value === 'string' ? value.trim() : '';
+
+  if (avatarText && Array.from(avatarText).length <= 2 && !/[/:.]/.test(avatarText)) {
+    return avatarText;
+  }
+
+  const safeName = typeof name === 'string' ? name.trim() : '';
+  const firstChar = safeName ? Array.from(safeName)[0] : '';
+
+  if (!firstChar) {
+    return '👤';
+  }
+
+  return /^[a-z]$/i.test(firstChar) ? firstChar.toUpperCase() : firstChar;
+}
+
+function resolveAvatarValue({ avatar, avatarUrl, name, fallbackAvatar = '👤' }) {
+  const avatarSrc = normalizeAvatarSource(avatarUrl) || normalizeAvatarSource(avatar);
+  if (avatarSrc) {
+    return avatarSrc;
+  }
+
+  return getAvatarFallback(avatar || fallbackAvatar, name);
+}
+
 const STATUS_CONFIG = {
   generating: { label: '生成中', color: '#fbbf24' },
   review:     { label: '审核中', color: '#6e56ff' },
@@ -380,7 +441,13 @@ const MAX_BIO_LEN = 200;
 function EditProfileModal({ profile, onClose, onSave }) {
   const [name, setName] = useState(profile.name || '');
   const [bio, setBio] = useState(profile.bio || '');
-  const [avatar, setAvatar] = useState(profile.avatar || '');
+  const [avatar, setAvatar] = useState(() => (
+    resolveAvatarValue({
+      avatar: profile.avatar,
+      avatarUrl: profile.avatarUrl,
+      name: profile.name,
+    })
+  ));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -412,7 +479,11 @@ function EditProfileModal({ profile, onClose, onSave }) {
         } catch (e) {
           console.error('Avatar upload failed:', e);
           Taro.showToast({ title: '头像上传失败', icon: 'none' });
-          setAvatar(profile.avatar || '');
+          setAvatar(resolveAvatarValue({
+            avatar: profile.avatar,
+            avatarUrl: profile.avatarUrl,
+            name: profile.name,
+          }));
         } finally {
           setUploading(false);
         }
@@ -428,24 +499,33 @@ function EditProfileModal({ profile, onClose, onSave }) {
     }
     setSaving(true);
     try {
+      const currentUser = Storage.getUser() || {};
+      const existingAvatarUrl = normalizeAvatarSource(currentUser.avatarUrl) || normalizeAvatarSource(profile.avatarUrl);
+      const nextAvatarSource = normalizeAvatarSource(avatar);
+      const persistedAvatarUrl = isPersistableAvatarUrl(nextAvatarSource) ? nextAvatarSource : existingAvatarUrl;
+      const nextAvatarValue = persistedAvatarUrl || getAvatarFallback(avatar, trimmedName);
       const updateData = {
         displayName: trimmedName,
         bio: bio.trim(),
       };
-      if (avatar.startsWith('http')) {
-        updateData.avatarUrl = avatar;
+      if (persistedAvatarUrl) {
+        updateData.avatarUrl = persistedAvatarUrl;
       }
       await authService.updateProfile(updateData);
-      const user = Storage.getUser() || {};
       Storage.setUser({
-        ...user,
+        ...currentUser,
         displayName: trimmedName,
         name: trimmedName,
         bio: bio.trim(),
-        avatar,
-        avatarUrl: avatar.startsWith('http') ? avatar : user.avatarUrl,
+        avatar: nextAvatarValue,
+        avatarUrl: persistedAvatarUrl || '',
       });
-      onSave({ name: trimmedName, bio: bio.trim(), avatar });
+      onSave({
+        name: trimmedName,
+        bio: bio.trim(),
+        avatar: nextAvatarValue,
+        avatarUrl: persistedAvatarUrl || '',
+      });
       Taro.showToast({ title: '保存成功', icon: 'success' });
     } catch (e) {
       console.error('updateProfile failed:', e);
@@ -470,10 +550,10 @@ function EditProfileModal({ profile, onClose, onSave }) {
           <View className="edit-avatar-section">
             <View className="edit-avatar-bg" />
             <View className="edit-avatar-preview" onClick={handleChooseAvatar}>
-              {avatar.startsWith('http') ? (
-                <Image className="edit-avatar-img" src={avatar} mode="aspectFill" />
+              {normalizeAvatarSource(avatar) ? (
+                <Image className="edit-avatar-img" src={normalizeAvatarSource(avatar)} mode="aspectFill" />
               ) : (
-                <Text className="edit-avatar-emoji">{avatar || '👤'}</Text>
+                <Text className="edit-avatar-emoji">{getAvatarFallback(avatar, name)}</Text>
               )}
               <View className="edit-avatar-badge">
                 <Text>{uploading ? '上传中' : '上传'}</Text>
@@ -540,7 +620,7 @@ export default function Profile() {
   const fetchQuota = useQuotaStore((s) => s.fetchQuota);
   const [activeTab, setActiveTab] = useState('works');
   const [profile, setProfile] = useState({
-    name: '', avatar: '👤', bio: '',
+    name: '', avatar: '👤', avatarUrl: '', bio: '',
     followers: 0, following: 0, totalLikes: 0, mutualFollows: 0,
   });
 
@@ -559,47 +639,81 @@ export default function Profile() {
     setAllGames((prev) => mergeBookmarkedFlags(prev));
   };
 
-  useEffect(() => {
-    const token = Storage.getToken();
-    if (!token) {
-      Taro.showToast({ title: '请先登录', icon: 'none', duration: 1500 });
-      setTimeout(() => Taro.navigateTo({ url: '/pages/login/index' }), 500);
-      return;
-    }
-
+  const syncStoredProfile = () => {
     const storedUser = Storage.getUser();
     if (storedUser) {
+      const nextName = storedUser.displayName || storedUser.nickname || storedUser.name || storedUser.username || '用户';
+      const nextAvatarUrl = normalizeAvatarSource(storedUser.avatarUrl) || normalizeAvatarSource(storedUser.avatar);
       setProfile((prev) => ({
         ...prev,
-        name: storedUser.displayName || storedUser.nickname || storedUser.name || storedUser.username || '用户',
-        avatar: storedUser.avatar || storedUser.avatarUrl || prev.avatar,
+        name: nextName,
+        avatar: nextAvatarUrl || getAvatarFallback(storedUser.avatar, nextName),
+        avatarUrl: nextAvatarUrl || prev.avatarUrl,
         bio: storedUser.bio || '这个人很懒，还没有介绍自己',
       }));
     }
+  };
 
+  const syncRemoteProfile = () => {
     authService.getMe().then((user) => {
       if (user) {
-        setProfile((prev) => ({
-          ...prev,
-          name: user.displayName || user.nickname || user.name || prev.name || user.username,
-          avatar: user.avatar || user.avatarUrl || prev.avatar,
-          bio: user.bio || prev.bio,
-          followers: user.followerCount || 0,
-          following: user.followingCount || 0,
-          mutualFollows: user.mutualFollowCount || 0,
-        }));
+        setProfile((prev) => {
+          const nextName = user.displayName || user.nickname || user.name || prev.name || user.username || '用户';
+          const nextAvatarUrl = normalizeAvatarSource(user.avatarUrl) || normalizeAvatarSource(user.avatar);
+
+          return {
+            ...prev,
+            name: nextName,
+            avatar: nextAvatarUrl || getAvatarFallback(user.avatar, nextName),
+            avatarUrl: nextAvatarUrl || prev.avatarUrl,
+            bio: user.bio || prev.bio,
+            followers: user.followerCount || 0,
+            following: user.followingCount || 0,
+            mutualFollows: user.mutualFollowCount || 0,
+          };
+        });
+
+        const currentStoredUser = Storage.getUser() || {};
+        Storage.setUser({
+          ...currentStoredUser,
+          ...user,
+        });
       }
     }).catch(() => {});
+  };
 
+  const redirectToLogin = () => {
+    Taro.showToast({ title: '请先登录', icon: 'none', duration: 1500 });
+    setTimeout(() => Taro.navigateTo({ url: '/pages/login/index' }), 500);
+  };
+
+  const refreshProfilePage = ({ redirectOnMissingToken = false } = {}) => {
+    const token = Storage.getToken();
+    if (!token) {
+      setAllGames([]);
+      setLoadingGames(false);
+      if (redirectOnMissingToken) {
+        redirectToLogin();
+      }
+      return false;
+    }
+
+    syncStoredProfile();
+    syncRemoteProfile();
     fetchQuota(true);
     fetchMyGames();
+    return true;
+  };
+
+  useEffect(() => {
+    refreshProfilePage({ redirectOnMissingToken: true });
   }, []);
 
   useDidShow(() => {
     refreshBookmarkedGames();
     hydrateTrackedTasks();
     refreshTrackedTasks().catch(() => {});
-    fetchQuota(true);
+    refreshProfilePage();
 
     const nextActiveTab = consumePersistedProfileActiveTab();
     if (nextActiveTab) {
@@ -918,6 +1032,8 @@ export default function Profile() {
     { value: formatNumber(profile.followers),     label: '粉丝' },
     { value: formatNumber(profile.mutualFollows), label: '互关' },
   ];
+  const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
+  const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
   return (
     <View className={`profile-container${isWeapp ? ' profile-container--weapp' : ''}`}>
@@ -925,10 +1041,10 @@ export default function Profile() {
       <View className="profile-header">
         <View className="header-top">
           <View className="header-avatar">
-            {typeof profile.avatar === 'string' && profile.avatar.startsWith('http') ? (
-              <Image className="avatar-img" src={profile.avatar} mode="aspectFill" />
+            {profileAvatarSrc ? (
+              <Image className="avatar-img" src={profileAvatarSrc} mode="aspectFill" />
             ) : (
-              <Text className="avatar">{profile.avatar || '👤'}</Text>
+              <Text className="avatar">{profileAvatarFallback}</Text>
             )}
             </View>
             <View className="header-right">

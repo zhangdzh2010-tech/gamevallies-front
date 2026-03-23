@@ -12,6 +12,7 @@ export const ENV = {
   },
   WS_URL: process.env.TARO_APP_WS_URL,
   GAME_CONTENT_URL: process.env.TARO_APP_GAME_CONTENT_URL,
+  GAME_SHELL_URL: process.env.TARO_APP_GAME_SHELL_URL || '',
   API_TIMEOUT: 30000,
 
   // Storage Keys

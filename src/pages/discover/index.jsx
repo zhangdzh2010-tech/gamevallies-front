@@ -12,6 +12,7 @@ import * as socialService from '../../services/social';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
 import { buildGameDetailPath } from '../../utils/share';
+import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../utils/profileDisplay';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
@@ -30,7 +31,14 @@ function normalizeGame(game, index) {
     viewerHasBookmarked: game.viewerHasBookmarked === true,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
-    author: game.author?.displayName || game.author?.username || game.author || '\u521b\u4f5c\u8005',
+    author: getSafeDisplayText([
+      game.author?.displayName,
+      game.author?.nickname,
+      game.author?.username,
+      game.authorName,
+      game.creatorName,
+      typeof game.author === 'string' ? game.author : '',
+    ], '\u521b\u4f5c\u8005'),
     isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
@@ -102,7 +110,9 @@ export default function FollowPage() {
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
-      openGame(game.gameUrl, game.title);
+      openGame(game.gameUrl, game.title, game.coverUrl || game.thumbnailUrl || '', {
+        gameId: game.id,
+      });
       return;
     }
 
@@ -201,26 +211,38 @@ export default function FollowPage() {
               </View>
               <ScrollView className="creators-scroll" scrollX>
                 <View className="creators-list">
-                  {topCreators.map((creator) => (
-                    <View key={creator.id} className="creator-card">
-                      <View className="creator-avatar">
-                        {(creator.avatar || '').startsWith('http') ? (
-                          <Image className="avatar-img" src={creator.avatar} mode="aspectFill" />
-                        ) : (
-                          <Text className="avatar-text">{(creator.username || '?')[0]}</Text>
-                        )}
+                  {topCreators.map((creator) => {
+                    const creatorName = getSafeDisplayText([
+                      creator.displayName,
+                      creator.nickname,
+                      creator.username,
+                      creator.name,
+                    ], '\u521b\u4f5c\u8005');
+                    const creatorAvatarRaw = creator.avatarUrl || creator.avatar || '';
+                    const creatorAvatarSrc = normalizeAvatarSource(creatorAvatarRaw);
+                    const creatorAvatarFallback = getAvatarFallback(creatorAvatarRaw, creatorName, '\u521b');
+
+                    return (
+                      <View key={creator.id} className="creator-card">
+                        <View className="creator-avatar">
+                          {creatorAvatarSrc ? (
+                            <Image className="avatar-img" src={creatorAvatarSrc} mode="aspectFill" />
+                          ) : (
+                            <Text className="avatar-text">{creatorAvatarFallback}</Text>
+                          )}
+                        </View>
+                        <Text className="creator-name">
+                          {creatorName}
+                        </Text>
+                        <Text className="creator-meta">
+                          {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
+                        </Text>
+                        <View className="follow-btn">
+                          <Text className="follow-btn-text">{'\u5173\u6ce8'}</Text>
+                        </View>
                       </View>
-                      <Text className="creator-name">
-                        {creator.username || creator.name || '\u521b\u4f5c\u8005'}
-                      </Text>
-                      <Text className="creator-meta">
-                        {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
-                      </Text>
-                      <View className="follow-btn">
-                        <Text className="follow-btn-text">{'\u5173\u6ce8'}</Text>
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </ScrollView>
             </View>
@@ -240,6 +262,7 @@ export default function FollowPage() {
                       <GameCard
                         key={game.id}
                         game={game}
+                        variant="play-only"
                         onPlay={handlePlay}
                         onComment={handleComment}
                         onToggleLike={handleToggleLike}
@@ -252,6 +275,7 @@ export default function FollowPage() {
                       <GameCard
                         key={game.id}
                         game={game}
+                        variant="play-only"
                         onPlay={handlePlay}
                         onComment={handleComment}
                         onToggleLike={handleToggleLike}
@@ -281,24 +305,26 @@ export default function FollowPage() {
               <View className="waterfall">
                 <View className="waterfall-col">
                   {leftCol.map((game) => (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                      onPlay={handlePlay}
-                      onComment={handleComment}
-                      onToggleLike={handleToggleLike}
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        variant="play-only"
+                        onPlay={handlePlay}
+                        onComment={handleComment}
+                        onToggleLike={handleToggleLike}
                       onToggleBookmark={handleToggleBookmark}
                     />
                   ))}
                 </View>
                 <View className="waterfall-col">
                   {rightCol.map((game) => (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                      onPlay={handlePlay}
-                      onComment={handleComment}
-                      onToggleLike={handleToggleLike}
+                      <GameCard
+                        key={game.id}
+                        game={game}
+                        variant="play-only"
+                        onPlay={handlePlay}
+                        onComment={handleComment}
+                        onToggleLike={handleToggleLike}
                       onToggleBookmark={handleToggleBookmark}
                     />
                   ))}

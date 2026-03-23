@@ -1,12 +1,13 @@
+@import '../../styles/game-ui.scss';
+
 .game-card {
-  background: #111118;
-  border: 1px solid #252535;
-  border-radius: 16px;
+  @include game-surface-card($radius: 16px, $shadow: 0 12px 28px rgba(4, 6, 14, 0.22));
   overflow: hidden;
   cursor: pointer;
   width: 100%;
   box-sizing: border-box;
   position: relative;
+  transition: transform $transition-fast, border-color $transition-fast, box-shadow $transition-fast;
 
   &:active {
     transform: scale(0.98);
@@ -20,7 +21,9 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(110, 86, 255, 0.15) 0%, rgba(110, 86, 255, 0.3) 100%);
+    background:
+      radial-gradient(circle at top right, rgba(45, 212, 168, 0.12), transparent 34%),
+      linear-gradient(135deg, rgba(110, 86, 255, 0.16) 0%, rgba(20, 22, 34, 0.96) 100%);
 
     .game-emoji {
       font-size: 64px;
@@ -57,19 +60,23 @@
       align-items: center;
       justify-content: center;
       z-index: 3;
-      padding: 4px;
+      width: 34px;
+      height: 34px;
+      border-radius: 17px;
+      background: rgba(17, 17, 24, 0.82);
+      border: 1px solid rgba(37, 37, 53, 0.9);
+      box-shadow: 0 10px 22px rgba(4, 6, 14, 0.28);
 
       &:active {
-        transform: scale(1.06);
+        transform: scale(1.04);
       }
 
       .how-to-play-icon {
         color: #ffffff;
-        font-size: 22px;
+        font-size: 18px;
         font-weight: 700;
         font-style: normal;
         line-height: 1;
-        text-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
       }
     }
 
@@ -81,12 +88,16 @@
       bottom: 0;
       z-index: 2;
       background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
-      padding: 24px 10px 8px;
+      padding: 24px 12px 10px;
 
       .preview-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
+
+        &.preview-footer--play-only {
+          justify-content: flex-start;
+        }
       }
 
       .author-row {
@@ -96,7 +107,7 @@
 
         .author-name {
           font-size: 20px;
-          color: rgba(255, 255, 255, 0.85);
+          color: rgba(234, 232, 244, 0.86);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -109,6 +120,27 @@
         align-items: center;
         gap: 14px;
         margin-left: 8px;
+
+        &.stats-row--play-only {
+          margin-left: 0;
+          gap: 0;
+
+          .stat-text {
+            gap: 8px;
+            font-size: 36px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+
+            .stat-icon {
+              font-size: 38px;
+            }
+
+            .stat-value {
+              font-size: 34px;
+            }
+          }
+        }
 
         .stat-text {
           display: inline-flex;
@@ -162,6 +194,7 @@
 
   .game-info {
     padding: 10px 12px 12px;
+    background: rgba(17, 17, 24, 0.96);
 
     .game-title {
       display: block;

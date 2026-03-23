@@ -15,7 +15,7 @@ export default {
     },
     {
       root: 'pages/game',
-      pages: ['detail/index', 'play/index'],
+      pages: ['detail/index', 'play/index', 'web-shell/index'],
     },
     {
       root: 'pages/subscription',
