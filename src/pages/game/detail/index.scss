@@ -1,3 +1,5 @@
+@import '../../../styles/game-ui.scss';
+
 .game-detail {
   background: #08080d;
   min-height: 100vh;
@@ -26,7 +28,8 @@
       left: 30px;
       width: 66px;
       height: 66px;
-      background: rgba(17, 17, 24, 0.8);
+      background: $surface-overlay;
+      border: 1px solid $border-soft;
       border-radius: 15px;
       display: flex;
       align-items: center;
@@ -34,7 +37,7 @@
       color: #eae8f4;
       font-size: 33px;
       cursor: pointer;
-      backdrop-filter: blur(10px);
+      box-shadow: $overlay-shadow;
       z-index: 10;
       &:active { background: rgba(17, 17, 24, 0.95); }
     }
@@ -64,9 +67,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 24px;
-        background: #111118;
-        border: 1px solid #252535;
-        border-radius: 21px;
+        @include game-surface-card();
         margin-bottom: 36px;
 
         .author-info {
@@ -74,25 +75,66 @@
           align-items: center;
           gap: 18px;
           flex: 1;
+          min-width: 0;
+
+          .author-avatar,
+          .author-avatar-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            flex-shrink: 0;
+          }
+
+          .author-avatar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: $brand-gradient;
+            box-shadow: 0 10px 24px rgba(110, 86, 255, 0.2);
+
+            &.author-avatar--fallback {
+              color: #fff;
+            }
+          }
+
+          .author-avatar-text {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+          }
+
+          .author-avatar-img {
+            object-fit: cover;
+            box-shadow: 0 10px 24px rgba(4, 6, 14, 0.22);
+          }
+
           .author-emoji { font-size: 57px; }
           .author-details {
             display: flex;
             flex-direction: column;
+            min-width: 0;
             .author-name { font-size: 26px; font-weight: 600; color: #eae8f4; }
             .author-desc { font-size: 21px; color: #8b87a3; }
           }
         }
 
         .follow-btn {
-          padding: 12px 24px;
-          background: rgba(110, 86, 255, 0.15);
-          border-radius: 15px;
-          color: #6e56ff;
-          font-size: 23px;
-          font-weight: 600;
+          @include game-primary-pill(42px, 0 20px);
+          font-size: 22px;
           cursor: pointer;
           white-space: nowrap;
-          &:active { background: rgba(110, 86, 255, 0.25); }
+          transition: transform $transition-fast, opacity $transition-fast, background-color $transition-fast;
+
+          &.is-following {
+            @include game-secondary-pill(42px, 0 20px);
+            font-size: 22px;
+          }
+
+          &.is-loading {
+            opacity: 0.72;
+          }
+
+          &:active { transform: scale(0.98); }
         }
       }
 
@@ -103,9 +145,7 @@
         margin-bottom: 36px;
 
         .stat-item {
-          background: #111118;
-          border: 1px solid #252535;
-          border-radius: 21px;
+          @include game-surface-card();
           padding: 21px;
           text-align: center;
           .stat-label { display: block; font-size: 24px; margin-bottom: 8px; }
@@ -121,7 +161,7 @@
 
         .play-btn {
           flex: 1;
-          background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+          background: $brand-gradient;
           border-radius: 21px;
           padding: 24px;
           color: white;
@@ -133,6 +173,7 @@
           justify-content: center;
           gap: 12px;
           cursor: pointer;
+          box-shadow: 0 12px 28px rgba(110, 86, 255, 0.2);
           .btn-icon { font-size: 30px; }
           &:active { transform: scale(0.98); }
 
@@ -149,9 +190,7 @@
 
         .icon-btn {
           flex: 0.8;
-          background: #111118;
-          border: 1px solid #252535;
-          border-radius: 21px;
+          @include game-surface-card();
           padding: 24px;
           color: #8b87a3;
           font-size: 26px;

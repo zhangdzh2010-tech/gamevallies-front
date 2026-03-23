@@ -16,6 +16,7 @@ import {
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { Storage } from '../../../utils/storage';
 import { getShareConfig } from '../../../utils/share';
+import { ENV } from '../../../config/env';
 import './index.scss';
 
 const COMMENTS_SECTION_ID = 'game-comments-section';
@@ -40,6 +41,89 @@ function formatNumber(num) {
   return n.toString();
 }
 
+function normalizeAvatarSource(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
+
+  if (/^https?:\/\//i.test(trimmed) || /^data:image\//i.test(trimmed) || /^wxfile:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/')) {
+    return `${ENV.API_BASE_URL.replace(/\/$/, '')}${trimmed}`;
+  }
+
+  return '';
+}
+
+function isSuspiciousProfileText(value) {
+  if (typeof value !== 'string') {
+    return true;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  if (normalizeAvatarSource(trimmed)) {
+    return true;
+  }
+
+  if (/[\\/]/.test(trimmed) || /\.(png|jpe?g|gif|webp|svg)$/i.test(trimmed)) {
+    return true;
+  }
+
+  if (trimmed.length > 24 && /^[a-f0-9_.-]+$/i.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+}
+
+function getSafeDisplayText(candidates, fallback) {
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') {
+      continue;
+    }
+
+    const trimmed = candidate.trim();
+    if (!trimmed || isSuspiciousProfileText(trimmed)) {
+      continue;
+    }
+
+    return trimmed;
+  }
+
+  return fallback;
+}
+
+function getAvatarFallback(value, name, fallback = '👤') {
+  const avatarText = typeof value === 'string' ? value.trim() : '';
+  if (avatarText && Array.from(avatarText).length <= 2 && !isSuspiciousProfileText(avatarText) && !/[/:.]/.test(avatarText)) {
+    return avatarText;
+  }
+
+  const safeName = getSafeDisplayText([name], '');
+  const firstChar = safeName ? Array.from(safeName)[0] : '';
+
+  if (!firstChar) {
+    return fallback;
+  }
+
+  return /^[a-z]$/i.test(firstChar) ? firstChar.toUpperCase() : firstChar;
+}
+
 function applyCommentLikeDelta(list, commentId, delta) {
   return (list || []).map((comment) => {
     if (comment.id === commentId) {
@@ -60,15 +144,22 @@ function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply
   const isLiked = likedIds.has(comment.id);
   const isOwn = currentUserId && String(comment.authorId || comment.author?.id || '') === String(currentUserId);
   const avatar = comment.author?.avatar || comment.author?.avatarUrl || '';
-  const displayName = comment.author?.displayName || comment.author?.username || '用户';
+  const avatarSrc = normalizeAvatarSource(comment.author?.avatarUrl || comment.author?.avatar);
+  const displayName = getSafeDisplayText([
+    comment.author?.displayName,
+    comment.author?.nickname,
+    comment.author?.username,
+    typeof comment.author === 'string' ? comment.author : '',
+  ], '用户');
+  const avatarFallback = getAvatarFallback(avatar, displayName);
 
   return (
     <View className={`comment-item ${isReply ? 'is-reply' : ''}`}>
       <View className="comment-avatar-wrap">
-        {avatar.startsWith('http') ? (
-          <Image className="comment-avatar-img" src={avatar} mode="aspectFill" />
+        {avatarSrc ? (
+          <Image className="comment-avatar-img" src={avatarSrc} mode="aspectFill" />
         ) : (
-          <Text className="comment-avatar-emoji">{avatar || '👤'}</Text>
+          <Text className="comment-avatar-emoji">{avatarFallback}</Text>
         )}
       </View>
       <View className="comment-body">
@@ -141,6 +232,17 @@ export default function GameDetail() {
   const authorId = game?.author?.id || game?.authorId;
   const isOwnGame = Boolean(currentUserId && String(currentUserId) === String(authorId || ''));
   const canForkGame = Boolean(game && !isOwnGame && game.allowFork !== false);
+  const authorDisplayName = getSafeDisplayText([
+    game?.author?.displayName,
+    game?.author?.nickname,
+    game?.author?.username,
+    game?.authorName,
+    game?.creatorName,
+    typeof game?.author === 'string' ? game.author : '',
+  ], '未知作者');
+  const authorAvatar = game?.author?.avatar || game?.author?.avatarUrl || '';
+  const authorAvatarSrc = normalizeAvatarSource(game?.author?.avatarUrl || game?.author?.avatar);
+  const authorAvatarFallback = getAvatarFallback(authorAvatar, authorDisplayName);
   const continueCreateLabel = isOwnGame
     ? '继续优化'
     : (canForkGame ? 'Fork 后继续创作' : '作者未开放 Fork');
@@ -442,7 +544,12 @@ export default function GameDetail() {
   const handleReply = (comment) => {
     setReplyingTo({
       id: comment.id,
-      username: comment.author?.displayName || comment.author?.username || '用户',
+      username: getSafeDisplayText([
+        comment.author?.displayName,
+        comment.author?.nickname,
+        comment.author?.username,
+        typeof comment.author === 'string' ? comment.author : '',
+      ], '用户'),
     });
     setCommentText('');
   };
@@ -618,18 +725,20 @@ export default function GameDetail() {
 
           <View className="author-row">
             <View className="author-info">
-              {(game.author?.avatar || game.author?.avatarUrl || '').startsWith('http') ? (
-                <Image style={{ width: '60px', height: '60px', borderRadius: '50%' }} src={game.author.avatar || game.author.avatarUrl} mode="aspectFill" />
+              {authorAvatarSrc ? (
+                <Image className="author-avatar-img" src={authorAvatarSrc} mode="aspectFill" />
               ) : (
-                <Text className="author-emoji">{game.author?.avatar || game.author?.avatarUrl || '👤'}</Text>
+                <View className="author-avatar author-avatar--fallback">
+                  <Text className="author-avatar-text">{authorAvatarFallback}</Text>
+                </View>
               )}
               <View className="author-details">
-                <Text className="author-name">{game.author?.displayName || game.author?.username || game.author || '未知作者'}</Text>
+                <Text className="author-name">{authorDisplayName}</Text>
                 <Text className="author-desc">{game.author?.bio || ''}</Text>
               </View>
             </View>
             {!isOwnGame ? (
-              <View className="follow-btn" onClick={handleFollow}>
+              <View className={`follow-btn${isFollowing ? ' is-following' : ''}${followLoading ? ' is-loading' : ''}`} onClick={handleFollow}>
                 {followLoading ? '处理中...' : (isFollowing ? '已关注' : '关注')}
               </View>
             ) : null}

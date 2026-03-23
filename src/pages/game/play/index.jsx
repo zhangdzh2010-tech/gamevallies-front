@@ -1,12 +1,28 @@
-import { useEffect, useState } from 'react';
-import { View, WebView, CoverView, Text } from '@tarojs/components';
+import { useCallback, useEffect, useState } from 'react';
+import { View, WebView, Text } from '@tarojs/components';
 import { useNavigation, useRoute } from '@tarojs/hooks';
-import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro';
+import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import * as gameService from '../../../services/game';
 import * as socialService from '../../../services/social';
 import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
+import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
+import { buildGameWebShellUrl } from '../../../utils/gameWebShell';
+import { Storage } from '../../../utils/storage';
 import { getShareConfig } from '../../../utils/share';
 import './index.scss';
+
+function validateGameUrl(url) {
+  const suspiciousChars = /[<>{}|\\^`]/;
+  return Boolean(url) && !suspiciousChars.test(url);
+}
+
+function getBookmarkCount(game) {
+  return Number(game?.bookmarks || game?.bookmarkCount || game?.favoriteCount || game?.favorites || 0);
+}
+
+function getAuthSignature() {
+  return `${Storage.getToken() || ''}:${Storage.getRefreshToken() || ''}`;
+}
 
 export default function GamePlay() {
   const navigation = useNavigation();
@@ -15,36 +31,69 @@ export default function GamePlay() {
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
   const gameCover = useGamePlayerStore((s) => s.gameCover);
   const gameId = useGamePlayerStore((s) => s.gameId);
-  const closeGame = useGamePlayerStore((s) => s.closeGame);
-  const minimizeGame = useGamePlayerStore((s) => s.minimizeGame);
   const setGameContext = useGamePlayerStore((s) => s.setGameContext);
-  const { statusBarHeight = 44 } = Taro.getSystemInfoSync();
+  const [sourceGameUrl, setSourceGameUrl] = useState('');
   const [currentUrl, setCurrentUrl] = useState('');
   const [loading, setLoading] = useState(true);
+  const [gameMeta, setGameMeta] = useState(null);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [authSignature, setAuthSignature] = useState(getAuthSignature());
   const routeGameId = route.params?.id || '';
+  const activeGameId = gameId || routeGameId;
   const shareConfig = getShareConfig(
     {
-      id: gameId || routeGameId,
-      title: gameTitle || '游戏',
-      coverUrl: gameCover,
+      id: activeGameId,
+      title: gameMeta?.title || gameTitle || '游戏',
+      coverUrl: gameMeta?.coverUrl || gameMeta?.thumbnailUrl || gameCover,
     },
     undefined,
     { target: 'play' },
   );
 
-  const reportShare = (platform) => {
-    const targetId = gameId || routeGameId;
-    if (!targetId) {
+  const syncGameMeta = useCallback((gameData) => {
+    if (!gameData) {
       return;
     }
 
-    socialService.recordShare(targetId, platform).catch(() => {});
+    const resolvedGameId = gameData.id || activeGameId;
+    const bookmarked = Boolean(gameData.viewerHasBookmarked) || isGameBookmarked(resolvedGameId);
+
+    setGameMeta(gameData);
+    setBookmarkCount(getBookmarkCount(gameData));
+    setIsBookmarked(bookmarked);
+
+    if (bookmarked) {
+      setGameBookmarked({ ...gameData, viewerHasBookmarked: true }, true);
+    }
+  }, [activeGameId]);
+
+  const loadGameMeta = useCallback(async () => {
+    if (!activeGameId) {
+      return;
+    }
+
+    try {
+      const gameData = await gameService.getGame(activeGameId);
+      syncGameMeta(gameData);
+    } catch (error) {
+      console.error('Failed to load game metadata for play page:', error);
+    }
+  }, [activeGameId, syncGameMeta]);
+
+  const reportShare = (platform) => {
+    if (!activeGameId) {
+      return;
+    }
+
+    socialService.recordShare(activeGameId, platform).catch(() => {});
   };
 
   useShareAppMessage(() => ({
     ...shareConfig,
     success: () => reportShare('weapp_session'),
   }));
+
   useShareTimeline(() => ({
     title: shareConfig.title,
     query: shareConfig.query,
@@ -53,7 +102,9 @@ export default function GamePlay() {
   }));
 
   useEffect(() => {
-    if (process.env.TARO_ENV !== 'weapp') return;
+    if (process.env.TARO_ENV !== 'weapp') {
+      return;
+    }
 
     Taro.showShareMenu({
       withShareTicket: true,
@@ -64,14 +115,9 @@ export default function GamePlay() {
   useEffect(() => {
     let cancelled = false;
 
-    const validateGameUrl = (url) => {
-      const suspiciousChars = /[<>{}|\\^`]/;
-      return Boolean(url) && !suspiciousChars.test(url);
-    };
-
     const setupGame = async () => {
       if (validateGameUrl(gameUrl)) {
-        setCurrentUrl(gameUrl);
+        setSourceGameUrl(gameUrl);
         setLoading(false);
         return;
       }
@@ -85,7 +131,9 @@ export default function GamePlay() {
         const game = await gameService.getGame(routeGameId);
         const resolvedUrl = resolveGameUrl(game?.gameUrl || '');
 
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         if (!validateGameUrl(resolvedUrl)) {
           throw new Error('Invalid game URL');
@@ -98,9 +146,12 @@ export default function GamePlay() {
           gameId: game?.id || routeGameId,
           minimized: false,
         });
-        setCurrentUrl(resolvedUrl);
+        syncGameMeta(game);
+        setSourceGameUrl(resolvedUrl);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
 
         console.error('Failed to load game for play page:', error);
         Taro.showToast({
@@ -121,21 +172,42 @@ export default function GamePlay() {
     return () => {
       cancelled = true;
     };
-  }, [gameUrl, navigation, routeGameId, setGameContext]);
+  }, [gameUrl, navigation, routeGameId, setGameContext, syncGameMeta]);
 
-  const handleClose = () => {
-    navigation.back();
-    setTimeout(() => closeGame(), 100);
-  };
+  useEffect(() => {
+    if (!sourceGameUrl) {
+      setCurrentUrl('');
+      return;
+    }
 
-  const handleMinimize = () => {
-    minimizeGame();
-    navigation.back();
-  };
+    const shellUrl = buildGameWebShellUrl({
+      gameId: activeGameId,
+      gameUrl: sourceGameUrl,
+      title: gameMeta?.title || gameTitle || '游戏',
+      coverUrl: gameMeta?.coverUrl || gameMeta?.thumbnailUrl || gameCover || '',
+      accessToken: Storage.getToken(),
+      refreshToken: Storage.getRefreshToken(),
+      bookmarked: isBookmarked,
+    });
+
+    setCurrentUrl(shellUrl || sourceGameUrl);
+  }, [activeGameId, authSignature, gameCover, gameMeta, gameTitle, isBookmarked, sourceGameUrl]);
+
+  useEffect(() => {
+    loadGameMeta();
+  }, [loadGameMeta]);
+
+  useDidShow(() => {
+    setAuthSignature(getAuthSignature());
+    loadGameMeta();
+  });
 
   const handleError = (error) => {
     console.error('WebView loading error:', error);
-    if (!currentUrl) return;
+
+    if (!currentUrl) {
+      return;
+    }
 
     Taro.hideLoading({ fail() {} });
     Taro.showToast({
@@ -145,12 +217,58 @@ export default function GamePlay() {
     });
   };
 
+  const handleShellMessage = (event) => {
+    const payloads = Array.isArray(event?.detail?.data) ? event.detail.data : [];
+    const syncPayload = [...payloads].reverse().find((item) => (
+      item
+      && item.kind === 'game-shell-sync'
+      && (!item.gameId || String(item.gameId) === String(activeGameId || ''))
+    ));
+
+    if (!syncPayload || typeof syncPayload.bookmarked !== 'boolean' || !activeGameId) {
+      return;
+    }
+
+    const nextBookmarkCount = Number.isFinite(Number(syncPayload.bookmarkCount))
+      ? Number(syncPayload.bookmarkCount)
+      : bookmarkCount;
+    const baseGame = gameMeta || {
+      id: activeGameId,
+      title: gameTitle || '游戏',
+      coverUrl: gameCover || '',
+      thumbnailUrl: gameCover || '',
+      bookmarks: nextBookmarkCount,
+      viewerHasBookmarked: syncPayload.bookmarked,
+    };
+
+    setGameBookmarked(
+      {
+        ...baseGame,
+        viewerHasBookmarked: syncPayload.bookmarked,
+        bookmarks: nextBookmarkCount,
+      },
+      syncPayload.bookmarked,
+    );
+    setIsBookmarked(syncPayload.bookmarked);
+    setBookmarkCount(nextBookmarkCount);
+    setGameMeta((prev) => (
+      prev
+        ? {
+            ...prev,
+            viewerHasBookmarked: syncPayload.bookmarked,
+            bookmarks: nextBookmarkCount,
+          }
+        : prev
+    ));
+  };
+
   return (
     <View className="game-play-page">
       {currentUrl ? (
         <WebView
           className="game-webview"
           src={currentUrl}
+          onMessage={handleShellMessage}
           onError={handleError}
           enableShareAppMessage
           enableShareTimeline
@@ -162,15 +280,6 @@ export default function GamePlay() {
           </Text>
         </View>
       )}
-
-      <CoverView
-        className="game-header-cover"
-        style={{ paddingTop: `${statusBarHeight}px` }}
-      >
-        <CoverView className="close-btn" onClick={handleClose}>关闭</CoverView>
-        <CoverView className="game-title-text">{gameTitle || '游戏'}</CoverView>
-        <CoverView className="minimize-btn" onClick={handleMinimize}>最小化</CoverView>
-      </CoverView>
     </View>
   );
 }

@@ -21,6 +21,7 @@ import {
   normalizeGameTypeKey,
 } from '../../utils/gameTypes';
 import { buildGameDetailPath } from '../../utils/share';
+import { getSafeDisplayText } from '../../utils/profileDisplay';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6', '#06b6d4', '#ec4899'];
@@ -38,7 +39,14 @@ function normalizeGame(game, index) {
     viewerHasBookmarked: game.viewerHasBookmarked === true,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
-    author: game.author?.displayName || game.author?.username || game.author || '创作者',
+    author: getSafeDisplayText([
+      game.author?.displayName,
+      game.author?.nickname,
+      game.author?.username,
+      game.authorName,
+      game.creatorName,
+      typeof game.author === 'string' ? game.author : '',
+    ], '创作者'),
     isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
@@ -143,7 +151,9 @@ export default function Home() {
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
-      openGame(game.gameUrl, game.title);
+      openGame(game.gameUrl, game.title, game.coverUrl || game.thumbnailUrl || '', {
+        gameId: game.id,
+      });
       return;
     }
 
@@ -269,6 +279,7 @@ export default function Home() {
                 <GameCard
                   key={game.id}
                   game={game}
+                  variant="play-only"
                   onPlay={handlePlay}
                   onComment={handleComment}
                   onToggleLike={handleToggleLike}
@@ -281,6 +292,7 @@ export default function Home() {
                 <GameCard
                   key={game.id}
                   game={game}
+                  variant="play-only"
                   onPlay={handlePlay}
                   onComment={handleComment}
                   onToggleLike={handleToggleLike}

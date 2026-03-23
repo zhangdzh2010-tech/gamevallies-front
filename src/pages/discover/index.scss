@@ -1,3 +1,5 @@
+@import '../../styles/game-ui.scss';
+
 .follow-page {
   display: flex;
   flex-direction: column;
@@ -27,24 +29,18 @@
 
     .header-tabs {
       display: flex;
-      gap: 8px;
+      gap: 10px;
 
       .header-tab {
-        font-size: 22px;
-        color: #55516e;
-        padding: 8px 18px;
-        border-radius: 20px;
-        font-weight: 500;
+        @include game-tab-chip();
         cursor: pointer;
 
         &.active {
-          color: #c4b5fd;
-          background: rgba(110, 86, 255, 0.12);
-          font-weight: 600;
+          @include game-tab-chip($active: true);
         }
 
         &:active {
-          opacity: 0.7;
+          transform: scale(0.98);
         }
       }
     }
@@ -65,7 +61,7 @@
       padding: 20px 0 12px;
 
       .section-title {
-        font-size: 28px;
+        font-size: 30px;
         font-weight: 700;
         color: #eae8f4;
       }
@@ -89,22 +85,21 @@
       flex-direction: column;
       align-items: center;
       padding: 20px 16px;
-      background: #111118;
-      border: 1px solid #252535;
-      border-radius: 18px;
+      @include game-surface-card($radius: 18px);
       min-width: 150px;
       cursor: pointer;
+      transition: transform $transition-fast, border-color $transition-fast, box-shadow $transition-fast;
 
       &:active {
-        background: #1a1a24;
         border-color: rgba(110, 86, 255, 0.3);
+        transform: scale(0.98);
       }
 
       .creator-avatar {
         width: 68px;
         height: 68px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #6e56ff 0%, #a78bfa 100%);
+        background: $brand-gradient;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -142,19 +137,16 @@
       }
 
       .follow-btn {
-        padding: 6px 17px;
-        background: rgba(110, 86, 255, 0.15);
-        border: 1px solid rgba(110, 86, 255, 0.25);
-        border-radius: 10px;
+        @include game-primary-pill(34px, 0 16px);
 
         .follow-btn-text {
           font-size: 14px;
-          color: #a78bfa;
-          font-weight: 600;
+          color: #fff;
+          font-weight: 700;
         }
 
         &:active {
-          background: rgba(110, 86, 255, 0.25);
+          transform: scale(0.98);
         }
       }
     }

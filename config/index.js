@@ -74,6 +74,7 @@ module.exports = defineConfig({
         "process.env.TARO_APP_AI_SERVICE_URL": JSON.stringify(process.env.TARO_APP_AI_SERVICE_URL || ""),
         "process.env.TARO_APP_WS_URL": JSON.stringify(process.env.TARO_APP_WS_URL || ""),
         "process.env.TARO_APP_GAME_CONTENT_URL": JSON.stringify(process.env.TARO_APP_GAME_CONTENT_URL || ""),
+        "process.env.TARO_APP_GAME_SHELL_URL": JSON.stringify(process.env.TARO_APP_GAME_SHELL_URL || ""),
         "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
         "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY || ""),
       };
@@ -111,6 +112,7 @@ module.exports = defineConfig({
         "process.env.TARO_APP_AI_SERVICE_URL": JSON.stringify(process.env.TARO_APP_AI_SERVICE_URL || ""),
         "process.env.TARO_APP_WS_URL": JSON.stringify(process.env.TARO_APP_WS_URL || ""),
         "process.env.TARO_APP_GAME_CONTENT_URL": JSON.stringify(process.env.TARO_APP_GAME_CONTENT_URL || ""),
+        "process.env.TARO_APP_GAME_SHELL_URL": JSON.stringify(process.env.TARO_APP_GAME_SHELL_URL || ""),
         "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
         "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY || ""),
       }]);

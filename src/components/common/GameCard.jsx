@@ -40,7 +40,14 @@ function getBookmarkCount(game) {
   ) || 0;
 }
 
-export const GameCard = ({ game, onPlay, onComment, onToggleLike, onToggleBookmark }) => {
+export const GameCard = ({
+  game,
+  onPlay,
+  onComment,
+  onToggleLike,
+  onToggleBookmark,
+  variant = 'default',
+}) => {
   const [isLiked, setIsLiked] = useState(Boolean(game.viewerHasLiked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked));
   const [likeCount, setLikeCount] = useState(Number(game.likes) || 0);
@@ -49,6 +56,7 @@ export const GameCard = ({ game, onPlay, onComment, onToggleLike, onToggleBookma
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const navigation = useNavigation();
+  const isPlayOnlyVariant = variant === 'play-only';
 
   useEffect(() => {
     setIsLiked(Boolean(game.viewerHasLiked));
@@ -169,33 +177,39 @@ export const GameCard = ({ game, onPlay, onComment, onToggleLike, onToggleBookma
         </View>
 
         <View className="preview-overlay">
-          <View className="preview-footer">
-            <View className="author-row">
-              <Text className="author-name">{game.author}</Text>
-            </View>
-            <View className="stats-row">
+          <View className={`preview-footer${isPlayOnlyVariant ? ' preview-footer--play-only' : ''}`}>
+            {!isPlayOnlyVariant ? (
+              <View className="author-row">
+                <Text className="author-name">{game.author}</Text>
+              </View>
+            ) : null}
+            <View className={`stats-row${isPlayOnlyVariant ? ' stats-row--play-only' : ''}`}>
               <Text className="stat-text">
                 <Text className="stat-icon">{PLAY_ICON}</Text>
                 <Text className="stat-value">{formatNumber(game.plays || 0)}</Text>
               </Text>
-              <Text className="stat-text comment-text" onClick={handleComment}>
-                <Text className="stat-icon">{COMMENT_ICON}</Text>
-                <Text className="stat-value">{formatNumber(game.comments || game.commentCount || 0)}</Text>
-              </Text>
-              <Text
-                className={`stat-text like-text ${isLiked ? 'liked' : ''} ${likeLoading ? 'pending' : ''}`}
-                onClick={handleLike}
-              >
-                <Text className="stat-icon">{isLiked ? LIKE_ICON : LIKE_OUTLINE_ICON}</Text>
-                <Text className="stat-value">{formatNumber(likeCount)}</Text>
-              </Text>
-              <Text
-                className={`stat-text bookmark-text ${isBookmarked ? 'bookmarked' : ''} ${bookmarkLoading ? 'pending' : ''}`}
-                onClick={handleBookmark}
-              >
-                <Text className="stat-icon">{isBookmarked ? BOOKMARK_ICON : BOOKMARK_OUTLINE_ICON}</Text>
-                <Text className="stat-value">{formatNumber(bookmarkCount)}</Text>
-              </Text>
+              {!isPlayOnlyVariant ? (
+                <>
+                  <Text className="stat-text comment-text" onClick={handleComment}>
+                    <Text className="stat-icon">{COMMENT_ICON}</Text>
+                    <Text className="stat-value">{formatNumber(game.comments || game.commentCount || 0)}</Text>
+                  </Text>
+                  <Text
+                    className={`stat-text like-text ${isLiked ? 'liked' : ''} ${likeLoading ? 'pending' : ''}`}
+                    onClick={handleLike}
+                  >
+                    <Text className="stat-icon">{isLiked ? LIKE_ICON : LIKE_OUTLINE_ICON}</Text>
+                    <Text className="stat-value">{formatNumber(likeCount)}</Text>
+                  </Text>
+                  <Text
+                    className={`stat-text bookmark-text ${isBookmarked ? 'bookmarked' : ''} ${bookmarkLoading ? 'pending' : ''}`}
+                    onClick={handleBookmark}
+                  >
+                    <Text className="stat-icon">{isBookmarked ? BOOKMARK_ICON : BOOKMARK_OUTLINE_ICON}</Text>
+                    <Text className="stat-value">{formatNumber(bookmarkCount)}</Text>
+                  </Text>
+                </>
+              ) : null}
             </View>
           </View>
         </View>
