@@ -120,6 +120,10 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
     return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
   }
 
+  if (/作品已生成完成|加载结果失败|我的作品/i.test(source)) {
+    return '作品已生成完成，请到“我的作品”查看';
+  }
+
   if (/已取消|canceled|cancelled/i.test(source)) {
     return '创作任务已取消';
   }
