@@ -416,6 +416,30 @@ async function loadGameWithRetry(gameId, attempts = 3) {
   throw lastError;
 }
 
+function buildFallbackCompletedGame(task, state) {
+  const gameId = task?.gameId || state.generatingGameId || state.currentGame?.id || '';
+  const previewUrl = task?.previewUrl || state.currentGame?.previewUrl || '';
+  const gameUrl = task?.gameUrl || state.currentGame?.gameUrl || '';
+
+  if (!gameId || (!previewUrl && !gameUrl)) {
+    return null;
+  }
+
+  const trackedTask = state.trackedTasks.find((item) => item.taskId === task?.taskId);
+
+  return {
+    ...(state.currentGame || {}),
+    id: gameId,
+    title: trackedTask?.gameTitle || state.currentGame?.title || '',
+    status: state.currentGame?.status || 'draft',
+    gameUrl: gameUrl || state.currentGame?.gameUrl || '',
+    previewUrl: previewUrl || state.currentGame?.previewUrl || '',
+    coverUrl: previewUrl || gameUrl || state.currentGame?.coverUrl || '',
+    canPlay: state.canPlay !== false,
+    requireSubscription: state.canPlay === false,
+  };
+}
+
 export const useGameStore = create((set, get) => ({
   currentGame: null,
   currentTask: null,
@@ -464,6 +488,7 @@ export const useGameStore = create((set, get) => ({
       set({
         generatingGameId: gameId,
         isLoading: false,
+        canPlay: result.canPlay !== false,
       });
 
       if (result.generationTask?.taskId) {
@@ -808,13 +833,14 @@ export const useGameStore = create((set, get) => ({
     clearActiveTaskRuntime();
 
     if (task?.status === 'succeeded') {
+      const doneProgress = buildProgressFromTask(
+        { ...task, status: 'succeeded', progressPct: 100 },
+        get().currentTaskEvents
+      );
+
       try {
         const game = await loadGameWithRetry(task.gameId || get().generatingGameId);
         const canPlayGame = game?.canPlay !== false;
-        const doneProgress = buildProgressFromTask(
-          { ...task, status: 'succeeded', progressPct: 100 },
-          get().currentTaskEvents
-        );
 
         set((state) => ({
           currentTask: task,
@@ -851,7 +877,47 @@ export const useGameStore = create((set, get) => ({
         }, 600);
         return;
       } catch (_error) {
+        const fallbackGame = buildFallbackCompletedGame(task, get());
         clearPersistedGenerationTaskSnapshot();
+
+        if (fallbackGame) {
+          const canPlayGame = fallbackGame?.canPlay !== false;
+
+          set((state) => ({
+            currentTask: task,
+            currentGame: fallbackGame,
+            canPlay: canPlayGame,
+            generationProgress: doneProgress,
+            latestTaskMessage: doneProgress.stageLabel,
+            terminalError: null,
+            error: null,
+            trackedTasks: mergeTrackedTaskItems(
+              state.trackedTasks,
+              buildTrackedTaskItem(
+                { ...task, progressPct: 100, completedAt: task.completedAt || new Date().toISOString() },
+                {
+                  gameId: task.gameId || state.generatingGameId,
+                  gameTitle: fallbackGame?.title || state.currentGame?.title || '',
+                  promptPreview: state.trackedTasks.find((item) => item.taskId === task.taskId)?.promptPreview || '',
+                  latestMessage: doneProgress.stageLabel,
+                }
+              )
+            ),
+          }));
+
+          useQuotaStore.getState().updateAfterCreate(canPlayGame, fallbackGame?.quotaRemaining);
+          await useQuotaStore.getState().fetchQuota(true);
+
+          setTimeout(() => {
+            const store = useGameStore.getState();
+            if (store.currentTask?.taskId !== task.taskId) {
+              return;
+            }
+            store._finishGenerationTransition();
+          }, 600);
+          return;
+        }
+
         set({
           currentTask: task,
           isGenerating: false,

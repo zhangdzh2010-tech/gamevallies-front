@@ -27,6 +27,8 @@ function normalizeGenerationTask(task) {
     pollUrl: task.pollUrl || null,
     eventsUrl: task.eventsUrl || null,
     cancelUrl: task.cancelUrl || null,
+    previewUrl: task.previewUrl || null,
+    gameUrl: task.gameUrl || null,
     startedAt: task.startedAt || null,
     completedAt: task.completedAt || null,
     terminalError: task.terminalError || (errorMessage ? {
