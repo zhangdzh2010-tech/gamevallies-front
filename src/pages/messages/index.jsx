@@ -29,7 +29,7 @@ export default function MessagesPage() {
     id: '2',
     icon: '🔀',
     actor: '创意鬼才',
-    action: 'Fork 了你的游戏',
+    action: '复刻了你的游戏',
     time: '1小时前',
     isRead: false
   },

@@ -1,5 +1,20 @@
 import { post, get, del, patch } from './api';
 
+function mergeTaskPayload(source) {
+  if (!source || typeof source !== 'object') {
+    return null;
+  }
+
+  const nestedTask = source.generationTask && typeof source.generationTask === 'object'
+    ? source.generationTask
+    : null;
+
+  return {
+    ...source,
+    ...(nestedTask || {}),
+  };
+}
+
 function normalizeGenerationTask(task) {
   if (!task || typeof task !== 'object') {
     return null;
@@ -15,22 +30,43 @@ function normalizeGenerationTask(task) {
     region: task.region || '',
     gameId: task.gameId || task.game_id || '',
     version: task.version ?? null,
+    pipelineVersion: task.pipelineVersion || null,
+    promptBundleId: task.promptBundleId || null,
+    promptBundleVersion: task.promptBundleVersion ?? null,
+    runtimeProfile: task.runtimeProfile || null,
+    contractVersion: task.contractVersion || null,
     progressPct: Number.isFinite(progressPct) ? progressPct : 0,
     cancelRequested: task.cancelRequested === true,
     currentStage: task.currentStage || task.progressStage || task.stage || null,
     currentStepKey: task.currentStepKey || task.stepKey || null,
     progressMessage: task.progressMessage || '',
+    displayStageKey: task.displayStageKey || null,
+    displayStageLabel: task.displayStageLabel || null,
+    displayStageIndex: task.displayStageIndex ?? null,
+    displayStagePct: task.displayStagePct ?? null,
+    rawStage: task.rawStage || null,
     errorMessage,
     failedStage: task.failedStage || null,
     taskTimeoutS: task.taskTimeoutS ?? task.timeoutS ?? null,
     wsChannel: task.wsChannel || null,
     pollUrl: task.pollUrl || null,
     eventsUrl: task.eventsUrl || null,
+    artifactsUrl: task.artifactsUrl || null,
     cancelUrl: task.cancelUrl || null,
     previewUrl: task.previewUrl || null,
     gameUrl: task.gameUrl || null,
+    statusText: task.statusText || null,
+    failureFamily: task.failureFamily || null,
+    primaryArtifactId: task.primaryArtifactId || null,
+    retryCount: task.retryCount ?? null,
     startedAt: task.startedAt || null,
     completedAt: task.completedAt || null,
+    createdAt: task.createdAt || null,
+    updatedAt: task.updatedAt || null,
+    resultSummary: task.resultSummary || null,
+    gameStatus: task.gameStatus || null,
+    canPlay: typeof task.canPlay === 'boolean' ? task.canPlay : null,
+    requireSubscription: task.requireSubscription === true,
     terminalError: task.terminalError || (errorMessage ? {
       message: errorMessage,
       errorCode: task.failedStage || 'task_failed',
@@ -91,6 +127,8 @@ function normalizeGenerateResponse(response, fallbackGameId = '') {
     };
   }
 
+  const taskPayload = mergeTaskPayload(response);
+
   return {
     gameId: response?.gameId || response?.id || fallbackGameId || '',
     title: response?.title || '',
@@ -99,7 +137,7 @@ function normalizeGenerateResponse(response, fallbackGameId = '') {
     canPlay: response?.canPlay !== false,
     quotaRemaining: response?.quotaRemaining ?? null,
     requireSubscription: response?.requireSubscription === true,
-    generationTask: normalizeGenerationTask(response?.generationTask),
+    generationTask: normalizeGenerationTask(taskPayload),
   };
 }
 
@@ -114,12 +152,14 @@ function normalizeIterateResponse(response, fallbackGameId = '') {
     };
   }
 
+  const taskPayload = mergeTaskPayload(response);
+
   return {
     gameId: response.gameId || fallbackGameId,
     version: response.version ?? null,
     status: response.status || 'iterating',
     iterationId: response.iterationId || null,
-    generationTask: normalizeGenerationTask(response.generationTask),
+    generationTask: normalizeGenerationTask(taskPayload),
   };
 }
 
@@ -159,6 +199,14 @@ export async function iterateGame(gameId, feedback) {
     { feedback }
   );
   return normalizeIterateResponse(response, gameId);
+}
+
+/**
+ * Get author-visible generation status for a game
+ */
+export async function getGenerationStatus(gameId) {
+  const response = await get(`/api/v1/games/${gameId}/generation-status`);
+  return normalizeGenerationTask(response);
 }
 
 /**
@@ -235,6 +283,7 @@ export default {
   generateGame,
   getGameTypes,
   getGame,
+  getGenerationStatus,
   iterateGame,
   getGenerationTask,
   getGenerationTaskEvents,

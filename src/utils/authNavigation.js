@@ -11,6 +11,8 @@ export const HOME_PAGE_URL = '/pages/index/index';
 export const LOGIN_PAGE_URL = '/pages/login/index';
 export const CREATE_PAGE_URL = '/pages/create/index';
 export const PROFILE_PAGE_URL = '/pages/profile/index';
+export const ITERATE_PAGE_URL = '/pages/game/iterate/index';
+export const FORK_PAGE_URL = '/pages/game/fork/index';
 
 const TAB_BAR_PAGES = new Set([
   HOME_PAGE_URL,
@@ -170,6 +172,36 @@ function getPageRoute(page) {
   return page?.route ? `/${page.route}` : '';
 }
 
+function buildUrlWithQuery(baseUrl, params = {}) {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+    .join('&');
+
+  return query ? `${baseUrl}?${query}` : baseUrl;
+}
+
+function openPage(url) {
+  if (TAB_BAR_PAGES.has(url)) {
+    return Taro.switchTab({ url }).catch(() => {});
+  }
+
+  return Taro.navigateTo({ url }).catch(() => {});
+}
+
+function replacePage(url) {
+  if (TAB_BAR_PAGES.has(url)) {
+    return Taro.switchTab({ url }).catch(() => {});
+  }
+
+  return Taro.redirectTo({ url }).catch(() => Taro.navigateTo({ url }).catch(() => {}));
+}
+
+function isWorkflowPageUrl(url) {
+  return typeof url === 'string'
+    && (url.startsWith(CREATE_PAGE_URL) || url.startsWith(ITERATE_PAGE_URL) || url.startsWith(FORK_PAGE_URL));
+}
+
 function navigateToLogin() {
   const pages = Taro.getCurrentPages();
   const currentRoute = getPageRoute(pages[pages.length - 1]);
@@ -300,7 +332,7 @@ export function openCreatePageWithAuth(options = {}) {
 
   if (isLoggedIn()) {
     clearPostLoginRedirect();
-    Taro.switchTab({ url: CREATE_PAGE_URL }).catch(() => {});
+    openPage(CREATE_PAGE_URL);
     return true;
   }
 
@@ -313,14 +345,77 @@ export function openFreshCreatePageWithAuth() {
 }
 
 export function openResumeCreatePageWithAuth(game, gameId = null) {
-  return openCreatePageWithAuth({ mode: 'resume', game, gameId: gameId || game?.id || null });
+  return openIteratePageWithAuth(game, gameId || game?.id || null);
 }
 
 export function openForkCreatePageWithAuth(sourceGameId) {
-  return openCreatePageWithAuth({ mode: 'fork', sourceGameId });
+  return openForkPageWithAuth(sourceGameId);
 }
 
-export function openTaskCreatePageWithAuth(taskId, gameId = null) {
+export function buildIteratePageUrl(gameId = null, taskId = null) {
+  return buildUrlWithQuery(ITERATE_PAGE_URL, {
+    ...(gameId ? { gameId } : {}),
+    ...(taskId ? { taskId } : {}),
+  });
+}
+
+export function buildForkPageUrl(sourceGameId) {
+  return buildUrlWithQuery(FORK_PAGE_URL, { sourceGameId });
+}
+
+export function openIteratePageWithAuth(game, gameId = null, options = {}) {
+  const targetGameId = gameId || game?.id || null;
+  const { taskId = null } = options;
+
+  if (!targetGameId && !taskId) {
+    return false;
+  }
+
+  const gameStore = useGameStore.getState();
+  if (game) {
+    gameStore.setCurrentGame(game);
+  }
+
+  const targetUrl = buildIteratePageUrl(targetGameId, taskId);
+
+  if (isLoggedIn()) {
+    clearPostLoginRedirect();
+    openPage(targetUrl);
+    return true;
+  }
+
+  promptLoginAndGo(targetUrl);
+  return false;
+}
+
+export function openForkPageWithAuth(sourceGameId) {
+  if (!sourceGameId) {
+    return false;
+  }
+
+  const targetUrl = buildForkPageUrl(sourceGameId);
+
+  if (isLoggedIn()) {
+    clearPostLoginRedirect();
+    openPage(targetUrl);
+    return true;
+  }
+
+  promptLoginAndGo(targetUrl);
+  return false;
+}
+
+export function openTaskCreatePageWithAuth(taskId, gameId = null, taskType = 'pipeline_run') {
+  if (taskType === 'pipeline_iterate') {
+    setPersistedGenerationTaskSnapshot({
+      taskId,
+      taskType,
+      gameId: gameId || '',
+      status: 'running',
+    });
+    return openIteratePageWithAuth(null, gameId, { taskId });
+  }
+
   return openCreatePageWithAuth({ mode: 'task', taskId, gameId });
 }
 
@@ -344,16 +439,11 @@ export function navigateAfterLogin(fallbackUrl = HOME_PAGE_URL) {
   const redirectUrl = consumePostLoginRedirect();
   const targetUrl = redirectUrl || fallbackUrl;
 
-  if (TAB_BAR_PAGES.has(targetUrl)) {
-    return Taro.switchTab({ url: targetUrl }).catch(() => {});
+  if (targetUrl) {
+    return replacePage(targetUrl);
   }
 
-  const pages = Taro.getCurrentPages();
-  if (pages.length > 1) {
-    return Taro.navigateBack().catch(() => {});
-  }
-
-  return Taro.switchTab({ url: fallbackUrl }).catch(() => {});
+  return replacePage(fallbackUrl);
 }
 
 export function handleLoginBackNavigation() {
@@ -371,6 +461,10 @@ export function handleLoginBackNavigation() {
   if (!isLoggedIn() && redirectUrl === CREATE_PAGE_URL) {
     clearPostLoginRedirect();
     clearPersistedCreateEntryIntent();
+  }
+
+  if (!isLoggedIn() && isWorkflowPageUrl(redirectUrl) && redirectUrl !== CREATE_PAGE_URL) {
+    clearPostLoginRedirect();
   }
 
   if (pages.length > 1) {

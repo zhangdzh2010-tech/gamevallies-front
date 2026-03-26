@@ -1215,3 +1215,261 @@ x-admin-token: <admin_token>
 - `ai-engine` 的 `/api/v1/ai/*` 更多是服务间接口，普通前端不建议直接依赖
 - 文档优先描述“当前代码已经实现并对前端可用”的接口，不展开内部回调
 - 若字段与代码实现发生冲突，以控制器、Presenter、DTO 和线上真实返回为准
+
+---
+
+## 8. 2026-03-25 账号级点赞/收藏整改附录（规划中，未上线）
+
+### 8.1 背景
+
+本附录用于补充 2026-03-25 确认的点赞/收藏链路整改需求。
+
+当前问题背景如下：
+
+- 收藏能力仍以本地设备缓存为主，清缓存、换设备或重新安装后无法恢复。
+- 点赞动作已经写入后端，但列表页与“我的”页缺少稳定的账号级恢复链路。
+- “我的-点赞”尚未接入真实后端列表，“我的-收藏”仍依赖本地缓存。
+- 这会导致用户重新登录后，在不同页面看到的点赞/收藏状态不一致。
+
+本次整改目标：
+
+- 以后端为点赞/收藏状态唯一真相源。
+- 让点赞/收藏具备账号级、跨设备、清缓存后可恢复能力。
+- 以 additive 方式补接口，不破坏现有前端已上线链路。
+
+### 8.2 规划状态说明
+
+本节接口为规划中的后端增补清单：
+
+- 目的是为完整版点赞/收藏整改提供正式契约。
+- 不代表所有接口已在生产环境上线。
+- 实际上线时应优先保持现有字段兼容，再追加新字段和新接口。
+
+### 8.3 读模型增补要求
+
+为避免前端在首页、发现页、详情页、我的页分别使用不同恢复逻辑，以下游戏读模型字段应统一补齐：
+
+#### GameSummary / GameDetail additive fields
+
+```json
+{
+  "bookmarks": 0,
+  "viewerHasLiked": false,
+  "viewerHasBookmarked": false
+}
+```
+
+建议至少覆盖以下读接口：
+
+- `GET /games/:id`
+- `GET /feed/trending`
+- `GET /feed/latest`
+- `GET /feed/following`
+- `GET /games/my`
+- `GET /feed/favorites`
+- `GET /feed/liked`
+
+字段语义：
+
+- `bookmarks`: 当前作品收藏总数
+- `viewerHasLiked`: 当前登录用户是否已点赞
+- `viewerHasBookmarked`: 当前登录用户是否已收藏
+
+未登录时建议统一返回：
+
+```json
+{
+  "viewerHasLiked": false,
+  "viewerHasBookmarked": false
+}
+```
+
+### 8.4 收藏能力增补接口
+
+#### `GET /feed/favorites?page=1&limit=20`
+
+用途：
+
+- “我的-收藏”页面读取当前账号收藏列表
+- 支持清缓存后重新登录恢复收藏数据
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "...GameSummary": "...",
+        "viewerHasBookmarked": true
+      }
+    ],
+    "hasMore": false,
+    "page": 1,
+    "limit": 20,
+    "total": 1
+  }
+}
+```
+
+#### `POST /feed/favorites`
+
+请求：
+
+```json
+{
+  "gameId": "string"
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "bookmarked": true,
+    "bookmarks": 12
+  }
+}
+```
+
+#### `DELETE /feed/favorites/:gameId`
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "bookmarked": false,
+    "bookmarks": 11
+  }
+}
+```
+
+#### `GET /feed/favorites/status/:gameId`（可选）
+
+如果后端短期无法在 `GET /games/:id` 中直接稳定返回 `viewerHasBookmarked`，则补充该接口：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "bookmarked": true
+  }
+}
+```
+
+#### `POST /feed/favorites/status/batch`（可选，推荐）
+
+用途：
+
+- 首页/发现页批量补齐收藏状态，避免逐条查询
+
+请求：
+
+```json
+{
+  "gameIds": ["game_1", "game_2", "game_3"]
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      { "gameId": "game_1", "bookmarked": true },
+      { "gameId": "game_2", "bookmarked": false },
+      { "gameId": "game_3", "bookmarked": true }
+    ]
+  }
+}
+```
+
+### 8.5 点赞能力增补接口
+
+以下接口继续沿用当前契约，但要求在整改后成为账号级恢复链路的一部分：
+
+- `POST /social/like`
+- `GET /social/like-status/:type/:id`
+
+除现有单条状态接口外，新增以下列表/批量能力。
+
+#### `GET /feed/liked?page=1&limit=20`
+
+用途：
+
+- “我的-点赞”页面读取当前账号已点赞作品列表
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "...GameSummary": "...",
+        "viewerHasLiked": true
+      }
+    ],
+    "hasMore": false,
+    "page": 1,
+    "limit": 20,
+    "total": 1
+  }
+}
+```
+
+#### `POST /social/like-status/batch`（可选，推荐）
+
+用途：
+
+- 首页/发现页/关注页在登录后批量补齐点赞状态
+
+请求：
+
+```json
+{
+  "targetType": "game",
+  "targetIds": ["game_1", "game_2", "game_3"]
+}
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      { "targetId": "game_1", "liked": true },
+      { "targetId": "game_2", "liked": false },
+      { "targetId": "game_3", "liked": true }
+    ]
+  }
+}
+```
+
+### 8.6 实施约束
+
+本附录对应的后端实施需要满足以下约束：
+
+- 新接口和新字段必须以 additive 方式上线，不破坏现有前端兼容性。
+- 收藏与点赞都必须支持同账号跨设备恢复。
+- 收藏与点赞都必须支持清缓存后重新登录恢复。
+- 前端不得再以本地缓存作为收藏主数据源。
+- “我的-收藏”和“我的-点赞”必须以服务端列表为准。
+
+### 8.7 联调验收标准
+
+- 同一账号在设备 A 收藏/点赞后，设备 B 登录能看到相同状态。
+- 清缓存后重新登录，收藏/点赞状态可恢复。
+- 首页、发现页、详情页、试玩页、小游戏壳页、我的页状态一致。
+- “我的-点赞”不再是固定空态。
+- “我的-收藏”不再依赖本地缓存作为唯一来源。

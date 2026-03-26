@@ -562,3 +562,82 @@
 如果后端完成到 P2：
 
 - 即使部分列表接口不方便返回 `viewerHasLiked`，前端也能高效批量补齐
+
+---
+
+## 14. 2026-03-25 口径同步附录
+
+### 14.1 同步背景
+
+本附录用于与 `docs/api-schema.md` 中“2026-03-25 账号级点赞/收藏整改附录”保持一致口径。
+
+本次同步新增一个明确要求：
+
+- 点赞不仅要支持单次切换和单条状态查询，还要支持账号级恢复与“我的-点赞”列表能力。
+
+### 14.2 与 api-schema 对齐的新增接口
+
+#### `GET /api/v1/feed/liked?page=1&limit=20`
+
+用途：
+
+- “我的-点赞”页面读取当前账号已点赞作品列表
+
+建议响应：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "id": "game_123",
+        "title": "星际投篮",
+        "plays": 1234,
+        "likes": 88,
+        "bookmarks": 12,
+        "viewerHasLiked": true,
+        "viewerHasBookmarked": false
+      }
+    ],
+    "hasMore": false,
+    "page": 1,
+    "limit": 20,
+    "total": 1
+  }
+}
+```
+
+#### `POST /api/v1/social/like-status/batch`
+
+本文原有批量状态接口建议继续保留，并作为首页、发现页、关注页的批量补齐方案。
+
+### 14.3 读模型一致性补充
+
+为了让“我的-点赞”、详情页、Feed 列表页和小游戏壳页共享同一读模型，建议游戏对象统一补齐：
+
+```json
+{
+  "likes": 88,
+  "bookmarks": 12,
+  "viewerHasLiked": true,
+  "viewerHasBookmarked": false
+}
+```
+
+### 14.4 规划状态说明
+
+本附录属于 2026-03-25 版规划性增补：
+
+- `POST /api/v1/social/like` 与 `GET /api/v1/social/like-status/:targetType/:targetId` 属于现有主链路
+- `GET /api/v1/feed/liked` 属于本轮需要补齐的新读接口
+- 最终以上线版 `docs/api-schema.md` 契约为准
+
+### 14.5 联调补充验收
+
+除本文已有验收项外，建议新增以下检查：
+
+1. “我的-点赞”页面可返回真实后端列表，不再展示固定空态。
+2. 清缓存后重新登录，已点赞作品能在详情页和“我的-点赞”中恢复。
+3. 首页、发现页、详情页、我的页、小游戏壳页对同一作品展示的点赞状态保持一致。
