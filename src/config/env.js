@@ -2,7 +2,7 @@ const isProd = process.env.NODE_ENV === 'production';
 
 export const ENV = {
   // API Configuration — read from .env / .env.development
-  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL || 'https://www.gamevallies.com',
+  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL || 'https://gamevallies.com',
   SERVICE_URLS: {
     AUTH: process.env.TARO_APP_AUTH_SERVICE_URL,
     GAME: process.env.TARO_APP_GAME_SERVICE_URL,

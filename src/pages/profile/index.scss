@@ -490,6 +490,18 @@
         gap: 14px;
       }
 
+      .tasks-panel__groups {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .tasks-panel__section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
       .tasks-panel__empty {
         padding: 46px 28px;
         border-radius: 24px;
@@ -499,6 +511,13 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
+      }
+
+      .tasks-panel__empty--compact {
+        padding: 22px 20px;
+        align-items: flex-start;
+        text-align: left;
+        border-radius: 18px;
       }
 
       .tasks-panel__empty-icon {
@@ -1653,6 +1672,18 @@
     color: #bfb5ff;
   }
 
+  .profile-task-card__status--succeeded {
+    background: rgba(45, 212, 168, 0.12);
+    color: #8ff8d9;
+  }
+
+  .profile-task-card__status--failed,
+  .profile-task-card__status--timed_out,
+  .profile-task-card__status--canceled {
+    background: rgba(255, 92, 138, 0.12);
+    color: #ff9db8;
+  }
+
   .profile-task-card__time {
     font-size: 20px;
     color: #77728f;
@@ -1672,6 +1703,35 @@
     font-size: 22px;
     color: #9e99b7;
     line-height: 1.55;
+  }
+
+  .profile-task-card__detail {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .profile-task-card__detail--failure {
+    background: rgba(255, 92, 138, 0.08);
+    border-color: rgba(255, 92, 138, 0.18);
+  }
+
+  .profile-task-card__detail-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #ff9db8;
+  }
+
+  .profile-task-card__detail-text {
+    display: block;
+    font-size: 21px;
+    line-height: 1.6;
+    color: #d8d4ea;
+    word-break: break-word;
   }
 
   .profile-task-card__progress {
@@ -1724,6 +1784,12 @@
     background: rgba(255, 92, 138, 0.1);
     border: 1px solid rgba(255, 92, 138, 0.22);
     color: #ff9db8;
+  }
+
+  .profile-task-card__btn--ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #d7d3ea;
   }
 }
 

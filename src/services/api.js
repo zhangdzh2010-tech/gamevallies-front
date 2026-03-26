@@ -97,14 +97,15 @@ function normalizeBackendMessage(message) {
  */
 function resolveBaseUrl(url) {
   const s = API_CONFIG.SERVICE_URLS;
-  if (!s) return API_CONFIG.BASE_URL;
+  const fallbackBaseUrl = API_CONFIG.BASE_URL;
+  if (!s) return fallbackBaseUrl;
   // /games/* (including /generate, /iterate) all go to GAME service
   // game-service proxies to ai-engine internally
-  if (url.startsWith('/api/v1/auth') || url.startsWith('/api/v1/users')) return s.AUTH;
-  if (url.startsWith('/api/v1/games')) return s.GAME;
-  if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications')) return s.SOCIAL;
-  if (url.startsWith('/api/v1/feed') || url.startsWith('/api/v1/tags') || url.startsWith('/api/v1/challenges') || url.startsWith('/api/v1/creators')) return s.FEED;
-  return API_CONFIG.BASE_URL;
+  if (url.startsWith('/api/v1/auth') || url.startsWith('/api/v1/users')) return s.AUTH || fallbackBaseUrl;
+  if (url.startsWith('/api/v1/games')) return s.GAME || fallbackBaseUrl;
+  if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications')) return s.SOCIAL || fallbackBaseUrl;
+  if (url.startsWith('/api/v1/feed') || url.startsWith('/api/v1/tags') || url.startsWith('/api/v1/challenges') || url.startsWith('/api/v1/creators')) return s.FEED || fallbackBaseUrl;
+  return fallbackBaseUrl;
 }
 
 async function requestTokenRefresh(refreshToken) {

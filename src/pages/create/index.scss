@@ -518,35 +518,31 @@
   .progress-panel {
     padding: 40px 24px;
 
-    .task-meta-card,
     .task-events-card {
-      background: #111118;
-      border: 1px solid #252535;
-      border-radius: 18px;
-      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
       margin-bottom: 22px;
-    }
+      padding: 20px 22px;
+      background:
+        radial-gradient(circle at 10% 12%, rgba(110, 86, 255, 0.12), transparent 26%),
+        linear-gradient(180deg, rgba(17, 17, 24, 0.98) 0%, rgba(12, 12, 18, 0.98) 100%);
+      border: 1px solid rgba(110, 86, 255, 0.12);
+      border-radius: 22px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 16px 30px rgba(6, 8, 18, 0.28);
 
-    .task-meta-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-
-      & + .task-meta-row {
-        margin-top: 12px;
+      &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        opacity: 0.22;
+        background-image:
+          linear-gradient(rgba(108, 112, 153, 0.09) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(108, 112, 153, 0.09) 1px, transparent 1px);
+        background-size: 16px 16px;
+        pointer-events: none;
       }
-    }
-
-    .task-meta-label {
-      font-size: 22px;
-      color: #8b87a3;
-    }
-
-    .task-meta-value {
-      font-size: 22px;
-      color: #eae8f4;
-      font-weight: 600;
     }
 
     .progress-bar-wrapper {
@@ -652,17 +648,24 @@
     }
 
     .task-events-title {
+      position: relative;
       display: block;
       font-size: 24px;
       font-weight: 700;
       color: #eae8f4;
       margin-bottom: 14px;
+      letter-spacing: 0.4px;
     }
 
     .task-event-item {
+      position: relative;
       display: flex;
       align-items: flex-start;
       gap: 10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.04);
 
       & + .task-event-item {
         margin-top: 10px;
@@ -751,11 +754,13 @@
 
     .completion-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 16px;
       width: 100%;
 
       .action-btn {
         flex: 1;
+        min-width: calc(33.333% - 11px);
         padding: 22px;
         border-radius: 18px;
         text-align: center;
@@ -789,6 +794,7 @@
         color: #eae8f4;
       }
     }
+
   }
 
   // ── Iterate / optimize panel ──
@@ -800,6 +806,67 @@
     border: 1px solid #252535;
     border-radius: 24px;
     box-sizing: border-box;
+
+    .iterate-metadata-card {
+      margin-bottom: 28px;
+      padding: 24px;
+      background: linear-gradient(135deg, rgba(110, 86, 255, 0.08), rgba(45, 212, 168, 0.05));
+      border: 1px solid rgba(110, 86, 255, 0.18);
+      border-radius: 20px;
+
+      &__title {
+        display: block;
+        font-size: 24px;
+        font-weight: 700;
+        color: #f4f2ff;
+        margin-bottom: 8px;
+      }
+
+      &__hint {
+        display: block;
+        font-size: 20px;
+        color: #a8a3c7;
+        line-height: 1.6;
+      }
+
+      &__summary {
+        display: block;
+        margin-top: 14px;
+        font-size: 22px;
+        color: #d6d2ea;
+        line-height: 1.6;
+      }
+    }
+
+    .iterate-metadata-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .iterate-metadata-item {
+      padding: 16px 18px;
+      background: rgba(8, 8, 13, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+
+      &__label {
+        display: block;
+        font-size: 18px;
+        color: #8b87a3;
+        margin-bottom: 8px;
+      }
+
+      &__value {
+        display: block;
+        font-size: 22px;
+        font-weight: 600;
+        color: #f4f2ff;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+    }
 
     .iterate-title {
       display: block;
@@ -1096,6 +1163,27 @@
   }
 
   .iterate-panel {
+    .iterate-metadata-card {
+      &__title {
+        font-size: 28rpx;
+      }
+
+      &__hint,
+      &__summary {
+        font-size: 24rpx;
+      }
+    }
+
+    .iterate-metadata-item {
+      &__label {
+        font-size: 22rpx;
+      }
+
+      &__value {
+        font-size: 26rpx;
+      }
+    }
+
     .iterate-title {
       font-size: 30rpx;
     }

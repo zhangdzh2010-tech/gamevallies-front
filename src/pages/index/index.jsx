@@ -164,6 +164,10 @@ export default function Home() {
     navigation.push({ url: buildGameDetailPath(game.id, { openComment: 1 }) });
   };
 
+  const handleOpenDetail = (game) => {
+    navigation.push({ url: buildGameDetailPath(game.id) });
+  };
+
   const handleToggleLike = async (targetGame) => {
     try {
       const result = await socialService.likeGame('game', targetGame.id);
@@ -200,7 +204,7 @@ export default function Home() {
         : game
     )));
     Taro.showToast({
-      title: nextBookmarked ? '已收藏' : '已取消收藏',
+      title: nextBookmarked ? '已加入收藏' : '已取消收藏',
       icon: 'none',
     });
     return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
@@ -282,6 +286,8 @@ export default function Home() {
                   variant="play-only"
                   onPlay={handlePlay}
                   onComment={handleComment}
+                  onOpenDetail={handleOpenDetail}
+                  showDetailEntry
                   onToggleLike={handleToggleLike}
                   onToggleBookmark={handleToggleBookmark}
                 />
@@ -295,6 +301,8 @@ export default function Home() {
                   variant="play-only"
                   onPlay={handlePlay}
                   onComment={handleComment}
+                  onOpenDetail={handleOpenDetail}
+                  showDetailEntry
                   onToggleLike={handleToggleLike}
                   onToggleBookmark={handleToggleBookmark}
                 />

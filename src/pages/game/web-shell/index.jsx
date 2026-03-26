@@ -543,7 +543,7 @@ export default function GameWebShellPage() {
         : prev
     ));
     Taro.showToast({
-      title: nextBookmarked ? '已收藏' : '已取消收藏',
+      title: nextBookmarked ? '已加入收藏' : '已取消收藏',
       icon: 'none',
     });
     setTimeout(() => {
@@ -586,7 +586,7 @@ export default function GameWebShellPage() {
           method: 'DELETE',
         });
         setIsFollowing(false);
-        Taro.showToast({ title: '已取消关注', icon: 'none' });
+        Taro.showToast({ title: '已取消关注', icon: 'success' });
       } else {
         await requestWithAuth('/api/v1/social/follow', {
           method: 'POST',
@@ -595,10 +595,10 @@ export default function GameWebShellPage() {
           },
         });
         setIsFollowing(true);
-        Taro.showToast({ title: '已关注作者', icon: 'none' });
+        Taro.showToast({ title: '已关注创作者', icon: 'success' });
       }
     } catch (error) {
-      Taro.showToast({ title: error?.message || '关注失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || (isFollowing ? '取消关注失败' : '关注失败'), icon: 'none' });
       if (error?.message === '请先登录') {
         openLoginPage();
       }

@@ -11,7 +11,7 @@ const ACTIVE_GENERATION_TASK_KEY = 'gamevallies_active_generation_task';
 const TRACKED_GENERATION_TASKS_KEY = 'gamevallies_tracked_generation_tasks';
 const ACTIVE_GENERATION_TASK_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_TASK_TIMEOUT_MS = 30 * 60 * 1000;
-const TRACKED_TASKS_LIMIT = 12;
+const TRACKED_TASKS_LIMIT = 20;
 
 const PIPELINE_STAGES = [
   { key: 'submitting', label: '提交创作请求', pct: 5 },
@@ -44,6 +44,48 @@ const STAGE_KEY_ALIASES = {
   qa_checking: 'qa_checking',
   runtime_qa: 'runtime_qa',
   code_review: 'code_review',
+  completed: 'completed',
+  succeeded: 'completed',
+};
+
+const DISPLAY_PIPELINE_STAGES = PIPELINE_STAGES.length
+  ? [
+      { key: 'submitting', label: '提交创作请求', pct: 5 },
+      { key: 'spec_build', label: '构建游戏规格', pct: 15 },
+      { key: 'runtime_profile_select', label: '选择运行时模板', pct: 30 },
+      { key: 'contract_compose', label: '组装运行时约束', pct: 40 },
+      { key: 'logic_generate', label: '生成游戏逻辑', pct: 60 },
+      { key: 'contract_qa', label: '合约校验与修复', pct: 76 },
+      { key: 'runtime_simulation_qa', label: '运行时模拟校验', pct: 92 },
+      { key: 'completed', label: '生成完成', pct: 100 },
+    ]
+  : [];
+
+const DISPLAY_STAGE_KEY_ALIASES = {
+  ...STAGE_KEY_ALIASES,
+  dialogue_slot_extract: 'submitting',
+  'dialogue.slot_extract': 'submitting',
+  dialogue_reply: 'submitting',
+  'dialogue.reply': 'submitting',
+  intent_parse: 'submitting',
+  intent_parsing: 'submitting',
+  request_normalized: 'submitting',
+  spec_build: 'spec_build',
+  runtime_profile_select: 'runtime_profile_select',
+  template_match: 'runtime_profile_select',
+  template_matching: 'runtime_profile_select',
+  designing: 'contract_compose',
+  contract_compose: 'contract_compose',
+  logic_generate: 'logic_generate',
+  code_generate: 'logic_generate',
+  code_generating: 'logic_generate',
+  contract_qa: 'contract_qa',
+  qa_fix: 'contract_qa',
+  qa_checking: 'contract_qa',
+  targeted_remediation: 'contract_qa',
+  runtime_simulation_qa: 'runtime_simulation_qa',
+  runtime_qa: 'runtime_simulation_qa',
+  code_review: 'runtime_simulation_qa',
   completed: 'completed',
   succeeded: 'completed',
 };
@@ -87,26 +129,48 @@ function clampProgress(progress, fallback = 5) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function getStageAlias(task) {
-  if (task?.status === 'succeeded') {
-    return 'completed';
-  }
+function getDisplayStageDefinition(stageKey) {
+  return DISPLAY_PIPELINE_STAGES.find((stage) => stage.key === stageKey) || DISPLAY_PIPELINE_STAGES[0];
+}
 
+function getFallbackStageAlias(task) {
   const keys = [
     task?.progressStage,
     task?.currentStage,
     task?.currentStepKey,
+    task?.rawStage,
     task?.stage,
     task?.stepKey,
   ].filter(Boolean);
 
   for (const key of keys) {
-    if (STAGE_KEY_ALIASES[key]) {
-      return STAGE_KEY_ALIASES[key];
+    if (key === 'targeted_remediation') {
+      return Number(task?.progressPct) >= 90
+        ? 'runtime_simulation_qa'
+        : 'contract_qa';
+    }
+
+    if (DISPLAY_STAGE_KEY_ALIASES[key]) {
+      return DISPLAY_STAGE_KEY_ALIASES[key];
     }
   }
 
-  return 'submitting';
+  return DISPLAY_PIPELINE_STAGES[0].key;
+}
+
+function getStageAlias(task) {
+  if (task?.status === 'succeeded') {
+    return 'completed';
+  }
+
+  if (
+    task?.displayStageKey
+    && DISPLAY_PIPELINE_STAGES.some((stage) => stage.key === task.displayStageKey)
+  ) {
+    return task.displayStageKey;
+  }
+
+  return getFallbackStageAlias(task);
 }
 
 function getLatestTaskMessage(events, fallback = '') {
@@ -119,9 +183,11 @@ function getLatestTaskMessage(events, fallback = '') {
 
 function buildProgressFromTask(task, events = []) {
   const stageKey = getStageAlias(task);
-  const stageIndex = Math.max(0, PIPELINE_STAGES.findIndex((stage) => stage.key === stageKey));
-  const stage = PIPELINE_STAGES[stageIndex] || PIPELINE_STAGES[0];
-  const fallbackPct = task?.status === 'succeeded' ? 100 : stage.pct;
+  const stageIndex = Math.max(0, DISPLAY_PIPELINE_STAGES.findIndex((stage) => stage.key === stageKey));
+  const stage = getDisplayStageDefinition(stageKey);
+  const fallbackPct = task?.status === 'succeeded'
+    ? 100
+    : clampProgress(task?.displayStagePct, stage.pct);
   const fallbackLabel = task?.status === 'canceled'
     ? '已取消创作任务'
     : task?.status === 'timed_out'
@@ -129,11 +195,20 @@ function buildProgressFromTask(task, events = []) {
       : task?.status === 'failed'
         ? '创作失败'
         : stage.label;
+  const stageLabel = task?.status === 'canceled'
+    ? '已取消创作任务'
+    : task?.status === 'timed_out'
+      ? '任务超时'
+      : task?.status === 'failed'
+        ? (task?.displayStageLabel || stage.label || '创作失败')
+        : (task?.displayStageLabel || stage.label || fallbackLabel);
+  const message = getLatestTaskMessage(events, task?.progressMessage || stageLabel || fallbackLabel);
 
   return {
     stageIndex,
     stageKey,
-    stageLabel: getLatestTaskMessage(events, task?.progressMessage || fallbackLabel),
+    stageLabel,
+    message,
     pct: clampProgress(task?.progressPct, fallbackPct),
   };
 }
@@ -223,7 +298,7 @@ function loadTrackedTaskItems() {
 
     const nextItems = parsed
       .map(normalizeTrackedTaskItem)
-      .filter((item) => item && !isTerminalTaskStatus(item.status))
+      .filter(Boolean)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       .slice(0, TRACKED_TASKS_LIMIT);
 
@@ -250,10 +325,6 @@ function mergeTrackedTaskItems(previous, nextItem) {
   const normalizedItem = normalizeTrackedTaskItem(nextItem);
   if (!normalizedItem) {
     return previous;
-  }
-
-  if (isTerminalTaskStatus(normalizedItem.status)) {
-    return removeTrackedTaskItem(previous, normalizedItem.taskId);
   }
 
   const nextItems = [
@@ -469,13 +540,13 @@ export const useGameStore = create((set, get) => ({
       isGenerating: true,
       error: null,
       terminalError: null,
-      latestTaskMessage: PIPELINE_STAGES[0].label,
+      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
       canPlay: true,
       generationProgress: {
         stageIndex: 0,
-        stageKey: PIPELINE_STAGES[0].key,
-        stageLabel: PIPELINE_STAGES[0].label,
-        pct: PIPELINE_STAGES[0].pct,
+        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
+        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
+        pct: DISPLAY_PIPELINE_STAGES[0].pct,
       },
     });
 
@@ -499,7 +570,7 @@ export const useGameStore = create((set, get) => ({
               gameId,
               gameTitle,
               promptPreview,
-              latestMessage: PIPELINE_STAGES[0].label,
+              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
             })
           ),
         }));
@@ -546,12 +617,12 @@ export const useGameStore = create((set, get) => ({
       isGenerating: true,
       error: null,
       terminalError: null,
-      latestTaskMessage: PIPELINE_STAGES[0].label,
+      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
       generationProgress: {
         stageIndex: 0,
-        stageKey: PIPELINE_STAGES[0].key,
-        stageLabel: PIPELINE_STAGES[0].label,
-        pct: PIPELINE_STAGES[0].pct,
+        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
+        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
+        pct: DISPLAY_PIPELINE_STAGES[0].pct,
       },
     });
 
@@ -574,7 +645,7 @@ export const useGameStore = create((set, get) => ({
               gameId: result.gameId || gameId,
               gameTitle,
               promptPreview,
-              latestMessage: PIPELINE_STAGES[0].label,
+              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
             })
           ),
         }));
@@ -626,7 +697,7 @@ export const useGameStore = create((set, get) => ({
       isLoading: false,
       error: null,
       terminalError: task?.terminalError || null,
-      latestTaskMessage: progress.stageLabel,
+      latestTaskMessage: progress.message,
       generationProgress: progress,
       trackedTasks: mergeTrackedTaskItems(
         state.trackedTasks,
@@ -634,7 +705,7 @@ export const useGameStore = create((set, get) => ({
           gameId,
           gameTitle: taskMeta.gameTitle || state.currentGame?.title || '',
           promptPreview: taskMeta.promptPreview || '',
-          latestMessage: progress.stageLabel,
+          latestMessage: progress.message,
         })
       ),
     }));
@@ -731,7 +802,7 @@ export const useGameStore = create((set, get) => ({
       set((state) => ({
         currentTaskEvents: mergedEvents,
         currentTaskCursor: nextCursor,
-        latestTaskMessage: progress?.stageLabel || getLatestTaskMessage(mergedEvents, ''),
+        latestTaskMessage: progress?.message || getLatestTaskMessage(mergedEvents, ''),
         generationProgress: progress || state.generationProgress,
         trackedTasks: latestTask?.taskId
           ? mergeTrackedTaskItems(
@@ -740,7 +811,7 @@ export const useGameStore = create((set, get) => ({
                 gameId: latestTask.gameId,
                 gameTitle: existingTrackedTask?.gameTitle || state.currentGame?.title || '',
                 promptPreview: existingTrackedTask?.promptPreview || '',
-                latestMessage: progress?.stageLabel || getLatestTaskMessage(mergedEvents, ''),
+                latestMessage: progress?.message || getLatestTaskMessage(mergedEvents, ''),
               })
             )
           : state.trackedTasks,
@@ -759,7 +830,7 @@ export const useGameStore = create((set, get) => ({
       currentTask: task,
       generatingGameId: task.gameId || state.generatingGameId,
       generationProgress: progress,
-      latestTaskMessage: progress.stageLabel,
+      latestTaskMessage: progress.message,
       terminalError: task.terminalError || null,
       isLoading: false,
       trackedTasks: mergeTrackedTaskItems(
@@ -768,7 +839,7 @@ export const useGameStore = create((set, get) => ({
           gameId: task.gameId || state.generatingGameId,
           gameTitle: existingTrackedTask?.gameTitle || state.currentGame?.title || '',
           promptPreview: existingTrackedTask?.promptPreview || '',
-          latestMessage: progress.stageLabel,
+          latestMessage: progress.message,
           terminalErrorMessage: task.terminalError?.message || '',
         })
       ),
@@ -847,7 +918,7 @@ export const useGameStore = create((set, get) => ({
           currentGame: game,
           canPlay: canPlayGame,
           generationProgress: doneProgress,
-          latestTaskMessage: doneProgress.stageLabel,
+          latestTaskMessage: doneProgress.message,
           terminalError: null,
           error: null,
           trackedTasks: mergeTrackedTaskItems(
@@ -858,7 +929,7 @@ export const useGameStore = create((set, get) => ({
                 gameId: task.gameId || state.generatingGameId,
                 gameTitle: game?.title || state.currentGame?.title || '',
                 promptPreview: state.trackedTasks.find((item) => item.taskId === task.taskId)?.promptPreview || '',
-                latestMessage: doneProgress.stageLabel,
+                latestMessage: doneProgress.message,
               }
             )
           ),
@@ -888,7 +959,7 @@ export const useGameStore = create((set, get) => ({
             currentGame: fallbackGame,
             canPlay: canPlayGame,
             generationProgress: doneProgress,
-            latestTaskMessage: doneProgress.stageLabel,
+            latestTaskMessage: doneProgress.message,
             terminalError: null,
             error: null,
             trackedTasks: mergeTrackedTaskItems(
@@ -899,7 +970,7 @@ export const useGameStore = create((set, get) => ({
                   gameId: task.gameId || state.generatingGameId,
                   gameTitle: fallbackGame?.title || state.currentGame?.title || '',
                   promptPreview: state.trackedTasks.find((item) => item.taskId === task.taskId)?.promptPreview || '',
-                  latestMessage: doneProgress.stageLabel,
+                  latestMessage: doneProgress.message,
                 }
               )
             ),
@@ -988,9 +1059,9 @@ export const useGameStore = create((set, get) => ({
       latestTaskMessage: '正在恢复创作任务...',
       generationProgress: {
         stageIndex: 0,
-        stageKey: PIPELINE_STAGES[0].key,
+        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
         stageLabel: '正在恢复创作任务...',
-        pct: PIPELINE_STAGES[0].pct,
+        pct: DISPLAY_PIPELINE_STAGES[0].pct,
       },
       generatingGameId: persistedTask.gameId || null,
     });
@@ -1099,13 +1170,6 @@ export const useGameStore = create((set, get) => ({
         if (game?.title) {
           gameTitle = game.title;
         }
-      }
-
-      if (isTerminalTaskStatus(task.status)) {
-        set((state) => ({
-          trackedTasks: removeTrackedTaskItem(state.trackedTasks, taskId),
-        }));
-        return task;
       }
 
       set((state) => {
@@ -1250,5 +1314,5 @@ export const useGameStore = create((set, get) => ({
   clearError: () => set({ error: null, terminalError: null }),
 }));
 
-export { PIPELINE_STAGES };
+export { DISPLAY_PIPELINE_STAGES as PIPELINE_STAGES };
 export default useGameStore;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import { useRoute, useNavigation } from '@tarojs/hooks';
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro';
@@ -9,13 +9,16 @@ import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import { SharePanel } from '../../../components/common/SharePanel';
 import useGamePlayerStore from '../../../stores/gamePlayer';
 import useQuotaStore from '../../../stores/quotaStore';
+import { useGameStore } from '../../../store/gameStore';
 import {
-  openForkCreatePageWithAuth,
-  openResumeCreatePageWithAuth,
+  LOGIN_PAGE_URL,
+  openForkPageWithAuth,
+  openIteratePageWithAuth,
+  setPostLoginRedirect,
 } from '../../../utils/authNavigation';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { Storage } from '../../../utils/storage';
-import { getShareConfig } from '../../../utils/share';
+import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
 import { ENV } from '../../../config/env';
 import './index.scss';
 
@@ -140,6 +143,37 @@ function applyCommentLikeDelta(list, commentId, delta) {
   });
 }
 
+function hydrateAuthorOwnedGame(game, currentUser) {
+  if (!game || typeof game !== 'object') {
+    return null;
+  }
+
+  const currentUserName = currentUser?.displayName
+    || currentUser?.nickname
+    || currentUser?.username
+    || '我';
+  const authorObject = typeof game.author === 'object' && game.author
+    ? game.author
+    : {
+        id: game.authorId || currentUser?.id || '',
+        username: typeof game.author === 'string' ? game.author : currentUserName,
+        displayName: currentUserName,
+      };
+
+  return {
+    ...game,
+    author: authorObject,
+    authorId: game.authorId || authorObject?.id || currentUser?.id || '',
+    likes: Number(game.likes || game.likeCount || 0),
+    plays: Number(game.plays || game.playCount || 0),
+    forks: Number(game.forks || game.forkCount || 0),
+    comments: Number(game.comments || game.commentCount || 0),
+    viewerHasLiked: game.viewerHasLiked === true || game.liked === true,
+    viewerHasBookmarked: game.viewerHasBookmarked === true || game.bookmarked === true,
+    status: game.status || 'draft',
+  };
+}
+
 function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply, onDelete }) {
   const isLiked = likedIds.has(comment.id);
   const isOwn = currentUserId && String(comment.authorId || comment.author?.id || '') === String(currentUserId);
@@ -195,11 +229,31 @@ export default function GameDetail() {
   const route = useRoute();
   const navigation = useNavigation();
   const gameId = route.params?.id;
-  const { windowHeight = 750, safeArea } = Taro.getSystemInfoSync();
+  const authorViewRequested = route.params?.authorView === '1';
+  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const systemInfo = Taro.getSystemInfoSync();
+  const menuButtonRect =
+    isWeapp && typeof Taro.getMenuButtonBoundingClientRect === 'function'
+      ? Taro.getMenuButtonBoundingClientRect()
+      : null;
+  const { windowHeight = 750, safeArea, statusBarHeight = 0 } = systemInfo;
   const safeBottomInset = safeArea ? Math.max(windowHeight - safeArea.bottom, 0) : 0;
-  const scrollViewHeight = windowHeight - 96;
+  const scrollViewHeight = windowHeight;
+  const menuTopInset = menuButtonRect
+    ? Math.max(Math.round((menuButtonRect.top - statusBarHeight) * 0.92), 6)
+    : 24;
+  const topBarStyle = menuButtonRect
+    ? {
+        paddingTop: `${statusBarHeight + menuTopInset}px`,
+        minHeight: `${menuButtonRect.bottom + 14}px`,
+      }
+    : {
+        paddingTop: '24px',
+        minHeight: '96px',
+      };
 
   const openGame = useGamePlayerStore((s) => s.openGame);
+  const storeCurrentGame = useGameStore((state) => state.currentGame);
   const currentUser = Storage.getUser();
   const currentUserId = currentUser?.id;
 
@@ -245,7 +299,7 @@ export default function GameDetail() {
   const authorAvatarFallback = getAvatarFallback(authorAvatar, authorDisplayName);
   const continueCreateLabel = isOwnGame
     ? '继续优化'
-    : (canForkGame ? 'Fork 后继续创作' : '作者未开放 Fork');
+    : (canForkGame ? '复刻后继续创作' : '作者未开放复刻权限');
   const continueCreateDisabled = Boolean(game) && !isOwnGame && !canForkGame;
 
   const reportShare = (platform) => {
@@ -276,23 +330,27 @@ export default function GameDetail() {
 
     let cancelled = false;
 
+    const applyLoadedGame = (gameData) => {
+      if (!gameData || cancelled) {
+        return;
+      }
+
+      setGame(gameData);
+      setLikeCount(gameData?.likes || 0);
+      setIsLiked(Boolean(gameData?.viewerHasLiked));
+
+      const bookmarked = Boolean(gameData?.viewerHasBookmarked) || isGameBookmarked(gameData?.id || gameId);
+      setIsBookmarked(bookmarked);
+
+      if (bookmarked) {
+        setGameBookmarked({ ...gameData, viewerHasBookmarked: true }, true);
+      }
+    };
+
     const load = async () => {
       try {
         const gameData = await gameService.getGame(gameId);
-        if (cancelled) {
-          return;
-        }
-
-        setGame(gameData);
-        setLikeCount(gameData?.likes || 0);
-        setIsLiked(Boolean(gameData?.viewerHasLiked));
-
-        const bookmarked = Boolean(gameData?.viewerHasBookmarked) || isGameBookmarked(gameData?.id || gameId);
-        setIsBookmarked(bookmarked);
-
-        if (bookmarked) {
-          setGameBookmarked({ ...gameData, viewerHasBookmarked: true }, true);
-        }
+        applyLoadedGame(gameData);
 
         if (Storage.getToken()) {
           try {
@@ -305,7 +363,25 @@ export default function GameDetail() {
           }
         }
       } catch {
-        if (!cancelled) {
+        let fallbackGame = null;
+
+        if (authorViewRequested && String(storeCurrentGame?.id || '') === String(gameId)) {
+          fallbackGame = hydrateAuthorOwnedGame(storeCurrentGame, currentUser);
+        }
+
+        if (!fallbackGame && Storage.getToken()) {
+          try {
+            const myGames = await gameService.getMyGames(1, 50);
+            const matchedGame = (myGames?.items || []).find((item) => String(item?.id || '') === String(gameId));
+            fallbackGame = hydrateAuthorOwnedGame(matchedGame, currentUser);
+          } catch {
+            // Ignore fallback lookup failures and keep the original error feedback.
+          }
+        }
+
+        if (fallbackGame) {
+          applyLoadedGame(fallbackGame);
+        } else if (!cancelled) {
           Taro.showToast({ title: '加载失败', icon: 'none' });
         }
       } finally {
@@ -321,7 +397,7 @@ export default function GameDetail() {
     return () => {
       cancelled = true;
     };
-  }, [gameId]);
+  }, [authorViewRequested, currentUserId, gameId, storeCurrentGame]);
 
   useEffect(() => {
     if (!Storage.getToken() || !authorId || isOwnGame) {
@@ -422,6 +498,8 @@ export default function GameDetail() {
 
     if (!Storage.getToken()) {
       Taro.showToast({ title: '请先登录后再评论', icon: 'none' });
+      setPostLoginRedirect(buildGameDetailPath(gameId, { openComment: 1, ...(authorViewRequested ? { authorView: 1 } : {}) }));
+      Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
       return;
     }
 
@@ -447,7 +525,7 @@ export default function GameDetail() {
       setCommentText('');
       setReplyingTo(null);
     } catch {
-      Taro.showToast({ title: '发布失败，请重试', icon: 'none' });
+      Taro.showToast({ title: '评论发送失败，请重试', icon: 'none' });
     } finally {
       setSubmitting(false);
     }
@@ -586,44 +664,35 @@ export default function GameDetail() {
     setGameBookmarked(game, nextBookmarked);
     setIsBookmarked(nextBookmarked);
     setGame((prev) => (prev ? { ...prev, viewerHasBookmarked: nextBookmarked } : prev));
-    Taro.showToast({ title: nextBookmarked ? '已收藏' : '已取消收藏', icon: 'none' });
+    Taro.showToast({ title: nextBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
   };
 
   const handleForkAction = async () => {
     if (!Storage.getToken()) {
-      openForkCreatePageWithAuth(gameId);
+      openForkPageWithAuth(gameId);
       return;
     }
 
     if (isOwnGame) {
-      Taro.showToast({ title: '不能 Fork 自己的作品', icon: 'none' });
+      Taro.showToast({ title: '不能复刻自己的作品', icon: 'none' });
       return;
     }
 
     if (!canForkGame) {
-      Taro.showToast({ title: '作者未开放 Fork 权限', icon: 'none' });
+      Taro.showToast({ title: '作者未开放复刻权限', icon: 'none' });
       return;
     }
 
-    try {
-      const forkedGameId = await gameService.forkGame(gameId);
-      const forkedGame = await gameService.getGame(forkedGameId);
-      Taro.showToast({ title: '已 Fork 到你的创作区', icon: 'success' });
-      setTimeout(() => {
-        openResumeCreatePageWithAuth(forkedGame, forkedGameId);
-      }, 300);
-    } catch (error) {
-      Taro.showToast({ title: error?.message || 'Fork 失败，请重试', icon: 'none' });
-    }
+    openForkPageWithAuth(gameId);
   };
 
   const handleContinueCreate = async () => {
     if (isOwnGame) {
-      openResumeCreatePageWithAuth(game, game?.id);
+      openIteratePageWithAuth(game, game?.id);
       return;
     }
 
-    await handleForkAction();
+    openForkPageWithAuth(gameId);
   };
 
   const handleFollow = async () => {
@@ -633,6 +702,8 @@ export default function GameDetail() {
 
     if (!Storage.getToken()) {
       Taro.showToast({ title: '请先登录后再关注', icon: 'none' });
+      setPostLoginRedirect(buildGameDetailPath(gameId, { ...(authorViewRequested ? { authorView: 1 } : {}) }));
+      Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
       return;
     }
 
@@ -704,6 +775,9 @@ export default function GameDetail() {
 
   return (
     <View className="game-detail">
+      <View className="detail-top-bar" style={topBarStyle}>
+        <View className="back-btn" onClick={() => navigation.back()}>←</View>
+      </View>
       <ScrollView
         className="detail-scroll"
         style={{ height: `${scrollViewHeight}px` }}
@@ -787,16 +861,16 @@ export default function GameDetail() {
             </View>
             <View className={`icon-btn bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`} onClick={handleBookmarkGame}>
               <Text>{isBookmarked ? '★' : '☆'}</Text>
-              <Text className="count">{isBookmarked ? '已收藏' : '收藏'}</Text>
+              <Text className="count">收藏</Text>
             </View>
             <View className="icon-btn share-btn" onClick={() => setShowSharePanel(true)}>
               <Text>分享</Text>
               <Text className="count">分享</Text>
             </View>
             <View className={`icon-btn fork-btn ${canForkGame ? '' : 'disabled'}`} onClick={handleForkAction}>
-              <Text className="count count--overlay">{canForkGame ? 'Fork' : (isOwnGame ? '自己' : '未授权')}</Text>
+              <Text className="count count--overlay">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
               <Text>⎇</Text>
-              <Text className="count">{canForkGame ? 'Fork' : (isOwnGame ? '自己' : '未授权')}</Text>
+              <Text className="count">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
             </View>
           </View>
 

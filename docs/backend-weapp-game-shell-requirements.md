@@ -392,3 +392,47 @@ TARO_APP_GAME_SHELL_URL=https://www.gamevallies.com/game-shell/index.html
 - 页面内部实现作者、关注、点赞、收藏、评论交互层
 - 壳页本身可识别登录用户身份并调用现有社交接口
 - 支持通过 `wx.miniProgram.navigateTo` 回跳小程序页面
+
+---
+
+## 14. 2026-03-25 口径同步附录
+
+### 14.1 背景
+
+小程序壳页内的点赞、收藏、关注、评论入口，最终都必须以账号级后端状态为准。
+
+结合 2026-03-25 的链路排查，当前需要额外强调：
+
+- 点赞主动作已经是后端真实能力，但壳页回显必须依赖稳定的账号级读模型。
+- 收藏若仍只依赖本地缓存，则用户清缓存或换设备后，壳页将无法恢复真实收藏状态。
+- 因此壳页正式版不应再把“本地收藏状态”作为最终真相源。
+
+### 14.2 新增依赖的后端能力
+
+除本文原有接口外，壳页正式上线建议以后端补齐以下能力：
+
+- 游戏对象直接返回 `viewerHasLiked`
+- 游戏对象直接返回 `viewerHasBookmarked`
+- 游戏对象直接返回 `bookmarks`
+- `GET /api/v1/feed/favorites`
+- `GET /api/v1/feed/liked`
+- `POST /api/v1/feed/favorites`
+- `DELETE /api/v1/feed/favorites/:gameId`
+- `POST /api/v1/social/like-status/batch`（如列表场景需要批量补齐）
+
+### 14.3 壳页联调建议
+
+壳页正式联调时，建议明确分两阶段：
+
+1. 壳页可访问、可嵌入、可调用现有点赞/关注接口。
+2. 壳页切到账号级点赞/收藏读模型，不再依赖本地收藏缓存。
+
+### 14.4 文档对齐关系
+
+本附录与以下文档保持一致：
+
+- `docs/api-schema.md`
+- `docs/backend-bookmark-api-implementation.md`
+- `docs/backend-engagement-api-implementation.md`
+
+如三份文档之间出现冲突，以 `docs/api-schema.md` 中最新规划附录为总契约参考。

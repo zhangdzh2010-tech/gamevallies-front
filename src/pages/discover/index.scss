@@ -138,6 +138,18 @@
 
       .follow-btn {
         @include game-primary-pill(34px, 0 16px);
+        transition: transform $transition-fast, opacity $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+
+        &.is-following {
+          background: rgba(109, 105, 132, 0.18);
+          border: 1px solid rgba(120, 116, 147, 0.4);
+          box-shadow: none;
+        }
+
+        &.is-loading,
+        &.disabled {
+          opacity: 0.7;
+        }
 
         .follow-btn-text {
           font-size: 14px;
@@ -190,6 +202,21 @@
       font-size: 22px;
       color: #6b6882;
       text-align: center;
+    }
+
+    .empty-action {
+      margin-top: 20px;
+      @include game-primary-pill(40px, 0 22px);
+
+      &:active {
+        transform: scale(0.98);
+      }
+
+      text {
+        font-size: 18px;
+        color: #fff;
+        font-weight: 700;
+      }
     }
   }
 
@@ -273,6 +300,15 @@
 
     .empty-text {
       font-size: 26rpx;
+    }
+
+    .empty-action {
+      margin-top: 24rpx;
+      padding: 12rpx 28rpx;
+
+      text {
+        font-size: 24rpx;
+      }
     }
   }
 

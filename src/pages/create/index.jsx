@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Textarea, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
+import { PipelineOrbit } from '../../components/common/PipelineOrbit';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import * as gameService from '../../services/game';
 import {
@@ -19,47 +20,11 @@ import {
   ensureCreateAccess,
   getPersistedCreateEntryIntent,
   isLoggedIn,
+  openForkPageWithAuth,
+  openIteratePageWithAuth,
   openProfilePageWithTab,
 } from '../../utils/authNavigation';
 import './index.scss';
-
-function mkMsg(role, text) {
-  return { role, text, id: Date.now() + Math.random() };
-}
-
-function generateClarifications(prompt) {
-  const questions = [];
-  const lower = prompt.toLowerCase();
-  const hasStyle = /风格|画面|像素|卡通|写实|简约|霓虹/.test(lower);
-  const hasDifficulty = /难度|简单|困难|容易|hard|easy/.test(lower);
-  const hasScoring = /计分|得分|积分|分数/.test(lower);
-
-  if (!hasStyle) {
-    questions.push({
-      id: 'style',
-      text: '你希望游戏的画面风格是？',
-      options: ['像素风', '卡通风', '简约几何', '霓虹科技', '不限，AI决定'],
-    });
-  }
-
-  if (!hasDifficulty) {
-    questions.push({
-      id: 'difficulty',
-      text: '希望游戏难度如何？',
-      options: ['简单（休闲）', '中等', '困难（挑战）', '不限'],
-    });
-  }
-
-  if (!hasScoring) {
-    questions.push({
-      id: 'scoring',
-      text: '计分方式偏好？',
-      options: ['时间越长分越高', '击败敌人得分', '收集物品得分', 'AI决定'],
-    });
-  }
-
-  return questions;
-}
 
 const EXAMPLE_PROMPTS = [
   { emoji: '🐍', text: '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。' },
@@ -72,47 +37,13 @@ const EXAMPLE_PROMPTS = [
 
 const TASK_STATUS_LABELS = {
   queued: '排队中',
+  submitted: '执行中',
   running: '执行中',
   succeeded: '已完成',
   failed: '失败',
   canceled: '已取消',
   timed_out: '超时',
 };
-
-const PIPELINE_MESSAGE_PATTERNS = [
-  { pattern: /(started|queued|submitting|提交|request)/i, stageKey: 'submitting' },
-  { pattern: /(slot extraction|slot_extract|dialogue|intent parsing|intent_parse|json|解析意图|意图解析)/i, stageKey: 'intent_parsing' },
-  { pattern: /(design|parameter|参数|设计方案)/i, stageKey: 'designing' },
-  { pattern: /(template|模板)/i, stageKey: 'template_matching' },
-  { pattern: /(code|代码生成|生成代码)/i, stageKey: 'code_generating' },
-  { pattern: /(qa|quality|质量检查)/i, stageKey: 'qa_checking' },
-  { pattern: /(runtime|运行时)/i, stageKey: 'runtime_qa' },
-  { pattern: /(review|审查|审阅)/i, stageKey: 'code_review' },
-  { pattern: /(complete|completed|succeeded|完成)/i, stageKey: 'completed' },
-];
-
-function getPipelineStageLabel(stageKey, fallback = '处理中') {
-  const stage = PIPELINE_STAGES.find((item) => item.key === stageKey);
-  return stage?.label || fallback;
-}
-
-function inferPipelineStageLabel(rawMessage = '', explicitStageKey = '', fallback = '处理中') {
-  if (explicitStageKey) {
-    return getPipelineStageLabel(explicitStageKey, fallback);
-  }
-
-  const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
-  if (!message) {
-    return fallback;
-  }
-
-  const matchedStage = PIPELINE_MESSAGE_PATTERNS.find((item) => item.pattern.test(message));
-  if (matchedStage) {
-    return getPipelineStageLabel(matchedStage.stageKey, fallback);
-  }
-
-  return fallback;
-}
 
 function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
@@ -128,33 +59,25 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
     return '创作任务已取消';
   }
 
-  const stageLabel = inferPipelineStageLabel(source, '', fallbackStageLabel);
   if (/超时|timeout|timed out/i.test(source)) {
-    return `${stageLabel}阶段处理超时，请稍后重试`;
+    return `${fallbackStageLabel}阶段处理超时，请稍后重试`;
   }
 
-  if (stageLabel === '解析游戏意图') {
-    return '解析游戏意图阶段遇到问题，请换一种更直接的描述后重试';
-  }
-
-  return `${stageLabel}阶段遇到问题，请稍后重试`;
+  return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
 }
 
 export default function Create() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const {
     createGame,
-    iterateGame,
     restorePersistedTask,
     cancelCurrentTask,
     isGenerating,
     generationProgress,
     currentGame,
     currentTask,
-    currentTaskEvents,
     error,
     terminalError,
-    latestTaskMessage,
     clearError,
     canPlay,
     createEntryIntent,
@@ -167,17 +90,6 @@ export default function Create() {
   const openPaywall = useQuotaStore((s) => s.openPaywall);
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [isExpanding, setIsExpanding] = useState(false);
-
-  // Chat-based clarification state
-  const [chatMode, setChatMode] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [pendingQuestions, setPendingQuestions] = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [finalPrompt, setFinalPrompt] = useState('');
-  const [extraDetails, setExtraDetails] = useState({});
-  const [iterateFeedback, setIterateFeedback] = useState('');
-  const [isIterating, setIsIterating] = useState(false);
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
   const { windowHeight = 720 } = Taro.getSystemInfoSync();
@@ -206,6 +118,22 @@ export default function Create() {
     authRedirectingRef.current = false;
   });
 
+  useEffect(() => {
+    if (!isGenerating || currentTask?.taskType !== 'pipeline_iterate' || !currentTask?.taskId) {
+      return;
+    }
+
+    openIteratePageWithAuth(currentGame, currentTask.gameId || currentGame?.id || null, {
+      taskId: currentTask.taskId,
+    });
+  }, [
+    currentGame,
+    currentTask?.gameId,
+    currentTask?.taskId,
+    currentTask?.taskType,
+    isGenerating,
+  ]);
+
   useDidShow(() => {
     if (!isLoggedIn() || createEntryIntent || isGenerating || currentTask?.taskId || isRestoringEntry) {
       return;
@@ -218,7 +146,7 @@ export default function Create() {
     }
 
     const activeTaskSnapshot = getPersistedGenerationTaskSnapshot();
-    if (!activeTaskSnapshot?.taskId) {
+    if (!activeTaskSnapshot?.taskId || activeTaskSnapshot?.taskType === 'pipeline_iterate') {
       return;
     }
 
@@ -237,15 +165,6 @@ export default function Create() {
   const resetLocalCreateState = () => {
     setPrompt('');
     setGameName('');
-    setIsExpanding(false);
-    setChatMode(false);
-    setMessages([]);
-    setPendingQuestions([]);
-    setCurrentQuestion(null);
-    setFinalPrompt('');
-    setExtraDetails({});
-    setIterateFeedback('');
-    setIsIterating(false);
   };
 
   useEffect(() => {
@@ -261,6 +180,24 @@ export default function Create() {
       resetLocalCreateState();
       clearError();
       resetCreateSession({ clearPersistedTask: mode === 'fresh' });
+
+      if (mode === 'resume' && gameId) {
+        if (!cancelled) {
+          openIteratePageWithAuth(null, gameId);
+        }
+        consumeCreateEntryIntent();
+        consumePersistedCreateEntryIntent();
+        return;
+      }
+
+      if (mode === 'fork' && sourceGameId) {
+        if (!cancelled) {
+          openForkPageWithAuth(sourceGameId);
+        }
+        consumeCreateEntryIntent();
+        consumePersistedCreateEntryIntent();
+        return;
+      }
 
       if (mode === 'task') {
         setIsRestoringEntry(true);
@@ -301,11 +238,11 @@ export default function Create() {
           const forkedGame = await gameService.getGame(forkedGameId);
           if (!cancelled) {
             setCurrentGame(forkedGame);
-            Taro.showToast({ title: '已 Fork 到你的创作区', icon: 'success' });
+            Taro.showToast({ title: '已加入我的创作', icon: 'success' });
           }
         } catch (error) {
           if (!cancelled) {
-            Taro.showToast({ title: error?.message || 'Fork 失败，请重试', icon: 'none' });
+            Taro.showToast({ title: error?.message || '复刻失败，请重试', icon: 'none' });
             resetCreateSession({ clearPersistedTask: false });
           }
         } finally {
@@ -372,80 +309,15 @@ export default function Create() {
       return;
     }
     clearError();
-
-    const clarifications = generateClarifications(prompt.trim());
-    if (clarifications.length > 0) {
-      setChatMode(true);
-      setFinalPrompt(prompt.trim());
-      setExtraDetails({});
-      setMessages([
-        mkMsg('user', prompt.trim()),
-        mkMsg('ai', `好的，我来帮你创作${gameName ? `《${gameName}》` : '这个游戏'}！为了让结果更符合你的预期，我想先确认几个细节。`),
-      ]);
-      setCurrentQuestion(clarifications[0]);
-      setPendingQuestions(clarifications.slice(1));
-    } else {
-      setIsExpanding(true);
-      doCreate(prompt.trim(), gameName);
-    }
+    await doCreate(prompt.trim(), gameName);
   };
-
-  // Handle user selecting a clarification option
-  const handleOptionSelect = (option) => {
-    if (!currentQuestion) return;
-
-    const newMsgs = [
-      ...messages,
-      mkMsg('ai', currentQuestion.text),
-      mkMsg('user', option),
-    ];
-    const newDetails = { ...extraDetails, [currentQuestion.id]: option };
-    setExtraDetails(newDetails);
-    setMessages(newMsgs);
-
-    if (pendingQuestions.length > 0) {
-      setCurrentQuestion(pendingQuestions[0]);
-      setPendingQuestions(pendingQuestions.slice(1));
-    } else {
-      // All questions answered, build the enhanced prompt and start creating.
-      setCurrentQuestion(null);
-      const enhanced = buildEnhancedPrompt(finalPrompt, newDetails);
-      const finalMsgs = [
-        ...newMsgs,
-        mkMsg('ai', '明白了，开始为你创作游戏。'),
-      ];
-      setMessages(finalMsgs);
-      setTimeout(() => doCreate(enhanced, gameName), 600);
-    }
-  };
-
-  // Skip remaining clarifications
-  const handleSkipClarify = () => {
-    setCurrentQuestion(null);
-    setPendingQuestions([]);
-    const skipMsgs = [...messages, mkMsg('ai', '好的，直接开始创作。')];
-    setMessages(skipMsgs);
-    const enhanced = buildEnhancedPrompt(finalPrompt, extraDetails);
-    setTimeout(() => doCreate(enhanced, gameName), 400);
-  };
-
-  function buildEnhancedPrompt(base, details) {
-    let extra = '';
-
-    if (details.style && details.style !== '不限，AI决定') extra += `，画面风格：${details.style}`;
-    if (details.difficulty && details.difficulty !== '不限') extra += `，难度：${details.difficulty}`;
-    if (details.scoring) extra += `，计分方式：${details.scoring}`;
-    return base + extra;
-  }
 
   async function doCreate(description, name) {
-    setChatMode(false);
-    setIsExpanding(false);
     const title = (name || gameName).trim(); // Empty title lets the backend generate one.
     try {
       await createGame(description, title);
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, 'AI 规划方案'), icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
     }
   }
 
@@ -468,23 +340,6 @@ export default function Create() {
     resetLocalCreateState();
   };
 
-  const handleIterate = async () => {
-    if (!iterateFeedback.trim()) {
-      Taro.showToast({ title: '请输入优化说明', icon: 'none' });
-      return;
-    }
-    if (!currentGame?.id) return;
-    setIsIterating(true);
-    try {
-      await iterateGame(currentGame.id, iterateFeedback.trim());
-      setIterateFeedback('');
-    } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '优化游戏'), icon: 'none' });
-    } finally {
-      setIsIterating(false);
-    }
-  };
-
   // Chat clarification view
   if (isRestoringEntry) {
     return (
@@ -503,169 +358,43 @@ export default function Create() {
     );
   }
 
-  if (chatMode && !isGenerating) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header">
-          <Text className="header-title">完善游戏方案</Text>
-          <Text className="header-subtitle">回答几个小问题，让 AI 更准确地理解你的想法</Text>
-        </View>
-
-        <ScrollView className="create-scroll" scrollY>
-          <View className="chat-messages">
-            {messages.map(msg => (
-              <View key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
-                {msg.role === 'ai' && <Text className="chat-avatar">AI</Text>}
-                <View className="chat-bubble">
-                  <Text className="chat-text">{msg.text}</Text>
-                </View>
-                {msg.role === 'user' && <Text className="chat-avatar">我</Text>}
-              </View>
-            ))}
-
-            {currentQuestion && (
-              <View className="clarify-block">
-                <View className="chat-msg chat-msg--ai">
-                  <Text className="chat-avatar">AI</Text>
-                  <View className="chat-bubble">
-                    <Text className="chat-text">{currentQuestion.text}</Text>
-                  </View>
-                </View>
-                <View className="options-list">
-                  {currentQuestion.options.map((opt, i) => (
-                    <View key={i} className="option-btn" onClick={() => handleOptionSelect(opt)}>
-                      <Text className="option-text">{opt}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-          <View className="bottom-spacer" />
-        </ScrollView>
-
-        <View className="chat-footer">
-          <View className="skip-btn" onClick={handleSkipClarify}>
-            <Text className="skip-text">跳过，直接开始创作 →</Text>
-          </View>
-        </View>
-
-        <CustomTabBar activeIndex={2} />
-      </View>
-    );
-  }
-
-  // Expanding / submitting view
-  if (isExpanding) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header">
-          <Text className="header-title">AI 正在整理方案</Text>
-          <Text className="header-subtitle">根据你的想法整理更完整的游戏方案</Text>
-        </View>
-        <View className="expanding-panel">
-          <View className="expanding-spinner" />
-          <Text className="expanding-text">AI 正在分析你的创意，并整理成完整的游戏方案...</Text>
-        </View>
-        <CustomTabBar activeIndex={2} />
-      </View>
-    );
-  }
-
   // Generating progress view
   if (isGenerating) {
     const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
-    const taskEventList = currentTaskEvents.slice(-3);
-    const taskTypeLabel = currentTask?.taskType === 'pipeline_iterate' ? '优化任务' : '创建任务';
-    const taskIdSuffix = currentTask?.taskId ? String(currentTask.taskId).slice(-8) : '';
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
-    const currentStageLabel = inferPipelineStageLabel(
-      latestTaskMessage,
-      progress.stageKey,
-      getPipelineStageLabel(progress.stageKey, '正在生成游戏')
-    );
+    const currentStageLabel = progress.stageLabel || '正在生成游戏';
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
         <View className="create-header">
           <Text className="header-title">AI 创作中</Text>
-          <Text className="header-subtitle">{`当前阶段：${currentStageLabel}`}</Text>
+          <Text className="header-subtitle">AI 正在为你生成游戏，请稍候</Text>
         </View>
 
-        <View className="progress-panel">
-          <View className="task-meta-card">
-            <View className="task-meta-row">
-              <Text className="task-meta-label">当前任务</Text>
-              <Text className="task-meta-value">{taskTypeLabel}</Text>
-            </View>
-            {taskIdSuffix ? (
-              <View className="task-meta-row">
-                <Text className="task-meta-label">任务 ID</Text>
-                <Text className="task-meta-value">...{taskIdSuffix}</Text>
+        <ScrollView className="create-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
+          <View className="progress-panel">
+            <PipelineOrbit
+              stages={PIPELINE_STAGES}
+              currentIndex={progress.stageIndex}
+              progressPct={progress.pct}
+              title="生成进度"
+              stageLabel={currentStageLabel}
+              statusLabel={taskStatusLabel}
+              modeLabel="创作流程"
+              coreLabel="AI 创作"
+            />
+
+            {currentTask?.taskId ? (
+              <View className="task-actions">
+                <View className="task-cancel-btn" onClick={handleCancelTask}>
+                  <Text>取消任务</Text>
+                </View>
               </View>
             ) : null}
-            {currentTask?.status ? (
-              <View className="task-meta-row">
-                <Text className="task-meta-label">状态</Text>
-                <Text className="task-meta-value">{taskStatusLabel}</Text>
-              </View>
-            ) : null}
           </View>
 
-          <View className="progress-bar-wrapper">
-            <View className="progress-bar-bg">
-              <View className="progress-bar-fill" style={{ width: `${progress.pct}%` }} />
-            </View>
-            <Text className="progress-pct">{progress.pct}%</Text>
-          </View>
-
-          <View className="stage-list">
-            {PIPELINE_STAGES.map((stage, idx) => {
-              const isDone = idx < progress.stageIndex;
-              const isCurrent = idx === progress.stageIndex;
-              return (
-                <View key={stage.key} className={`stage-item ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''} ${!isDone && !isCurrent ? 'pending' : ''}`}>
-                  <View className="stage-indicator">
-                    {isDone ? <Text className="stage-check">✓</Text> : isCurrent ? <View className="stage-pulse" /> : <View className="stage-dot" />}
-                  </View>
-                  <Text className="stage-label">{stage.label}</Text>
-                  {isCurrent && <Text className="stage-active-hint">进行中...</Text>}
-                </View>
-              );
-            })}
-          </View>
-
-          {taskEventList.length ? (
-            <View className="task-events-card">
-              <Text className="task-events-title">最新进展</Text>
-              {taskEventList.map((event, index) => (
-                <View
-                  key={event.id || event.seqNo || `${event.createdAt || 'event'}-${index}`}
-                  className="task-event-item"
-                >
-                  <Text className="task-event-dot" />
-                  <Text className="task-event-text">
-                    {inferPipelineStageLabel(
-                      event.message,
-                      event.stepKey || event.stage,
-                      currentStageLabel
-                    )}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          {currentTask?.taskId ? (
-            <View className="task-actions">
-              <View className="task-cancel-btn" onClick={handleCancelTask}>
-                <Text>取消任务</Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
+          <View className="bottom-spacer" />
+        </ScrollView>
 
         <CustomTabBar activeIndex={2} />
       </View>
@@ -705,32 +434,14 @@ export default function Create() {
                 <Text>订阅后试玩</Text>
               </View>
             )}
+            <View className="action-btn new-btn" onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}>
+              <Text>继续优化</Text>
+            </View>
             <View className="action-btn new-btn" onClick={handleNewGame}>
               <Text>再创一个</Text>
             </View>
           </View>
 
-          {/* 优化面板 */}
-          <View className="iterate-panel">
-            <Text className="iterate-title">优化游戏</Text>
-            <Text className="iterate-hint">描述你想改进的地方，越详细效果越好</Text>
-            <Textarea
-              className="iterate-textarea"
-              placeholder="例如：把游戏速度调快一些，增加二段跳能力，改成红色主题，增加音效..."
-              placeholderStyle="color: #55516e"
-              value={iterateFeedback}
-              onInput={(e) => setIterateFeedback(e.detail.value)}
-              maxLength={500}
-              autoHeight
-            />
-            <Text className="input-count">{iterateFeedback.length}/500</Text>
-            <View
-              className={`iterate-btn ${isIterating ? 'disabled' : ''}`}
-              onClick={isIterating ? undefined : handleIterate}
-            >
-              <Text>{isIterating ? '优化中...' : '提交优化'}</Text>
-            </View>
-          </View>
         </View>
         <View style={{ height: '80px' }} />
         </ScrollView>
@@ -776,7 +487,7 @@ export default function Create() {
               placeholderStyle="color: #55516e"
               value={prompt}
               onInput={(e) => setPrompt(e.detail.value)}
-              maxLength={2000}
+              maxlength={2000}
               autoHeight
             />
             <Text className="input-count">{prompt.length}/2000</Text>
@@ -784,14 +495,14 @@ export default function Create() {
 
           {error && (
             <View className="error-banner">
-              <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, 'AI 规划方案')}</Text>
+              <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
               <Text className="error-dismiss" onClick={clearError}>×</Text>
             </View>
           )}
 
           <View className="form-actions">
             <View className="submit-btn" onClick={handleSubmit}>
-              <Text>AI 规划方案</Text>
+              <Text>开始创作</Text>
             </View>
           </View>
         </View>
@@ -811,8 +522,8 @@ export default function Create() {
         <View className="tips-section">
           <Text className="tips-title">创作流程</Text>
           <View className="tip-item"><Text className="tip-text">1. 描述你的游戏想法（可以很简短）</Text></View>
-          <View className="tip-item"><Text className="tip-text">2. AI 会通过几个小问题补充关键细节</Text></View>
-          <View className="tip-item"><Text className="tip-text">3. 确认信息后，AI 会自动生成可玩的游戏</Text></View>
+          <View className="tip-item"><Text className="tip-text">2. 提交后会直接进入 AI 创作任务</Text></View>
+          <View className="tip-item"><Text className="tip-text">3. 生成完成后即可在“我的作品”继续编辑或试玩</Text></View>
         </View>
 
         <View className="bottom-spacer" />

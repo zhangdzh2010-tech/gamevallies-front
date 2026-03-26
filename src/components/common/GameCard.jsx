@@ -44,9 +44,11 @@ export const GameCard = ({
   game,
   onPlay,
   onComment,
+  onOpenDetail,
   onToggleLike,
   onToggleBookmark,
   variant = 'default',
+  showDetailEntry = false,
 }) => {
   const [isLiked, setIsLiked] = useState(Boolean(game.viewerHasLiked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked));
@@ -159,6 +161,19 @@ export const GameCard = ({
     });
   };
 
+  const handleOpenDetail = (e) => {
+    e.stopPropagation();
+
+    if (onOpenDetail) {
+      onOpenDetail(game);
+      return;
+    }
+
+    navigation.push({
+      url: `/pages/game/detail/index?id=${game.id}`,
+    });
+  };
+
   const handleCloseHowToPlay = (e) => {
     e.stopPropagation();
     setShowHowToPlay(false);
@@ -175,6 +190,12 @@ export const GameCard = ({
         <View className="how-to-play-btn" onClick={handleHowToPlay}>
           <Text className="how-to-play-icon">ⓘ</Text>
         </View>
+
+        {showDetailEntry ? (
+          <View className="detail-entry-btn" onClick={handleOpenDetail}>
+            <Text className="detail-entry-dots">...</Text>
+          </View>
+        ) : null}
 
         <View className="preview-overlay">
           <View className={`preview-footer${isPlayOnlyVariant ? ' preview-footer--play-only' : ''}`}>

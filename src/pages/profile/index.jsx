@@ -1,5 +1,5 @@
 ﻿/* eslint-disable react/prop-types */
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Textarea, Image, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -9,13 +9,13 @@ import { ENV } from '../../config/env';
 import {
   consumePersistedProfileActiveTab,
   openCreatePageWithAuth,
-  openResumeCreatePageWithAuth,
+  openIteratePageWithAuth,
   openTaskCreatePageWithAuth,
 } from '../../utils/authNavigation';
 import * as authService from '../../services/auth';
 import * as gameService from '../../services/game';
 import * as socialService from '../../services/social';
-import { useGameStore } from '../../store/gameStore';
+import { isTerminalTaskStatus, useGameStore } from '../../store/gameStore';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import useQuotaStore from '../../stores/quotaStore';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
@@ -135,7 +135,130 @@ const TASK_STATUS_LABELS = {
   queued: '排队中',
   submitted: '执行中',
   running: '执行中',
+  succeeded: '已完成',
+  failed: '失败',
+  canceled: '已取消',
+  timed_out: '超时',
 };
+
+const ACTIVE_TASK_STATUSES = new Set(['queued', 'submitted', 'running']);
+const FAILED_TASK_STATUSES = new Set(['failed', 'timed_out', 'canceled']);
+
+function isActiveTaskStatus(status) {
+  return ACTIVE_TASK_STATUSES.has(status);
+}
+
+function isFailedTaskStatus(status) {
+  return FAILED_TASK_STATUSES.has(status);
+}
+
+function getTaskStatusDetail(task) {
+  if (!task) {
+    return '';
+  }
+
+  if (task.terminalErrorMessage) {
+    return task.terminalErrorMessage;
+  }
+
+  if (task.status === 'timed_out') {
+    return '任务处理超时，请稍后查看作品结果或重新发起。';
+  }
+
+  if (task.status === 'canceled') {
+    return '任务已被取消，本次生成不会继续执行。';
+  }
+
+  if (task.status === 'failed') {
+    if (task.latestMessage && task.latestMessage !== '等待任务状态更新') {
+      return task.latestMessage;
+    }
+
+    return '任务执行失败，请稍后重试。';
+  }
+
+  if (task.status === 'succeeded') {
+    return '任务已完成，可以继续查看作品结果。';
+  }
+
+  return '';
+}
+
+function getTaskCardMessage(task) {
+  if (!task) {
+    return '等待任务状态更新';
+  }
+
+  if (isFailedTaskStatus(task.status)) {
+    return '任务执行未完成，请查看下方详情。';
+  }
+
+  if (task.status === 'succeeded') {
+    return '任务已完成，可以继续查看作品结果。';
+  }
+
+  if (isActiveTaskStatus(task.status)) {
+    return task.taskType === 'pipeline_iterate'
+      ? 'AI 正在优化作品，请稍候'
+      : 'AI 正在生成作品，请稍候';
+  }
+
+  return '等待任务状态更新';
+}
+
+function getDisplayGameStatusFromTask(task) {
+  if (!task) {
+    return '';
+  }
+
+  if (isActiveTaskStatus(task.status)) {
+    return 'generating';
+  }
+
+  if (isFailedTaskStatus(task.status)) {
+    return 'failed';
+  }
+
+  return '';
+}
+
+function mergeTrackedTaskStatusIntoGames(games, trackedTasks) {
+  if (!Array.isArray(games) || !games.length || !Array.isArray(trackedTasks) || !trackedTasks.length) {
+    return games;
+  }
+
+  const latestTaskByGameId = new Map();
+
+  [...trackedTasks]
+    .sort((a, b) => (b?.updatedAt || 0) - (a?.updatedAt || 0))
+    .forEach((task) => {
+      const gameId = String(task?.gameId || '').trim();
+      if (!gameId || latestTaskByGameId.has(gameId)) {
+        return;
+      }
+
+      latestTaskByGameId.set(gameId, task);
+    });
+
+  return games.map((game) => {
+    const gameId = String(game?.id || '').trim();
+    if (!gameId || PUBLISHED_STATUSES.includes(game?.status)) {
+      return game;
+    }
+
+    const latestTask = latestTaskByGameId.get(gameId);
+    const displayStatus = getDisplayGameStatusFromTask(latestTask);
+
+    if (!displayStatus || displayStatus === game.status) {
+      return game;
+    }
+
+    return {
+      ...game,
+      status: displayStatus,
+    };
+  });
+}
 
 function StatusBadge({ status }) {
   const s = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
@@ -246,7 +369,14 @@ function ProfileGameCard({ game, onPlay, onMore, onLike, onComment, onBookmark, 
   );
 }
 
-function ProfileTaskCard({ task, onResume, onCancel }) {
+function ProfileTaskCard({ task, onResume, onCancel, onDelete }) {
+  const isActive = isActiveTaskStatus(task.status);
+  const isFailed = isFailedTaskStatus(task.status);
+  const isTerminal = isTerminalTaskStatus(task.status);
+  const failureDetail = isFailed ? getTaskStatusDetail(task) : '';
+  const detailMessage = !isFailed && isTerminal ? getTaskStatusDetail(task) : '';
+  const taskCardMessage = getTaskCardMessage(task);
+
   return (
     <View className="profile-task-card">
       <View className="profile-task-card__top">
@@ -260,24 +390,45 @@ function ProfileTaskCard({ task, onResume, onCancel }) {
       </View>
 
       <Text className="profile-task-card__title">
-        {task.gameTitle || task.promptPreview || `任务 ${String(task.taskId).slice(-6)}`}
+        {task.gameTitle || task.promptPreview || TASK_TYPE_LABELS[task.taskType] || '创作任务'}
       </Text>
-      <Text className="profile-task-card__message">{task.latestMessage || '等待任务状态更新'}</Text>
+      <Text className="profile-task-card__message">{taskCardMessage}</Text>
 
-      <View className="profile-task-card__progress">
-        <View className="profile-task-card__progress-bg">
-          <View className="profile-task-card__progress-fill" style={{ width: `${task.progressPct || 0}%` }} />
+      {failureDetail ? (
+        <View className="profile-task-card__detail profile-task-card__detail--failure">
+          <Text className="profile-task-card__detail-label">失败详情</Text>
+          <Text className="profile-task-card__detail-text">{failureDetail}</Text>
         </View>
-        <Text className="profile-task-card__progress-text">{task.progressPct || 0}%</Text>
-      </View>
+      ) : null}
+
+      {detailMessage ? (
+        <View className="profile-task-card__detail">
+          <Text className="profile-task-card__detail-text">{detailMessage}</Text>
+        </View>
+      ) : null}
+
+      {isActive ? (
+        <View className="profile-task-card__progress">
+          <View className="profile-task-card__progress-bg">
+            <View className="profile-task-card__progress-fill" style={{ width: `${task.progressPct || 0}%` }} />
+          </View>
+          <Text className="profile-task-card__progress-text">{task.progressPct || 0}%</Text>
+        </View>
+      ) : null}
 
       <View className="profile-task-card__actions">
         <View className="profile-task-card__btn profile-task-card__btn--primary" onClick={() => onResume(task)}>
           <Text>继续查看</Text>
         </View>
-        <View className="profile-task-card__btn profile-task-card__btn--danger" onClick={() => onCancel(task)}>
-          <Text>取消任务</Text>
-        </View>
+        {isActive ? (
+          <View className="profile-task-card__btn profile-task-card__btn--danger" onClick={() => onCancel(task)}>
+            <Text>取消任务</Text>
+          </View>
+        ) : (
+          <View className="profile-task-card__btn profile-task-card__btn--ghost" onClick={() => onDelete(task)}>
+            <Text>删除记录</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -302,7 +453,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       key: 'share',
       icon: '↗',
       tone: 'share',
-      label: '分享游戏',
+      label: '分享作品',
       desc: '发送给好友或分享到社交平台',
       onClick: onShare,
     },
@@ -319,7 +470,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       icon: '⚙',
       tone: 'settings',
       label: '权限设置',
-      desc: '管理可见范围、评论和 Fork 权限',
+      desc: '管理可见范围、评论和复刻权限',
       onClick: onSettings,
     },
     {
@@ -613,6 +764,7 @@ export default function Profile() {
   const hydrateTrackedTasks = useGameStore((state) => state.hydrateTrackedTasks);
   const refreshTrackedTasks = useGameStore((state) => state.refreshTrackedTasks);
   const cancelTaskById = useGameStore((state) => state.cancelTaskById);
+  const removeTrackedTask = useGameStore((state) => state.removeTrackedTask);
   const currentUserId = Storage.getUser()?.id;
   const freeQuota = useQuotaStore((s) => s.freeQuota);
   const totalFreeQuota = useQuotaStore((s) => s.totalFreeQuota);
@@ -631,8 +783,12 @@ export default function Profile() {
   const [settingsGame, setSettingsGame] = useState(null);
   const [editProfile, setEditProfile] = useState(false);
 
-  const publishedGames = allGames.filter((g) => PUBLISHED_STATUSES.includes(g.status));
-  const draftGames = allGames.filter((g) => DRAFT_STATUSES.includes(g.status));
+  const displayGames = useMemo(
+    () => mergeTrackedTaskStatusIntoGames(allGames, trackedTasks),
+    [allGames, trackedTasks]
+  );
+  const publishedGames = displayGames.filter((g) => PUBLISHED_STATUSES.includes(g.status));
+  const draftGames = displayGames.filter((g) => DRAFT_STATUSES.includes(g.status));
 
   const refreshBookmarkedGames = () => {
     setBookmarkedGames(getBookmarkedGames());
@@ -795,12 +951,12 @@ export default function Profile() {
         ? { ...item, viewerHasBookmarked: isNowBookmarked }
         : item
     )));
-    Taro.showToast({ title: isNowBookmarked ? '已收藏' : '已取消收藏', icon: 'none' });
+    Taro.showToast({ title: isNowBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
   };
 
   const handleOptimize = (game) => {
     setMoreGame(null);
-    openResumeCreatePageWithAuth(game, game?.id);
+    openIteratePageWithAuth(game, game?.id);
   };
 
   const handleShare = async (game) => {
@@ -902,7 +1058,7 @@ export default function Profile() {
   };
 
   const handleResumeTask = (task) => {
-    openTaskCreatePageWithAuth(task.taskId, task.gameId || null);
+    openTaskCreatePageWithAuth(task.taskId, task.gameId || null, task.taskType || 'pipeline_run');
   };
 
   const handleCancelTask = (task) => {
@@ -922,6 +1078,22 @@ export default function Profile() {
         } catch (error) {
           Taro.showToast({ title: error?.message || '取消失败，请重试', icon: 'none' });
         }
+      },
+    });
+  };
+
+  const handleDeleteTask = (task) => {
+    Taro.showModal({
+      title: '删除任务记录',
+      content: '确认从任务列表中删除这条记录吗？删除后不会影响已经生成的作品。',
+      confirmColor: '#ff5c8a',
+      success: (res) => {
+        if (!res.confirm) {
+          return;
+        }
+
+        removeTrackedTask(task.taskId);
+        Taro.showToast({ title: '已删除任务记录', icon: 'success' });
       },
     });
   };
@@ -967,50 +1139,70 @@ export default function Profile() {
   };
 
   const renderTaskPanel = () => {
-    const primaryTask = trackedTasks[0] || null;
+    const activeTasks = trackedTasks.filter((task) => isActiveTaskStatus(task.status));
+    const failedTasks = trackedTasks.filter((task) => isFailedTaskStatus(task.status));
+    const succeededTasks = trackedTasks.filter((task) => task.status === 'succeeded');
+    const primaryTask = activeTasks[0] || succeededTasks[0] || failedTasks[0] || null;
 
-    return (
-      <View className="tasks-panel">
-        <View className="tasks-panel__hero">
-          <Text className="tasks-panel__hero-title">当前执行中的任务</Text>
-          <Text className="tasks-panel__hero-desc">
-            这里只显示排队中和执行中的创作任务，完成后会自动从列表移除。
-          </Text>
-        </View>
-
+    const renderTaskSection = (title, tasks, emptyText) => (
+      <View className="tasks-panel__section">
         <View className="tasks-panel__header">
-          <Text className="tasks-panel__title">进行中</Text>
-          <Text className="tasks-panel__count">{trackedTasks.length}</Text>
+          <Text className="tasks-panel__title">{title}</Text>
+          <Text className="tasks-panel__count">{tasks.length}</Text>
         </View>
 
-        {trackedTasks.length ? (
+        {tasks.length ? (
           <View className="tasks-panel__list">
-            {trackedTasks.map((task) => (
+            {tasks.map((task) => (
               <ProfileTaskCard
                 key={task.taskId}
                 task={task}
                 onResume={handleResumeTask}
                 onCancel={handleCancelTask}
+                onDelete={handleDeleteTask}
               />
             ))}
           </View>
         ) : (
+          <View className="tasks-panel__empty tasks-panel__empty--compact">
+            <Text className="tasks-panel__empty-text">{emptyText}</Text>
+          </View>
+        )}
+      </View>
+    );
+
+    return (
+      <View className="tasks-panel">
+        <View className="tasks-panel__hero">
+          <Text className="tasks-panel__hero-title">任务管理</Text>
+          <Text className="tasks-panel__hero-desc">
+            这里会保留进行中、已完成和失败/取消的任务记录；失败任务会显示失败详情，终态任务也可以手动删除。
+          </Text>
+        </View>
+
+        {!trackedTasks.length ? (
           <View className="tasks-panel__empty">
             <Text className="tasks-panel__empty-icon">⌛</Text>
-            <Text className="tasks-panel__empty-text">当前没有未完成的任务</Text>
+            <Text className="tasks-panel__empty-text">当前还没有任务记录</Text>
             <View className="tasks-panel__empty-action" onClick={openCreatePageWithAuth}>
               <Text>开始创作</Text>
             </View>
           </View>
+        ) : (
+          <View className="tasks-panel__groups">
+            {renderTaskSection('进行中', activeTasks, '当前没有进行中的任务')}
+            {renderTaskSection('已完成', succeededTasks, '当前没有已完成任务')}
+            {renderTaskSection('失败 / 已取消', failedTasks, '当前没有失败或取消的任务')}
+          </View>
         )}
 
-        {trackedTasks.length ? (
+        {primaryTask ? (
           <View className="tasks-panel__footer">
             <View
               className="tasks-panel__primary-btn"
-              onClick={() => (primaryTask ? handleResumeTask(primaryTask) : openCreatePageWithAuth())}
+              onClick={() => handleResumeTask(primaryTask)}
             >
-              <Text>{primaryTask ? '继续当前任务' : '开始新创作'}</Text>
+              <Text>继续查看最近任务</Text>
             </View>
           </View>
         ) : null}

@@ -10,8 +10,10 @@ import { PaywallPopup } from '../../components/common/PaywallPopup';
 import * as feedService from '../../services/feed';
 import * as socialService from '../../services/social';
 import useGamePlayerStore from '../../stores/gamePlayer';
+import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
 import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
 import { buildGameDetailPath } from '../../utils/share';
+import { Storage } from '../../utils/storage';
 import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../utils/profileDisplay';
 import './index.scss';
 
@@ -45,6 +47,9 @@ function normalizeGame(game, index) {
 
 export default function FollowPage() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
+  const currentUser = Storage.getUser() || {};
+  const currentUserId = currentUser?.id ? String(currentUser.id) : '';
+  const loggedIn = isLoggedIn();
   const [activeTab, setActiveTab] = useState(TAB_RECOMMENDED);
   const [topCreators, setTopCreators] = useState([]);
   const [followedGames, setFollowedGames] = useState([]);
@@ -56,18 +61,39 @@ export default function FollowPage() {
   const openGame = useGamePlayerStore((s) => s.openGame);
 
   const tabs = [TAB_RECOMMENDED, TAB_LATEST];
+  const topCreatorIdsSignature = topCreators.map((creator) => String(creator?.id || '')).join(',');
+
+  const updateCreatorFollowState = useCallback((creatorId, nextState) => {
+    const normalizedCreatorId = creatorId ? String(creatorId) : '';
+    if (!normalizedCreatorId) {
+      return;
+    }
+
+    setTopCreators((prev) => prev.map((creator) => (
+      String(creator.id) === normalizedCreatorId
+        ? { ...creator, ...nextState }
+        : creator
+    )));
+  }, []);
 
   const fetchData = useCallback(async (pageNum = 1, append = false) => {
     if (!append) setLoading(true);
     try {
+      const shouldLoadFollowingFeed = activeTab === TAB_LATEST;
       const [creatorsRes, gamesRes] = await Promise.all([
-        pageNum === 1 ? feedService.getTrendingCreators(10) : Promise.resolve(null),
-        feedService.getLatest(pageNum, 10),
+        pageNum === 1 && activeTab === TAB_RECOMMENDED ? feedService.getTrendingCreators(10) : Promise.resolve(null),
+        shouldLoadFollowingFeed
+          ? (loggedIn ? feedService.getFollowingFeed(pageNum, 10) : Promise.resolve({ items: [], hasMore: false }))
+          : feedService.getLatest(pageNum, 10),
       ]);
 
       if (creatorsRes) {
         const creators = Array.isArray(creatorsRes) ? creatorsRes : (creatorsRes?.items || []);
-        setTopCreators(creators);
+        setTopCreators(creators.map((creator) => ({
+          ...creator,
+          isFollowing: creator.isFollowing === true || creator.following === true || creator.viewerHasFollowed === true,
+          followLoading: false,
+        })));
       }
 
       const items = mergeBookmarkedFlags((gamesRes?.items || []).map(normalizeGame));
@@ -82,15 +108,65 @@ export default function FollowPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeTab, loggedIn]);
 
   useEffect(() => {
+    setPage(1);
+    setHasMore(true);
     fetchData(1);
   }, [fetchData]);
 
   useDidShow(() => {
     setFollowedGames((prev) => mergeBookmarkedFlags(prev));
   });
+
+  useEffect(() => {
+    if (!isLoggedIn() || topCreators.length === 0) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const syncFollowStates = async () => {
+      const results = await Promise.all(topCreators.map(async (creator) => {
+        const creatorId = creator?.id ? String(creator.id) : '';
+        if (!creatorId || creatorId === currentUserId) {
+          return [creatorId, false];
+        }
+
+        try {
+          const following = await socialService.checkFollowStatus(creatorId);
+          return [creatorId, Boolean(following)];
+        } catch {
+          return [creatorId, creator.isFollowing === true];
+        }
+      }));
+
+      if (cancelled) {
+        return;
+      }
+
+      const followMap = new Map(results.filter(([creatorId]) => creatorId));
+      setTopCreators((prev) => prev.map((creator) => {
+        const creatorId = creator?.id ? String(creator.id) : '';
+        if (!followMap.has(creatorId)) {
+          return creator;
+        }
+
+        return {
+          ...creator,
+          isFollowing: followMap.get(creatorId) === true,
+          followLoading: false,
+        };
+      }));
+    };
+
+    syncFollowStates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, topCreatorIdsSignature]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -108,6 +184,14 @@ export default function FollowPage() {
     setIsLoadingMore(false);
   };
 
+  const handleTabChange = (tab) => {
+    if (tab === activeTab) {
+      return;
+    }
+
+    setActiveTab(tab);
+  };
+
   const handlePlay = (game) => {
     if (game.gameUrl) {
       openGame(game.gameUrl, game.title, game.coverUrl || game.thumbnailUrl || '', {
@@ -121,6 +205,10 @@ export default function FollowPage() {
 
   const handleComment = (game) => {
     Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) }).catch(() => {});
+  };
+
+  const handleOpenDetail = (game) => {
+    Taro.navigateTo({ url: buildGameDetailPath(game.id) }).catch(() => {});
   };
 
   const handleToggleLike = async (targetGame) => {
@@ -165,6 +253,59 @@ export default function FollowPage() {
     return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
+  const handleToggleCreatorFollow = async (creator, event) => {
+    event?.stopPropagation?.();
+
+    const creatorId = creator?.id ? String(creator.id) : '';
+    if (!creatorId) {
+      return;
+    }
+
+    if (creatorId === currentUserId) {
+      Taro.showToast({
+        title: '不能关注自己',
+        icon: 'none',
+      });
+      return;
+    }
+
+    if (creator.followLoading) {
+      return;
+    }
+
+    if (!isLoggedIn()) {
+      setPostLoginRedirect('/pages/discover/index');
+      Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
+      return;
+    }
+
+    const nextFollowing = !creator.isFollowing;
+    updateCreatorFollowState(creatorId, { followLoading: true });
+
+    try {
+      if (creator.isFollowing) {
+        await socialService.unfollowUser(creatorId);
+      } else {
+        await socialService.followUser(creatorId);
+      }
+
+      updateCreatorFollowState(creatorId, {
+        isFollowing: nextFollowing,
+        followLoading: false,
+      });
+      Taro.showToast({
+        title: nextFollowing ? '已关注创作者' : '已取消关注',
+        icon: 'none',
+      });
+    } catch (error) {
+      updateCreatorFollowState(creatorId, { followLoading: false });
+      Taro.showToast({
+        title: error?.message || (creator.isFollowing ? '取消关注失败' : '关注失败'),
+        icon: 'none',
+      });
+    }
+  };
+
   const leftCol = [];
   const rightCol = [];
   followedGames.forEach((game, index) => {
@@ -186,7 +327,7 @@ export default function FollowPage() {
             <Text
               key={tab}
               className={`header-tab ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
             >
               {tab}
             </Text>
@@ -221,6 +362,14 @@ export default function FollowPage() {
                     const creatorAvatarRaw = creator.avatarUrl || creator.avatar || '';
                     const creatorAvatarSrc = normalizeAvatarSource(creatorAvatarRaw);
                     const creatorAvatarFallback = getAvatarFallback(creatorAvatarRaw, creatorName, '\u521b');
+                    const isOwnCreator = Boolean(currentUserId && String(creator.id || '') === currentUserId);
+                    const followButtonText = creator.followLoading
+                      ? '处理中...'
+                      : creator.isFollowing
+                        ? '已关注'
+                        : isOwnCreator
+                          ? '自己'
+                          : '\u5173\u6ce8';
 
                     return (
                       <View key={creator.id} className="creator-card">
@@ -237,8 +386,11 @@ export default function FollowPage() {
                         <Text className="creator-meta">
                           {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
                         </Text>
-                        <View className="follow-btn">
-                          <Text className="follow-btn-text">{'\u5173\u6ce8'}</Text>
+                        <View
+                          className={`follow-btn${creator.isFollowing ? ' is-following' : ''}${creator.followLoading ? ' is-loading' : ''}${isOwnCreator ? ' disabled' : ''}`}
+                          onClick={(event) => handleToggleCreatorFollow(creator, event)}
+                        >
+                          <Text className="follow-btn-text">{followButtonText}</Text>
                         </View>
                       </View>
                     );
@@ -265,6 +417,8 @@ export default function FollowPage() {
                         variant="play-only"
                         onPlay={handlePlay}
                         onComment={handleComment}
+                        onOpenDetail={handleOpenDetail}
+                        showDetailEntry
                         onToggleLike={handleToggleLike}
                         onToggleBookmark={handleToggleBookmark}
                       />
@@ -278,6 +432,8 @@ export default function FollowPage() {
                         variant="play-only"
                         onPlay={handlePlay}
                         onComment={handleComment}
+                        onOpenDetail={handleOpenDetail}
+                        showDetailEntry
                         onToggleLike={handleToggleLike}
                         onToggleBookmark={handleToggleBookmark}
                       />
@@ -298,8 +454,25 @@ export default function FollowPage() {
             ) : followedGames.length === 0 ? (
               <View className="empty-state">
                 <Text className="empty-icon">{'\u2728'}</Text>
-                <Text className="empty-title">{'\u8fd8\u6ca1\u6709\u5173\u6ce8\u7684\u521b\u4f5c\u8005'}</Text>
-                <Text className="empty-text">{'\u5173\u6ce8\u521b\u4f5c\u8005\u540e\uff0c\u8fd9\u91cc\u4f1a\u663e\u793a\u4ed6\u4eec\u7684\u6700\u65b0\u4f5c\u54c1'}</Text>
+                <Text className="empty-title">
+                  {loggedIn ? '\u8fd8\u6ca1\u6709\u5173\u6ce8\u7684\u521b\u4f5c\u8005' : '\u767b\u5f55\u540e\u67e5\u770b\u5173\u6ce8\u52a8\u6001'}
+                </Text>
+                <Text className="empty-text">
+                  {loggedIn
+                    ? '\u5173\u6ce8\u521b\u4f5c\u8005\u540e\uff0c\u8fd9\u91cc\u4f1a\u663e\u793a\u4ed6\u4eec\u7684\u6700\u65b0\u4f5c\u54c1'
+                    : '\u767b\u5f55\u540e\uff0c\u8fd9\u91cc\u4f1a\u5c55\u793a\u4f60\u5173\u6ce8\u521b\u4f5c\u8005\u7684\u6700\u65b0\u4f5c\u54c1'}
+                </Text>
+                {!loggedIn ? (
+                  <View
+                    className="empty-action"
+                    onClick={() => {
+                      setPostLoginRedirect('/pages/discover/index');
+                      Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
+                    }}
+                  >
+                    <Text>{'\u53bb\u767b\u5f55'}</Text>
+                  </View>
+                ) : null}
               </View>
             ) : (
               <View className="waterfall">
@@ -311,10 +484,12 @@ export default function FollowPage() {
                         variant="play-only"
                         onPlay={handlePlay}
                         onComment={handleComment}
+                        onOpenDetail={handleOpenDetail}
+                        showDetailEntry
                         onToggleLike={handleToggleLike}
-                      onToggleBookmark={handleToggleBookmark}
-                    />
-                  ))}
+                        onToggleBookmark={handleToggleBookmark}
+                      />
+                    ))}
                 </View>
                 <View className="waterfall-col">
                   {rightCol.map((game) => (
@@ -324,9 +499,11 @@ export default function FollowPage() {
                         variant="play-only"
                         onPlay={handlePlay}
                         onComment={handleComment}
+                        onOpenDetail={handleOpenDetail}
+                        showDetailEntry
                         onToggleLike={handleToggleLike}
-                      onToggleBookmark={handleToggleBookmark}
-                    />
+                        onToggleBookmark={handleToggleBookmark}
+                      />
                   ))}
                 </View>
               </View>

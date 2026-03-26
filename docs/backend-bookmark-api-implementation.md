@@ -325,3 +325,77 @@
 后端完成 P0 后，前端就可以把当前的本地收藏能力切换为账号级收藏，用户跨设备也能保持一致。
 
 后端完成到 P1 后，前端还能进一步把首页、发现页等列表页的收藏状态做成首屏即准确的真实状态。
+
+---
+
+## 10. 2026-03-25 口径同步附录
+
+### 10.1 同步背景
+
+本附录用于与 `docs/api-schema.md` 中“2026-03-25 账号级点赞/收藏整改附录”保持一致口径。
+
+本次同步重点是明确以下事实：
+
+- 收藏必须从“设备本地缓存能力”升级为“账号级、可跨设备恢复能力”。
+- 收藏接口本轮不仅要返回 `bookmarked`，还建议直接返回最新 `bookmarks` 总数，避免前端自行推算。
+- 游戏读模型除 `viewerHasBookmarked` 外，也建议统一包含 `bookmarks` 字段，便于首页、发现页、详情页、我的页和未来的收藏/点赞列表共享同一读模型。
+
+### 10.2 与 api-schema 对齐的补充要求
+
+#### 收藏写接口响应补充
+
+`POST /api/v1/feed/favorites` 与 `DELETE /api/v1/feed/favorites/:gameId` 建议统一返回：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "bookmarked": true,
+    "bookmarks": 12
+  }
+}
+```
+
+其中：
+
+- `bookmarked` 表示当前请求用户在操作后的最终收藏状态
+- `bookmarks` 表示该作品最新收藏总数
+
+#### 读模型字段补充
+
+除本文已有的 `viewerHasBookmarked` 外，建议以下接口返回的游戏对象统一补齐：
+
+```json
+{
+  "bookmarks": 12,
+  "viewerHasBookmarked": true
+}
+```
+
+建议覆盖：
+
+- `GET /api/v1/games/:id`
+- `GET /api/v1/feed/trending`
+- `GET /api/v1/feed/latest`
+- `GET /api/v1/feed/following`
+- `GET /api/v1/games/my`
+- `GET /api/v1/feed/favorites`
+- `GET /api/v1/feed/liked`
+
+### 10.3 规划状态说明
+
+本附录属于 2026-03-25 版规划性增补：
+
+- 不表示所有新增字段和返回体已在线上全部落地
+- 推荐以后端 additive 方式逐步上线
+- 前端切换前，允许短期兼容旧的本地收藏逻辑，但不得继续将其作为最终真相源
+
+### 10.4 联调补充验收
+
+除本文已有验收项外，建议新增以下检查：
+
+1. 收藏写接口返回的 `bookmarks` 可直接用于覆盖前端数字显示。
+2. 首页、发现页、详情页、我的页对同一作品展示的收藏状态保持一致。
+3. 清缓存后重新登录，`GET /api/v1/feed/favorites` 仍能恢复同账号收藏列表。
+4. “我的-收藏”页面不再以本地缓存作为唯一数据源。
