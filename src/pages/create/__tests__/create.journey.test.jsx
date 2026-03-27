@@ -191,7 +191,11 @@ describe('Create page journey coverage', () => {
     fireEvent.click(screen.getByText('再创一个'));
 
     expect(mockOpenIteratePageWithAuth).toHaveBeenCalledWith(currentGame, 'game-88');
-    expect(mockOpenPaywall).toHaveBeenCalledWith('game-88');
+    expect(mockOpenPaywall).toHaveBeenCalledWith(expect.objectContaining({
+      gameId: 'game-88',
+      gameUrl: 'https://game.example/play',
+      resumePlay: true,
+    }));
     expect(mockResetCreateSession).toHaveBeenCalledTimes(1);
   });
 });

@@ -17,6 +17,7 @@ import {
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
+import { subscribeGameUnlocked } from '../../../utils/gameUnlock';
 import { Storage } from '../../../utils/storage';
 import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
 import { ENV } from '../../../config/env';
@@ -125,6 +126,19 @@ function getAvatarFallback(value, name, fallback = '👤') {
   }
 
   return /^[a-z]$/i.test(firstChar) ? firstChar.toUpperCase() : firstChar;
+}
+
+function mergeUnlockedGame(game, payload) {
+  const unlockedGame = payload?.game || {};
+
+  return {
+    ...(game || {}),
+    ...unlockedGame,
+    id: unlockedGame.id || game?.id || payload?.gameId || '',
+    canPlay: true,
+    requireSubscription: false,
+    quotaRemaining: payload?.quotaRemaining ?? unlockedGame.quotaRemaining ?? game?.quotaRemaining ?? null,
+  };
 }
 
 function applyCommentLikeDelta(list, commentId, delta) {
@@ -420,6 +434,20 @@ export default function GameDetail() {
   }, [authorId, isOwnGame]);
 
   useEffect(() => {
+    if (!gameId) {
+      return undefined;
+    }
+
+    return subscribeGameUnlocked((payload) => {
+      if (String(payload?.gameId || '') !== String(gameId)) {
+        return;
+      }
+
+      setGame((prev) => mergeUnlockedGame(prev, payload));
+    });
+  }, [gameId]);
+
+  useEffect(() => {
     if (process.env.TARO_ENV !== 'weapp') return;
 
     Taro.showShareMenu({
@@ -667,6 +695,16 @@ export default function GameDetail() {
     Taro.showToast({ title: nextBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
   };
 
+  const handleOpenCommentComposer = () => {
+    setCommentScrollTarget('');
+    setCommentInputFocused(false);
+
+    setTimeout(() => {
+      setCommentScrollTarget(COMMENTS_SECTION_ID);
+      setCommentInputFocused(true);
+    }, 0);
+  };
+
   const handleForkAction = async () => {
     if (!Storage.getToken()) {
       openForkPageWithAuth(gameId);
@@ -838,7 +876,13 @@ export default function GameDetail() {
               className={`play-btn ${!game.canPlay ? 'locked' : ''}`}
               onClick={() => {
                 if (game.canPlay === false && currentUserId === game.author?.id) {
-                  useQuotaStore.getState().openPaywall(game.id);
+                  useQuotaStore.getState().openPaywall({
+                    gameId: game.id,
+                    gameUrl: game.gameUrl,
+                    gameTitle: game.title,
+                    gameCover: game.coverUrl || game.thumbnailUrl || '',
+                    resumePlay: true,
+                  });
                   return;
                 }
                 if (game?.gameUrl) {
@@ -853,24 +897,47 @@ export default function GameDetail() {
               }}
             >
               <Text className="btn-icon">{game.canPlay === false && currentUserId === game.author?.id ? '🔒' : '▶'}</Text>
-              <Text className="btn-text">{game.canPlay === false && currentUserId === game.author?.id ? '订阅后试玩' : '试玩'}</Text>
+              <View className="btn-copy">
+                <Text className="btn-text">{game.canPlay === false && currentUserId === game.author?.id ? '订阅后试玩' : '立即试玩'}</Text>
+                <Text className="btn-subtext">
+                  {game.canPlay === false && currentUserId === game.author?.id ? '开通后自动解锁当前作品' : '沉浸体验这个小游戏'}
+                </Text>
+              </View>
             </View>
             <View className={`icon-btn like-btn ${isLiked ? 'liked' : ''}`} onClick={handleLikeGame}>
-              <Text>♥</Text>
-              <Text className="count">{likeLoading ? '...' : formatNumber(likeCount)}</Text>
+              <Text className="icon-symbol">♥</Text>
+              <View className="icon-copy">
+                <Text className="icon-value">{likeLoading ? '...' : formatNumber(likeCount)}</Text>
+                <Text className="icon-label">点赞</Text>
+              </View>
+            </View>
+            <View className="icon-btn comment-btn" onClick={handleOpenCommentComposer}>
+              <Text className="icon-symbol">💬</Text>
+              <View className="icon-copy">
+                <Text className="icon-value">{formatNumber(totalComments)}</Text>
+                <Text className="icon-label">评论</Text>
+              </View>
             </View>
             <View className={`icon-btn bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`} onClick={handleBookmarkGame}>
-              <Text>{isBookmarked ? '★' : '☆'}</Text>
-              <Text className="count">收藏</Text>
+              <Text className="icon-symbol">{isBookmarked ? '★' : '☆'}</Text>
+              <View className="icon-copy">
+                <Text className="icon-value">{isBookmarked ? '已收藏' : '收藏'}</Text>
+                <Text className="icon-label">稍后再玩</Text>
+              </View>
             </View>
             <View className="icon-btn share-btn" onClick={() => setShowSharePanel(true)}>
-              <Text>分享</Text>
-              <Text className="count">分享</Text>
+              <Text className="icon-symbol icon-symbol--share">分享</Text>
+              <View className="icon-copy">
+                <Text className="icon-value">分享</Text>
+                <Text className="icon-label">发给朋友</Text>
+              </View>
             </View>
             <View className={`icon-btn fork-btn ${canForkGame ? '' : 'disabled'}`} onClick={handleForkAction}>
-              <Text className="count count--overlay">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
-              <Text>⎇</Text>
-              <Text className="count">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
+              <Text className="icon-symbol">⎇</Text>
+              <View className="icon-copy">
+                <Text className="icon-value">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
+                <Text className="icon-label">{canForkGame ? '继续创作' : (isOwnGame ? '无需复刻' : '暂不可用')}</Text>
+              </View>
             </View>
           </View>
 

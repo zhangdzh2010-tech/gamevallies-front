@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
@@ -665,29 +665,38 @@ export default function GameWebShellPage() {
       <View className="game-web-shell-actions">
         <View className="game-web-shell-action" onClick={handleLike}>
           <View className="game-web-shell-action__button">
-            <Text className={`game-web-shell-action__icon${isLiked ? ' is-active' : ''}`}>
+            <Text className={`game-web-shell-action__icon${isLiked ? ' is-active' : ''}`}> 
               {isLiked ? '♥' : '♡'}
             </Text>
           </View>
-          <Text className="game-web-shell-action__count">
-            {likeLoading ? '...' : formatNumber(likeCount)}
-          </Text>
+          <View className="game-web-shell-action__meta">
+            <Text className="game-web-shell-action__count">
+              {likeLoading ? '...' : formatNumber(likeCount)}
+            </Text>
+            <Text className="game-web-shell-action__label">点赞</Text>
+          </View>
         </View>
 
         <View className="game-web-shell-action" onClick={handleBookmark}>
           <View className="game-web-shell-action__button">
-            <Text className={`game-web-shell-action__icon${isBookmarked ? ' is-bookmarked' : ''}`}>
+            <Text className={`game-web-shell-action__icon${isBookmarked ? ' is-bookmarked' : ''}`}> 
               {isBookmarked ? '★' : '☆'}
             </Text>
           </View>
-          <Text className="game-web-shell-action__count">{formatNumber(bookmarkCount)}</Text>
+          <View className="game-web-shell-action__meta">
+            <Text className="game-web-shell-action__count">{formatNumber(bookmarkCount)}</Text>
+            <Text className="game-web-shell-action__label">收藏</Text>
+          </View>
         </View>
 
         <View className="game-web-shell-action" onClick={handleComment}>
           <View className="game-web-shell-action__button">
             <Text className="game-web-shell-action__icon">评</Text>
           </View>
-          <Text className="game-web-shell-action__count">{formatNumber(commentCount)}</Text>
+          <View className="game-web-shell-action__meta">
+            <Text className="game-web-shell-action__count">{formatNumber(commentCount)}</Text>
+            <Text className="game-web-shell-action__label">评论</Text>
+          </View>
         </View>
       </View>
 
@@ -699,3 +708,6 @@ export default function GameWebShellPage() {
     </View>
   );
 }
+
+
+
