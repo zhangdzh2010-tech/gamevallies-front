@@ -23,6 +23,7 @@ import {
 } from '../../../utils/authNavigation';
 import { formatDate } from '../../../utils/date';
 import { getGameTypeLabel } from '../../../utils/gameTypes';
+import { getGameCoverUrl } from '../../../utils/media';
 import { buildGameDetailPath } from '../../../utils/share';
 import './index.scss';
 
@@ -291,7 +292,7 @@ export default function GameIteratePage() {
 
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
-      openGame(currentGame.gameUrl, currentGame.title || '游戏', '', {
+      openGame(currentGame.gameUrl, currentGame.title || '游戏', getGameCoverUrl(currentGame), {
         canPlay,
         isOwnGame: true,
         gameId: currentGame.id,
@@ -320,7 +321,7 @@ export default function GameIteratePage() {
       gameId: currentGame?.id,
       gameUrl: currentGame?.gameUrl,
       gameTitle: currentGame?.title || '游戏',
-      gameCover: currentGame?.coverUrl || currentGame?.thumbnailUrl || '',
+      gameCover: getGameCoverUrl(currentGame),
       resumePlay: true,
     });
   };

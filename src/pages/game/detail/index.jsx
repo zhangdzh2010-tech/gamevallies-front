@@ -18,6 +18,7 @@ import {
 } from '../../../utils/authNavigation';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../../utils/gameUnlock';
+import { getGameCoverUrl } from '../../../utils/media';
 import { Storage } from '../../../utils/storage';
 import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
 import { ENV } from '../../../config/env';
@@ -880,13 +881,13 @@ export default function GameDetail() {
                     gameId: game.id,
                     gameUrl: game.gameUrl,
                     gameTitle: game.title,
-                    gameCover: game.coverUrl || game.thumbnailUrl || '',
+                    gameCover: getGameCoverUrl(game),
                     resumePlay: true,
                   });
                   return;
                 }
                 if (game?.gameUrl) {
-                  openGame(game.gameUrl, game.title, '', {
+                  openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
                     canPlay: game.canPlay !== false,
                     isOwnGame: currentUserId === game.author?.id,
                     gameId: game.id,

@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { ENV } from '../config/env';
 import useQuotaStore from './quotaStore';
 import { subscribeGameUnlocked } from '../utils/gameUnlock';
+import { getGameCoverUrl } from '../utils/media';
 
 const PLAY_PAGE_PATH = '/pages/game/play/index';
 
@@ -146,7 +147,7 @@ function bindUnlockedPlayback() {
     useGamePlayerStore.getState().openGame(
       gameUrl,
       playContext.gameTitle || unlockedGame.title || '游戏',
-      playContext.gameCover || unlockedGame.coverUrl || unlockedGame.thumbnailUrl || '',
+      getGameCoverUrl(unlockedGame, playContext.gameCover || ''),
       {
         gameId: payload.gameId || unlockedGame.id || '',
         canPlay: true,

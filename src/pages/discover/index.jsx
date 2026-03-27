@@ -12,6 +12,7 @@ import * as socialService from '../../services/social';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
 import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
+import { getGameCoverUrl } from '../../utils/media';
 import { buildGameDetailPath } from '../../utils/share';
 import { Storage } from '../../utils/storage';
 import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../utils/profileDisplay';
@@ -194,7 +195,7 @@ export default function FollowPage() {
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
-      openGame(game.gameUrl, game.title, game.coverUrl || game.thumbnailUrl || '', {
+      openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
       });
       return;

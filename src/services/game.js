@@ -166,12 +166,17 @@ function normalizeIterateResponse(response, fallbackGameId = '') {
 /**
  * Generate a new game from a prompt
  */
-export async function generateGame(prompt, title, type) {
+export async function generateGame(prompt, title, options) {
+  const normalizedOptions = typeof options === 'string'
+    ? { type: options }
+    : (options && typeof options === 'object' ? options : {});
+
   const response = await post('/api/v1/games/generate', {
     description: prompt,
     prompt,
     ...(title ? { title } : {}),
-    ...(type ? { type } : {}),
+    ...(normalizedOptions.type ? { type: normalizedOptions.type } : {}),
+    ...(normalizedOptions.orientation ? { orientation: normalizedOptions.orientation } : {}),
   });
   return normalizeGenerateResponse(response);
 }

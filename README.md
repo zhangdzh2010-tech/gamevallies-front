@@ -1,260 +1,137 @@
-# PlayForge Mini Program
+# GameVallies Frontend
 
-AI Game Creation Platform - WeChat Mini Program & H5 Frontend
+GameVallies 的多端前端仓库，基于 Taro 4 和 React 18，当前主要服务于微信小程序，并同步构建 H5 版本。
 
-Built with Taro 4, React 18, TypeScript, and Zustand
+## 当前状态
 
-## Project Structure
+- 当前主代码以 `JavaScript / JSX + Sass` 为主，不是 TypeScript 项目
+- 构建目标包含 `weapp` 和 `h5`
+- 核心业务链路已经集中在首页分发、AI 创作、作品试玩、订阅解锁、个人中心
+- 文档入口见 [docs/README.md](docs/README.md)
 
-```
-src/
-├── app.tsx                 # Root component
-├── app.config.ts          # App configuration
-├── app.scss               # Global styles
-├── config/
-│   └── env.ts            # Environment configuration
-├── styles/
-│   ├── variables.scss    # CSS variables
-│   ├── animations.scss   # Keyframe animations
-│   └── global.scss       # Global styles
-├── types/
-│   └── index.ts          # TypeScript type definitions
-├── utils/
-│   ├── request.ts        # HTTP client
-│   ├── storage.ts        # Local storage wrapper
-│   ├── websocket.ts      # WebSocket manager
-│   ├── date.ts           # Date formatting utilities
-│   ├── format.ts         # Format utilities
-│   └── index.ts          # Export utilities
-├── services/
-│   ├── game.ts           # Game API service
-│   ├── user.ts           # User API service
-│   ├── comment.ts        # Comment API service
-│   └── index.ts          # Service exports
-├── stores/
-│   ├── auth.ts           # Auth Zustand store
-│   └── index.ts          # Store exports
-├── components/           # Reusable React components
-└── pages/
-    ├── index/            # Home page
-    ├── login/            # Login page
-    ├── create/           # Game creation page
-    ├── profile/          # User profile page
-    ├── game/             # Game detail/play pages
-    ├── discover/         # Discover page
-    └── messages/         # Messages page
-```
+## 技术栈
 
-## Setup
+- Taro 4
+- React 18
+- Zustand
+- Sass
+- Webpack 5
+- Jest
 
-### Prerequisites
-- Node.js 16+ 
-- npm or yarn
+## 常用命令
 
-### Installation
-
-```bash
-npm install
-# or
-yarn install
-```
-
-### Development
-
-#### WeChat Mini Program
 ```bash
 npm run dev:weapp
-```
-
-#### Web (H5)
-```bash
 npm run dev:h5
-```
-
-### Build
-
-#### WeChat Mini Program
-```bash
 npm run build:weapp
-```
-
-#### Web (H5)
-```bash
 npm run build:h5
-```
-
-### Testing
-```bash
 npm test
-npm run test:watch
-```
-
-### Linting
-```bash
 npm run lint
 ```
 
-## Features
+构建产物默认输出到：
 
-- **Dark Theme**: Custom dark theme with CSS variables
-- **Type Safe**: Full TypeScript support
-- **State Management**: Zustand for global state
-- **HTTP Client**: Built-in request wrapper with auth
-- **Storage**: Persistent local storage with TTL support
-- **WebSocket**: Real-time communication support
-- **Responsive**: Mobile-first responsive design
-- **Animations**: Smooth animations and transitions
-- **Error Handling**: Comprehensive error handling
+- `dist/weapp`
+- `dist/h5`
 
-## Configuration
+## 环境配置
 
-### Environment Variables
-See `src/config/env.ts` for configuration options.
+项目通过 [config/index.js](config/index.js) 在构建时注入环境变量。
 
-### API Base URL
-- Production: `https://api.playforge.com`
-- Development: `https://dev-api.playforge.com`
+常用环境文件：
 
-### WebSocket URL
-- Production: `wss://ws.playforge.com`
-- Development: `wss://dev-ws.playforge.com`
+- `.env`：默认环境配置
+- `.env.deploy`：部署环境配置
+- `.env.deploy.example`：部署配置示例
+- `.env.development`：本地 watch 模式覆盖配置，可选
 
-## Usage Examples
+主要环境变量定义集中在 [src/config/env.js](src/config/env.js)。
 
-### Authentication
-```typescript
-import { useAuthStore } from '@/stores/auth';
+## 目录结构
 
-const { user, login, logout, status } = useAuthStore();
-
-// Login
-await login(phone, code);
-
-// Logout
-await logout();
+```text
+config/                     Taro 构建配置与环境变量注入
+docs/                       项目文档、设计文档、归档资料
+scripts/                    辅助脚本
+src/
+  app.jsx                   应用入口
+  app.config.js             页面与 tabBar 配置
+  components/common/        通用 UI 组件
+  config/                   前端运行时配置
+  custom-tab-bar/           自定义 tabBar
+  images/                   静态资源
+  pages/
+    index/                  首页
+    discover/               发现页
+    create/                 AI 创作页
+    message/                消息通知页
+    profile/                个人中心
+    login/                  登录页
+    register/               注册页
+    game/                   游戏详情、试玩、迭代、复刻
+    subscription/           订阅页
+  services/                 API 与 WebSocket 服务层
+  store/gameStore.js        创作任务与作品工作流 store
+  stores/                   播放器、额度/支付等 store
+  styles/                   全局样式与主题变量
+  test-utils/               测试辅助
+  types/                    运行时配置常量
+  utils/                    存储、鉴权跳转、分享、书签等工具
 ```
 
-### API Requests
-```typescript
-import { request } from '@/utils/request';
+更详细的代码地图见 [docs/project-structure.md](docs/project-structure.md)。
 
-// GET
-const games = await request.get('/games');
+## 主要页面
 
-// POST
-const newGame = await request.post('/games', gameData);
+- `pages/index/index`：热门 feed、分类筛选、点赞/收藏、进入作品
+- `pages/create/index`：AI 创建入口、任务恢复、创作态承接
+- `pages/game/detail/index`：作品详情、互动与跳转
+- `pages/game/play/index`：作品试玩页
+- `pages/game/iterate/index`：作品迭代页
+- `pages/game/fork/index`：作品复刻页
+- `pages/message/index`：消息通知
+- `pages/profile/index`：个人中心、作品管理、任务状态
+- `pages/subscription/index`：订阅与权益说明
 
-// PUT
-const updated = await request.put('/games/1', updateData);
+## 核心链路
 
-// DELETE
-await request.delete('/games/1');
-```
+### 1. 鉴权与跳转恢复
 
-### Storage
-```typescript
-import { storage } from '@/utils/storage';
+- 登录/注册能力在 [src/services/auth.js](src/services/auth.js)
+- 登录后的跳转恢复、创作入口保护在 [src/utils/authNavigation.js](src/utils/authNavigation.js)
+- Token / 用户信息存储在 [src/utils/storage.js](src/utils/storage.js)
 
-// Set item
-await storage.setItem('key', value, { ttl: 3600000 });
+### 2. AI 创作工作流
 
-// Get item
-const value = await storage.getItem('key');
+- 页面入口在 [src/pages/create/index.jsx](src/pages/create/index.jsx)
+- 创作任务状态、轮询、恢复、阶段展示在 [src/store/gameStore.js](src/store/gameStore.js)
+- 相关接口在 [src/services/game.js](src/services/game.js)
 
-// Remove item
-await storage.removeItem('key');
+### 3. 试玩与订阅解锁
 
-// Clear all
-await storage.clear();
-```
+- 全局播放器在 [src/stores/gamePlayer.js](src/stores/gamePlayer.js)
+- 额度、支付、解锁状态在 [src/stores/quotaStore.js](src/stores/quotaStore.js)
+- 支付弹窗组件在 [src/components/common/PaywallPopup.jsx](src/components/common/PaywallPopup.jsx)
 
-### WebSocket
-```typescript
-import { getWebSocketManager } from '@/utils/websocket';
+### 4. Feed 与互动
 
-const ws = getWebSocketManager(token);
+- 首页/发现页数据由 [src/services/feed.js](src/services/feed.js) 提供
+- 点赞、关注、评论、通知由 [src/services/social.js](src/services/social.js) 提供
 
-await ws.connect();
+## 测试
 
-ws.onMessage((message) => {
-  console.log('Message received:', message);
-});
+当前仓库已有的测试主要覆盖：
 
-ws.send({
-  type: 'notification',
-  payload: {...},
-  timestamp: new Date().toISOString(),
-});
+- 首页关键交互
+- 创作页主流程
+- 试玩页导航
+- 配额/支付 store
+- 鉴权跳转工具
 
-ws.disconnect();
-```
+Jest 配置见 [jest.config.js](jest.config.js)。
 
-## Styling
+## 文档
 
-### Color Variables
-All colors are defined in `src/styles/variables.scss`:
-- `$bg`: Main background
-- `$surface`: Surface color
-- `$card`: Card background
-- `$primary`: Primary brand color
-- `$text`: Text color
-- `$sub`: Secondary text color
-- And more...
-
-### Utilities
-Common utility classes are available in `src/app.scss`:
-- Flexbox: `.flex-center`, `.flex-between`, `.flex-row`, `.flex-col`
-- Grid: `.grid`, `.grid-3`, `.grid-4`
-- Spacing: `.m-0` to `.m-4`, `.p-0` to `.p-4`
-- Text: `.text-center`, `.text-primary`, `.font-bold`
-- Responsive: `.w-full`, `.h-full`, etc.
-
-## API Endpoints
-
-### Games
-- `GET /games` - Get all games
-- `GET /games/:id` - Get single game
-- `POST /games` - Create game
-- `PUT /games/:id` - Update game
-- `DELETE /games/:id` - Delete game
-- `GET /users/:id/games` - Get user games
-- `GET /games/trending` - Get trending games
-- `GET /games/recommended` - Get recommended games
-- `POST /games/:id/like` - Like game
-- `DELETE /games/:id/like` - Unlike game
-
-### Users
-- `GET /users/:id` - Get user profile
-- `GET /users/me` - Get current user
-- `PUT /users/me` - Update profile
-- `POST /users/:id/follow` - Follow user
-- `DELETE /users/:id/follow` - Unfollow user
-- `GET /users/:id/followers` - Get followers
-- `GET /users/:id/following` - Get following
-- `GET /users/search` - Search users
-
-### Comments
-- `GET /games/:id/comments` - Get comments
-- `POST /games/:id/comments` - Create comment
-- `PUT /comments/:id` - Update comment
-- `DELETE /comments/:id` - Delete comment
-- `POST /comments/:id/like` - Like comment
-- `DELETE /comments/:id/like` - Unlike comment
-
-### Notifications
-- `GET /notifications` - Get notifications
-- `PUT /notifications/:id/read` - Mark as read
-- `PUT /notifications/read-all` - Mark all as read
-
-## Browser Support
-
-- WeChat Mini Program (iOS 10+, Android 4.1+)
-- Web (Last 3 versions of modern browsers)
-
-## License
-
-Proprietary - PlayForge Inc.
-
-## Contributing
-
-Please follow the existing code style and conventions.
+- 文档索引：[docs/README.md](docs/README.md)
+- 代码结构说明：[docs/project-structure.md](docs/project-structure.md)
+- 历史归档资料：[docs/archive/README.md](docs/archive/README.md)

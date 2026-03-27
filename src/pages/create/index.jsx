@@ -24,6 +24,7 @@ import {
   openIteratePageWithAuth,
   openProfilePageWithTab,
 } from '../../utils/authNavigation';
+import { getGameCoverUrl } from '../../utils/media';
 import './index.scss';
 
 const EXAMPLE_PROMPTS = [
@@ -44,6 +45,11 @@ const TASK_STATUS_LABELS = {
   canceled: '已取消',
   timed_out: '超时',
 };
+
+const ORIENTATION_OPTIONS = [
+  { value: 'portrait', label: '竖屏' },
+  { value: 'landscape', label: '横屏' },
+];
 
 function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
@@ -90,6 +96,7 @@ export default function Create() {
   const openPaywall = useQuotaStore((s) => s.openPaywall);
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [orientation, setOrientation] = useState('portrait');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
   const { windowHeight = 720 } = Taro.getSystemInfoSync();
@@ -165,6 +172,7 @@ export default function Create() {
   const resetLocalCreateState = () => {
     setPrompt('');
     setGameName('');
+    setOrientation('portrait');
   };
 
   useEffect(() => {
@@ -309,13 +317,15 @@ export default function Create() {
       return;
     }
     clearError();
-    await doCreate(prompt.trim(), gameName);
+    await doCreate(prompt.trim(), gameName, orientation);
   };
 
-  async function doCreate(description, name) {
+  async function doCreate(description, name, nextOrientation) {
     const title = (name || gameName).trim(); // Empty title lets the backend generate one.
     try {
-      await createGame(description, title);
+      await createGame(description, title, {
+        orientation: nextOrientation || orientation,
+      });
     } catch (err) {
       Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
     }
@@ -323,7 +333,7 @@ export default function Create() {
 
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
-      openGame(currentGame.gameUrl, currentGame.title || gameName, '', {
+      openGame(currentGame.gameUrl, currentGame.title || gameName, getGameCoverUrl(currentGame), {
         canPlay,
         isOwnGame: true,
         gameId: currentGame.id,
@@ -336,7 +346,7 @@ export default function Create() {
       gameId: currentGame?.id,
       gameUrl: currentGame?.gameUrl,
       gameTitle: currentGame?.title || gameName,
-      gameCover: currentGame?.coverUrl || currentGame?.thumbnailUrl || '',
+      gameCover: getGameCoverUrl(currentGame),
       resumePlay: true,
     });
   };
@@ -464,7 +474,23 @@ export default function Create() {
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
       <View className="create-header">
-        <Text className="header-title">创作新游戏</Text>
+        <View className="create-header-top">
+          <Text className="header-title">创作新游戏</Text>
+          <View className="orientation-switch">
+            {ORIENTATION_OPTIONS.map((option) => {
+              const isActive = orientation === option.value;
+              return (
+                <View
+                  key={option.value}
+                  className={`orientation-option${isActive ? ' is-active' : ''}`}
+                  onClick={() => setOrientation(option.value)}
+                >
+                  <Text className="orientation-option__text">{option.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
         <Text className="header-subtitle">描述你的游戏想法，AI 会帮你设计并生成</Text>
       </View>
 
