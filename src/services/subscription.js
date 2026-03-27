@@ -152,6 +152,22 @@ export async function getSubscriptionStatus() {
 }
 
 /**
+ * 查询订阅订单状态
+ */
+export async function getOrderStatus(orderId) {
+  if (USE_MOCK) {
+    await delay(200);
+    return {
+      ...MOCK_SUBSCRIPTION_STATUS,
+      orderId,
+      status: 'paid',
+      subscriptionActive: true,
+    };
+  }
+  return get(`/api/v1/subscription/orders/${orderId}`);
+}
+
+/**
  * 解锁游戏
  */
 export async function unlockGame(gameId) {
@@ -171,5 +187,6 @@ export default {
   getPlans,
   createOrder,
   getSubscriptionStatus,
+  getOrderStatus,
   unlockGame,
 };

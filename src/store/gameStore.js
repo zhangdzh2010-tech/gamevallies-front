@@ -4,6 +4,7 @@ import * as gameService from '../services/game';
 import { getWebSocketManager } from '../services/websocket';
 import useQuotaStore from '../stores/quotaStore';
 import { Storage } from '../utils/storage';
+import { subscribeGameUnlocked } from '../utils/gameUnlock';
 
 const COMPLETED_GAME_STATUSES = ['ready', 'draft', 'published', 'review'];
 const TERMINAL_TASK_STATUSES = new Set(['succeeded', 'failed', 'canceled', 'timed_out']);
@@ -508,6 +509,19 @@ function buildFallbackCompletedGame(task, state) {
     coverUrl: previewUrl || gameUrl || state.currentGame?.coverUrl || '',
     canPlay: state.canPlay !== false,
     requireSubscription: state.canPlay === false,
+  };
+}
+
+function buildUnlockedCurrentGame(currentGame, payload) {
+  const unlockedGame = payload?.game || {};
+
+  return {
+    ...(currentGame || {}),
+    ...unlockedGame,
+    id: unlockedGame.id || currentGame?.id || payload?.gameId || '',
+    canPlay: true,
+    requireSubscription: false,
+    quotaRemaining: payload?.quotaRemaining ?? unlockedGame.quotaRemaining ?? currentGame?.quotaRemaining ?? null,
   };
 }
 
@@ -1313,6 +1327,39 @@ export const useGameStore = create((set, get) => ({
   }),
   clearError: () => set({ error: null, terminalError: null }),
 }));
+
+let hasBoundUnlockedGameSync = false;
+
+function bindUnlockedGameSync() {
+  if (hasBoundUnlockedGameSync) {
+    return;
+  }
+
+  hasBoundUnlockedGameSync = true;
+  subscribeGameUnlocked((payload) => {
+    const state = useGameStore.getState();
+    const payloadGameId = String(payload?.gameId || '');
+    if (!payloadGameId) {
+      return;
+    }
+
+    const currentGameId = String(state.currentGame?.id || '');
+    const generatingGameId = String(state.generatingGameId || '');
+    const matchesCurrentGame = currentGameId && currentGameId === payloadGameId;
+    const matchesGeneratingGame = generatingGameId && generatingGameId === payloadGameId;
+
+    if (!matchesCurrentGame && !matchesGeneratingGame) {
+      return;
+    }
+
+    useGameStore.setState((prev) => ({
+      currentGame: buildUnlockedCurrentGame(prev.currentGame, payload),
+      canPlay: true,
+    }));
+  });
+}
+
+bindUnlockedGameSync();
 
 export { DISPLAY_PIPELINE_STAGES as PIPELINE_STAGES };
 export default useGameStore;

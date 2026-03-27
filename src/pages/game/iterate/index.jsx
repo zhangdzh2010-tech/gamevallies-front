@@ -316,7 +316,13 @@ export default function GameIteratePage() {
   };
 
   const handleLockedPlay = () => {
-    openPaywall(currentGame?.id);
+    openPaywall({
+      gameId: currentGame?.id,
+      gameUrl: currentGame?.gameUrl,
+      gameTitle: currentGame?.title || '游戏',
+      gameCover: currentGame?.coverUrl || currentGame?.thumbnailUrl || '',
+      resumePlay: true,
+    });
   };
 
   const handleCancelTask = () => {

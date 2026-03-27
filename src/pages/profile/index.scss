@@ -9,7 +9,7 @@
   .profile-header {
     background: linear-gradient(135deg, rgba(110, 86, 255, 0.1) 0%, rgba(45, 212, 168, 0.1) 100%);
     border-bottom: 1px solid #252535;
-    padding: 30px 30px 20px;
+    padding: 34px 30px 24px;
 
     .header-top {
       display: flex;
@@ -24,22 +24,22 @@
       }
 
       .avatar {
-        width: 100px;
-        height: 100px;
-        border-radius: 24px;
+        width: 116px;
+        height: 116px;
+        border-radius: 30px;
         background: rgba(110, 86, 255, 0.15);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 50px;
+        font-size: 58px;
         border: 2px solid rgba(110, 86, 255, 0.3);
       }
 
       .avatar-img {
-        width: 100px;
-        height: 100px;
+        width: 116px;
+        height: 116px;
         display: block;
-        border-radius: 24px;
+        border-radius: 30px;
         border: 2px solid rgba(110, 86, 255, 0.3);
         background: rgba(110, 86, 255, 0.12);
       }
@@ -49,8 +49,8 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        margin-left: 16px;
-        gap: 14px;
+        margin-left: 20px;
+        gap: 16px;
       }
 
         .header-actions {
@@ -61,8 +61,8 @@
           gap: 12px;
 
           .settings-btn {
-            width: 44px;
-            height: 44px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
           background: rgba(110, 86, 255, 0.12);
           display: flex;
@@ -71,7 +71,7 @@
           cursor: pointer;
 
           .settings-icon {
-            font-size: 28px;
+            font-size: 32px;
           }
 
           &:active {
@@ -80,13 +80,13 @@
         }
 
         .logout-btn {
-          padding: 10px 22px;
+          padding: 12px 24px;
           border-radius: 14px;
           background: rgba(255, 92, 138, 0.15);
           cursor: pointer;
 
           .logout-text {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 600;
             color: #ff5c8a;
           }
@@ -99,46 +99,47 @@
     }
 
     .user-info {
-      margin-bottom: 18px;
+      margin-bottom: 22px;
 
       .user-name {
         display: block;
-        font-size: 28px;
-        font-weight: 700;
+        font-size: 36px;
+        font-weight: 800;
         color: #eae8f4;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
       }
 
       .user-bio {
         display: block;
-        font-size: 20px;
-        color: #8b87a3;
+        font-size: 23px;
+        line-height: 1.55;
+        color: #9a95b1;
       }
     }
 
     .stats-row {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      gap: 12px;
 
       .stat {
         background: rgba(17, 17, 24, 0.5);
         border: 1px solid rgba(110, 86, 255, 0.2);
         border-radius: 18px;
-        padding: 14px 8px;
+        padding: 18px 8px 16px;
         text-align: center;
 
         .stat-value {
           display: block;
-          font-size: 25px;
-          font-weight: 700;
+          font-size: 30px;
+          font-weight: 800;
           color: #6e56ff;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         }
 
         .stat-label {
           display: block;
-          font-size: 19px;
+          font-size: 20px;
           color: #8b87a3;
         }
       }
@@ -268,8 +269,8 @@
 
   .creator-links {
     display: grid;
-    gap: 12px;
-    margin: 14px 20px 18px;
+    gap: 14px;
+    margin: 18px 20px 20px;
   }
 
   .link-item {
@@ -277,8 +278,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 16px 18px;
-    border-radius: 22px;
+    padding: 18px 20px;
+    border-radius: 24px;
     background: linear-gradient(180deg, rgba(17, 17, 24, 0.88), rgba(12, 12, 18, 0.96));
     border: 1px solid rgba(110, 86, 255, 0.14);
 
@@ -295,8 +296,8 @@
     }
 
     .link-icon-badge {
-      width: 46px;
-      height: 46px;
+      width: 54px;
+      height: 54px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -307,7 +308,7 @@
     }
 
     .link-icon {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 700;
       color: #f6f3ff;
     }
@@ -321,14 +322,14 @@
 
     .link-label {
       display: block;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       color: #f1eefb;
     }
 
     .link-desc {
       display: block;
-      font-size: 18px;
+      font-size: 19px;
       line-height: 1.45;
       color: #8f8aa7;
     }
@@ -340,7 +341,7 @@
       justify-content: center;
       padding: 7px 12px;
       border-radius: 999px;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 700;
       color: #8b87a3;
       background: rgba(139, 135, 163, 0.12);
@@ -361,16 +362,16 @@
       .tab-item {
         flex: 1;
         min-width: 0;
-        padding: 22px 4px;
+        padding: 24px 4px 22px;
         text-align: center;
-        border-bottom: 2px solid transparent;
-        font-size: 22px;
-        font-weight: 600;
+        border-bottom: 3px solid transparent;
+        font-size: 24px;
+        font-weight: 700;
         color: #8b87a3;
         cursor: pointer;
 
         .tab-count {
-          font-size: 18px;
+          font-size: 20px;
           color: #6e56ff;
         }
 
@@ -388,14 +389,14 @@
     }
 
     .games-section {
-      padding: 20px 20px 24px;
+      padding: 22px 20px 28px;
 
-      .games-list {
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-        padding-bottom: 12px;
-      }
+        .games-list {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          padding-bottom: 12px;
+        }
 
       .empty-state {
         display: flex;
@@ -614,14 +615,15 @@
 .profile-game-card {
   background: #111118;
   border: 1px solid #252535;
-  border-radius: 18px;
+  border-radius: 24px;
   overflow: hidden;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
 
   &:active { transform: scale(0.99); }
 
   .pgc-preview {
     width: 100%;
-    height: 360px;
+    height: 396px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -629,7 +631,7 @@
     cursor: pointer;
 
     .pgc-emoji {
-      font-size: 96px;
+      font-size: 108px;
     }
 
     .hot-badge {
@@ -638,10 +640,10 @@
       left: 16px;
       background: rgba(255, 92, 138, 0.9);
       color: white;
-      padding: 8px 14px;
+      padding: 8px 16px;
       border-radius: 12px;
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 19px;
+      font-weight: 700;
     }
 
     .pgc-status-wrap {
@@ -652,14 +654,14 @@
   }
 
   .pgc-body {
-    padding: 14px 16px 14px;
+    padding: 18px 18px 18px;
 
     .pgc-title {
       display: block;
-      font-size: 27px;
-      font-weight: 600;
+      font-size: 31px;
+      font-weight: 700;
       color: #eae8f4;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -669,14 +671,15 @@
     .pgc-actions {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 8px;
+      flex-wrap: wrap;
 
       .pgc-action {
         display: flex;
         align-items: center;
-        gap: 5px;
-        padding: 8px 12px;
-        border-radius: 20px;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 18px;
         cursor: pointer;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid transparent;
@@ -686,7 +689,7 @@
         &:active { background: rgba(110, 86, 255, 0.12); }
 
         .pgc-action-icon {
-          font-size: 24px;
+          font-size: 30px;
           line-height: 1;
           color: #8b87a3;
 
@@ -694,10 +697,24 @@
           &.bookmarked { color: #fbbf24; }
         }
 
+        .pgc-action-copy {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        }
+
         .pgc-action-count {
-          font-size: 20px;
-          color: #8b87a3;
+          font-size: 22px;
+          font-weight: 700;
+          color: #ece8f7;
           &.liked { color: #6e56ff; }
+          &.bookmarked { color: #fbbf24; }
+        }
+
+        .pgc-action-label {
+          font-size: 16px;
+          color: #8b87a3;
         }
       }
 
@@ -705,10 +722,10 @@
         margin-left: auto;
         background: transparent;
         border: none;
-        padding: 8px 10px;
+        padding: 10px 12px;
 
         .pgc-more-dots {
-          font-size: 22px;
+          font-size: 28px;
           color: #8b87a3;
           letter-spacing: 1px;
           font-weight: 700;
@@ -1402,57 +1419,57 @@
 
       .avatar,
       .avatar-img {
-        width: 132rpx;
-        height: 132rpx;
-        border-radius: 32rpx;
+        width: 148rpx;
+        height: 148rpx;
+        border-radius: 36rpx;
       }
 
       .avatar {
-        font-size: 64rpx;
+        font-size: 72rpx;
       }
 
       .header-right {
-        margin-left: 20rpx;
-        gap: 16rpx;
+        margin-left: 24rpx;
+        gap: 18rpx;
       }
 
       .header-actions {
         .settings-btn {
-          width: 62rpx;
-          height: 62rpx;
+          width: 72rpx;
+          height: 72rpx;
 
           .settings-icon {
-            font-size: 40rpx;
+            font-size: 44rpx;
           }
         }
 
         .logout-btn {
-          padding: 14rpx 28rpx;
+          padding: 16rpx 30rpx;
 
           .logout-text {
-            font-size: 26rpx;
+            font-size: 28rpx;
           }
         }
       }
     }
 
     .user-info {
-      margin-bottom: 20rpx;
+      margin-bottom: 24rpx;
 
       .user-name {
-        font-size: 32rpx;
-        margin-bottom: 6rpx;
+        font-size: 40rpx;
+        margin-bottom: 10rpx;
       }
 
       .user-bio {
-        font-size: 24rpx;
+        font-size: 26rpx;
       }
     }
 
     .stats-row {
       .stat {
         .stat-value {
-          font-size: 30rpx;
+          font-size: 34rpx;
         }
 
         .stat-label {
@@ -1510,7 +1527,7 @@
 
   .creator-links {
     gap: 16rpx;
-    margin: 16rpx 24rpx 20rpx;
+    margin: 18rpx 24rpx 22rpx;
   }
 
   .link-item {
@@ -1523,13 +1540,13 @@
     }
 
     .link-icon-badge {
-      width: 72rpx;
-      height: 72rpx;
+      width: 78rpx;
+      height: 78rpx;
       border-radius: 24rpx;
     }
 
     .link-icon {
-      font-size: 28rpx;
+      font-size: 30rpx;
     }
 
     .link-copy {
@@ -1551,14 +1568,14 @@
     }
   }
 
-  .profile-scroll {
-    .tabs-container {
-      .tab-item {
-        padding: 24rpx 4rpx;
-        font-size: 24rpx;
+    .profile-scroll {
+      .tabs-container {
+        .tab-item {
+        padding: 26rpx 4rpx 24rpx;
+        font-size: 28rpx;
 
         .tab-count {
-          font-size: 20rpx;
+          font-size: 22rpx;
         }
       }
     }
@@ -1597,19 +1614,27 @@
   .profile-game-card {
     border-radius: 22px;
 
+    .pgc-preview {
+      height: 430rpx;
+    }
+
     .pgc-body {
       .pgc-title {
-        font-size: 30rpx;
+        font-size: 34rpx;
       }
 
       .pgc-actions {
         .pgc-action {
           .pgc-action-icon {
-            font-size: 24rpx;
+            font-size: 30rpx;
           }
 
           .pgc-action-count {
-            font-size: 22rpx;
+            font-size: 24rpx;
+          }
+
+          .pgc-action-label {
+            font-size: 18rpx;
           }
         }
 

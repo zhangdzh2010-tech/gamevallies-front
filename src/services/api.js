@@ -261,8 +261,30 @@ retryConfig = DEFAULT_RETRY_CONFIG)
  * Check if error is network-related
  */
 function isNetworkError(error) {
-  const networkErrors = ['NETWORK_ERROR', 'TIMEOUT', 'ECONNREFUSED', 'ENOTFOUND'];
-  return networkErrors.some((err) => error.message?.includes(err));
+  const rawMessage = [error?.message, error?.errMsg]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (!rawMessage) {
+    return false;
+  }
+
+  const networkPatterns = [
+    'network_error',
+    'network error',
+    'request:fail',
+    'timeout',
+    'timed out',
+    'econnrefused',
+    'econnreset',
+    'enotfound',
+    'enetunreach',
+    '网络',
+    '超时',
+  ];
+
+  return networkPatterns.some((pattern) => rawMessage.includes(pattern));
 }
 
 /**

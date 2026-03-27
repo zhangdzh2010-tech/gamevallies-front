@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, WebView, Text } from '@tarojs/components';
-import { useNavigation, useRoute } from '@tarojs/hooks';
+import { useRoute } from '@tarojs/hooks';
 import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import * as gameService from '../../../services/game';
 import * as socialService from '../../../services/social';
 import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { buildGameWebShellUrl } from '../../../utils/gameWebShell';
+import { buildGameDetailPath } from '../../../utils/share';
 import { Storage } from '../../../utils/storage';
 import { getShareConfig } from '../../../utils/share';
 import './index.scss';
+
+const HOME_PAGE_URL = '/pages/index/index';
 
 function validateGameUrl(url) {
   const suspiciousChars = /[<>{}|\\^`]/;
@@ -24,8 +27,28 @@ function getAuthSignature() {
   return `${Storage.getToken() || ''}:${Storage.getRefreshToken() || ''}`;
 }
 
+function navigateBackOrHome(fallbackUrl = '') {
+  const pages = Taro.getCurrentPages();
+
+  if (pages.length > 1) {
+    Taro.navigateBack({ delta: 1 }).catch(() => {});
+    return;
+  }
+
+  if (fallbackUrl) {
+    Taro.redirectTo({ url: fallbackUrl })
+      .catch(() => Taro.reLaunch({ url: fallbackUrl }))
+      .catch(() => Taro.switchTab({ url: HOME_PAGE_URL }))
+      .catch(() => {});
+    return;
+  }
+
+  Taro.switchTab({ url: HOME_PAGE_URL })
+    .catch(() => Taro.reLaunch({ url: HOME_PAGE_URL }))
+    .catch(() => {});
+}
+
 export default function GamePlay() {
-  const navigation = useNavigation();
   const route = useRoute();
   const gameUrl = useGamePlayerStore((s) => s.gameUrl);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
@@ -48,7 +71,7 @@ export default function GamePlay() {
       coverUrl: gameMeta?.coverUrl || gameMeta?.thumbnailUrl || gameCover,
     },
     undefined,
-    { target: 'play' },
+    { target: 'detail' },
   );
 
   const syncGameMeta = useCallback((gameData) => {
@@ -123,7 +146,15 @@ export default function GamePlay() {
       }
 
       if (!routeGameId) {
-        navigation.back();
+        navigateBackOrHome();
+        return;
+      }
+
+      const pages = Taro.getCurrentPages();
+      const isDirectLaunchToPlay = process.env.TARO_ENV === 'weapp' && pages.length <= 1;
+
+      if (isDirectLaunchToPlay) {
+        navigateBackOrHome(buildGameDetailPath(routeGameId));
         return;
       }
 
@@ -159,7 +190,7 @@ export default function GamePlay() {
           icon: 'none',
           duration: 2000,
         });
-        setTimeout(() => navigation.back(), 200);
+        setTimeout(() => navigateBackOrHome(buildGameDetailPath(routeGameId)), 200);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -172,7 +203,7 @@ export default function GamePlay() {
     return () => {
       cancelled = true;
     };
-  }, [gameUrl, navigation, routeGameId, setGameContext, syncGameMeta]);
+  }, [gameUrl, routeGameId, setGameContext, syncGameMeta]);
 
   useEffect(() => {
     if (!sourceGameUrl) {

@@ -22,6 +22,7 @@ import { PaywallPopup } from '../../components/common/PaywallPopup';
 import { buildGameDetailPath } from '../../utils/share';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { getBookmarkedGames, mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
+import { subscribeGameUnlocked } from '../../utils/gameUnlock';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
@@ -45,6 +46,18 @@ function normalizeGame(game, index) {
     author: game.author?.username || game.author || '创作者',
     authorEmoji: game.authorEmoji || '👤',
     isHot: (game.plays || 0) > 10000,
+  };
+}
+
+function mergeUnlockedProfileGame(game, payload) {
+  const unlockedGame = payload?.game || {};
+
+  return {
+    ...game,
+    ...unlockedGame,
+    canPlay: true,
+    requireSubscription: false,
+    quotaRemaining: payload?.quotaRemaining ?? unlockedGame.quotaRemaining ?? game?.quotaRemaining ?? null,
   };
 }
 
@@ -349,14 +362,24 @@ function ProfileGameCard({ game, onPlay, onMore, onLike, onComment, onBookmark, 
         <View className="pgc-actions">
           <View className="pgc-action" onClick={handleLike}>
             <Text className={`pgc-action-icon ${isLiked ? 'liked' : ''}`}>♥</Text>
-            <Text className={`pgc-action-count ${isLiked ? 'liked' : ''}`}>{likeLoading ? '...' : formatNumber(likeCount)}</Text>
+            <View className="pgc-action-copy">
+              <Text className={`pgc-action-count ${isLiked ? 'liked' : ''}`}>{likeLoading ? '...' : formatNumber(likeCount)}</Text>
+              <Text className="pgc-action-label">点赞</Text>
+            </View>
           </View>
           <View className="pgc-action" onClick={(e) => { e.stopPropagation(); onComment && onComment(game); }}>
             <Text className="pgc-action-icon">💬</Text>
-            <Text className="pgc-action-count">{formatNumber(game.comments || 0)}</Text>
+            <View className="pgc-action-copy">
+              <Text className="pgc-action-count">{formatNumber(game.comments || 0)}</Text>
+              <Text className="pgc-action-label">评论</Text>
+            </View>
           </View>
           <View className="pgc-action" onClick={handleBookmark}>
             <Text className={`pgc-action-icon ${isBookmarked ? 'bookmarked' : ''}`}>{isBookmarked ? '★' : '☆'}</Text>
+            <View className="pgc-action-copy">
+              <Text className={`pgc-action-count ${isBookmarked ? 'bookmarked' : ''}`}>{isBookmarked ? '已收藏' : '收藏'}</Text>
+              <Text className="pgc-action-label">稍后再玩</Text>
+            </View>
           </View>
           {showMore && (
             <View className="pgc-action pgc-more-btn" onClick={(e) => { e.stopPropagation(); onMore && onMore(game); }}>
@@ -876,6 +899,19 @@ export default function Profile() {
       setActiveTab(nextActiveTab);
     }
   });
+
+  useEffect(() => subscribeGameUnlocked((payload) => {
+    const payloadGameId = String(payload?.gameId || '');
+    if (!payloadGameId) {
+      return;
+    }
+
+    setAllGames((prev) => prev.map((game) => (
+      String(game?.id || '') === payloadGameId
+        ? mergeUnlockedProfileGame(game, payload)
+        : game
+    )));
+  }), []);
 
   const fetchMyGames = async () => {
     setLoadingGames(true);

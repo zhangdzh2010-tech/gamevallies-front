@@ -14,6 +14,11 @@ export function PaywallPopup() {
 
   if (!showPaywall) return null;
 
+  const handleClose = () => {
+    if (subscribing) return;
+    closePaywall();
+  };
+
   const handleSubscribe = async (planId) => {
     if (subscribing) return;
     await subscribe(planId);
@@ -26,10 +31,13 @@ export function PaywallPopup() {
   };
 
   return (
-    <View className="paywall-overlay" onClick={closePaywall}>
+    <View className={`paywall-overlay ${subscribing ? 'locked' : ''}`} onClick={handleClose}>
       <View className="paywall-panel" onClick={(e) => e.stopPropagation()}>
         <View className="paywall-header">
-          <View className="paywall-close" onClick={closePaywall}>
+          <View
+            className={`paywall-close ${subscribing ? 'disabled' : ''}`}
+            onClick={handleClose}
+          >
             <Text className="paywall-close-text">x</Text>
           </View>
           <Text className="paywall-icon">订阅</Text>

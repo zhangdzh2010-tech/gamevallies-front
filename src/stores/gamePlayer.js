@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import Taro from '@tarojs/taro';
 import { ENV } from '../config/env';
 import useQuotaStore from './quotaStore';
+import { subscribeGameUnlocked } from '../utils/gameUnlock';
 
 const PLAY_PAGE_PATH = '/pages/game/play/index';
 
@@ -9,7 +10,6 @@ function buildPlayPageUrl(gameId) {
   return gameId ? `${PLAY_PAGE_PATH}?id=${encodeURIComponent(String(gameId))}` : PLAY_PAGE_PATH;
 }
 
-// Backend may return gameUrl with localhost - replace with actual server host.
 export function resolveGameUrl(url) {
   if (!url) return '';
 
@@ -61,7 +61,13 @@ const useGamePlayerStore = create((set) => ({
 
     if (isOwnGame && !canPlay) {
       Taro.showToast({ title: '订阅后可试玩', icon: 'none' });
-      useQuotaStore.getState().openPaywall(gameId);
+      useQuotaStore.getState().openPaywall({
+        gameId,
+        gameUrl: url,
+        gameTitle: title,
+        gameCover: cover,
+        resumePlay: true,
+      });
       return;
     }
 
@@ -115,5 +121,41 @@ const useGamePlayerStore = create((set) => ({
       minimized: false,
     }),
 }));
+
+let hasBoundUnlockedPlayback = false;
+
+function bindUnlockedPlayback() {
+  if (hasBoundUnlockedPlayback) {
+    return;
+  }
+
+  hasBoundUnlockedPlayback = true;
+  subscribeGameUnlocked((payload) => {
+    if (!payload?.resumePlay) {
+      return;
+    }
+
+    const playContext = payload.playContext || {};
+    const unlockedGame = payload.game || {};
+    const gameUrl = playContext.gameUrl || unlockedGame.gameUrl || '';
+
+    if (!gameUrl) {
+      return;
+    }
+
+    useGamePlayerStore.getState().openGame(
+      gameUrl,
+      playContext.gameTitle || unlockedGame.title || '游戏',
+      playContext.gameCover || unlockedGame.coverUrl || unlockedGame.thumbnailUrl || '',
+      {
+        gameId: payload.gameId || unlockedGame.id || '',
+        canPlay: true,
+        isOwnGame: true,
+      }
+    );
+  });
+}
+
+bindUnlockedPlayback();
 
 export default useGamePlayerStore;

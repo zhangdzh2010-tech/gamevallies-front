@@ -332,7 +332,13 @@ export default function Create() {
   };
 
   const handleLockedPlay = () => {
-    openPaywall(currentGame?.id);
+    openPaywall({
+      gameId: currentGame?.id,
+      gameUrl: currentGame?.gameUrl,
+      gameTitle: currentGame?.title || gameName,
+      gameCover: currentGame?.coverUrl || currentGame?.thumbnailUrl || '',
+      resumePlay: true,
+    });
   };
 
   const handleNewGame = () => {

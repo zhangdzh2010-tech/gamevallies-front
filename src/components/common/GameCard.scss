@@ -44,10 +44,10 @@
       left: 8px;
       background: rgba(255, 92, 138, 0.9);
       color: white;
-      padding: 4px 10px;
+      padding: 6px 12px;
       border-radius: 8px;
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 20px;
+      font-weight: 700;
       z-index: 2;
     }
 
@@ -73,7 +73,7 @@
 
       .how-to-play-icon {
         color: #ffffff;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         font-style: normal;
         line-height: 1;
@@ -89,9 +89,9 @@
       justify-content: center;
       z-index: 3;
       min-width: 46px;
-      height: 40px;
-      padding: 0 10px;
-      border-radius: 20px;
+      height: 42px;
+      padding: 0 12px;
+      border-radius: 22px;
       background: rgba(17, 17, 24, 0.82);
       border: 1px solid rgba(37, 37, 53, 0.9);
       box-shadow: 0 10px 22px rgba(4, 6, 14, 0.28);
@@ -102,7 +102,7 @@
 
       .detail-entry-dots {
         color: #ffffff;
-        font-size: 34px;
+        font-size: 36px;
         font-weight: 700;
         letter-spacing: 0;
         line-height: 1;
@@ -135,7 +135,7 @@
         overflow: hidden;
 
         .author-name {
-          font-size: 20px;
+          font-size: 22px;
           color: rgba(234, 232, 244, 0.86);
           overflow: hidden;
           text-overflow: ellipsis;
@@ -147,7 +147,7 @@
         flex-shrink: 0;
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
         margin-left: 8px;
 
         &.stats-row--play-only {
@@ -174,18 +174,18 @@
         .stat-text {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          font-size: 22px;
+          gap: 6px;
+          font-size: 24px;
           color: rgba(255, 255, 255, 0.8);
           white-space: nowrap;
 
           .stat-icon {
-            font-size: 24px;
+            font-size: 28px;
             line-height: 1;
           }
 
           .stat-value {
-            font-size: 20px;
+            font-size: 22px;
             line-height: 1;
           }
 
@@ -222,13 +222,13 @@
   }
 
   .game-info {
-    padding: 10px 12px 12px;
+    padding: 12px 14px 14px;
     background: rgba(17, 17, 24, 0.96);
 
     .game-title {
       display: block;
-      font-size: 26px;
-      font-weight: 600;
+      font-size: 28px;
+      font-weight: 700;
       color: #eae8f4;
       white-space: nowrap;
       overflow: hidden;
