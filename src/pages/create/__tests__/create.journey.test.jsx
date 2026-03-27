@@ -105,6 +105,13 @@ jest.mock('../../../store/gameStore', () => ({
 
 const CreatePage = require('../index').default;
 
+const SUBMIT_TEXT = /\u5f00\u59cb\u521b\u4f5c/;
+const PORTRAIT_TEXT = /\u7ad6\u5c4f/;
+const LANDSCAPE_TEXT = /\u6a2a\u5c4f/;
+const OPTIMIZE_TEXT = /\u7ee7\u7eed\u4f18\u5316/;
+const SUBSCRIBE_PLAY_TEXT = /\u8ba2\u9605\u540e\u8bd5\u73a9/;
+const CREATE_AGAIN_TEXT = /\u518d\u521b\u4e00\u4e2a/;
+
 function buildGameStoreState(overrides = {}) {
   return {
     createGame: mockCreateGame,
@@ -136,46 +143,64 @@ describe('Create page journey coverage', () => {
   test('creative textarea keeps the intended 2000-char limit and submits long input', async () => {
     render(<CreatePage />);
 
-    const textarea = screen.getByPlaceholderText('简单描述你想要的游戏，AI 会帮你扩展成完整方案...');
-    const longPrompt = '创意'.repeat(180);
+    const textarea = screen.getByPlaceholderText(/AI/);
+    const longPrompt = 'creative'.repeat(180);
 
     expect(textarea.getAttribute('data-maxlength')).toBe('2000');
+    expect(screen.getByText(PORTRAIT_TEXT)).toBeTruthy();
 
     fireEvent.change(textarea, { target: { value: longPrompt } });
     expect(screen.getByText(`${longPrompt.length}/2000`)).toBeTruthy();
 
-    fireEvent.click(screen.getByText('开始创作'));
+    fireEvent.click(screen.getByText(SUBMIT_TEXT));
 
     await waitFor(() => {
-      expect(mockCreateGame).toHaveBeenCalledWith(longPrompt, '');
+      expect(mockCreateGame).toHaveBeenCalledWith(longPrompt, '', { orientation: 'portrait' });
     });
   });
 
   test('example prompt click fills the textarea and short prompts are blocked', async () => {
     render(<CreatePage />);
 
-    fireEvent.click(screen.getByText('做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。'));
-    expect(screen.getByPlaceholderText('简单描述你想要的游戏，AI 会帮你扩展成完整方案...').value).toBe(
-      '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。'
-    );
+    fireEvent.click(screen.getByText('🐍'));
 
-    fireEvent.change(screen.getByPlaceholderText('简单描述你想要的游戏，AI 会帮你扩展成完整方案...'), {
-      target: { value: '太短' },
+    expect(screen.getByPlaceholderText(/AI/).value).toContain('\u8d2a\u5403\u86c7');
+
+    fireEvent.change(screen.getByPlaceholderText(/AI/), {
+      target: { value: '\u592a\u77ed' },
     });
-    fireEvent.click(screen.getByText('开始创作'));
+    fireEvent.click(screen.getByText(SUBMIT_TEXT));
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: '请输入游戏描述', icon: 'none' })
+        expect.objectContaining({ title: '\u8bf7\u8f93\u5165\u6e38\u620f\u63cf\u8ff0', icon: 'none' })
       );
     });
     expect(mockCreateGame).not.toHaveBeenCalled();
   });
 
+  test('orientation defaults to portrait and can switch to landscape before submit', async () => {
+    render(<CreatePage />);
+
+    fireEvent.change(screen.getByPlaceholderText(/AI/), {
+      target: { value: 'build a horizontal shooter game with a spaceship and enemies' },
+    });
+    fireEvent.click(screen.getByText(LANDSCAPE_TEXT));
+    fireEvent.click(screen.getByText(SUBMIT_TEXT));
+
+    await waitFor(() => {
+      expect(mockCreateGame).toHaveBeenCalledWith(
+        'build a horizontal shooter game with a spaceship and enemies',
+        '',
+        { orientation: 'landscape' }
+      );
+    });
+  });
+
   test('completed journey offers continue optimization and locked play actions', () => {
     const currentGame = {
       id: 'game-88',
-      title: '像素跑酷',
+      title: '\u50cf\u7d20\u8dd1\u9177',
       status: 'ready',
       gameUrl: 'https://game.example/play',
     };
@@ -186,9 +211,9 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    fireEvent.click(screen.getByText('继续优化'));
-    fireEvent.click(screen.getByText('订阅后试玩'));
-    fireEvent.click(screen.getByText('再创一个'));
+    fireEvent.click(screen.getByText(OPTIMIZE_TEXT));
+    fireEvent.click(screen.getByText(SUBSCRIBE_PLAY_TEXT));
+    fireEvent.click(screen.getByText(CREATE_AGAIN_TEXT));
 
     expect(mockOpenIteratePageWithAuth).toHaveBeenCalledWith(currentGame, 'game-88');
     expect(mockOpenPaywall).toHaveBeenCalledWith(expect.objectContaining({

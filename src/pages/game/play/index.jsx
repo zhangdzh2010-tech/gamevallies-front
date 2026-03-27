@@ -7,6 +7,7 @@ import * as socialService from '../../../services/social';
 import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { buildGameWebShellUrl } from '../../../utils/gameWebShell';
+import { getGameCoverUrl } from '../../../utils/media';
 import { buildGameDetailPath } from '../../../utils/share';
 import { Storage } from '../../../utils/storage';
 import { getShareConfig } from '../../../utils/share';
@@ -64,11 +65,12 @@ export default function GamePlay() {
   const [authSignature, setAuthSignature] = useState(getAuthSignature());
   const routeGameId = route.params?.id || '';
   const activeGameId = gameId || routeGameId;
+  const activeGameCover = getGameCoverUrl(gameMeta || {}, gameCover);
   const shareConfig = getShareConfig(
     {
       id: activeGameId,
       title: gameMeta?.title || gameTitle || '游戏',
-      coverUrl: gameMeta?.coverUrl || gameMeta?.thumbnailUrl || gameCover,
+      coverUrl: activeGameCover,
     },
     undefined,
     { target: 'detail' },
@@ -173,7 +175,7 @@ export default function GamePlay() {
         setGameContext({
           gameUrl: resolvedUrl,
           gameTitle: game?.title || '游戏',
-          gameCover: game?.coverUrl || game?.thumbnailUrl || '',
+          gameCover: getGameCoverUrl(game),
           gameId: game?.id || routeGameId,
           minimized: false,
         });
@@ -215,7 +217,7 @@ export default function GamePlay() {
       gameId: activeGameId,
       gameUrl: sourceGameUrl,
       title: gameMeta?.title || gameTitle || '游戏',
-      coverUrl: gameMeta?.coverUrl || gameMeta?.thumbnailUrl || gameCover || '',
+      coverUrl: activeGameCover,
       accessToken: Storage.getToken(),
       refreshToken: Storage.getRefreshToken(),
       bookmarked: isBookmarked,

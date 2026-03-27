@@ -20,6 +20,7 @@ import {
   fetchGameTypeOptions,
   normalizeGameTypeKey,
 } from '../../utils/gameTypes';
+import { getGameCoverUrl } from '../../utils/media';
 import { buildGameDetailPath } from '../../utils/share';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
 import './index.scss';
@@ -151,7 +152,7 @@ export default function Home() {
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
-      openGame(game.gameUrl, game.title, game.coverUrl || game.thumbnailUrl || '', {
+      openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
       });
       return;

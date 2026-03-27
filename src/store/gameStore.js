@@ -542,7 +542,7 @@ export const useGameStore = create((set, get) => ({
   latestTaskMessage: '',
   canPlay: true,
 
-  createGame: async (description, title, type) => {
+  createGame: async (description, title, options) => {
     clearActiveTaskRuntime();
 
     set({
@@ -565,7 +565,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     try {
-      const result = await gameService.generateGame(description, title, type);
+      const result = await gameService.generateGame(description, title, options);
       const gameId = result.gameId;
       const gameTitle = result.title || title || '';
       const promptPreview = description ? String(description).slice(0, 80) : '';

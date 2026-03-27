@@ -31,7 +31,7 @@ export function isRenderableImageUrl(url) {
   return true;
 }
 
-export function getSafeGameImage(game = {}) {
+export function getGameCoverUrl(game = {}, fallback = '') {
   const candidates = [
     game.coverUrl,
     game.thumbnailUrl,
@@ -41,7 +41,12 @@ export function getSafeGameImage(game = {}) {
     game.poster,
     game.imageUrl,
     game.image,
+    fallback,
   ];
 
   return candidates.find((url) => isRenderableImageUrl(url)) || '';
+}
+
+export function getSafeGameImage(game = {}) {
+  return getGameCoverUrl(game);
 }

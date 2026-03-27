@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import * as gameService from '../services/game';
 import * as subscriptionService from '../services/subscription';
 import { emitGameUnlocked } from '../utils/gameUnlock';
+import { getGameCoverUrl } from '../utils/media';
 import { storage } from '../utils/storage';
 
 const QUOTA_CACHE_TTL = 5 * 60 * 1000;
@@ -32,7 +33,7 @@ function normalizePaywallContext(input) {
   const pendingGameId = rawGameId ? String(rawGameId) : null;
   const gameUrl = input.gameUrl || input.url || '';
   const gameTitle = input.gameTitle || input.title || '';
-  const gameCover = input.gameCover || input.cover || input.coverUrl || input.thumbnailUrl || '';
+  const gameCover = getGameCoverUrl(input, input.gameCover || input.cover || '');
   const resumePlay = input.resumePlay !== false && Boolean(gameUrl);
 
   return {
@@ -56,8 +57,8 @@ function buildUnlockedGame(game, unlockResult, gameId, pendingPlayContext) {
   nextGame.id = nextGame.id || gameId || pendingPlayContext?.gameId || '';
   nextGame.title = nextGame.title || pendingPlayContext?.gameTitle || '';
   nextGame.gameUrl = nextGame.gameUrl || pendingPlayContext?.gameUrl || '';
-  nextGame.coverUrl = nextGame.coverUrl || nextGame.thumbnailUrl || pendingPlayContext?.gameCover || '';
-  nextGame.thumbnailUrl = nextGame.thumbnailUrl || nextGame.coverUrl || pendingPlayContext?.gameCover || '';
+  nextGame.coverUrl = getGameCoverUrl(nextGame, pendingPlayContext?.gameCover || '');
+  nextGame.thumbnailUrl = getGameCoverUrl({ thumbnailUrl: nextGame.thumbnailUrl }, nextGame.coverUrl);
   nextGame.canPlay = unlockResult?.canPlay !== false;
   nextGame.requireSubscription = false;
   nextGame.quotaRemaining = unlockResult?.quotaRemaining ?? nextGame.quotaRemaining ?? null;

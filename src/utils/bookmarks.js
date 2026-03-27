@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro';
+import { getGameCoverUrl } from './media';
 
 const BOOKMARK_STORAGE_KEY = 'gamevallies_bookmarked_games';
 
@@ -30,14 +31,17 @@ function writeBookmarkedGames(games) {
 }
 
 function normalizeBookmarkedGame(game = {}) {
+  const coverUrl = getGameCoverUrl(game);
+  const thumbnailUrl = getGameCoverUrl({ thumbnailUrl: game.thumbnailUrl }, coverUrl);
+
   return {
     id: game.id,
     title: game.title || '未命名游戏',
     description: game.description || '',
     status: game.status || 'published',
     gameUrl: game.gameUrl || '',
-    coverUrl: game.coverUrl || '',
-    thumbnailUrl: game.thumbnailUrl || game.coverUrl || '',
+    coverUrl,
+    thumbnailUrl,
     emoji: game.emoji || '🎮',
     color: game.color || '#6e56ff',
     plays: Number(game.plays || game.playCount || 0),

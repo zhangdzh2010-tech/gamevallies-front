@@ -23,6 +23,7 @@ import { buildGameDetailPath } from '../../utils/share';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { getBookmarkedGames, mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../utils/gameUnlock';
+import { getGameCoverUrl } from '../../utils/media';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
@@ -930,7 +931,7 @@ export default function Profile() {
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
-      openGame(game.gameUrl, game.title, game.coverUrl || game.thumbnailUrl || '', {
+      openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
         canPlay: game.canPlay !== false,
         isOwnGame: Boolean(currentUserId && String(game.authorId || game.author?.id || '') === String(currentUserId)),
@@ -1341,18 +1342,6 @@ export default function Profile() {
             <View className="link-copy">
               <Text className="link-label">个人主页</Text>
               <Text className="link-desc">展示作品、创作标签和个人介绍</Text>
-            </View>
-          </View>
-          <Text className="link-status">开发中</Text>
-        </View>
-        <View className="link-item link-item--disabled">
-          <View className="link-main">
-            <View className="link-icon-badge">
-              <Text className="link-icon">社</Text>
-            </View>
-            <View className="link-copy">
-              <Text className="link-label">社交媒体</Text>
-              <Text className="link-desc">连接外部账号，补充你的创作阵地</Text>
             </View>
           </View>
           <Text className="link-status">开发中</Text>

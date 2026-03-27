@@ -205,7 +205,7 @@ export const GameCard = ({
               </View>
             ) : null}
             <View className={`stats-row${isPlayOnlyVariant ? ' stats-row--play-only' : ''}`}>
-              <Text className="stat-text">
+              <Text className="stat-text play-text">
                 <Text className="stat-icon">{PLAY_ICON}</Text>
                 <Text className="stat-value">{formatNumber(game.plays || 0)}</Text>
               </Text>
