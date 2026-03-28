@@ -93,6 +93,13 @@ export const ENV = {
     WX_SHARE_ENABLED: process.env.TARO_ENV === 'weapp'
   },
 
+  WECHAT: {
+    H5_OAUTH_APP_ID: process.env.TARO_APP_WECHAT_OAUTH_APP_ID || '',
+    H5_OAUTH_SCOPE: process.env.TARO_APP_WECHAT_OAUTH_SCOPE || 'snsapi_base',
+    H5_OAUTH_AUTHORIZE_URL:
+      process.env.TARO_APP_WECHAT_OAUTH_AUTHORIZE_URL || 'https://open.weixin.qq.com/connect/oauth2/authorize',
+  },
+
   // Analytics
   ANALYTICS: {
     SENTRY_DSN: process.env.SENTRY_DSN || '',

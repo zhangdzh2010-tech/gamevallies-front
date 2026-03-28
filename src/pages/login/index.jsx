@@ -3,7 +3,7 @@ import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import * as authService from '../../services/auth';
 import { handleLoginBackNavigation, navigateAfterLogin } from '../../utils/authNavigation';
-import { isH5Runtime } from '../../utils/runtime';
+import { isH5Runtime, isWechatBrowserRuntime } from '../../utils/runtime';
 import './index.scss';
 
 const COOLDOWN = 60;
@@ -42,6 +42,7 @@ export default function Login() {
   const [wechatNickname, setWechatNickname] = useState('');
   const [wechatAvatarUrl, setWechatAvatarUrl] = useState('');
   const timerRef = useRef(null);
+  const h5WechatAuthHandledRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -51,6 +52,36 @@ export default function Login() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isH5 || h5WechatAuthHandledRef.current) {
+      return;
+    }
+
+    const { code: wechatCode, state: wechatState } = authService.getWechatH5AuthParams();
+    if (!wechatCode) {
+      return;
+    }
+
+    h5WechatAuthHandledRef.current = true;
+
+    const completeWechatH5Login = async () => {
+      try {
+        setLoadingAction('wechat');
+        await authService.loginByWechatH5AuthCode(wechatCode, wechatState);
+        authService.clearWechatH5AuthParams();
+        Taro.showToast({ title: '微信授权登录成功', icon: 'success' });
+        finishLogin();
+      } catch (error) {
+        authService.clearWechatH5AuthParams();
+        Taro.showToast({ title: error.message || '微信授权登录失败', icon: 'none' });
+      } finally {
+        setLoadingAction(null);
+      }
+    };
+
+    void completeWechatH5Login();
+  }, [isH5]);
 
   const isPhoneValid = /^1[3-9]\d{9}$/.test(phone);
   const canSend = isPhoneValid && countdown === 0;
@@ -132,7 +163,7 @@ export default function Login() {
     }
 
     if (code.length !== 6) {
-      Taro.showToast({ title: '请输入6位验证码', icon: 'none' });
+      Taro.showToast({ title: '请输入 6 位验证码', icon: 'none' });
       return;
     }
 
@@ -150,6 +181,22 @@ export default function Login() {
 
   const handleWechatLogin = async () => {
     if (isBusy) return;
+
+    if (isH5) {
+      if (!isWechatBrowserRuntime()) {
+        Taro.showToast({ title: '请在微信内打开当前页面后再使用微信授权登录', icon: 'none' });
+        return;
+      }
+
+      try {
+        setLoadingAction('wechat');
+        await authService.startWechatH5Login();
+      } catch (error) {
+        Taro.showToast({ title: error.message || '微信授权登录失败', icon: 'none' });
+        setLoadingAction(null);
+      }
+      return;
+    }
 
     if (!isWeapp) {
       Taro.showToast({ title: '请在微信小程序中使用', icon: 'none' });
@@ -186,7 +233,9 @@ export default function Login() {
 
   const passwordBtnText = loadingAction === 'password' ? '登录中...' : '登录';
   const smsBtnText = loadingAction === 'sms' ? '登录中...' : '登录';
-  const wechatBtnText = loadingAction === 'wechat' ? '登录中...' : '微信一键登录';
+  const wechatBtnText = loadingAction === 'wechat'
+    ? (isH5 ? '授权中...' : '登录中...')
+    : (isH5 ? '微信授权登录' : '微信一键登录');
 
   return (
     <View className={`login-container${isWeapp ? ' login-container--weapp' : ''}${isH5 ? ' login-container--h5' : ''}`}>
@@ -270,7 +319,7 @@ export default function Login() {
                 <Input
                   className="input"
                   type="number"
-                  placeholder="6位验证码"
+                  placeholder="6 位验证码"
                   placeholderStyle="color: #55516e"
                   maxlength={6}
                   value={code}
@@ -342,7 +391,7 @@ export default function Login() {
             </View>
 
             <Text className="wechat-profile-card__tip">
-              微信小程序已不再直接返回真实头像和昵称，需要由用户主动选择后再同步到账号资料。
+              微信小程序已不再直接返回真实头像和昵称，需要由用户主动选择后再同步到账户资料。
             </Text>
           </View>
         )}

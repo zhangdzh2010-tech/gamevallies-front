@@ -9,6 +9,8 @@ const mockGetGame = jest.fn();
 const mockShowToast = jest.fn();
 const mockRequestPayment = jest.fn(() => Promise.resolve());
 const mockNavigateTo = jest.fn(() => Promise.resolve());
+const mockLaunchPaymentAction = jest.fn();
+const mockInvokeWechatH5Payment = jest.fn(() => Promise.resolve());
 
 const mockListeners = new Map();
 const mockStorage = {};
@@ -87,6 +89,15 @@ jest.mock('../../services/websocket', () => ({
     offMessage: jest.fn(),
   })),
 }));
+
+jest.mock('../../utils/paymentRuntime', () => {
+  const actual = jest.requireActual('../../utils/paymentRuntime');
+  return {
+    ...actual,
+    launchPaymentAction: (...args) => mockLaunchPaymentAction(...args),
+    invokeWechatH5Payment: (...args) => mockInvokeWechatH5Payment(...args),
+  };
+});
 
 const useQuotaStore = require('../quotaStore').default;
 const useGamePlayerStore = require('../gamePlayer').default;
@@ -219,6 +230,7 @@ describe('quotaStore payment unlock flow', () => {
 
   test('payment callback failure still recovers when order status is paid', async () => {
     mockRequestPayment.mockRejectedValueOnce(new Error('requestPayment:fail timeout'));
+    mockInvokeWechatH5Payment.mockResolvedValue(undefined);
     mockGetQuota
       .mockResolvedValueOnce({
         freeQuota: 0,
@@ -277,5 +289,73 @@ describe('quotaStore payment unlock flow', () => {
     expect(closed).toBe(false);
     expect(useQuotaStore.getState().showPaywall).toBe(true);
     expect(useQuotaStore.getState().pendingGameId).toBe('game-1');
+  });
+
+  test('h5 subscription can redirect to native or h5 pay url without requestPayment', async () => {
+    process.env.TARO_ENV = 'h5';
+    mockCreateOrder.mockResolvedValueOnce({
+      orderId: 'order-h5',
+      payment: {
+        payUrl: 'https://pay.example.com/cashier?token=abc',
+      },
+    });
+
+    useQuotaStore.getState().openPaywall({
+      gameId: 'game-1',
+      gameUrl: 'https://game.example/play',
+      gameTitle: 'Locked Game',
+      gameCover: 'https://img.example/cover.png',
+      gameOrientation: 'portrait',
+      resumePlay: true,
+    });
+
+    const result = await useQuotaStore.getState().subscribe('plan-pro');
+
+    expect(result).toBe(true);
+    expect(mockRequestPayment).not.toHaveBeenCalled();
+    expect(mockLaunchPaymentAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'h5_redirect',
+        url: 'https://pay.example.com/cashier?token=abc',
+      })
+    );
+    expect(useQuotaStore.getState().showPaywall).toBe(false);
+    expect(useQuotaStore.getState().paymentAttempt).toEqual(
+      expect.objectContaining({
+        orderId: 'order-h5',
+        status: 'redirecting_payment',
+      })
+    );
+  });
+
+  test('wechat h5 subscription can invoke jsapi without taro requestPayment', async () => {
+    process.env.TARO_ENV = 'h5';
+    Object.defineProperty(global, 'navigator', {
+      value: { userAgent: 'MicroMessenger' },
+      configurable: true,
+    });
+
+    mockCreateOrder.mockResolvedValueOnce({
+      orderId: 'order-h5-jsapi',
+      payment: {
+        timeStamp: '2',
+        nonceStr: 'nonce-h5',
+        package: 'prepay_id=wx123',
+        signType: 'RSA',
+        paySign: 'sign-h5',
+      },
+    });
+
+    const result = await useQuotaStore.getState().subscribe('plan-pro');
+
+    expect(result).toBe(true);
+    expect(mockRequestPayment).not.toHaveBeenCalled();
+    expect(mockInvokeWechatH5Payment).toHaveBeenCalledWith({
+      timeStamp: '2',
+      nonceStr: 'nonce-h5',
+      package: 'prepay_id=wx123',
+      signType: 'RSA',
+      paySign: 'sign-h5',
+    });
   });
 });

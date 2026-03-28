@@ -526,15 +526,17 @@ export default function Create() {
 
           <View className="form-group">
             <Text className="form-label">描述你的游戏创意</Text>
-            <Textarea
-              className="form-textarea"
-              placeholder="简单描述你想要的游戏，AI 会帮你扩展成完整方案..."
-              placeholderStyle="color: #55516e"
-              value={prompt}
-              onInput={(e) => setPrompt(e.detail.value)}
-              maxlength={2000}
-              autoHeight
-            />
+            <View className="form-input-wrap form-input-wrap--textarea">
+              <Textarea
+                className="form-textarea"
+                placeholder="简单描述你想要的游戏，AI 会帮你扩展成完整方案..."
+                placeholderStyle="color: #55516e"
+                value={prompt}
+                onInput={(e) => setPrompt(e.detail.value)}
+                maxlength={2000}
+                autoHeight
+              />
+            </View>
             <Text className="input-count">{prompt.length}/2000</Text>
           </View>
 

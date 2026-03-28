@@ -5,6 +5,13 @@ import * as subscriptionService from '../services/subscription';
 import { emitGameUnlocked } from '../utils/gameUnlock';
 import { getGameCoverUrl } from '../utils/media';
 import { getGameOrientation } from '../utils/gameOrientation';
+import {
+  getPaymentActionFailureMessage,
+  invokeWechatH5Payment,
+  launchPaymentAction,
+  resolveSubscriptionPaymentAction,
+} from '../utils/paymentRuntime';
+import { isH5Runtime } from '../utils/runtime';
 import { storage } from '../utils/storage';
 
 const QUOTA_CACHE_TTL = 5 * 60 * 1000;
@@ -14,7 +21,6 @@ const PAYMENT_STATUS_POLL_ATTEMPTS = 5;
 const PAYMENT_STATUS_POLL_DELAY_MS = 1200;
 const PAYMENT_AUDIT_KEY = 'subscription_payment_attempt';
 const PAYMENT_AUDIT_TTL = 7 * 24 * 60 * 60 * 1000;
-const REQUIRED_PAYMENT_FIELDS = ['timeStamp', 'nonceStr', 'package', 'signType', 'paySign'];
 const PAID_ORDER_STATUSES = new Set(['paid']);
 const FAILED_ORDER_STATUSES = new Set(['canceled', 'cancelled', 'failed', 'refunded']);
 
@@ -146,26 +152,6 @@ function getPaymentFailureMessage(stage, error, orderStatus = null) {
   return error?.message || '微信支付失败，请重试';
 }
 
-function getPaymentPayload(order) {
-  const payment = order?.payment;
-  if (!payment || typeof payment !== 'object') {
-    return null;
-  }
-
-  const missingField = REQUIRED_PAYMENT_FIELDS.find((field) => !payment[field]);
-  if (missingField) {
-    return null;
-  }
-
-  return {
-    timeStamp: payment.timeStamp,
-    nonceStr: payment.nonceStr,
-    package: payment.package,
-    signType: payment.signType,
-    paySign: payment.paySign,
-  };
-}
-
 async function persistPaymentAttempt(attempt) {
   try {
     await storage.setItem(PAYMENT_AUDIT_KEY, attempt, { ttl: PAYMENT_AUDIT_TTL });
@@ -197,6 +183,20 @@ const useQuotaStore = create((set, get) => ({
   paymentAttempt: null,
 
   _lastFetchTime: 0,
+
+  hydratePaymentAttempt: async () => {
+    if (get().paymentAttempt) {
+      return get().paymentAttempt;
+    }
+
+    const savedAttempt = await storage.getItem(PAYMENT_AUDIT_KEY);
+    if (savedAttempt) {
+      set({ paymentAttempt: savedAttempt });
+      return savedAttempt;
+    }
+
+    return null;
+  },
 
   fetchQuota: async (force = false) => {
     const { _lastFetchTime } = get();
@@ -386,6 +386,7 @@ const useQuotaStore = create((set, get) => ({
       stage: 'create_order',
       planId: normalizedPlanId,
       gameId: pendingGameId,
+      pendingPlayContext,
       orderId: null,
       orderStatus: null,
       lastError: null,
@@ -407,16 +408,23 @@ const useQuotaStore = create((set, get) => ({
     }
 
     const orderId = order?.orderId ? String(order.orderId) : null;
-    const paymentPayload = getPaymentPayload(order);
-
-    await get()._setPaymentAttempt({
-      status: paymentPayload ? 'awaiting_payment' : 'failed',
-      stage: paymentPayload ? 'request_payment' : 'invalid_payment',
-      orderId,
-      lastError: paymentPayload ? null : 'missing_payment_payload',
+    const paymentAction = resolveSubscriptionPaymentAction(order, {
+      runtime: process.env.TARO_ENV,
+      returnUrl: isH5Runtime() && typeof window !== 'undefined' ? window.location.href : '',
+      isWechatBrowser: isH5Runtime() && typeof navigator !== 'undefined'
+        ? /micromessenger/i.test(navigator.userAgent || '')
+        : false,
     });
 
-    if (!paymentPayload) {
+    await get()._setPaymentAttempt({
+      status: paymentAction ? 'awaiting_payment' : 'failed',
+      stage: paymentAction ? 'request_payment' : 'invalid_payment',
+      orderId,
+      pendingPlayContext,
+      lastError: paymentAction ? null : 'missing_payment_action',
+    });
+
+    if (!paymentAction) {
       set({ subscribing: false, subscribingPlanId: null });
       Taro.showToast({ title: getPaymentFailureMessage('invalid_payment'), icon: 'none' });
       return false;
@@ -424,28 +432,97 @@ const useQuotaStore = create((set, get) => ({
 
     let paymentError = null;
 
-    try {
-      await Taro.requestPayment(paymentPayload);
-    } catch (error) {
-      if (isPaymentCanceled(error)) {
+    if (paymentAction.kind === 'weapp_jsapi') {
+      try {
+        await Taro.requestPayment(paymentAction.payload);
+      } catch (error) {
+        if (isPaymentCanceled(error)) {
+          set({ subscribing: false, subscribingPlanId: null });
+          await get()._setPaymentAttempt({
+            status: 'cancelled',
+            stage: 'request_payment',
+            orderId,
+            pendingPlayContext,
+            lastError: getErrorMessage(error),
+          });
+          return false;
+        }
+
+        paymentError = error;
+        console.error('requestPayment failed:', error);
+      }
+    } else if (paymentAction.kind === 'wechat_h5_jsapi') {
+      try {
+        await invokeWechatH5Payment(paymentAction.payload);
+      } catch (error) {
+        if (isPaymentCanceled(error)) {
+          set({ subscribing: false, subscribingPlanId: null });
+          await get()._setPaymentAttempt({
+            status: 'cancelled',
+            stage: 'request_payment',
+            orderId,
+            pendingPlayContext,
+            lastError: getErrorMessage(error),
+          });
+          return false;
+        }
+
+        paymentError = error;
+        console.error('wechat h5 jsapi payment failed:', error);
+      }
+    } else if (paymentAction.kind === 'h5_redirect') {
+      await get()._setPaymentAttempt({
+        status: 'redirecting_payment',
+        stage: 'redirect_payment',
+        orderId,
+        pendingPlayContext,
+        lastError: null,
+      });
+
+      try {
+        launchPaymentAction(paymentAction);
+      } catch (error) {
+        console.error('launchPaymentAction failed:', error);
         set({ subscribing: false, subscribingPlanId: null });
         await get()._setPaymentAttempt({
-          status: 'cancelled',
-          stage: 'request_payment',
+          status: 'failed',
+          stage: 'redirect_payment',
           orderId,
+          pendingPlayContext,
           lastError: getErrorMessage(error),
         });
+        Taro.showToast({ title: error?.message || '无法打开微信支付，请稍后重试', icon: 'none' });
         return false;
       }
 
-      paymentError = error;
-      console.error('requestPayment failed:', error);
+      set({
+        showPaywall: false,
+        pendingGameId: null,
+        pendingPlayContext: null,
+        subscribing: false,
+        subscribingPlanId: null,
+      });
+
+      Taro.showToast({ title: '正在打开微信支付，请支付完成后返回', icon: 'none' });
+      return true;
+    } else {
+      set({ subscribing: false, subscribingPlanId: null });
+      await get()._setPaymentAttempt({
+        status: 'failed',
+        stage: 'request_payment',
+        orderId,
+        pendingPlayContext,
+        lastError: getPaymentActionFailureMessage(paymentAction),
+      });
+      Taro.showToast({ title: getPaymentActionFailureMessage(paymentAction), icon: 'none' });
+      return false;
     }
 
     await get()._setPaymentAttempt({
       status: 'verifying_payment',
       stage: 'verify_payment',
       orderId,
+      pendingPlayContext,
       lastError: paymentError ? getErrorMessage(paymentError) : null,
     });
 
@@ -458,6 +535,7 @@ const useQuotaStore = create((set, get) => ({
       status: subscriptionConfirmed ? 'syncing_entitlement' : 'verifying_payment',
       stage: subscriptionConfirmed ? (pendingGameId ? 'unlock_game' : 'refresh_quota') : 'verify_payment',
       orderId,
+      pendingPlayContext,
       orderStatus: normalizeOrderStatus(orderStatus?.status) || null,
       lastError: paymentError ? getErrorMessage(paymentError) : null,
     });
@@ -468,6 +546,7 @@ const useQuotaStore = create((set, get) => ({
         status: 'failed',
         stage: 'verify_payment',
         orderId,
+        pendingPlayContext,
         orderStatus: normalizeOrderStatus(orderStatus?.status),
         lastError: getOrderFailureMessage(orderStatus) || getErrorMessage(paymentError),
       });
@@ -481,6 +560,7 @@ const useQuotaStore = create((set, get) => ({
         status: 'failed',
         stage: 'request_payment',
         orderId,
+        pendingPlayContext,
         orderStatus: normalizeOrderStatus(orderStatus?.status) || null,
         lastError: getErrorMessage(paymentError),
       });
@@ -519,6 +599,7 @@ const useQuotaStore = create((set, get) => ({
         status: 'completed',
         stage: 'done',
         orderId,
+        pendingPlayContext: null,
         orderStatus: normalizeOrderStatus(orderStatus?.status) || 'paid',
         lastError: null,
       });
@@ -549,6 +630,7 @@ const useQuotaStore = create((set, get) => ({
         status: entitlementConfirmed ? 'completed_with_warning' : 'failed',
         stage: 'sync_post_payment',
         orderId,
+        pendingPlayContext,
         orderStatus: normalizeOrderStatus(latestOrderStatus?.status) || null,
         lastError: getErrorMessage(error),
       });
@@ -566,6 +648,106 @@ const useQuotaStore = create((set, get) => ({
 
   refreshAfterPayment: async () => {
     await get().fetchQuota(true);
+  },
+
+  resumePendingPayment: async (options = {}) => {
+    const silent = options.silent !== false;
+    const paymentAttempt = get().paymentAttempt || (await get().hydratePaymentAttempt());
+    if (!paymentAttempt?.orderId || get().subscribing) {
+      return false;
+    }
+
+    const resumableStatuses = new Set([
+      'awaiting_payment',
+      'redirecting_payment',
+      'verifying_payment',
+      'syncing_entitlement',
+      'completed_with_warning',
+    ]);
+
+    if (!resumableStatuses.has(normalizeOrderStatus(paymentAttempt.status))) {
+      return false;
+    }
+
+    const orderId = String(paymentAttempt.orderId);
+    const pendingGameId = get().pendingGameId || paymentAttempt.gameId || null;
+    const pendingPlayContext = get().pendingPlayContext || paymentAttempt.pendingPlayContext || null;
+    const confirmation = await get()._waitForPaymentConfirmation(orderId);
+    const orderStatus = confirmation.orderStatus;
+    const subscriptionConfirmed =
+      confirmation.subscriptionActive || isPaidOrder(orderStatus?.status);
+
+    if (isFailedOrder(orderStatus?.status)) {
+      await get()._setPaymentAttempt({
+        status: 'failed',
+        stage: 'verify_payment',
+        orderId,
+        orderStatus: normalizeOrderStatus(orderStatus?.status),
+        pendingPlayContext,
+        lastError: getOrderFailureMessage(orderStatus),
+      });
+
+      if (!silent) {
+        Taro.showToast({ title: getOrderFailureMessage(orderStatus), icon: 'none' });
+      }
+
+      return false;
+    }
+
+    if (!subscriptionConfirmed) {
+      return false;
+    }
+
+    try {
+      if (pendingGameId) {
+        await get()._completePendingUnlockAfterPayment(pendingGameId, pendingPlayContext);
+      } else {
+        await get().fetchQuota(true);
+      }
+
+      set({
+        showPaywall: false,
+        pendingGameId: null,
+        pendingPlayContext: null,
+        subscribing: false,
+        subscribingPlanId: null,
+      });
+
+      await get()._setPaymentAttempt({
+        status: 'completed',
+        stage: 'done',
+        orderId,
+        orderStatus: normalizeOrderStatus(orderStatus?.status) || 'paid',
+        pendingPlayContext: null,
+        lastError: null,
+      });
+
+      if (!silent) {
+        Taro.showToast({ title: '订阅成功', icon: 'success' });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('resumePendingPayment failed:', error);
+
+      await get()._setPaymentAttempt({
+        status: 'completed_with_warning',
+        stage: 'sync_post_payment',
+        orderId,
+        orderStatus: normalizeOrderStatus(orderStatus?.status) || 'paid',
+        pendingPlayContext,
+        lastError: getErrorMessage(error),
+      });
+
+      if (!silent) {
+        Taro.showToast({
+          title: error?.message || '订阅已生效，请重新进入作品确认权益',
+          icon: 'none',
+        });
+      }
+
+      return true;
+    }
   },
 
   updateAfterCreate: (canPlay, quotaRemaining) => {

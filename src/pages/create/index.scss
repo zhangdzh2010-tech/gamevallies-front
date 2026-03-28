@@ -116,6 +116,10 @@
         overflow: hidden;
       }
 
+      .form-input-wrap--textarea {
+        background: #111118;
+      }
+
       .form-input {
         width: 100%;
         min-height: 72px;
@@ -168,9 +172,9 @@
 
       .form-textarea {
         width: 100%;
-        background: #111118;
-        border: 1px solid #252535;
-        border-radius: 16px;
+        background: transparent !important;
+        border: none;
+        border-radius: 0;
         padding: 18px 20px;
         font-size: 26px;
         color: #eae8f4;
@@ -178,10 +182,22 @@
         min-height: 180px;
         line-height: 1.6;
         display: block;
+        appearance: none;
+        -webkit-appearance: none;
+        box-shadow: none;
 
         &:focus-within {
-          border-color: #3a3950;
-          background: #111118;
+          background: transparent !important;
+        }
+
+        &,
+        textarea,
+        .taro-textarea,
+        .weui-textarea {
+          background: transparent !important;
+          color: #eae8f4;
+          box-shadow: none;
+          -webkit-box-shadow: none;
         }
 
         textarea {
@@ -197,6 +213,9 @@
           font: inherit;
           line-height: inherit;
           box-sizing: border-box;
+          appearance: none;
+          -webkit-appearance: none;
+          -webkit-text-fill-color: #eae8f4;
 
           &::placeholder {
             color: #55516e;
@@ -204,7 +223,7 @@
 
           &:focus {
             border: 0;
-            background: transparent;
+            background: transparent !important;
           }
         }
       }
@@ -1061,6 +1080,10 @@
       .form-input-wrap,
       .form-textarea {
         border-radius: 14px;
+      }
+
+      .form-input-wrap--textarea {
+        background: #111118;
       }
 
       .form-input {

@@ -737,33 +737,32 @@
     }
 
     .detail-content {
-      max-width: 480px;
+      max-width: 432px;
       margin: 0 auto;
-      padding: 14px 12px 0;
+      padding: 16px 14px 0;
 
       .title-section {
-        margin-bottom: 16px;
-        padding: 16px 14px 14px;
-        border-radius: 18px;
+        margin-bottom: 18px;
+        padding: 18px 16px 16px;
+        border-radius: 20px;
 
         .title {
-          font-size: clamp(24px, 7vw, 28px);
-          margin-bottom: 8px;
+          font-size: clamp(24px, 7vw, 30px);
+          margin-bottom: 10px;
           letter-spacing: 0;
         }
 
         .description {
-          font-size: 14px;
-          line-height: 1.55;
+          font-size: 15px;
+          line-height: 1.6;
         }
       }
 
       .author-row {
-        flex-direction: column;
-        align-items: stretch;
         gap: 12px;
-        padding: 14px;
-        margin-bottom: 16px;
+        padding: 16px;
+        margin-bottom: 18px;
+        border-radius: 20px;
 
         .author-info {
           gap: 12px;
@@ -787,7 +786,7 @@
             gap: 4px;
 
             .author-name {
-              font-size: 16px;
+              font-size: 17px;
             }
 
             .author-desc {
@@ -798,7 +797,7 @@
         }
 
         .follow-btn {
-          align-self: flex-start;
+          flex-shrink: 0;
           min-height: 36px;
           padding: 0 14px;
           font-size: 13px;
@@ -811,91 +810,98 @@
 
       .stats-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-        margin-bottom: 16px;
+        gap: 10px;
+        margin-bottom: 18px;
 
         .stat-item {
-          padding: 14px 10px 12px;
+          padding: 16px 12px 14px;
+          border-radius: 18px;
 
           .stat-icon {
-            width: 24px;
-            height: 24px;
-            margin-bottom: 8px;
+            width: 28px;
+            height: 28px;
+            margin-bottom: 10px;
           }
 
           .stat-value {
-            font-size: 16px;
-            margin-bottom: 3px;
+            font-size: 18px;
+            margin-bottom: 4px;
           }
 
           .stat-text {
-            font-size: 11px;
+            font-size: 12px;
           }
         }
       }
 
       .action-buttons {
-        gap: 8px;
-        margin-bottom: 16px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
 
         .play-btn {
+          grid-column: 1 / -1;
           min-height: 74px;
-          padding: 14px;
-          border-radius: 18px;
-          gap: 10px;
+          padding: 16px;
+          border-radius: 20px;
+          gap: 12px;
 
           .btn-icon {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
           }
 
           .btn-copy {
-            gap: 2px;
+            gap: 4px;
           }
 
           .btn-text {
-            font-size: 18px;
+            font-size: 20px;
           }
 
           .btn-subtext {
-            font-size: 12px;
+            font-size: 13px;
             line-height: 1.4;
           }
         }
 
         .icon-btn {
-          flex: 1 1 calc(50% - 4px);
-          min-height: 68px;
-          padding: 12px 12px 10px;
-          gap: 8px;
+          min-height: 84px;
+          padding: 14px 12px;
+          gap: 10px;
           border-radius: 18px;
+          display: grid;
+          grid-template-columns: 24px minmax(0, 1fr);
+          align-items: center;
+          justify-content: stretch;
 
           .icon-symbol {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
           }
 
           .icon-copy {
-            gap: 2px;
+            gap: 3px;
           }
 
           .icon-value {
-            font-size: 14px;
+            font-size: 15px;
           }
 
           .icon-label {
-            font-size: 11px;
-            line-height: 1.3;
+            font-size: 12px;
+            line-height: 1.35;
           }
         }
       }
 
       .tags-section {
-        gap: 6px;
-        margin-bottom: 16px;
+        gap: 8px;
+        margin-bottom: 18px;
 
         .tag {
-          padding: 7px 12px;
+          padding: 8px 14px;
           font-size: 12px;
         }
       }
@@ -1014,7 +1020,7 @@
       }
 
       .bottom-spacer {
-        min-height: 96px;
+        min-height: 104px;
       }
     }
   }
@@ -1064,8 +1070,33 @@
         }
 
         .action-buttons {
+          gap: 8px;
+
+          .play-btn {
+            min-height: 78px;
+            padding: 14px;
+
+            .btn-text {
+              font-size: 18px;
+            }
+
+            .btn-subtext {
+              font-size: 12px;
+            }
+          }
+
           .icon-btn {
-            flex-basis: 100%;
+            min-height: 78px;
+            padding: 12px 10px;
+          }
+        }
+
+        .author-row {
+          flex-direction: column;
+          align-items: stretch;
+
+          .follow-btn {
+            align-self: flex-start;
           }
         }
       }
@@ -1084,9 +1115,29 @@
         padding-left: 10px;
         padding-right: 10px;
 
+        .stats-row {
+          gap: 8px;
+        }
+
         .action-buttons {
+          gap: 8px;
+
           .icon-btn {
-            flex-basis: 100%;
+            min-height: 74px;
+            grid-template-columns: 22px minmax(0, 1fr);
+
+            .icon-symbol {
+              width: 22px;
+              height: 22px;
+            }
+
+            .icon-value {
+              font-size: 14px;
+            }
+
+            .icon-label {
+              font-size: 11px;
+            }
           }
         }
 

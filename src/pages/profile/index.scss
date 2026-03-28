@@ -12,12 +12,14 @@
     padding: 34px 30px 24px;
 
     .header-top {
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+      column-gap: 20px;
       margin-bottom: 14px;
 
       .header-avatar {
+        grid-row: 1 / span 2;
         flex-shrink: 0;
         display: flex;
         align-items: center;
@@ -44,26 +46,24 @@
         background: rgba(110, 86, 255, 0.12);
       }
 
-      .header-right {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        margin-left: 20px;
-        gap: 16px;
+      .header-main {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: auto auto;
+        row-gap: 16px;
       }
 
-        .header-actions {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 12px;
+      .header-actions {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
 
-          .settings-btn {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
+        .settings-btn {
+          width: 52px;
+          height: 52px;
+          border-radius: 16px;
           background: rgba(110, 86, 255, 0.12);
           display: flex;
           align-items: center;
@@ -82,9 +82,14 @@
         }
 
         .logout-btn {
+          min-width: 88px;
+          min-height: 52px;
           padding: 12px 24px;
           border-radius: 14px;
           background: rgba(255, 92, 138, 0.15);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           cursor: pointer;
 
           .logout-text {
@@ -97,6 +102,13 @@
             background: rgba(255, 92, 138, 0.25);
           }
         }
+      }
+
+      .header-quota-row {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+        min-width: 0;
       }
     }
 
@@ -1505,9 +1517,8 @@
         font-size: 72rpx;
       }
 
-      .header-right {
-        margin-left: 24rpx;
-        gap: 18rpx;
+      .header-main {
+        row-gap: 18rpx;
       }
 
       .header-actions {
@@ -1528,6 +1539,10 @@
             font-size: 28rpx;
           }
         }
+      }
+
+      .header-quota-row {
+        gap: 18rpx;
       }
     }
 
@@ -2132,34 +2147,60 @@
 
 // Quota info bar
 .profile-container .profile-header .header-top .quota-info-bar {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'icon text'
+    'icon sub';
   align-items: center;
-  justify-content: flex-end;
-  padding: 0;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(18, 18, 28, 0.76), rgba(9, 13, 22, 0.86));
+  border: 1px solid rgba(110, 86, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .profile-container .profile-header .header-top .quota-info-icon {
-  font-size: 28rpx;
-  margin-right: 10rpx;
+  grid-area: icon;
+  min-width: 50px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  background: rgba(110, 86, 255, 0.16);
+  color: #d6d0ff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .profile-container .profile-header .header-top .quota-info-text {
-  font-size: 26rpx;
-  font-weight: 600;
+  grid-area: text;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 700;
   color: #ffffff;
-  flex-shrink: 0;
-  white-space: nowrap;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .profile-container .profile-header .header-top .quota-info-sub {
-  font-size: 24rpx;
+  grid-area: sub;
+  min-width: 0;
+  font-size: 16px;
   color: #8b87a3;
-  margin-left: 10rpx;
-  flex-shrink: 0;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .profile-container .profile-header .header-top .quota-subscribe-btn {
@@ -2167,17 +2208,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 56rpx;
-  margin-left: 16rpx;
-  padding: 14rpx 28rpx;
-  border-radius: 14rpx;
+  min-width: 96px;
+  padding: 0 20px;
+  border-radius: 18px;
   background: rgba(110, 86, 255, 0.15);
   white-space: nowrap;
+  border: 1px solid rgba(110, 86, 255, 0.18);
 }
 
 .profile-container .profile-header .header-top .quota-subscribe-btn .quota-subscribe-text {
-  font-size: 26rpx;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: #6e56ff;
   line-height: 1;
   white-space: nowrap;
@@ -2196,9 +2237,7 @@
     padding: 18px 14px 16px;
 
     .header-top {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: start;
+      grid-template-columns: 72px minmax(0, 1fr);
       column-gap: 12px;
       margin-bottom: 10px;
 
@@ -2217,29 +2256,17 @@
         font-size: 34px;
       }
 
-      .header-right {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        grid-template-areas: 'quota actions';
-        align-items: start;
-        min-width: 0;
-        width: 100%;
-        margin-left: 0;
-        gap: 10px;
+      .header-main {
+        row-gap: 10px;
       }
 
       .header-actions {
-        grid-area: actions;
-        flex-direction: column;
-        align-items: stretch;
-        justify-content: flex-start;
-        gap: 8px;
-        min-width: 54px;
+        gap: 10px;
+        justify-content: flex-end;
 
         .settings-btn {
           width: 38px;
           height: 38px;
-          align-self: flex-end;
           border-radius: 12px;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background: linear-gradient(180deg, rgba(110, 86, 255, 0.18), rgba(110, 86, 255, 0.08));
@@ -2252,12 +2279,10 @@
         }
 
         .logout-btn {
+          min-width: 68px;
           min-height: 38px;
           padding: 0 12px;
           border-radius: 12px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
 
           .logout-text {
             font-size: 14px;
@@ -2266,82 +2291,40 @@
         }
       }
 
+      .header-quota-row {
+        gap: 8px;
+        align-items: stretch;
+      }
+
       .quota-info-bar {
-        grid-area: quota;
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        grid-template-areas:
-          'icon text button'
-          'icon sub button';
-        width: 100%;
-        min-width: 0;
-        align-items: center;
         padding: 10px 12px;
         border-radius: 16px;
-        background: linear-gradient(180deg, rgba(18, 18, 28, 0.74), rgba(9, 13, 22, 0.84));
-        border: 1px solid rgba(110, 86, 255, 0.14);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         column-gap: 8px;
         row-gap: 4px;
       }
 
       .quota-info-icon {
-        grid-area: icon;
-        margin-right: 0;
         min-width: 42px;
         height: 26px;
         padding: 0 10px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(110, 86, 255, 0.16);
-        color: #d6d0ff;
         font-size: 12px;
-        font-weight: 700;
-        line-height: 1.2;
-        white-space: nowrap;
       }
 
       .quota-info-text {
-        grid-area: text;
-        min-width: 0;
         font-size: 15px;
-        font-weight: 700;
-        line-height: 1.3;
-        white-space: normal;
-        word-break: break-word;
       }
 
       .quota-info-sub {
-        grid-area: sub;
-        min-width: 0;
-        margin-left: 0;
         font-size: 12px;
-        line-height: 1.35;
-        white-space: normal;
-        word-break: break-word;
       }
 
       .quota-subscribe-btn {
-        grid-area: button;
-        justify-self: end;
-        align-self: center;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 58px;
-        min-height: 34px;
-        margin-left: 0;
-        margin-top: 0;
+        min-width: 62px;
         padding: 0 14px;
         border-radius: 12px;
-        white-space: nowrap;
 
         .quota-subscribe-text {
           font-size: 13px;
-          line-height: 1;
-          white-space: nowrap;
         }
       }
     }
@@ -2978,14 +2961,20 @@
   .profile-container.profile-container--h5 {
     .profile-header {
       .header-top {
-        .header-right {
-          grid-template-columns: minmax(0, 1fr) 50px;
-          gap: 8px;
-        }
+        grid-template-columns: 68px minmax(0, 1fr);
 
         .quota-info-bar {
           padding: 9px 10px;
           column-gap: 7px;
+        }
+
+        .header-actions {
+          gap: 8px;
+
+          .logout-btn {
+            min-width: 62px;
+            padding: 0 10px;
+          }
         }
       }
     }
@@ -3013,22 +3002,45 @@
           font-size: 30px;
         }
 
+        .header-actions {
+          gap: 6px;
+
+          .settings-btn {
+            width: 36px;
+            height: 36px;
+          }
+
+          .logout-btn {
+            min-width: 58px;
+            min-height: 36px;
+          }
+        }
+
+        .header-quota-row {
+          gap: 6px;
+        }
+
         .quota-info-bar {
-          grid-template-columns: auto minmax(0, 1fr);
-          grid-template-areas:
-            'icon text'
-            'sub sub'
-            'button button';
-          align-items: start;
+          padding: 8px 9px;
+          column-gap: 6px;
+        }
+
+        .quota-info-icon {
+          min-width: 38px;
+          font-size: 11px;
+        }
+
+        .quota-info-text {
+          font-size: 14px;
         }
 
         .quota-info-sub {
-          padding-left: 0;
+          font-size: 11px;
         }
 
         .quota-subscribe-btn {
-          justify-self: start;
-          margin-top: 2px;
+          min-width: 54px;
+          padding: 0 12px;
         }
       }
     }

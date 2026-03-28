@@ -249,79 +249,81 @@
     border-radius: 14px;
 
     .game-preview {
+      aspect-ratio: 15/11;
+
       .game-emoji {
-        font-size: clamp(38px, 11vw, 46px);
+        font-size: clamp(34px, 10vw, 42px);
       }
 
       .hot-badge {
         top: 6px;
         left: 6px;
-        padding: 4px 8px;
+        padding: 4px 7px;
         border-radius: 6px;
-        font-size: 12px;
+        font-size: 11px;
       }
 
       .detail-entry-btn {
         right: 8px;
         bottom: 8px;
-        min-width: 36px;
-        height: 32px;
-        padding: 0 10px;
-        border-radius: 18px;
+        min-width: 34px;
+        height: 30px;
+        padding: 0 9px;
+        border-radius: 16px;
 
         .detail-entry-dots {
-          font-size: 24px;
+          font-size: 22px;
         }
       }
 
       .preview-overlay {
-        padding: 16px 10px 8px;
+        padding: 14px 8px 7px;
 
         .author-row {
           .author-name {
-            font-size: 14px;
+            font-size: 13px;
           }
         }
 
         .stats-row {
-          gap: 10px;
-          margin-left: 6px;
+          gap: 8px;
+          margin-left: 4px;
 
           &.stats-row--play-only {
             .stat-text {
-              gap: 6px;
-              font-size: 18px;
+              gap: 5px;
+              font-size: 17px;
 
               .stat-icon {
-                width: 18px;
-                height: 18px;
+                width: 16px;
+                height: 16px;
               }
 
               .stat-value {
-                font-size: 18px;
+                font-size: 17px;
               }
             }
           }
 
           .stat-text {
             gap: 4px;
-            font-size: 15px;
+            font-size: 14px;
 
             &.play-text {
-              gap: 8px;
+              gap: 7px;
             }
 
             .stat-icon {
-              width: 18px;
-              height: 18px;
+              width: 16px;
+              height: 16px;
             }
 
             .stat-value {
-              font-size: 15px;
+              font-size: 14px;
             }
 
             &.bookmark-text {
-              min-width: 42px;
+              min-width: 38px;
             }
           }
         }
@@ -329,10 +331,59 @@
     }
 
     .game-info {
-      padding: 10px 12px 12px;
+      padding: 9px 10px 11px;
 
       .game-title {
-        font-size: 18px;
+        font-size: 17px;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .game-card {
+    .game-preview {
+      aspect-ratio: 16/11;
+
+      .game-emoji {
+        font-size: 34px;
+      }
+
+      .preview-overlay {
+        padding: 12px 7px 7px;
+
+        .stats-row {
+          &.stats-row--play-only {
+            .stat-text {
+              font-size: 16px;
+
+              .stat-icon {
+                width: 15px;
+                height: 15px;
+              }
+
+              .stat-value {
+                font-size: 16px;
+              }
+            }
+          }
+
+          .stat-text {
+            font-size: 13px;
+
+            .stat-value {
+              font-size: 13px;
+            }
+          }
+        }
+      }
+    }
+
+    .game-info {
+      padding: 8px 10px 10px;
+
+      .game-title {
+        font-size: 16px;
       }
     }
   }
