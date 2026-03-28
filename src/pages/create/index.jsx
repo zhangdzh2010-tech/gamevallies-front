@@ -25,6 +25,7 @@ import {
   openProfilePageWithTab,
 } from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
+import { getSafeSystemInfo } from '../../utils/systemInfo';
 import './index.scss';
 
 const EXAMPLE_PROMPTS = [
@@ -99,7 +100,7 @@ export default function Create() {
   const [orientation, setOrientation] = useState('portrait');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
-  const { windowHeight = 720 } = Taro.getSystemInfoSync();
+  const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
   const containerClassName = `create-container${isWeapp ? ' create-container--weapp' : ''}`;
 

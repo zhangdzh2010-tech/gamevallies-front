@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
 import useGamePlayerStore from '../../stores/gamePlayer';
+import { getSafeStatusBarHeight } from '../../utils/systemInfo';
 import './GamePlayer.scss';
 
 export function GamePlayer({ gameUrl, gameTitle, onClose }) {
-  const statusBarHeight = Taro.getSystemInfoSync().statusBarHeight || 44;
+  const statusBarHeight = process.env.TARO_ENV === 'weapp' ? getSafeStatusBarHeight() : 0;
   const [fullscreen, setFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(false);
