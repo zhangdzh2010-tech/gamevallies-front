@@ -16,6 +16,13 @@ describe('media cover helpers', () => {
     })).toBe('https://img.example/thumb.png');
   });
 
+  test('accepts backend relative cover urls as-is', () => {
+    expect(getGameCoverUrl({
+      coverUrl: '/covers/game-1.png?taskId=task-1&previewToken=token-1',
+      thumbnailUrl: 'https://img.example/thumb.png',
+    })).toBe('/covers/game-1.png?taskId=task-1&previewToken=token-1');
+  });
+
   test('accepts an explicit fallback string for non-game context objects', () => {
     expect(getGameCoverUrl({}, 'https://img.example/fallback.png')).toBe(
       'https://img.example/fallback.png'

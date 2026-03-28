@@ -114,9 +114,9 @@
           gap: 4px;
 
           .back-arrow {
-            font-size: 20px;
-            font-weight: 600;
-            line-height: 1;
+            width: 16px;
+            height: 16px;
+            background: center / contain no-repeat url('../../images/ui-icons/close.svg');
           }
           .back-text {
             font-size: 16px;

@@ -506,7 +506,7 @@ function buildFallbackCompletedGame(task, state) {
     status: state.currentGame?.status || 'draft',
     gameUrl: gameUrl || state.currentGame?.gameUrl || '',
     previewUrl: previewUrl || state.currentGame?.previewUrl || '',
-    coverUrl: previewUrl || gameUrl || state.currentGame?.coverUrl || '',
+    coverUrl: task?.coverUrl || state.currentGame?.coverUrl || '',
     canPlay: state.canPlay !== false,
     requireSubscription: state.canPlay === false,
   };

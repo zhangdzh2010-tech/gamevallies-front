@@ -665,9 +665,7 @@ export default function GameWebShellPage() {
       <View className="game-web-shell-actions">
         <View className="game-web-shell-action" onClick={handleLike}>
           <View className="game-web-shell-action__button">
-            <Text className={`game-web-shell-action__icon${isLiked ? ' is-active' : ''}`}> 
-              {isLiked ? '♥' : '♡'}
-            </Text>
+            <View className={`game-web-shell-action__icon game-web-shell-action__icon--like${isLiked ? ' is-active' : ''}`} />
           </View>
           <View className="game-web-shell-action__meta">
             <Text className="game-web-shell-action__count">
@@ -679,9 +677,7 @@ export default function GameWebShellPage() {
 
         <View className="game-web-shell-action" onClick={handleBookmark}>
           <View className="game-web-shell-action__button">
-            <Text className={`game-web-shell-action__icon${isBookmarked ? ' is-bookmarked' : ''}`}> 
-              {isBookmarked ? '★' : '☆'}
-            </Text>
+            <View className={`game-web-shell-action__icon game-web-shell-action__icon--bookmark${isBookmarked ? ' is-bookmarked' : ''}`} />
           </View>
           <View className="game-web-shell-action__meta">
             <Text className="game-web-shell-action__count">{formatNumber(bookmarkCount)}</Text>
@@ -691,7 +687,7 @@ export default function GameWebShellPage() {
 
         <View className="game-web-shell-action" onClick={handleComment}>
           <View className="game-web-shell-action__button">
-            <Text className="game-web-shell-action__icon">评</Text>
+            <View className="game-web-shell-action__icon game-web-shell-action__icon--comment" />
           </View>
           <View className="game-web-shell-action__meta">
             <Text className="game-web-shell-action__count">{formatNumber(commentCount)}</Text>

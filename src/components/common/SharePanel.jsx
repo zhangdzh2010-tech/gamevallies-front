@@ -107,7 +107,7 @@ export function SharePanel({
         <View className="share-actions">
           {isWeapp ? (
             <Button className="share-primary-btn" openType="share">
-              <Text className="share-primary-btn__icon">↗</Text>
+              <View className="share-primary-btn__icon" />
               <View className="share-primary-btn__copy">
                 <Text className="share-primary-btn__title">立即分享给好友</Text>
                 <Text className="share-primary-btn__desc">微信会使用当前页面的原生分享能力</Text>
@@ -115,7 +115,7 @@ export function SharePanel({
             </Button>
           ) : (
             <View className="share-primary-btn" onClick={handleShareToFriend}>
-              <Text className="share-primary-btn__icon">↗</Text>
+              <View className="share-primary-btn__icon" />
               <View className="share-primary-btn__copy">
                 <Text className="share-primary-btn__title">复制链接或系统分享</Text>
                 <Text className="share-primary-btn__desc">支持浏览器原生分享，不支持时自动复制链接</Text>

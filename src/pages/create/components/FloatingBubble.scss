@@ -56,8 +56,10 @@
     align-items: center;
     justify-content: center;
 
-    .bubble-emoji {
-      font-size: 28px;
+    .bubble-icon {
+      width: 28px;
+      height: 28px;
+      background: center / contain no-repeat url('../../../images/ui-icons/gamepad.svg');
     }
   }
 

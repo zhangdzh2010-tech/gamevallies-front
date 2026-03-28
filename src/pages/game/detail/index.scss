@@ -31,11 +31,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #eae8f4;
-    font-size: 33px;
     cursor: pointer;
     box-shadow: $overlay-shadow;
     pointer-events: auto;
+
+    .back-btn__icon {
+      width: 24px;
+      height: 24px;
+      background: center / contain no-repeat url('../../../images/ui-icons/arrow-left.svg');
+      flex-shrink: 0;
+    }
 
     &:active { background: rgba(17, 17, 24, 0.95); }
   }
@@ -53,14 +58,39 @@
       align-items: center;
       justify-content: center;
       position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #6e56ff30 0%, #6e56ff50 100%);
 
-      .preview-emoji { font-size: 144px; }
+      .preview-cover {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .preview-emoji {
+        font-size: 144px;
+        position: relative;
+        z-index: 1;
+      }
     }
 
     .back-btn { display: none; }
 
     .detail-content {
       padding: 36px 30px;
+
+      .stat-icon,
+      .btn-icon,
+      .icon-symbol,
+      .comments-title-icon,
+      .comments-empty-icon,
+      .comment-action-icon {
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        flex-shrink: 0;
+      }
 
       .title-section {
         margin-bottom: 36px;
@@ -176,12 +206,27 @@
           @include game-surface-card();
           padding: 28px 16px 24px;
           text-align: center;
-          .stat-label {
+          .stat-icon {
             display: block;
-            font-size: 38px;
-            line-height: 1;
-            color: #f4f2ff;
-            margin-bottom: 14px;
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 16px;
+
+            &.stat-icon--plays {
+              background-image: url('../../../images/detail-icons/play.svg');
+            }
+
+            &.stat-icon--likes {
+              background-image: url('../../../images/detail-icons/heart.svg');
+            }
+
+            &.stat-icon--forks {
+              background-image: url('../../../images/detail-icons/fork.svg');
+            }
+
+            &.stat-icon--clock {
+              background-image: url('../../../images/detail-icons/clock.svg');
+            }
           }
           .stat-value { display: block; font-size: 30px; font-weight: 800; color: #f8f6ff; margin-bottom: 8px; }
           .stat-text { display: block; font-size: 21px; color: #8b87a3; }
@@ -210,7 +255,18 @@
           cursor: pointer;
           min-height: 122px;
           box-shadow: 0 16px 34px rgba(110, 86, 255, 0.26);
-          .btn-icon { font-size: 38px; line-height: 1; }
+          .btn-icon {
+            width: 52px;
+            height: 52px;
+
+            &.btn-icon--play {
+              background-image: url('../../../images/detail-icons/play.svg');
+            }
+
+            &.btn-icon--lock {
+              background-image: url('../../../images/detail-icons/lock.svg');
+            }
+          }
           .btn-copy {
             display: flex;
             flex-direction: column;
@@ -257,23 +313,30 @@
           gap: 14px;
           min-height: 118px;
 
-          > text:first-child {
-            font-size: 30px;
-            line-height: 1;
-          }
-
-          .count {
-            font-size: 23px;
-            line-height: 1.3;
-            white-space: nowrap;
-          }
-
           .icon-symbol {
-            width: 42px;
-            text-align: center;
-            font-size: 34px;
-            line-height: 1;
-            flex-shrink: 0;
+            width: 46px;
+            height: 46px;
+            opacity: 0.96;
+
+            &.icon-symbol--like {
+              background-image: url('../../../images/detail-icons/heart.svg');
+            }
+
+            &.icon-symbol--comment {
+              background-image: url('../../../images/detail-icons/comment.svg');
+            }
+
+            &.icon-symbol--bookmark {
+              background-image: url('../../../images/detail-icons/bookmark.svg');
+            }
+
+            &.icon-symbol--share {
+              background-image: url('../../../images/detail-icons/share.svg');
+            }
+
+            &.icon-symbol--fork {
+              background-image: url('../../../images/detail-icons/fork.svg');
+            }
           }
 
           .icon-copy {
@@ -298,25 +361,28 @@
             color: #8b87a3;
           }
 
-          &.fork-btn {
-            .count.count--overlay { display: none; }
-          }
           &.like-btn.liked {
             color: #ff5c8a;
             border-color: rgba(255, 92, 138, 0.32);
 
-            .icon-symbol,
             .icon-value {
               color: #ff5c8a;
+            }
+
+            .icon-symbol--like {
+              background-image: url('../../../images/detail-icons/heart-active.svg');
             }
           }
           &.bookmark-btn.bookmarked {
             color: #fbbf24;
             border-color: rgba(251, 191, 36, 0.3);
 
-            .icon-symbol,
             .icon-value {
               color: #fbbf24;
+            }
+
+            .icon-symbol--bookmark {
+              background-image: url('../../../images/detail-icons/bookmark-active.svg');
             }
           }
           &.bookmark-btn {
@@ -343,6 +409,10 @@
             color: #55516e;
             border-color: #1d1d28;
             background: rgba(17, 17, 24, 0.72);
+
+            .icon-symbol {
+              opacity: 0.42;
+            }
           }
           &:active { background: #15151e; }
         }
@@ -366,11 +436,22 @@
       // ── Comments Section ────────────────────────────────────────
       .comments-section {
         .comments-title {
-          display: block;
-          font-size: 34px;
-          font-weight: 700;
-          color: #eae8f4;
+          display: flex;
+          align-items: center;
+          gap: 14px;
           margin-bottom: 28px;
+
+          .comments-title-icon {
+            width: 30px;
+            height: 30px;
+            background-image: url('../../../images/detail-icons/comment.svg');
+          }
+
+          .comments-title-text {
+            font-size: 34px;
+            font-weight: 700;
+            color: #eae8f4;
+          }
         }
 
         .comments-loading,
@@ -378,7 +459,14 @@
           text-align: center;
           padding: 48px 0;
           color: #4a4760;
-          .comments-empty-icon { display: block; font-size: 48px; margin-bottom: 12px; }
+          .comments-empty-icon {
+            display: block;
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 14px;
+            background-image: url('../../../images/detail-icons/comment.svg');
+            opacity: 0.7;
+          }
           .comments-empty-text { font-size: 26px; }
         }
 
@@ -460,13 +548,31 @@
                 color: #55516e;
                 font-size: 23px;
 
-                .comment-action-icon { font-size: 24px; }
+                .comment-action-icon {
+                  width: 22px;
+                  height: 22px;
+
+                  &.comment-action-icon--like {
+                    background-image: url('../../../images/detail-icons/heart.svg');
+                  }
+
+                  &.comment-action-icon--comment {
+                    background-image: url('../../../images/detail-icons/comment.svg');
+                  }
+
+                  &.comment-action-icon--trash {
+                    background-image: url('../../../images/detail-icons/trash.svg');
+                  }
+                }
                 .comment-action-count { font-size: 21px; }
                 .comment-action-label { font-size: 22px; }
 
                 &.liked {
                   color: #ff5c8a;
-                  .comment-action-icon { color: #ff5c8a; }
+
+                  .comment-action-icon--like {
+                    background-image: url('../../../images/detail-icons/heart-active.svg');
+                  }
                 }
                 &.danger {
                   color: #ff5c8a55;

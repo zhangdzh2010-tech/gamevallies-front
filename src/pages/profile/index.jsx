@@ -305,6 +305,7 @@ function ProfileGameCard({ game, onPlay, onMore, onLike, onComment, onBookmark, 
   const [likeCount, setLikeCount] = useState(game.likes || 0);
   const [likeLoading, setLikeLoading] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked || initialBookmarked));
+  const gameCover = getGameCoverUrl(game);
 
   useEffect(() => {
     setIsLiked(Boolean(game.viewerHasLiked));
@@ -351,7 +352,11 @@ function ProfileGameCard({ game, onPlay, onMore, onLike, onComment, onBookmark, 
         onClick={() => onPlay && onPlay(game)}
         style={{ background: `linear-gradient(135deg, ${game.color}20 0%, ${game.color}40 100%)` }}
       >
-        <Text className="pgc-emoji">{game.emoji}</Text>
+        {gameCover ? (
+          <Image className="pgc-cover" src={gameCover} mode="aspectFill" />
+        ) : (
+          <Text className="pgc-emoji">{game.emoji}</Text>
+        )}
         {game.isHot && <View className="hot-badge">热门</View>}
         <View className="pgc-status-wrap">
           <StatusBadge status={game.status} />
@@ -362,21 +367,21 @@ function ProfileGameCard({ game, onPlay, onMore, onLike, onComment, onBookmark, 
         <Text className="pgc-title" onClick={() => onPlay && onPlay(game)}>{game.title}</Text>
         <View className="pgc-actions">
           <View className="pgc-action" onClick={handleLike}>
-            <Text className={`pgc-action-icon ${isLiked ? 'liked' : ''}`}>♥</Text>
+            <View className={`pgc-action-icon pgc-action-icon--like ${isLiked ? 'liked' : ''}`} />
             <View className="pgc-action-copy">
               <Text className={`pgc-action-count ${isLiked ? 'liked' : ''}`}>{likeLoading ? '...' : formatNumber(likeCount)}</Text>
               <Text className="pgc-action-label">点赞</Text>
             </View>
           </View>
           <View className="pgc-action" onClick={(e) => { e.stopPropagation(); onComment && onComment(game); }}>
-            <Text className="pgc-action-icon">💬</Text>
+            <View className="pgc-action-icon pgc-action-icon--comment" />
             <View className="pgc-action-copy">
               <Text className="pgc-action-count">{formatNumber(game.comments || 0)}</Text>
               <Text className="pgc-action-label">评论</Text>
             </View>
           </View>
           <View className="pgc-action" onClick={handleBookmark}>
-            <Text className={`pgc-action-icon ${isBookmarked ? 'bookmarked' : ''}`}>{isBookmarked ? '★' : '☆'}</Text>
+            <View className={`pgc-action-icon pgc-action-icon--bookmark ${isBookmarked ? 'bookmarked' : ''}`} />
             <View className="pgc-action-copy">
               <Text className={`pgc-action-count ${isBookmarked ? 'bookmarked' : ''}`}>{isBookmarked ? '已收藏' : '收藏'}</Text>
               <Text className="pgc-action-label">稍后再玩</Text>
@@ -465,7 +470,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       ? [
           {
             key: 'publish',
-            icon: '↑',
+            iconKey: 'publish',
             tone: 'publish',
             label: '发布作品',
             desc: '发布后会进入作品区，对外展示给其他用户',
@@ -475,7 +480,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       : []),
     {
       key: 'share',
-      icon: '↗',
+      iconKey: 'share',
       tone: 'share',
       label: '分享作品',
       desc: '发送给好友或分享到社交平台',
@@ -483,7 +488,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
     },
     {
       key: 'optimize',
-      icon: '✦',
+      iconKey: 'optimize',
       tone: 'optimize',
       label: '优化游戏',
       desc: '继续完善玩法、文案和交互体验',
@@ -491,7 +496,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
     },
     {
       key: 'settings',
-      icon: '⚙',
+      iconKey: 'settings',
       tone: 'settings',
       label: '权限设置',
       desc: '管理可见范围、评论和复刻权限',
@@ -499,7 +504,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
     },
     {
       key: 'delete',
-      icon: '×',
+      iconKey: 'delete',
       tone: 'danger',
       label: '删除游戏',
       desc: '删除后不可恢复，请谨慎操作',
@@ -524,13 +529,13 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
               onClick={action.onClick}
             >
               <View className={`more-icon-badge more-icon-badge--${action.tone}`}>
-                <Text className="more-icon">{action.icon}</Text>
+                <View className={`more-icon more-icon--${action.iconKey}`} />
               </View>
               <View className="more-copy">
                 <Text className="more-label">{action.label}</Text>
                 <Text className="more-desc">{action.desc}</Text>
               </View>
-              <Text className="more-arrow">›</Text>
+              <View className="more-arrow" />
             </View>
           ))}
         </View>
@@ -1139,14 +1144,14 @@ export default function Profile() {
     setActiveTab(tab.key);
   };
 
-  const renderGameList = (games, emptyIcon, emptyText, showCreate = true, showMore = true) => {
+  const renderGameList = (games, emptyIconClass, emptyText, showCreate = true, showMore = true) => {
     if (loadingGames) {
       return <View className="empty-state"><Text className="empty-text">加载中...</Text></View>;
     }
     if (!games.length) {
       return (
         <View className="empty-state">
-          <Text className="empty-icon">{emptyIcon}</Text>
+          <View className={`empty-icon ${emptyIconClass}`} />
           <Text className="empty-text">{emptyText}</Text>
           {showCreate && (
             <View className="empty-action" onClick={openCreatePageWithAuth}>
@@ -1219,7 +1224,7 @@ export default function Profile() {
 
         {!trackedTasks.length ? (
           <View className="tasks-panel__empty">
-            <Text className="tasks-panel__empty-icon">⌛</Text>
+            <View className="tasks-panel__empty-icon" />
             <Text className="tasks-panel__empty-text">当前还没有任务记录</Text>
             <View className="tasks-panel__empty-action" onClick={openCreatePageWithAuth}>
               <Text>开始创作</Text>
@@ -1279,7 +1284,7 @@ export default function Profile() {
             <View className="header-right">
               <View className="header-actions">
                 <View className="settings-btn" onClick={() => setEditProfile(true)}>
-                  <Text className="settings-icon">⚙</Text>
+                  <View className="settings-icon" />
                 </View>
               <View className="logout-btn" onClick={handleLogout}>
                 <Text className="logout-text">退出</Text>
@@ -1334,10 +1339,10 @@ export default function Profile() {
       </View>
 
       <View className="creator-links">
-        <View className="link-item link-item--disabled">
+          <View className="link-item link-item--disabled">
           <View className="link-main">
             <View className="link-icon-badge">
-              <Text className="link-icon">页</Text>
+              <View className="link-icon" />
             </View>
             <View className="link-copy">
               <Text className="link-label">个人主页</Text>
@@ -1366,15 +1371,15 @@ export default function Profile() {
         </View>
 
         <View className="games-section">
-          {activeTab === 'works'     && renderGameList(publishedGames, '🎮', '还没有发布的游戏作品')}
-          {activeTab === 'drafts'    && renderGameList(draftGames, '📝', '还没有草稿作品')}
+          {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的游戏作品')}
+          {activeTab === 'drafts'    && renderGameList(draftGames, 'empty-icon--drafts', '还没有草稿作品')}
           {activeTab === 'liked'     && (
             <View className="empty-state">
-              <Text className="empty-icon">♥</Text>
+              <View className="empty-icon empty-icon--liked" />
               <Text className="empty-text">你还没有点赞过游戏</Text>
             </View>
           )}
-          {activeTab === 'bookmarks' && renderGameList(bookmarkedGames, '★', '还没有收藏的游戏', false, false)}
+          {activeTab === 'bookmarks' && renderGameList(bookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
           {activeTab === 'tasks'     && renderTaskPanel()}
         </View>
 

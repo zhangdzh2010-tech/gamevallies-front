@@ -1,5 +1,17 @@
 import { post, get, del, patch } from './api';
 
+const VALID_GAME_ORIENTATIONS = new Set(['portrait', 'landscape']);
+
+function normalizeGameOrientation(value) {
+  const normalizedValue = typeof value === 'string'
+    ? value.trim().toLowerCase()
+    : '';
+
+  return VALID_GAME_ORIENTATIONS.has(normalizedValue)
+    ? normalizedValue
+    : 'portrait';
+}
+
 function mergeTaskPayload(source) {
   if (!source || typeof source !== 'object') {
     return null;
@@ -53,6 +65,7 @@ function normalizeGenerationTask(task) {
     eventsUrl: task.eventsUrl || null,
     artifactsUrl: task.artifactsUrl || null,
     cancelUrl: task.cancelUrl || null,
+    coverUrl: task.coverUrl || null,
     previewUrl: task.previewUrl || null,
     gameUrl: task.gameUrl || null,
     statusText: task.statusText || null,
@@ -170,13 +183,14 @@ export async function generateGame(prompt, title, options) {
   const normalizedOptions = typeof options === 'string'
     ? { type: options }
     : (options && typeof options === 'object' ? options : {});
+  const orientation = normalizeGameOrientation(normalizedOptions.orientation);
 
   const response = await post('/api/v1/games/generate', {
     description: prompt,
     prompt,
     ...(title ? { title } : {}),
     ...(normalizedOptions.type ? { type: normalizedOptions.type } : {}),
-    ...(normalizedOptions.orientation ? { orientation: normalizedOptions.orientation } : {}),
+    orientation,
   });
   return normalizeGenerateResponse(response);
 }

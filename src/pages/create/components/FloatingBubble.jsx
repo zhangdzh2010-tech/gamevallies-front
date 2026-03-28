@@ -13,7 +13,7 @@ export default function FloatingBubble({ onClick }) {
       
       <View className="pulse-ring"></View>
       <View className="bubble-content">
-        <Text className="bubble-emoji">🎮</Text>
+        <View className="bubble-icon" />
       </View>
     </View>);
 

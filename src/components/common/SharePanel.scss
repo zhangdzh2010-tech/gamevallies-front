@@ -166,12 +166,11 @@
   height: 54px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.14);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  font-size: 28px;
-  color: #ffffff;
+  background-image: url('../../images/detail-icons/share.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 28px 28px;
 }
 
 .share-primary-btn__copy {

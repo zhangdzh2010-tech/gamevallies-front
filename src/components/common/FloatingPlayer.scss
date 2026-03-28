@@ -18,7 +18,9 @@
     position: relative;
 
     .ball-icon {
-      font-size: 44rpx;
+      width: 44rpx;
+      height: 44rpx;
+      background: center / contain no-repeat url('../../images/ui-icons/gamepad.svg');
       z-index: 1;
     }
 
@@ -63,7 +65,9 @@
         min-width: 0;
 
         .card-icon {
-          font-size: 40rpx;
+          width: 40rpx;
+          height: 40rpx;
+          background: center / contain no-repeat url('../../images/ui-icons/gamepad.svg');
           flex-shrink: 0;
         }
 
@@ -78,9 +82,18 @@
         }
 
         .card-play-hint {
+          display: flex;
+          align-items: center;
+          gap: 8rpx;
           font-size: 20rpx;
           color: #6e56ff;
           flex-shrink: 0;
+
+          .card-play-hint-icon {
+            width: 20rpx;
+            height: 20rpx;
+            background: center / contain no-repeat url('../../images/detail-icons/play.svg');
+          }
         }
       }
 
@@ -100,18 +113,29 @@
           justify-content: center;
 
           .action-icon {
-            font-size: 28rpx;
-            color: #8b87a3;
+            width: 28rpx;
+            height: 28rpx;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: contain;
+
+            &.action-icon--minus {
+              background-image: url('../../images/ui-icons/minus.svg');
+            }
+
+            &.action-icon--close {
+              background-image: url('../../images/ui-icons/close.svg');
+            }
           }
 
           &.close:active {
             background: rgba(255, 92, 138, 0.2);
-            .action-icon { color: #ff5c8a; }
+            opacity: 0.92;
           }
 
           &:active {
             background: rgba(110, 86, 255, 0.2);
-            .action-icon { color: #6e56ff; }
+            opacity: 0.92;
           }
         }
       }
@@ -132,15 +156,23 @@
       padding: 20rpx 28rpx 24rpx;
 
       .card-play-btn {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12rpx;
         width: 100%;
-        text-align: center;
         padding: 20rpx 0;
         background: linear-gradient(135deg, #6e56ff 0%, #8b5cf6 100%);
         border-radius: 16rpx;
         font-size: 28rpx;
         font-weight: 600;
         color: white;
+
+        .card-play-btn-icon {
+          width: 26rpx;
+          height: 26rpx;
+          background: center / contain no-repeat url('../../images/detail-icons/play.svg');
+        }
 
         &:active {
           opacity: 0.85;

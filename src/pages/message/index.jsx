@@ -6,6 +6,65 @@ import { CustomTabBar } from '../../components/common/CustomTabBar';
 import * as socialService from '../../services/social';
 import './index.scss';
 
+function getNotificationIconType(type) {
+  switch (type) {
+    case 'like':
+      return 'like';
+    case 'comment':
+      return 'comment';
+    case 'follow':
+      return 'follow';
+    case 'fork':
+      return 'fork';
+    case 'system':
+      return 'system';
+    case 'award':
+      return 'award';
+    case 'earning':
+      return 'earning';
+    default:
+      return 'default';
+  }
+}
+
+function getActorName(message) {
+  return message.senderName || message.actorName || message.name || '用户';
+}
+
+function getActionText(message) {
+  return message.body || message.content || message.action || '';
+}
+
+function getTimeText(message) {
+  const time = message.createdAt || message.timestamp || message.time || '';
+  if (!time) return '';
+
+  if (typeof time === 'string' && !time.includes('T') && !time.includes('-')) {
+    return time;
+  }
+
+  try {
+    const date = new Date(time);
+    if (Number.isNaN(date.getTime())) {
+      return time;
+    }
+
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return '刚刚';
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    return time.slice(0, 10);
+  } catch {
+    return time;
+  }
+}
+
 export default function Message() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const [messages, setMessages] = useState([]);
@@ -17,17 +76,22 @@ export default function Message() {
 
   const loadMessages = useCallback(async (pageNum, isRefresh = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      }
+
       const result = await socialService.getNotifications(pageNum, 50);
       const items = result?.items || result || [];
+
       if (pageNum === 1) {
         setMessages(items);
       } else {
         setMessages((prev) => [...prev, ...items]);
       }
+
       setHasMore(result?.hasMore || false);
       setPage(pageNum);
-    } catch (e) {
+    } catch {
       if (pageNum === 1) {
         Taro.showToast({ title: '加载消息失败', icon: 'none' });
       }
@@ -42,7 +106,6 @@ export default function Message() {
     loadMessages(1);
   }, [loadMessages]);
 
-  // 每次页面显示时刷新（从其他页面切回来时更新未读状态）
   useDidShow(() => {
     if (!loading) {
       loadMessages(1, true);
@@ -62,76 +125,36 @@ export default function Message() {
   const handleMarkAllRead = async () => {
     try {
       await socialService.markAllNotificationsAsRead();
-      setMessages((prev) =>
-        prev.map((m) => ({ ...m, read: true, isRead: true }))
-      );
-      Taro.showToast({ title: '已全部标为已读', icon: 'success' });
-    } catch (e) {
+      setMessages((prev) => prev.map((item) => ({ ...item, read: true, isRead: true })));
+      Taro.showToast({ title: '已全部标记为已读', icon: 'success' });
+    } catch {
       Taro.showToast({ title: '操作失败', icon: 'none' });
     }
   };
 
   const handleMessageClick = async (message) => {
     const isRead = message.isRead || message.read;
+
     if (!isRead) {
       try {
         await socialService.markNotificationsAsRead([message.id]);
         setMessages((prev) =>
-          prev.map((m) => (m.id === message.id ? { ...m, read: true, isRead: true } : m))
+          prev.map((item) => (
+            item.id === message.id
+              ? { ...item, read: true, isRead: true }
+              : item
+          )),
         );
-      } catch (e) {
+      } catch {
         // best-effort mark-read
       }
     }
+
     const gameId = message.gameId || message.targetId;
     if (gameId) {
       Taro.navigateTo({
         url: `/pages/game/detail/index?id=${gameId}`,
       }).catch(() => {});
-    }
-  };
-
-  const getIcon = (type) => {
-    switch (type) {
-      case 'like': return '❤️';
-      case 'comment': return '💬';
-      case 'follow': return '👥';
-      case 'fork': return '🔀';
-      case 'system': return '📢';
-      case 'award': return '🏆';
-      case 'earning': return '💰';
-      default: return '📬';
-    }
-  };
-
-  const getActorName = (message) => {
-    return message.senderName || message.actorName || message.name || '用户';
-  };
-
-  const getActionText = (message) => {
-    return message.body || message.content || message.action || '';
-  };
-
-  const getTimeText = (message) => {
-    const time = message.createdAt || message.timestamp || message.time || '';
-    if (!time) return '';
-    // 已经是相对时间字符串则直接返回
-    if (typeof time === 'string' && !time.includes('T') && !time.includes('-')) return time;
-    try {
-      const date = new Date(time);
-      if (isNaN(date.getTime())) return time;
-      const now = new Date();
-      const diff = now - date;
-      const minutes = Math.floor(diff / 60000);
-      const hours = Math.floor(diff / 3600000);
-      const days = Math.floor(diff / 86400000);
-      if (minutes < 1) return '刚刚';
-      if (minutes < 60) return `${minutes}分钟前`;
-      if (hours < 24) return `${hours}小时前`;
-      if (days < 7) return `${days}天前`;
-      return time.slice(0, 10);
-    } catch {
-      return time;
     }
   };
 
@@ -168,9 +191,9 @@ export default function Message() {
           </View>
         ) : messages.length === 0 ? (
           <View className="empty-state">
-            <Text className="empty-icon">📭</Text>
+            <View className="empty-icon" />
             <Text className="empty-text">暂无消息</Text>
-            <Text className="empty-desc">当有人赞、评论或关注你时，会在这里显示</Text>
+            <Text className="empty-desc">当有人点赞、评论、关注你时，会在这里显示</Text>
           </View>
         ) : (
           <View className="notifications">
@@ -181,9 +204,7 @@ export default function Message() {
                 onClick={() => handleMessageClick(message)}
               >
                 <View className="notification-left">
-                  <View className="notification-icon">
-                    {getIcon(message.type)}
-                  </View>
+                  <View className={`notification-icon notification-icon--${getNotificationIconType(message.type)}`} />
                   {isUnread(message) && <View className="unread-dot" />}
                 </View>
 
@@ -195,7 +216,7 @@ export default function Message() {
                   <Text className="notification-action">{getActionText(message)}</Text>
                 </View>
 
-                <Text className="notification-arrow">→</Text>
+                <View className="notification-arrow" />
               </View>
             ))}
 
