@@ -1,4 +1,5 @@
 import { ENV } from '../config/env';
+import { normalizeGameOrientation } from './gameOrientation';
 
 export const GAME_WEB_SHELL_PATH = '/pages/game/web-shell/index';
 
@@ -37,11 +38,13 @@ function appendParam(searchParams, key, value) {
 export function buildGameWebShellHash(params = {}, options = {}) {
   const includeAuth = options.includeAuth !== false;
   const searchParams = new URLSearchParams();
+  const orientation = normalizeGameOrientation(params.orientation);
 
   appendParam(searchParams, 'id', params.gameId || params.id);
   appendParam(searchParams, 'src', params.gameUrl || params.src);
   appendParam(searchParams, 'title', params.title);
   appendParam(searchParams, 'cover', params.coverUrl || params.cover);
+  appendParam(searchParams, 'orientation', orientation);
 
   if (params.bookmarked === true || normalizeString(params.bookmarked) === '1') {
     searchParams.set('bookmarked', '1');
@@ -79,6 +82,7 @@ export function parseGameWebShellParams(params = {}) {
     gameUrl: safeDecode(params.src || params.gameUrl),
     title: safeDecode(params.title),
     coverUrl: safeDecode(params.cover || params.coverUrl),
+    orientation: normalizeGameOrientation(params.orientation),
     accessToken: safeDecode(params.token || params.accessToken),
     refreshToken: safeDecode(params.refreshToken),
     bookmarked: normalizeString(params.bookmarked) === '1',

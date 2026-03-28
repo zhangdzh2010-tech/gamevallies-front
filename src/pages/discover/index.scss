@@ -241,6 +241,144 @@
   }
 }
 
+.follow-page.follow-page--h5 {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+
+  .follow-header {
+    padding: 16px 18px;
+
+    .header-title {
+      font-size: 30px;
+    }
+
+    .header-tabs {
+      gap: 8px;
+
+      .header-tab {
+        font-size: 14px;
+        padding: 9px 12px;
+      }
+    }
+  }
+
+  .follow-content,
+  taro-scroll-view-core.follow-content,
+  taro-scroll-view-core.follow-content .taro-scroll-view__scroll-y {
+    display: block;
+    flex: none;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible !important;
+  }
+
+  .section {
+    padding: 0 16px;
+
+    .section-head {
+      padding: 16px 0 10px;
+
+      .section-title {
+        font-size: 22px;
+      }
+    }
+  }
+
+  .creators-scroll {
+    margin: 0 -16px;
+  }
+
+  .creators-list {
+    gap: 10px;
+    padding: 4px 16px 14px;
+
+    .creator-card {
+      min-width: 132px;
+      padding: 16px 14px;
+      border-radius: 16px;
+
+      .creator-avatar,
+      .creator-avatar .avatar-img {
+        width: 56px;
+        height: 56px;
+      }
+
+      .creator-avatar .avatar-text {
+        font-size: 22px;
+      }
+
+      .creator-name {
+        max-width: 104px;
+        font-size: 17px;
+      }
+
+      .creator-meta {
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .follow-btn {
+        min-height: 32px;
+        padding: 0 14px;
+
+        .follow-btn-text {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+
+  .waterfall {
+    gap: 10px;
+
+    .waterfall-col {
+      gap: 10px;
+    }
+  }
+
+  .empty-state {
+    padding: 64px 24px;
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .empty-title {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .empty-text {
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .empty-action {
+      margin-top: 16px;
+
+      text {
+        font-size: 15px;
+      }
+    }
+  }
+
+  .load-more {
+    padding: 20px;
+
+    .load-more-text,
+    .load-more-end {
+      font-size: 15px;
+    }
+  }
+
+  .bottom-spacer {
+    height: calc(138px + env(safe-area-inset-bottom));
+  }
+}
+
 .follow-page.follow-page--weapp {
   .follow-header {
     .header-title {

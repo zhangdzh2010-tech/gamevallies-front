@@ -14,14 +14,14 @@
 生产统一入口：
 
 ```text
-https://www.gamevallies.com/api/v1
+https://gamevallies.com/api/v1
 ```
 
 常用补充地址：
 
-- 游戏预览页：`https://www.gamevallies.com/games/:gameId/preview`
-- 游戏实际运行页：`https://www.gamevallies.com/games/:gameId/index.html`
-- 管理后台页面：`https://www.gamevallies.com/admin`
+- 游戏预览页：`https://gamevallies.com/games/:gameId/preview`
+- 游戏实际运行页：`https://gamevallies.com/games/:gameId/index.html`
+- 管理后台页面：`https://gamevallies.com/admin`
 
 ---
 

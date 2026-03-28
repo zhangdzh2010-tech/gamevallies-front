@@ -8,6 +8,7 @@ const mockGetPlans = jest.fn();
 const mockGetGame = jest.fn();
 const mockShowToast = jest.fn();
 const mockRequestPayment = jest.fn(() => Promise.resolve());
+const mockNavigateTo = jest.fn(() => Promise.resolve());
 
 const mockListeners = new Map();
 const mockStorage = {};
@@ -30,7 +31,7 @@ jest.mock('@tarojs/taro', () => {
   const api = {
     showToast: mockShowToast,
     requestPayment: mockRequestPayment,
-    navigateTo: jest.fn(() => Promise.resolve()),
+    navigateTo: mockNavigateTo,
     getStorageSync: jest.fn((key) => {
       if (key === '') {
         return mockStorage;
@@ -94,6 +95,7 @@ const { useGameStore } = require('../../store/gameStore');
 describe('quotaStore payment unlock flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.TARO_ENV = 'weapp';
     Object.keys(mockStorage).forEach((key) => {
       delete mockStorage[key];
     });
@@ -135,6 +137,7 @@ describe('quotaStore payment unlock flow', () => {
       id: 'game-1',
       title: 'Locked Game',
       gameUrl: 'https://game.example/play',
+      orientation: 'landscape',
       canPlay: true,
       quotaRemaining: 29,
       coverUrl: 'https://img.example/cover.png',
@@ -179,6 +182,7 @@ describe('quotaStore payment unlock flow', () => {
       gameUrl: 'https://game.example/play',
       gameTitle: 'Locked Game',
       gameCover: 'https://img.example/cover.png',
+      gameOrientation: 'landscape',
       resumePlay: true,
     });
 
@@ -196,6 +200,10 @@ describe('quotaStore payment unlock flow', () => {
     expect(useGameStore.getState().currentGame.canPlay).toBe(true);
     expect(useGamePlayerStore.getState().gameId).toBe('game-1');
     expect(useGamePlayerStore.getState().gameUrl).toBe('https://game.example/play');
+    expect(useGamePlayerStore.getState().gameOrientation).toBe('landscape');
+    expect(mockNavigateTo).toHaveBeenCalledWith({
+      url: '/pages/game/play-landscape/index?id=game-1',
+    });
     expect(useQuotaStore.getState().paymentAttempt).toEqual(
       expect.objectContaining({
         orderId: 'order-1',
@@ -242,6 +250,7 @@ describe('quotaStore payment unlock flow', () => {
       gameUrl: 'https://game.example/play',
       gameTitle: 'Locked Game',
       gameCover: 'https://img.example/cover.png',
+      gameOrientation: 'landscape',
       resumePlay: true,
     });
 

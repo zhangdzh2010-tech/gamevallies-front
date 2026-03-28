@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Textarea } from '@tarojs/components';
+import { View, Text, Textarea } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
+import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
 import { PipelineOrbit } from '../../../components/common/PipelineOrbit';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import * as gameService from '../../../services/game';
@@ -24,6 +25,8 @@ import {
 import { formatDate } from '../../../utils/date';
 import { getGameTypeLabel } from '../../../utils/gameTypes';
 import { getGameCoverUrl } from '../../../utils/media';
+import { getGameOrientation } from '../../../utils/gameOrientation';
+import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
 import './index.scss';
@@ -105,6 +108,7 @@ export default function GameIteratePage() {
   const gameId = route?.params?.gameId || '';
   const taskId = route?.params?.taskId || '';
   const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
   const {
     iterateGame,
     restorePersistedTask,
@@ -128,7 +132,8 @@ export default function GameIteratePage() {
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
-  const containerClassName = `iterate-page${isWeapp ? ' iterate-page--weapp' : ''}`;
+  const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
+  const containerClassName = `iterate-page${isWeapp ? ' iterate-page--weapp' : ''}${isH5 ? ' iterate-page--h5' : ''}`;
 
   const activeIterateTask = currentTask?.taskType === 'pipeline_iterate' ? currentTask : null;
   const isIterateTaskActive = Boolean(
@@ -297,6 +302,7 @@ export default function GameIteratePage() {
         canPlay,
         isOwnGame: true,
         gameId: currentGame.id,
+        orientation: getGameOrientation(currentGame),
       });
       return;
     }
@@ -323,6 +329,7 @@ export default function GameIteratePage() {
       gameUrl: currentGame?.gameUrl,
       gameTitle: currentGame?.title || '游戏',
       gameCover: getGameCoverUrl(currentGame),
+      gameOrientation: getGameOrientation(currentGame),
       resumePlay: true,
     });
   };
@@ -404,7 +411,7 @@ export default function GameIteratePage() {
           <Text className="iterate-hero__subtitle">AI 正在基于当前版本优化，请稍候</Text>
         </View>
 
-        <ScrollView className="iterate-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
+        <PageScrollContainer className="iterate-scroll" style={scrollContainerStyle} scrollY>
           <View className="progress-panel">
             <PipelineOrbit
               stages={PIPELINE_STAGES}
@@ -456,7 +463,7 @@ export default function GameIteratePage() {
               </View>
             ) : null}
           </View>
-        </ScrollView>
+        </PageScrollContainer>
 
         <GlobalGamePlayer />
         <PaywallPopup />
@@ -494,7 +501,7 @@ export default function GameIteratePage() {
         <Text className="iterate-hero__subtitle">基于当前版本继续优化玩法、文案和体验</Text>
       </View>
 
-      <ScrollView className="iterate-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
+      <PageScrollContainer className="iterate-scroll" style={scrollContainerStyle} scrollY>
         <View className="iterate-panel">
           <View className="iterate-metadata-card">
             <Text className="iterate-metadata-card__title">当前版本信息</Text>
@@ -558,7 +565,7 @@ export default function GameIteratePage() {
         </View>
 
         <View style={{ height: '80px' }} />
-      </ScrollView>
+      </PageScrollContainer>
 
       <GlobalGamePlayer />
       <PaywallPopup />

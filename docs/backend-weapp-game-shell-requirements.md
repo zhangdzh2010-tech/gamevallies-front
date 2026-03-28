@@ -4,7 +4,7 @@
 
 当前游戏播放页运行在微信小程序端，页面主体使用 `web-view` 加载真实游戏地址，游戏原始地址形如：
 
-- `https://www.gamevallies.com/games/...`
+- `https://gamevallies.com/games/...`
 
 产品希望在游戏播放界面增加以下交互层：
 
@@ -56,12 +56,12 @@
 前端最终实际打开的地址形态会是：
 
 ```text
-https://www.gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id=123&src=%2Fgames%2Fabc123
+https://gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id=123&src=%2Fgames%2Fabc123
 ```
 
 请注意：
 
-- `https://www.gamevallies.com/game-shell/index.html` 是物理存在的 H5 入口地址
+- `https://gamevallies.com/game-shell/index.html` 是物理存在的 H5 入口地址
 - `#/pages/game/web-shell/index?...` 是前端现有壳页路由
 
 如果后端希望改成“自己单独提供一个完全独立的 custom shell 页面”，那也可以，但需要提前和前端确认，因为这会影响小程序端当前的 URL 拼装方式。
@@ -70,7 +70,7 @@ https://www.gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id
 
 请提供一个可以直接访问的 HTTPS 页面地址，例如：
 
-- `https://www.gamevallies.com/game-shell/index.html`
+- `https://gamevallies.com/game-shell/index.html`
 
 该地址用于被小程序 `web-view` 打开。这个页面负责：
 
@@ -86,13 +86,13 @@ https://www.gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id
 3. 使用 `https`
 4. 域名已配置到微信小程序业务域名白名单
 5. 页面可在微信内置浏览器正常打开
-6. 最好与真实游戏页同域，即同属 `https://www.gamevallies.com`
+6. 最好与真实游戏页同域，即同属 `https://gamevallies.com`
 
 ### 3.3 不建议使用 hash 路由地址
 
 不建议只提供这种地址：
 
-- `https://www.gamevallies.com/#/pages/game/web-shell/index`
+- `https://gamevallies.com/#/pages/game/web-shell/index`
 
 原因：
 
@@ -101,14 +101,14 @@ https://www.gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id
 
 因此请优先提供“物理存在的 HTML 地址”，例如：
 
-- `https://www.gamevallies.com/game-shell/index.html`
+- `https://gamevallies.com/game-shell/index.html`
 
 ## 4. 真实游戏页的嵌入要求
 
 H5 壳页会通过 `iframe` 加载真实游戏地址，例如：
 
 - `/games/abc123`
-- `https://www.gamevallies.com/games/abc123`
+- `https://gamevallies.com/games/abc123`
 
 因此真实游戏页必须允许被同域壳页嵌入。
 
@@ -126,7 +126,7 @@ H5 壳页会通过 `iframe` 加载真实游戏地址，例如：
 
 建议目标：
 
-- `https://www.gamevallies.com/game-shell/index.html` 可以稳定 iframe 打开 `https://www.gamevallies.com/games/...`
+- `https://gamevallies.com/game-shell/index.html` 可以稳定 iframe 打开 `https://gamevallies.com/games/...`
 
 ## 5. 壳页地址的参数契约
 
@@ -140,7 +140,7 @@ H5 壳页会通过 `iframe` 加载真实游戏地址，例如：
 示例：
 
 ```text
-https://www.gamevallies.com/game-shell/index.html?gameId=123&src=%2Fgames%2Fabc123&title=%E6%89%93%E5%9C%B0%E9%BC%A0&cover=https%3A%2F%2Fcdn.example.com%2Fcover.png
+https://gamevallies.com/game-shell/index.html?gameId=123&src=%2Fgames%2Fabc123&title=%E6%89%93%E5%9C%B0%E9%BC%A0&cover=https%3A%2F%2Fcdn.example.com%2Fcover.png
 ```
 
 字段说明：
@@ -336,13 +336,13 @@ https://www.gamevallies.com/game-shell/index.html?gameId=123&src=%2Fgames%2Fabc1
 
 ```text
 物理 H5 入口地址：
-https://www.gamevallies.com/game-shell/index.html
+https://gamevallies.com/game-shell/index.html
 
 前端实际打开示例：
-https://www.gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id=123&src=%2Fgames%2Fabc123&title=%E6%89%93%E5%9C%B0%E9%BC%A0
+https://gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?id=123&src=%2Fgames%2Fabc123&title=%E6%89%93%E5%9C%B0%E9%BC%A0
 
 真实游戏地址：
-https://www.gamevallies.com/games/abc123
+https://gamevallies.com/games/abc123
 ```
 
 这样做的优点：
@@ -358,7 +358,7 @@ https://www.gamevallies.com/games/abc123
 
 1. 壳页地址可直接在手机浏览器打开，返回 `200`
 2. 壳页地址可直接在微信内置浏览器打开，返回 `200`
-3. `https://www.gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?...` 可在手机浏览器正常打开
+3. `https://gamevallies.com/game-shell/index.html#/pages/game/web-shell/index?...` 可在手机浏览器正常打开
 4. 小程序 `web-view` 打开壳页时，不再出现“全部加载失败”
 5. 壳页能成功 iframe 打开 `/games/...`
 6. 壳页内能正确展示作者信息
@@ -374,7 +374,7 @@ https://www.gamevallies.com/games/abc123
 后端/运维提供最终可访问的壳页地址后，前端会通过环境变量接入，例如：
 
 ```text
-TARO_APP_GAME_SHELL_URL=https://www.gamevallies.com/game-shell/index.html
+TARO_APP_GAME_SHELL_URL=https://gamevallies.com/game-shell/index.html
 ```
 
 配置完成后，小程序播放页会优先打开该壳页地址；未配置时，当前前端会继续回退到原始游戏地址，保证基础播放不受影响。
@@ -383,12 +383,12 @@ TARO_APP_GAME_SHELL_URL=https://www.gamevallies.com/game-shell/index.html
 
 请提供一个可直接访问的、同域的、HTTPS 的 H5 壳页地址，例如：
 
-- `https://www.gamevallies.com/game-shell/index.html`
+- `https://gamevallies.com/game-shell/index.html`
 
 它需要满足以下目标：
 
 - 可被微信小程序 `web-view` 打开
-- 可通过 `iframe` 嵌入 `https://www.gamevallies.com/games/...`
+- 可通过 `iframe` 嵌入 `https://gamevallies.com/games/...`
 - 页面内部实现作者、关注、点赞、收藏、评论交互层
 - 壳页本身可识别登录用户身份并调用现有社交接口
 - 支持通过 `wx.miniProgram.navigateTo` 回跳小程序页面

@@ -406,3 +406,197 @@
     }
   }
 }
+
+.login-container.login-container--h5 {
+  display: block;
+  min-height: 100vh;
+  overflow: visible;
+  padding: 0 18px calc(28px + env(safe-area-inset-bottom));
+
+  .back-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: 6px;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 16px;
+    background: rgba(8, 8, 13, 0.94);
+    backdrop-filter: blur(18px);
+
+    .back-arrow {
+      font-size: 28px;
+    }
+
+    .back-text {
+      font-size: 15px;
+    }
+  }
+
+  .login-content {
+    width: 100%;
+    max-width: 420px;
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - 92px);
+    margin: 0 auto;
+    padding: 18px 0 28px;
+    justify-content: flex-start;
+
+    .logo-section {
+      margin-bottom: 32px;
+
+      .logo {
+        font-size: 40px;
+        margin-bottom: 10px;
+      }
+
+      .tagline {
+        font-size: 15px;
+        line-height: 1.6;
+      }
+    }
+
+    .login-tabs {
+      margin-bottom: 20px;
+
+      .login-tab {
+        padding: 14px 0;
+        font-size: 16px;
+
+        &.active {
+          &::after {
+            height: 2px;
+          }
+        }
+      }
+    }
+
+    .form-section {
+      gap: 14px;
+
+      .input-field {
+        gap: 12px;
+        border-radius: 18px;
+        padding: 16px 18px;
+
+        .field-prefix {
+          font-size: 16px;
+          padding-right: 12px;
+        }
+
+        .input {
+          font-size: 16px;
+        }
+
+        &.code-field {
+          .send-code-btn {
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+          }
+        }
+      }
+
+      .login-btn {
+        margin-top: 10px;
+        border-radius: 18px;
+        padding: 16px 20px;
+        font-size: 16px;
+      }
+
+      .register-link {
+        font-size: 14px;
+        margin-top: 0;
+      }
+    }
+
+    .divider {
+      margin: 14px 0;
+
+      .divider-text {
+        font-size: 13px;
+      }
+    }
+
+    .wechat-profile-card {
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 14px;
+
+      &__header {
+        gap: 4px;
+        margin-bottom: 14px;
+      }
+
+      &__title {
+        font-size: 16px;
+      }
+
+      &__desc,
+      &__tip {
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      &__row {
+        gap: 12px;
+        align-items: stretch;
+      }
+    }
+
+    .wechat-avatar-picker {
+      width: 84px;
+      height: 84px;
+      border-radius: 20px;
+
+      &__placeholder {
+        font-size: 14px;
+      }
+    }
+
+    .wechat-nickname-field {
+      min-width: 0;
+      border-radius: 18px;
+      padding: 16px 18px;
+
+      .input {
+        font-size: 16px;
+      }
+    }
+
+    .wechat-btn {
+      border-radius: 18px;
+      padding: 16px 20px;
+      font-size: 16px;
+    }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .login-container.login-container--h5 {
+    padding-left: 14px;
+    padding-right: 14px;
+
+    .login-content {
+      .wechat-profile-card {
+        &__row {
+          flex-direction: column;
+        }
+      }
+
+      .wechat-avatar-picker {
+        width: 100%;
+        height: 84px;
+      }
+    }
+  }
+}
+
+@media screen and (max-height: 760px) {
+  .login-container.login-container--h5 {
+    .login-content {
+      min-height: auto;
+
+      .logo-section {
+        margin-bottom: 24px;
+      }
+    }
+  }
+}

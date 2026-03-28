@@ -1,5 +1,7 @@
 import { getSafeGameImage } from './media';
 import { normalizeGameTypeKey } from './gameTypes';
+import { buildGamePlayPagePath } from './gamePlayRoute';
+import { getGameOrientation } from './gameOrientation';
 
 const DEFAULT_BASE_URL = 'https://gamevallies.local';
 const DEFAULT_SHARE_IMAGE = '';
@@ -30,10 +32,7 @@ export function buildGameDetailPath(gameId, extraQuery = {}) {
 }
 
 export function buildGamePlayPath(gameId, extraQuery = {}) {
-  return buildMiniProgramPath('/pages/game/play/index', {
-    id: normalizeId(gameId),
-    ...extraQuery,
-  });
+  return buildGamePlayPagePath(gameId, extraQuery.orientation, extraQuery);
 }
 
 export function getShareImageUrl(game = {}) {
@@ -54,6 +53,12 @@ export function generateShareText(game = {}, includeAuthor = true) {
 export function getShareConfig(game = {}, score, options = {}) {
   const target = options.target === 'play' ? 'play' : 'detail';
   const extraQuery = options.extraQuery || {};
+  const playQuery = target === 'play'
+    ? {
+      orientation: extraQuery.orientation || getGameOrientation(game),
+      ...extraQuery,
+    }
+    : extraQuery;
   const title = options.title || (
     score !== undefined && score !== null && score !== ''
       ? `I scored ${score} in ${game.title || 'this game'}`
@@ -63,13 +68,13 @@ export function getShareConfig(game = {}, score, options = {}) {
   const query = buildQueryString({
     id: normalizeId(game.id),
     ...(score !== undefined && score !== null && score !== '' ? { score: String(score) } : {}),
-    ...extraQuery,
+    ...(target === 'play' ? playQuery : extraQuery),
   });
 
   const path = target === 'play'
     ? buildGamePlayPath(game.id, {
       ...(score !== undefined && score !== null && score !== '' ? { score: String(score) } : {}),
-      ...extraQuery,
+      ...playQuery,
     })
     : buildGameDetailPath(game.id, {
       ...(score !== undefined && score !== null && score !== '' ? { score: String(score) } : {}),

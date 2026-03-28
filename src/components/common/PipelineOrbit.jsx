@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from '@tarojs/components';
+import { isH5Runtime } from '../../utils/runtime';
 import './PipelineOrbit.scss';
 
 function clampIndex(index, max) {
@@ -47,16 +48,17 @@ export function PipelineOrbit({
   modeLabel = '处理流程',
   coreLabel = 'AI 处理中',
 }) {
+  const isH5 = isH5Runtime();
   const safeStages = Array.isArray(stages) && stages.length ? stages : [];
   const activeIndex = clampIndex(currentIndex, Math.max(safeStages.length - 1, 0));
   const pct = clampPercent(progressPct);
   const activeStageLabel = stageLabel || safeStages[activeIndex]?.label || '处理中';
   const stageCount = safeStages.length || 1;
-  const orbitRadiusX = stageCount >= 8 ? 134 : 142;
-  const orbitRadiusY = stageCount >= 8 ? 102 : 116;
+  const orbitRadiusX = isH5 ? (stageCount >= 8 ? 98 : 106) : (stageCount >= 8 ? 134 : 142);
+  const orbitRadiusY = isH5 ? (stageCount >= 8 ? 74 : 86) : (stageCount >= 8 ? 102 : 116);
 
   return (
-    <View className="pipeline-orbit-card">
+    <View className={`pipeline-orbit-card${isH5 ? ' pipeline-orbit-card--h5' : ''}`}>
       <View className="pipeline-orbit-card__grid" />
       <View className="pipeline-orbit-card__header">
         <View className="pipeline-orbit-card__label-group">

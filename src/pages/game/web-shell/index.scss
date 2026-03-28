@@ -236,3 +236,83 @@
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.46);
   }
 }
+
+.game-web-shell-page.is-landscape {
+  .game-web-shell-page__bottom-gradient {
+    height: 220px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.18) 34%, rgba(0, 0, 0, 0.86) 100%);
+  }
+
+  .game-web-shell-author {
+    left: 18px;
+    right: auto;
+    width: min(44vw, 420px);
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+
+    &__card {
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 20px;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+    }
+
+    &__avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+    }
+
+    &__avatar-text {
+      font-size: 20px;
+    }
+
+    &__name {
+      font-size: 18px;
+    }
+
+    &__title {
+      margin-top: 2px;
+      font-size: 14px;
+    }
+
+    &__follow {
+      min-width: 76px;
+      height: 38px;
+      padding: 0 14px;
+      font-size: 13px;
+    }
+  }
+
+  .game-web-shell-actions {
+    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 14px;
+  }
+
+  .game-web-shell-action {
+    gap: 8px;
+
+    &__button {
+      width: 60px;
+      height: 60px;
+      border-radius: 30px;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+    }
+
+    &__icon {
+      width: 30px;
+      height: 30px;
+    }
+
+    &__count {
+      font-size: 16px;
+    }
+
+    &__label {
+      font-size: 12px;
+      letter-spacing: 0.4px;
+    }
+  }
+}

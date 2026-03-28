@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
+import { isH5Runtime } from '../../../utils/runtime';
 import './BottomDrawer.scss';
 
 const QUICK_STATS = [
@@ -16,6 +17,7 @@ export default function BottomDrawer({
   onPlayFullscreen,
   onPublish,
 }) {
+  const isH5 = isH5Runtime();
   const [startY, setStartY] = useState(0);
   const drawerRef = useRef(null);
 
@@ -29,6 +31,46 @@ export default function BottomDrawer({
       onClose();
     }
   };
+
+  const content = (
+    <>
+      <View className="preview-card">
+        <View className="preview-icon-area">
+          {previewData.emoji}
+        </View>
+        <Text className="preview-title">{previewData.title}</Text>
+        <View className="preview-status">
+          <View className="preview-status__icon" />
+          <Text>游戏已生成</Text>
+        </View>
+      </View>
+
+      <View className="action-buttons">
+        <View className="btn btn-primary" onClick={onPlayFullscreen}>
+          <View className="btn-icon btn-icon--play" />
+          <Text>全屏试玩</Text>
+        </View>
+        <View className="btn btn-outline" onClick={onPublish}>
+          <View className="btn-icon btn-icon--publish" />
+          <Text>发布到创意广场</Text>
+        </View>
+      </View>
+
+      <View className="quick-stats">
+        {QUICK_STATS.map((item) => (
+          <View key={item.key} className="stat-item">
+            <View className={`stat-icon stat-icon--${item.key}`} />
+            <View className="stat-content">
+              <Text className="stat-label">{item.label}</Text>
+              <Text className="stat-value">{item.value}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View className="drawer-footer" />
+    </>
+  );
 
   return (
     <>
@@ -52,43 +94,15 @@ export default function BottomDrawer({
         </View>
 
         {gameReady ? (
-          <ScrollView className="drawer-content" scrollY>
-            <View className="preview-card">
-              <View className="preview-icon-area">
-                {previewData.emoji}
-              </View>
-              <Text className="preview-title">{previewData.title}</Text>
-              <View className="preview-status">
-                <View className="preview-status__icon" />
-                <Text>游戏已生成</Text>
-              </View>
+          isH5 ? (
+            <View className="drawer-content drawer-content--h5">
+              {content}
             </View>
-
-            <View className="action-buttons">
-              <View className="btn btn-primary" onClick={onPlayFullscreen}>
-                <View className="btn-icon btn-icon--play" />
-                <Text>全屏试玩</Text>
-              </View>
-              <View className="btn btn-outline" onClick={onPublish}>
-                <View className="btn-icon btn-icon--publish" />
-                <Text>发布到创意广场</Text>
-              </View>
-            </View>
-
-            <View className="quick-stats">
-              {QUICK_STATS.map((item) => (
-                <View key={item.key} className="stat-item">
-                  <View className={`stat-icon stat-icon--${item.key}`} />
-                  <View className="stat-content">
-                    <Text className="stat-label">{item.label}</Text>
-                    <Text className="stat-value">{item.value}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            <View className="drawer-footer" />
-          </ScrollView>
+          ) : (
+            <ScrollView className="drawer-content" scrollY>
+              {content}
+            </ScrollView>
+          )
         ) : (
           <View className="drawer-empty-state">
             <View className="empty-icon" />

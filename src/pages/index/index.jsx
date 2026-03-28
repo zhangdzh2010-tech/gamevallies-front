@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
@@ -7,6 +7,7 @@ import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { FloatingPlayer } from '../../components/common/FloatingPlayer';
+import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import { openCreatePageWithAuth } from '../../utils/authNavigation';
 import * as feedService from '../../services/feed';
 import * as socialService from '../../services/social';
@@ -21,12 +22,15 @@ import {
   normalizeGameTypeKey,
 } from '../../utils/gameTypes';
 import { getGameCoverUrl } from '../../utils/media';
+import { getGameOrientation } from '../../utils/gameOrientation';
 import { buildGameDetailPath } from '../../utils/share';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
+import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Scroll';
+import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6', '#06b6d4', '#ec4899'];
-const GAME_EMOJIS = ['🎮', '🕹️', '🎲', '🎯', '🚀', '🌟', '⚡', '🧩', '🎨', '🎉'];
+const GAME_EMOJIS = ['🎮', '🎲', '🕹️', '🚀', '⚡', '🎨', '🧩', '🌟', '🏹', '🎯'];
 
 function normalizeGame(game, index) {
   return {
@@ -53,9 +57,10 @@ function normalizeGame(game, index) {
 }
 
 export default function Home() {
-  const isH5 = process.env.TARO_ENV === 'h5';
-  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
+  const isWeapp = isWeappRuntime();
   const navigation = useNavigation();
+  const homeRef = useRef(null);
   const openGame = useGamePlayerStore((s) => s.openGame);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -100,6 +105,10 @@ export default function Home() {
     }
   }, [fetchGames]);
 
+  const getH5ScrollContainer = useCallback(() => {
+    return isH5 ? getH5PageScrollContainer() : null;
+  }, [isH5]);
+
   useEffect(() => {
     let active = true;
 
@@ -120,6 +129,75 @@ export default function Home() {
     setGames((prev) => mergeBookmarkedFlags(prev));
   });
 
+  useEffect(() => {
+    if (!isH5 || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const home = homeRef.current;
+    const page = home?.closest?.('.taro_page') || document.querySelector('.taro_page.taro_page_show');
+    const panel = page?.closest?.('.taro-tabbar__panel');
+    const container = panel?.closest?.('.taro-tabbar__container');
+    const html = document.documentElement;
+    const body = document.body;
+
+    const previousStyles = new Map();
+    [
+      [html, { overflow: html.style.overflow }],
+      [body, { overflow: body.style.overflow }],
+      [container, { overflow: container?.style.overflow }],
+      [panel, { overflow: panel?.style.overflow }],
+      [page, { overflow: page?.style.overflow, height: page?.style.height, minHeight: page?.style.minHeight }],
+      [home, { height: home?.style.height, minHeight: home?.style.minHeight, overflow: home?.style.overflow }],
+    ].forEach(([element, styles]) => {
+      if (element) {
+        previousStyles.set(element, styles);
+      }
+    });
+
+    html.style.overflow = 'auto';
+    body.style.overflow = 'auto';
+    if (container) {
+      container.style.overflow = 'visible';
+    }
+    if (panel) {
+      panel.style.overflow = 'visible';
+    }
+    if (page) {
+      page.style.overflow = 'visible';
+      page.style.height = 'auto';
+      page.style.minHeight = '100vh';
+    }
+    if (home) {
+      home.style.height = 'auto';
+      home.style.minHeight = '100vh';
+      home.style.overflow = 'visible';
+    }
+
+    return () => {
+      previousStyles.forEach((styles, element) => {
+        Object.entries(styles).forEach(([key, value]) => {
+          element.style[key] = value || '';
+        });
+      });
+    };
+  }, [isH5]);
+
+  useEffect(() => {
+    if (!isH5) {
+      return undefined;
+    }
+
+    const scrollContainer = getH5ScrollContainer();
+    if (!scrollContainer) {
+      return undefined;
+    }
+
+    resetH5PageScrollTop();
+
+    return undefined;
+  }, [getH5ScrollContainer, isH5]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     setPage(1);
@@ -127,8 +205,8 @@ export default function Home() {
     setRefreshing(false);
   };
 
-  const handleLoadMore = async () => {
-    if (isLoadingMore || !hasMore) {
+  const handleLoadMore = useCallback(async () => {
+    if (loadingGames || isLoadingMore || !hasMore) {
       return;
     }
 
@@ -137,7 +215,50 @@ export default function Home() {
     await fetchGames(nextPage, true, activeType);
     setPage(nextPage);
     setIsLoadingMore(false);
-  };
+  }, [activeType, fetchGames, hasMore, isLoadingMore, loadingGames, page]);
+
+  useEffect(() => {
+    if (!isH5) {
+      return undefined;
+    }
+
+    let ticking = false;
+    const threshold = 320;
+
+    const maybeLoadMore = () => {
+      if (ticking) {
+        return;
+      }
+
+      ticking = true;
+      const runCheck = () => {
+        ticking = false;
+        const scrollContainer = getH5ScrollContainer();
+        if (!scrollContainer) {
+          return;
+        }
+        const remaining = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight);
+        if (remaining <= threshold) {
+          handleLoadMore();
+        }
+      };
+
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(runCheck);
+      } else {
+        runCheck();
+      }
+    };
+
+    window.addEventListener('scroll', maybeLoadMore, { passive: true });
+    document.addEventListener('scroll', maybeLoadMore, true);
+    maybeLoadMore();
+
+    return () => {
+      window.removeEventListener('scroll', maybeLoadMore);
+      document.removeEventListener('scroll', maybeLoadMore, true);
+    };
+  }, [getH5ScrollContainer, handleLoadMore, isH5]);
 
   const handleTypeChange = async (typeKey) => {
     if (typeKey === activeType) {
@@ -154,6 +275,7 @@ export default function Home() {
     if (game.gameUrl) {
       openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
+        orientation: getGameOrientation(game),
       });
       return;
     }
@@ -226,12 +348,106 @@ export default function Home() {
     }
   });
 
+  const feedContent = (
+    <>
+      <View className="challenge-banner" onClick={handleCreateClick}>
+        <View className="challenge-header-row">
+          <Text className="challenge-kicker">AI创作</Text>
+          <View className="challenge-action">现在开始</View>
+        </View>
+        <View className="challenge-content">
+          <Text className="challenge-title">把脑海里的想法，马上做出来</Text>
+          <Text className="challenge-desc">AI 帮你把灵感变成现实</Text>
+        </View>
+      </View>
+
+      <ScrollView className="type-tabs-scroll" scrollX showScrollbar={false}>
+        <View className="type-tabs">
+          {gameTypeTabs.map((tab) => (
+            <View
+              key={tab.key}
+              className={`type-tab ${activeType === tab.key ? 'active' : ''}`}
+              onClick={() => handleTypeChange(tab.key)}
+            >
+              <Text className={`type-tab__label ${activeType === tab.key ? 'active' : ''}`}>
+                {tab.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {loadingGames ? (
+        <View className="loading-state">
+          <Text className="loading-text">加载中...</Text>
+        </View>
+      ) : loadError ? (
+        <View className="loading-state">
+          <Text className="loading-text">加载失败</Text>
+          <View className="retry-btn" onClick={() => fetchGames(1, false, activeType)}>
+            <Text className="retry-text">重试</Text>
+          </View>
+        </View>
+      ) : (
+        <View className="waterfall">
+          <View className="waterfall-col">
+            {leftCol.map((game) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                variant="play-only"
+                onPlay={handlePlay}
+                onComment={handleComment}
+                onOpenDetail={handleOpenDetail}
+                showDetailEntry
+                onToggleLike={handleToggleLike}
+                onToggleBookmark={handleToggleBookmark}
+              />
+            ))}
+          </View>
+          <View className="waterfall-col">
+            {rightCol.map((game) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                variant="play-only"
+                onPlay={handlePlay}
+                onComment={handleComment}
+                onOpenDetail={handleOpenDetail}
+                showDetailEntry
+                onToggleLike={handleToggleLike}
+                onToggleBookmark={handleToggleBookmark}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {isLoadingMore && (
+        <View className="loading-indicator">
+          <Text className="loading-text">加载中...</Text>
+        </View>
+      )}
+
+      {!hasMore && games.length > 0 && (
+        <View className="loading-indicator">
+          <Text className="end-text">- 已经到底了 -</Text>
+        </View>
+      )}
+
+      <View className="bottom-spacer" />
+    </>
+  );
+
   return (
-    <View className={`home-container${isH5 ? ' home-container--h5' : ''}${isWeapp ? ' home-container--weapp' : ''}`}>
+    <View
+      ref={homeRef}
+      className={`home-container${isH5 ? ' home-container--h5' : ''}${isWeapp ? ' home-container--weapp' : ''}`}
+    >
       <AppTopBar />
 
-      <ScrollView
-        className="scroll-view"
+      <PageScrollContainer
+        className={isH5 ? 'home-content home-content--h5' : 'scroll-view'}
         scrollY
         refresherEnabled
         refresherTriggered={refreshing}
@@ -239,93 +455,8 @@ export default function Home() {
         onScrollToLower={handleLoadMore}
         lowerThreshold={300}
       >
-        <View className="challenge-banner" onClick={handleCreateClick}>
-          <View className="challenge-header-row">
-            <Text className="challenge-kicker">AI创作</Text>
-            <View className="challenge-action">现在开始</View>
-          </View>
-          <View className="challenge-content">
-            <Text className="challenge-title">把脑海里的想法，马上做出来</Text>
-            <Text className="challenge-desc">AI帮你把灵感变成现实</Text>
-          </View>
-        </View>
-
-        <ScrollView className="type-tabs-scroll" scrollX showScrollbar={false}>
-          <View className="type-tabs">
-            {gameTypeTabs.map((tab) => (
-              <View
-                key={tab.key}
-                className={`type-tab ${activeType === tab.key ? 'active' : ''}`}
-                onClick={() => handleTypeChange(tab.key)}
-              >
-                <Text className={`type-tab__label ${activeType === tab.key ? 'active' : ''}`}>
-                  {tab.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-
-        {loadingGames ? (
-          <View className="loading-state">
-            <Text className="loading-text">加载中...</Text>
-          </View>
-        ) : loadError ? (
-          <View className="loading-state">
-            <Text className="loading-text">加载失败</Text>
-            <View className="retry-btn" onClick={() => fetchGames(1, false, activeType)}>
-              <Text className="retry-text">重试</Text>
-            </View>
-          </View>
-        ) : (
-          <View className="waterfall">
-            <View className="waterfall-col">
-              {leftCol.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  variant="play-only"
-                  onPlay={handlePlay}
-                  onComment={handleComment}
-                  onOpenDetail={handleOpenDetail}
-                  showDetailEntry
-                  onToggleLike={handleToggleLike}
-                  onToggleBookmark={handleToggleBookmark}
-                />
-              ))}
-            </View>
-            <View className="waterfall-col">
-              {rightCol.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  variant="play-only"
-                  onPlay={handlePlay}
-                  onComment={handleComment}
-                  onOpenDetail={handleOpenDetail}
-                  showDetailEntry
-                  onToggleLike={handleToggleLike}
-                  onToggleBookmark={handleToggleBookmark}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {isLoadingMore && (
-          <View className="loading-indicator">
-            <Text className="loading-text">加载中...</Text>
-          </View>
-        )}
-
-        {!hasMore && games.length > 0 && (
-          <View className="loading-indicator">
-            <Text className="end-text">- 已经到底了 -</Text>
-          </View>
-        )}
-
-        <View className="bottom-spacer" />
-      </ScrollView>
+        {feedContent}
+      </PageScrollContainer>
 
       <CustomTabBar activeIndex={0} />
       <GlobalGamePlayer />

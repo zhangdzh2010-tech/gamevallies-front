@@ -4,6 +4,7 @@ import { View, Text, ScrollView, Textarea, Image, Input } from '@tarojs/componen
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
+import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import { Storage } from '../../utils/storage';
 import { ENV } from '../../config/env';
 import {
@@ -24,6 +25,8 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { getBookmarkedGames, mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../utils/gameUnlock';
 import { getGameCoverUrl } from '../../utils/media';
+import { getGameOrientation } from '../../utils/gameOrientation';
+import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
@@ -787,7 +790,8 @@ function EditProfileModal({ profile, onClose, onSave }) {
 }
 
 export default function Profile() {
-  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
+  const isWeapp = isWeappRuntime();
   const openGame = useGamePlayerStore((s) => s.openGame);
   const trackedTasks = useGameStore((state) => state.trackedTasks);
   const hydrateTrackedTasks = useGameStore((state) => state.hydrateTrackedTasks);
@@ -939,6 +943,7 @@ export default function Profile() {
       openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
         canPlay: game.canPlay !== false,
+        orientation: getGameOrientation(game),
         isOwnGame: Boolean(currentUserId && String(game.authorId || game.author?.id || '') === String(currentUserId)),
       });
       return;
@@ -1270,7 +1275,7 @@ export default function Profile() {
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
   return (
-    <View className={`profile-container${isWeapp ? ' profile-container--weapp' : ''}`}>
+    <View className={`profile-container${isH5 ? ' profile-container--h5' : ''}${isWeapp ? ' profile-container--weapp' : ''}`}>
       <AppTopBar />
       <View className="profile-header">
         <View className="header-top">
@@ -1354,7 +1359,7 @@ export default function Profile() {
       </View>
 
       {/* Tab 切换区 */}
-      <ScrollView className="profile-scroll" scrollY>
+      <PageScrollContainer className="profile-scroll">
         <View className="tabs-container">
           {TABS.map((tab) => (
             <View
@@ -1384,7 +1389,7 @@ export default function Profile() {
         </View>
 
         <View className="bottom-spacer" />
-      </ScrollView>
+      </PageScrollContainer>
 
       {moreGame && (
         <MoreMenu

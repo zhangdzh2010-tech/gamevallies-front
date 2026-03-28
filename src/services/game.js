@@ -1,16 +1,5 @@
 import { post, get, del, patch } from './api';
-
-const VALID_GAME_ORIENTATIONS = new Set(['portrait', 'landscape']);
-
-function normalizeGameOrientation(value) {
-  const normalizedValue = typeof value === 'string'
-    ? value.trim().toLowerCase()
-    : '';
-
-  return VALID_GAME_ORIENTATIONS.has(normalizedValue)
-    ? normalizedValue
-    : 'portrait';
-}
+import { normalizeGameOrientation } from '../utils/gameOrientation';
 
 function mergeTaskPayload(source) {
   if (!source || typeof source !== 'object') {

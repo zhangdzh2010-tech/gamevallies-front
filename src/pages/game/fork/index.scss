@@ -223,3 +223,163 @@
     transform: rotate(360deg);
   }
 }
+
+.fork-page.fork-page--h5 {
+  display: block;
+  min-height: 100vh;
+  overflow: visible;
+
+  .fork-hero {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 18px 12px 12px;
+  }
+
+  .fork-hero__title {
+    font-size: 26px;
+    margin-bottom: 6px;
+  }
+
+  .fork-hero__subtitle {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .fork-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .fork-panel {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0 12px 20px;
+  }
+
+  .fork-loading-card,
+  .fork-empty-card {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+
+  .fork-loading-card__spinner {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 16px;
+  }
+
+  .fork-loading-card__text,
+  .fork-empty-card__text,
+  .fork-source-card__meta,
+  .fork-source-card__desc,
+  .fork-guide-card__text,
+  .fork-warning-card__text {
+    font-size: 14px;
+  }
+
+  .fork-empty-card__icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+
+  .fork-empty-card__title,
+  .fork-guide-card__title {
+    font-size: 17px;
+  }
+
+  .fork-source-card,
+  .fork-guide-card,
+  .fork-warning-card,
+  .fork-stat-item {
+    border-radius: 16px;
+  }
+
+  .fork-source-card {
+    padding: 16px 14px;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .fork-source-card__preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+  }
+
+  .fork-source-card__emoji {
+    font-size: 36px;
+  }
+
+  .fork-source-card__copy {
+    gap: 6px;
+  }
+
+  .fork-source-card__title {
+    font-size: 18px;
+  }
+
+  .fork-stat-grid {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .fork-stat-item {
+    padding: 12px 10px;
+  }
+
+  .fork-stat-item__value {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .fork-stat-item__label {
+    font-size: 12px;
+  }
+
+  .fork-guide-card,
+  .fork-warning-card {
+    padding: 16px 14px;
+    margin-bottom: 14px;
+  }
+
+  .fork-actions {
+    padding-top: 0;
+  }
+
+  .fork-submit-btn {
+    min-height: 56px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .fork-page.fork-page--h5 {
+    .fork-hero__title {
+      font-size: 24px;
+    }
+
+    .fork-panel {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .fork-page.fork-page--h5 {
+    .fork-hero {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .fork-source-card {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+}

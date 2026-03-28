@@ -4,11 +4,11 @@ import { ENV } from '../config/env';
 import useQuotaStore from './quotaStore';
 import { subscribeGameUnlocked } from '../utils/gameUnlock';
 import { getGameCoverUrl } from '../utils/media';
+import { getGameOrientation, normalizeGameOrientation } from '../utils/gameOrientation';
+import { buildGamePlayPagePath } from '../utils/gamePlayRoute';
 
-const PLAY_PAGE_PATH = '/pages/game/play/index';
-
-function buildPlayPageUrl(gameId) {
-  return gameId ? `${PLAY_PAGE_PATH}?id=${encodeURIComponent(String(gameId))}` : PLAY_PAGE_PATH;
+function buildPlayPageUrl(gameId, orientation = 'portrait') {
+  return buildGamePlayPagePath(gameId, orientation);
 }
 
 export function resolveGameUrl(url) {
@@ -44,6 +44,7 @@ const useGamePlayerStore = create((set) => ({
   gameUrl: '',
   gameTitle: '',
   gameCover: '',
+  gameOrientation: 'portrait',
   minimized: false,
   gameId: '',
   setGameContext: (payload = {}) =>
@@ -51,6 +52,7 @@ const useGamePlayerStore = create((set) => ({
       gameUrl: payload.gameUrl ?? state.gameUrl,
       gameTitle: payload.gameTitle ?? state.gameTitle,
       gameCover: payload.gameCover ?? state.gameCover,
+      gameOrientation: payload.gameOrientation ?? state.gameOrientation,
       gameId: payload.gameId ?? state.gameId,
       minimized: payload.minimized ?? false,
     })),
@@ -59,6 +61,7 @@ const useGamePlayerStore = create((set) => ({
     const canPlay = opts.canPlay !== false;
     const isOwnGame = opts.isOwnGame || false;
     const gameId = opts.gameId || '';
+    const gameOrientation = getGameOrientation(opts, 'portrait');
 
     if (isOwnGame && !canPlay) {
       Taro.showToast({ title: '订阅后可试玩', icon: 'none' });
@@ -67,6 +70,7 @@ const useGamePlayerStore = create((set) => ({
         gameUrl: url,
         gameTitle: title,
         gameCover: cover,
+        gameOrientation,
         resumePlay: true,
       });
       return;
@@ -88,12 +92,13 @@ const useGamePlayerStore = create((set) => ({
         gameUrl: resolved,
         gameTitle: title || '游戏',
         gameCover: cover || '',
+        gameOrientation,
         gameId,
         minimized: false,
       });
 
       if (process.env.TARO_ENV === 'weapp') {
-        Taro.navigateTo({ url: buildPlayPageUrl(gameId) }).catch(() => {});
+        Taro.navigateTo({ url: buildPlayPageUrl(gameId, gameOrientation) }).catch(() => {});
       }
     } catch (error) {
       console.error('Invalid game URL:', error);
@@ -110,7 +115,7 @@ const useGamePlayerStore = create((set) => ({
 
     set({ minimized: false });
     if (process.env.TARO_ENV === 'weapp') {
-      Taro.navigateTo({ url: buildPlayPageUrl(state.gameId) }).catch(() => {});
+      Taro.navigateTo({ url: buildPlayPageUrl(state.gameId, state.gameOrientation) }).catch(() => {});
     }
   },
   closeGame: () =>
@@ -118,6 +123,7 @@ const useGamePlayerStore = create((set) => ({
       gameUrl: '',
       gameTitle: '',
       gameCover: '',
+      gameOrientation: 'portrait',
       gameId: '',
       minimized: false,
     }),
@@ -150,6 +156,7 @@ function bindUnlockedPlayback() {
       getGameCoverUrl(unlockedGame, playContext.gameCover || ''),
       {
         gameId: payload.gameId || unlockedGame.id || '',
+        orientation: normalizeGameOrientation(playContext.gameOrientation || unlockedGame.orientation),
         canPlay: true,
         isOwnGame: true,
       }

@@ -7,15 +7,19 @@ import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { FloatingPlayer } from '../../components/common/FloatingPlayer';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
+import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import * as feedService from '../../services/feed';
 import * as socialService from '../../services/social';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
 import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
 import { getGameCoverUrl } from '../../utils/media';
+import { getGameOrientation } from '../../utils/gameOrientation';
 import { buildGameDetailPath } from '../../utils/share';
 import { Storage } from '../../utils/storage';
 import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../utils/profileDisplay';
+import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Scroll';
+import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
@@ -47,7 +51,8 @@ function normalizeGame(game, index) {
 }
 
 export default function FollowPage() {
-  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
+  const isWeapp = isWeappRuntime();
   const currentUser = Storage.getUser() || {};
   const currentUserId = currentUser?.id ? String(currentUser.id) : '';
   const loggedIn = isLoggedIn();
@@ -176,14 +181,70 @@ export default function FollowPage() {
     setRefreshing(false);
   };
 
-  const handleLoadMore = async () => {
+  const getH5ScrollContainer = useCallback(() => {
+    return isH5 ? getH5PageScrollContainer() : null;
+  }, [isH5]);
+
+  const handleLoadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
     const nextPage = page + 1;
     await fetchData(nextPage, true);
     setPage(nextPage);
     setIsLoadingMore(false);
-  };
+  }, [fetchData, hasMore, isLoadingMore, page]);
+
+  useEffect(() => {
+    if (!isH5) {
+      return undefined;
+    }
+
+    let ticking = false;
+    const threshold = 320;
+
+    const maybeLoadMore = () => {
+      if (ticking) {
+        return;
+      }
+
+      ticking = true;
+      const runCheck = () => {
+        ticking = false;
+        const scrollContainer = getH5ScrollContainer();
+        if (!scrollContainer) {
+          return;
+        }
+
+        const remaining = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight);
+        if (remaining <= threshold) {
+          handleLoadMore();
+        }
+      };
+
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(runCheck);
+      } else {
+        runCheck();
+      }
+    };
+
+    window.addEventListener('scroll', maybeLoadMore, { passive: true });
+    document.addEventListener('scroll', maybeLoadMore, true);
+    maybeLoadMore();
+
+    return () => {
+      window.removeEventListener('scroll', maybeLoadMore);
+      document.removeEventListener('scroll', maybeLoadMore, true);
+    };
+  }, [getH5ScrollContainer, handleLoadMore, isH5]);
+
+  useEffect(() => {
+    if (!isH5 || typeof window === 'undefined') {
+      return;
+    }
+
+    resetH5PageScrollTop();
+  }, [activeTab, isH5]);
 
   const handleTabChange = (tab) => {
     if (tab === activeTab) {
@@ -197,6 +258,7 @@ export default function FollowPage() {
     if (game.gameUrl) {
       openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
+        orientation: getGameOrientation(game),
       });
       return;
     }
@@ -318,7 +380,7 @@ export default function FollowPage() {
   });
 
   return (
-    <View className={`follow-page${isWeapp ? ' follow-page--weapp' : ''}`}>
+    <View className={`follow-page${isH5 ? ' follow-page--h5' : ''}${isWeapp ? ' follow-page--weapp' : ''}`}>
       <AppTopBar />
 
       <View className="follow-header">
@@ -336,9 +398,8 @@ export default function FollowPage() {
         </View>
       </View>
 
-      <ScrollView
+      <PageScrollContainer
         className="follow-content"
-        scrollY
         refresherEnabled
         refresherTriggered={refreshing}
         onRefresherRefresh={handleRefresh}
@@ -525,7 +586,7 @@ export default function FollowPage() {
         )}
 
         <View className="bottom-spacer" />
-      </ScrollView>
+      </PageScrollContainer>
 
       <CustomTabBar activeIndex={1} />
       <GlobalGamePlayer />

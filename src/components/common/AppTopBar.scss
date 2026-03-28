@@ -1,4 +1,13 @@
 .app-top-bar {
+  --gv-h5-topbar-width: min(100vw, 500px);
+  --gv-h5-topbar-min-height: clamp(50px, calc(var(--gv-h5-topbar-width) * 108 / 750), 58px);
+  --gv-h5-topbar-horizontal-padding: clamp(14px, calc(var(--gv-h5-topbar-width) * 24 / 750), 18px);
+  --gv-h5-topbar-top-padding: clamp(12px, calc(var(--gv-h5-topbar-width) * 20 / 750), 16px);
+  --gv-h5-topbar-bottom-padding: clamp(10px, calc(var(--gv-h5-topbar-width) * 18 / 750), 14px);
+  --gv-h5-topbar-side-width: clamp(56px, calc(var(--gv-h5-topbar-width) * 96 / 750), 64px);
+  --gv-h5-topbar-back-icon-size: clamp(16px, calc(var(--gv-h5-topbar-width) * 34 / 750), 19px);
+  --gv-h5-topbar-meta-size: clamp(13px, calc(var(--gv-h5-topbar-width) * 28 / 750), 15px);
+  --gv-h5-topbar-title-size: clamp(18px, calc(var(--gv-h5-topbar-width) * 38 / 750), 21px);
   position: sticky;
   top: 0;
   align-items: center;
@@ -7,15 +16,15 @@
   border-bottom: 1px solid rgba(37, 37, 53, 0.5);
   box-sizing: border-box;
   display: flex;
-  min-height: 72px;
-  padding: 18px 24px 15px;
+  min-height: var(--gv-h5-topbar-min-height);
+  padding: var(--gv-h5-topbar-top-padding) var(--gv-h5-topbar-horizontal-padding) var(--gv-h5-topbar-bottom-padding);
   z-index: 100;
 
   &__side {
     align-items: center;
     display: flex;
     flex-shrink: 0;
-    min-width: 88px;
+    min-width: var(--gv-h5-topbar-side-width);
   }
 
   &__side--right {
@@ -31,14 +40,14 @@
 
   &__back-icon {
     color: #b7a8ff;
-    font-size: 24px;
+    font-size: var(--gv-h5-topbar-back-icon-size);
     font-weight: 600;
     line-height: 1;
   }
 
   &__back-text {
     color: #b7a8ff;
-    font-size: 15px;
+    font-size: var(--gv-h5-topbar-meta-size);
     font-weight: 600;
     line-height: 1;
   }
@@ -49,9 +58,9 @@
     color: #f3f1fb;
     display: block;
     flex: 1;
-    font-size: 36px;
+    font-size: var(--gv-h5-topbar-title-size);
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.2px;
     line-height: 1.1;
     text-align: center;
     -webkit-background-clip: text;
@@ -67,7 +76,7 @@
 
   &__action-text {
     color: #b7a8ff;
-    font-size: 15px;
+    font-size: var(--gv-h5-topbar-meta-size);
     font-weight: 600;
     line-height: 1;
   }
@@ -88,5 +97,30 @@
 
   .app-top-bar__action-text {
     font-size: 28rpx;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .app-top-bar {
+    min-height: var(--gv-h5-topbar-min-height);
+    padding: var(--gv-h5-topbar-top-padding) var(--gv-h5-topbar-horizontal-padding) var(--gv-h5-topbar-bottom-padding);
+
+    &__side {
+      min-width: var(--gv-h5-topbar-side-width);
+    }
+
+    &__back-icon {
+      font-size: var(--gv-h5-topbar-back-icon-size);
+    }
+
+    &__back-text,
+    &__action-text {
+      font-size: var(--gv-h5-topbar-meta-size);
+    }
+
+    &__title {
+      font-size: var(--gv-h5-topbar-title-size);
+      letter-spacing: 0.2px;
+    }
   }
 }

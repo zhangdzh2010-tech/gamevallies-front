@@ -116,7 +116,7 @@ VOLCENGINE_REGISTRY_PASSWORD="Gamevallies@2026"
 VOLCENGINE_TOS_BUCKET=gamevallies-deploy
 
 # ── 服务公网 API 网关地址（面向用户/浏览器访问）─────────────
-FRONTEND_URL=https://www.gamevallies.com
+FRONTEND_URL=https://gamevallies.com
 USER_SERVICE_URL=https://sd6n8k2up8bgiaakgor40.apigateway-cn-shanghai.volceapi.com
 GAME_SERVICE_URL=https://sd6n8j9fmqc3q4mg90pr0.apigateway-cn-shanghai.volceapi.com
 FEED_SERVICE_URL=https://sd6n8kcmp8bgiaakgorig.apigateway-cn-shanghai.volceapi.com
@@ -204,7 +204,7 @@ ALIYUN_SMS_TEMPLATE_CODE=100001
 | JWT_REFRESH_SECRET | (同上) |
 | CORS_ORIGIN | * |
 | ADMIN_TOKEN | admin123 |
-| APP_URL | https://www.gamevallies.com |
+| APP_URL | https://gamevallies.com |
 | GAME_SERVICE_URL | https://sd6n8j9fmqc3q4mg90pr0.apigateway-cn-shanghai.volceapi.com |
 
 ### 4.4 gv-ai-engine (ID: v9b2a2dx, Port: 8000)

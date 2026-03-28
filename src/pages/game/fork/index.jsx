@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
+import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import * as gameService from '../../../services/game';
 import { useGameStore } from '../../../store/gameStore';
@@ -15,6 +16,7 @@ import {
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
 import { Storage } from '../../../utils/storage';
+import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
 
@@ -39,6 +41,7 @@ export default function GameForkPage() {
   const route = useRoute();
   const sourceGameId = route?.params?.sourceGameId || '';
   const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
   const { setCurrentGame } = useGameStore();
   const [sourceGame, setSourceGame] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +51,8 @@ export default function GameForkPage() {
   const currentUserId = currentUser?.id || '';
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
-  const containerClassName = `fork-page${isWeapp ? ' fork-page--weapp' : ''}`;
+  const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
+  const containerClassName = `fork-page${isWeapp ? ' fork-page--weapp' : ''}${isH5 ? ' fork-page--h5' : ''}`;
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -207,7 +211,7 @@ export default function GameForkPage() {
         <Text className="fork-hero__subtitle">先将当前版本加入你的创作，再进入专属优化页面继续完善</Text>
       </View>
 
-      <ScrollView className="fork-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
+      <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
         <View className="fork-panel">
           <View className="fork-source-card">
             <View className="fork-source-card__preview">
@@ -257,7 +261,7 @@ export default function GameForkPage() {
         </View>
 
         <View style={{ height: '80px' }} />
-      </ScrollView>
+      </PageScrollContainer>
 
       <GlobalGamePlayer />
       <PaywallPopup />

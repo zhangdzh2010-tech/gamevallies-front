@@ -21,10 +21,12 @@ const mockSetGameContext = jest.fn();
 
 let mockShareAppMessageFactory = null;
 let mockRouteParams = { id: 'game-1' };
+let mockRoutePath = '/pages/game/play/index';
 let mockGamePlayerState = {
   gameUrl: '',
   gameTitle: '',
   gameCover: '',
+  gameOrientation: 'portrait',
   gameId: '',
   setGameContext: mockSetGameContext,
 };
@@ -40,7 +42,7 @@ jest.mock('@tarojs/components', () => {
 jest.mock('@tarojs/hooks', () => ({
   useRoute: jest.fn(() => ({
     params: mockRouteParams,
-    path: '/pages/game/play/index',
+    path: mockRoutePath,
   })),
 }));
 
@@ -108,10 +110,12 @@ describe('play page share navigation safeguards', () => {
     jest.clearAllMocks();
     mockShareAppMessageFactory = null;
     mockRouteParams = { id: 'game-1' };
+    mockRoutePath = '/pages/game/play/index';
     mockGamePlayerState = {
       gameUrl: '',
       gameTitle: '',
       gameCover: '',
+      gameOrientation: 'portrait',
       gameId: '',
       setGameContext: mockSetGameContext,
     };
@@ -125,6 +129,7 @@ describe('play page share navigation safeguards', () => {
       gameUrl: 'https://game.example/play',
       gameTitle: 'Shared Game',
       gameCover: 'https://img.example/cover.png',
+      gameOrientation: 'portrait',
       gameId: 'game-1',
       setGameContext: mockSetGameContext,
     };
@@ -146,6 +151,26 @@ describe('play page share navigation safeguards', () => {
       expect(mockRedirectTo).toHaveBeenCalledWith({
         url: '/pages/game/detail/index?id=game-1',
       });
+    });
+  });
+
+  test('landscape play page forwards orientation to the game shell', async () => {
+    mockRoutePath = '/pages/game/play-landscape/index';
+    mockGamePlayerState = {
+      gameUrl: 'https://game.example/play',
+      gameTitle: 'Landscape Game',
+      gameCover: 'https://img.example/cover.png',
+      gameOrientation: 'landscape',
+      gameId: 'game-1',
+      setGameContext: mockSetGameContext,
+    };
+
+    render(<GamePlay />);
+
+    await waitFor(() => {
+      expect(mockBuildGameWebShellUrl).toHaveBeenCalledWith(expect.objectContaining({
+        orientation: 'landscape',
+      }));
     });
   });
 });

@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import useQuotaStore from '../../stores/quotaStore';
 import { Storage } from '../../utils/storage';
 import Taro from '@tarojs/taro';
+import { isH5Runtime } from '../../utils/runtime';
 import './index.scss';
 
 export default function SubscriptionPage() {
+  const isH5 = isH5Runtime();
   const freeQuota = useQuotaStore((s) => s.freeQuota);
   const totalFreeQuota = useQuotaStore((s) => s.totalFreeQuota);
   const subscription = useQuotaStore((s) => s.subscription);
@@ -54,10 +57,10 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <View className="subscription-container">
+    <View className={`subscription-container${isH5 ? ' subscription-container--h5' : ''}`}>
       <AppTopBar showBack />
 
-      <ScrollView scrollY className="subscription-scroll">
+      <PageScrollContainer scrollY className="subscription-scroll">
         <View className="quota-card">
           <Text className="quota-card-title">免费创作额度</Text>
           <View className="quota-progress-wrap">
@@ -152,7 +155,7 @@ export default function SubscriptionPage() {
         )}
 
         <View className="bottom-spacer" />
-      </ScrollView>
+      </PageScrollContainer>
 
       <CustomTabBar activeIndex={4} />
     </View>

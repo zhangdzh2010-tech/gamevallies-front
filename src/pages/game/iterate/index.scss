@@ -452,3 +452,215 @@
     box-shadow: 0 0 0 12px rgba(110, 86, 255, 0);
   }
 }
+
+.iterate-page.iterate-page--h5 {
+  display: block;
+  min-height: 100vh;
+  overflow: visible;
+
+  .iterate-hero {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 18px 12px 12px;
+  }
+
+  .iterate-hero__title {
+    font-size: 26px;
+    margin-bottom: 6px;
+  }
+
+  .iterate-hero__subtitle {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .iterate-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .iterate-panel,
+  .progress-panel {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0 12px 20px;
+  }
+
+  .iterate-loading-card,
+  .iterate-empty-card {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+
+  .iterate-loading-card__spinner {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 16px;
+  }
+
+  .iterate-loading-card__text,
+  .iterate-empty-card__text {
+    font-size: 14px;
+  }
+
+  .iterate-empty-card__icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+
+  .iterate-empty-card__title,
+  .iterate-metadata-card__title {
+    font-size: 17px;
+  }
+
+  .iterate-empty-card__action,
+  .iterate-submit-btn {
+    min-height: 56px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+
+  .iterate-metadata-card {
+    padding: 16px 14px;
+    margin-bottom: 14px;
+    border-radius: 16px;
+  }
+
+  .iterate-metadata-card__hint,
+  .iterate-metadata-card__summary,
+  .iterate-error-banner__text,
+  .iterate-hint,
+  .task-event-text {
+    font-size: 14px;
+  }
+
+  .iterate-metadata-grid {
+    gap: 8px;
+  }
+
+  .iterate-metadata-item {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .iterate-metadata-item__label,
+  .iterate-count,
+  .progress-pct,
+  .stage-active-hint,
+  .task-events-title {
+    font-size: 12px;
+  }
+
+  .iterate-metadata-item__value,
+  .stage-label,
+  .task-cancel-btn {
+    font-size: 14px;
+  }
+
+  .iterate-error-banner {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .iterate-actions {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .iterate-action-btn {
+    min-height: 56px;
+    padding: 0 14px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  .iterate-section-title {
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .iterate-hint {
+    margin-bottom: 12px;
+  }
+
+  .iterate-textarea {
+    min-height: 144px;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  .iterate-count {
+    margin-bottom: 14px;
+  }
+
+  .task-events-card {
+    padding: 14px;
+    margin-bottom: 14px;
+    border-radius: 16px;
+  }
+
+  .progress-bar-wrapper {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stage-list {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .stage-item {
+    gap: 8px;
+    padding: 11px 12px;
+    border-radius: 12px;
+  }
+
+  .stage-indicator {
+    width: 20px;
+    height: 20px;
+  }
+
+  .stage-check,
+  .stage-dot {
+    font-size: 14px;
+  }
+
+  .task-cancel-btn {
+    min-height: 56px;
+    border-radius: 14px;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .iterate-page.iterate-page--h5 {
+    .iterate-hero__title {
+      font-size: 24px;
+    }
+
+    .iterate-panel,
+    .progress-panel {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+}
+
+@media screen and (max-width: 390px) {
+  .iterate-page.iterate-page--h5 {
+    .iterate-metadata-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .iterate-hero {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+}

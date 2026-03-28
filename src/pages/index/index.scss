@@ -50,7 +50,8 @@
     }
   }
 
-  .scroll-view {
+  .scroll-view,
+  .home-content {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -264,7 +265,18 @@
   }
 
   &.home-container--h5 {
-    .scroll-view {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+
+    .home-content--h5 {
+      display: block;
+      overflow: visible;
+    }
+
+    .scroll-view,
+    .home-content--h5 {
       .challenge-banner {
         -webkit-text-size-adjust: none;
         margin: 12px 16px 8px;
@@ -287,6 +299,37 @@
           font-size: 14px;
           padding: 8px 12px;
         }
+      }
+
+      .type-tabs-scroll {
+        margin-bottom: 4px;
+
+        .type-tabs {
+          gap: 8px;
+          padding: 4px 14px 2px;
+        }
+
+        .type-tab {
+          min-width: 56px;
+          padding: 8px 12px;
+
+          .type-tab__label {
+            font-size: 13px;
+          }
+        }
+      }
+
+      .waterfall {
+        gap: 10px;
+        padding: 8px 14px;
+
+        .waterfall-col {
+          gap: 10px;
+        }
+      }
+
+      .bottom-spacer {
+        height: calc(140px + env(safe-area-inset-bottom));
       }
     }
   }

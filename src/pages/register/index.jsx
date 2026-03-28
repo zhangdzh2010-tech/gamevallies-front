@@ -4,6 +4,7 @@ import { useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import * as authService from '../../services/auth';
 import { navigateAfterLogin } from '../../utils/authNavigation';
+import { isH5Runtime } from '../../utils/runtime';
 import './index.scss';
 
 const COOLDOWN = 60;
@@ -18,6 +19,7 @@ function getSmsErrorMessage(error) {
 
 export default function Register() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
   const navigation = useNavigation();
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -115,7 +117,7 @@ export default function Register() {
   };
 
   return (
-    <View className={`register-container${isWeapp ? ' register-container--weapp' : ''}`}>
+    <View className={`register-container${isWeapp ? ' register-container--weapp' : ''}${isH5 ? ' register-container--h5' : ''}`}>
       <View className="back-header" onClick={() => navigation.back()}>
         <Text className="back-arrow">←</Text>
         <Text className="back-text">返回</Text>
@@ -123,7 +125,7 @@ export default function Register() {
 
       <View className="register-content">
         <View className="logo-section">
-          <Text className="logo">智趣空间</Text>
+          <Text className="logo">智了空间</Text>
           <Text className="tagline">创建你的账号</Text>
         </View>
 

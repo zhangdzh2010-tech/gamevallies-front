@@ -699,3 +699,407 @@
     }
   }
 }
+
+.game-detail.game-detail--h5 {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+
+  .detail-top-bar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .back-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+
+    .back-btn__icon {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .detail-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+
+    .preview-banner {
+      height: clamp(164px, 46vw, 196px);
+
+      .preview-emoji {
+        font-size: clamp(64px, 18vw, 80px);
+      }
+    }
+
+    .detail-content {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 14px 12px 0;
+
+      .title-section {
+        margin-bottom: 16px;
+        padding: 16px 14px 14px;
+        border-radius: 18px;
+
+        .title {
+          font-size: clamp(24px, 7vw, 28px);
+          margin-bottom: 8px;
+          letter-spacing: 0;
+        }
+
+        .description {
+          font-size: 14px;
+          line-height: 1.55;
+        }
+      }
+
+      .author-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 14px;
+        margin-bottom: 16px;
+
+        .author-info {
+          gap: 12px;
+
+          .author-avatar,
+          .author-avatar-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+          }
+
+          .author-avatar-text {
+            font-size: 20px;
+          }
+
+          .author-emoji {
+            font-size: 34px;
+          }
+
+          .author-details {
+            gap: 4px;
+
+            .author-name {
+              font-size: 16px;
+            }
+
+            .author-desc {
+              font-size: 13px;
+              line-height: 1.5;
+            }
+          }
+        }
+
+        .follow-btn {
+          align-self: flex-start;
+          min-height: 36px;
+          padding: 0 14px;
+          font-size: 13px;
+
+          &.is-following {
+            font-size: 13px;
+          }
+        }
+      }
+
+      .stats-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+
+        .stat-item {
+          padding: 14px 10px 12px;
+
+          .stat-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 8px;
+          }
+
+          .stat-value {
+            font-size: 16px;
+            margin-bottom: 3px;
+          }
+
+          .stat-text {
+            font-size: 11px;
+          }
+        }
+      }
+
+      .action-buttons {
+        gap: 8px;
+        margin-bottom: 16px;
+
+        .play-btn {
+          min-height: 74px;
+          padding: 14px;
+          border-radius: 18px;
+          gap: 10px;
+
+          .btn-icon {
+            width: 28px;
+            height: 28px;
+          }
+
+          .btn-copy {
+            gap: 2px;
+          }
+
+          .btn-text {
+            font-size: 18px;
+          }
+
+          .btn-subtext {
+            font-size: 12px;
+            line-height: 1.4;
+          }
+        }
+
+        .icon-btn {
+          flex: 1 1 calc(50% - 4px);
+          min-height: 68px;
+          padding: 12px 12px 10px;
+          gap: 8px;
+          border-radius: 18px;
+
+          .icon-symbol {
+            width: 20px;
+            height: 20px;
+          }
+
+          .icon-copy {
+            gap: 2px;
+          }
+
+          .icon-value {
+            font-size: 14px;
+          }
+
+          .icon-label {
+            font-size: 11px;
+            line-height: 1.3;
+          }
+        }
+      }
+
+      .tags-section {
+        gap: 6px;
+        margin-bottom: 16px;
+
+        .tag {
+          padding: 7px 12px;
+          font-size: 12px;
+        }
+      }
+
+      .comments-section {
+        .comments-title {
+          gap: 8px;
+          margin-bottom: 14px;
+
+          .comments-title-icon {
+            width: 16px;
+            height: 16px;
+          }
+
+          .comments-title-text {
+            font-size: 18px;
+          }
+        }
+
+        .comments-loading,
+        .comments-empty {
+          padding: 26px 0;
+
+          .comments-empty-icon {
+            width: 30px;
+            height: 30px;
+            margin-bottom: 8px;
+          }
+
+          .comments-empty-text {
+            font-size: 14px;
+          }
+        }
+
+        .comment-thread {
+          margin-bottom: 10px;
+        }
+
+        .comment-item {
+          gap: 10px;
+          padding: 14px 0;
+
+          &.is-reply {
+            padding: 8px 0 8px 20px;
+          }
+
+          .comment-avatar-wrap {
+            width: 36px;
+            height: 36px;
+
+            .comment-avatar-img {
+              width: 36px;
+              height: 36px;
+            }
+
+            .comment-avatar-emoji {
+              font-size: 24px;
+            }
+          }
+
+          .comment-body {
+            .comment-header {
+              margin-bottom: 4px;
+
+              .comment-name {
+                font-size: 14px;
+              }
+
+              .comment-time {
+                font-size: 12px;
+              }
+            }
+
+            .comment-content {
+              font-size: 14px;
+              line-height: 1.6;
+              margin-bottom: 8px;
+            }
+
+            .comment-actions {
+              gap: 14px;
+
+              .comment-action {
+                gap: 6px;
+                font-size: 12px;
+
+                .comment-action-icon {
+                  width: 14px;
+                  height: 14px;
+                }
+
+                .comment-action-count,
+                .comment-action-label {
+                  font-size: 12px;
+                }
+              }
+            }
+          }
+        }
+
+        .replies-container {
+          padding-left: 18px;
+          margin-left: 16px;
+
+          .expand-replies,
+          .reply-shortcut {
+            font-size: 12px;
+          }
+        }
+
+        .load-more {
+          padding: 12px;
+          font-size: 13px;
+          border-radius: 12px;
+        }
+      }
+
+      .bottom-spacer {
+        min-height: 96px;
+      }
+    }
+  }
+
+  .comment-input-bar {
+    .reply-hint {
+      padding: 8px 12px 5px;
+
+      .reply-hint-text {
+        font-size: 12px;
+      }
+
+      .reply-cancel {
+        width: 24px;
+        height: 24px;
+        font-size: 18px;
+      }
+    }
+
+    .comment-input-row {
+      gap: 8px;
+      padding: 10px 12px;
+
+      .comment-input {
+        border-radius: 22px;
+        padding: 11px 14px;
+        font-size: 13px;
+      }
+
+      .comment-send {
+        padding: 11px 16px;
+        border-radius: 22px;
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .game-detail.game-detail--h5 {
+    .detail-scroll {
+      .detail-content {
+        .title-section {
+          .title {
+            font-size: 24px;
+          }
+        }
+
+        .action-buttons {
+          .icon-btn {
+            flex-basis: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .game-detail.game-detail--h5 {
+    .detail-scroll {
+      .preview-banner {
+        height: 152px;
+      }
+
+      .detail-content {
+        padding-left: 10px;
+        padding-right: 10px;
+
+        .action-buttons {
+          .icon-btn {
+            flex-basis: 100%;
+          }
+        }
+
+        .comments-section {
+          .comment-item {
+            .comment-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 2px;
+            }
+          }
+        }
+      }
+    }
+  }
+}

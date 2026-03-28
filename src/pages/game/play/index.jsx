@@ -8,12 +8,13 @@ import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { buildGameWebShellUrl } from '../../../utils/gameWebShell';
 import { getGameCoverUrl } from '../../../utils/media';
+import { navigateBackOrHome } from '../../../utils/navigation';
 import { buildGameDetailPath } from '../../../utils/share';
 import { Storage } from '../../../utils/storage';
 import { getShareConfig } from '../../../utils/share';
+import { getGameOrientation } from '../../../utils/gameOrientation';
+import { isLandscapePlayPagePath } from '../../../utils/gamePlayRoute';
 import './index.scss';
-
-const HOME_PAGE_URL = '/pages/index/index';
 
 function validateGameUrl(url) {
   const suspiciousChars = /[<>{}|\\^`]/;
@@ -28,25 +29,14 @@ function getAuthSignature() {
   return `${Storage.getToken() || ''}:${Storage.getRefreshToken() || ''}`;
 }
 
-function navigateBackOrHome(fallbackUrl = '') {
+function getRoutePagePath(route) {
+  if (route?.path) {
+    return String(route.path);
+  }
+
   const pages = Taro.getCurrentPages();
-
-  if (pages.length > 1) {
-    Taro.navigateBack({ delta: 1 }).catch(() => {});
-    return;
-  }
-
-  if (fallbackUrl) {
-    Taro.redirectTo({ url: fallbackUrl })
-      .catch(() => Taro.reLaunch({ url: fallbackUrl }))
-      .catch(() => Taro.switchTab({ url: HOME_PAGE_URL }))
-      .catch(() => {});
-    return;
-  }
-
-  Taro.switchTab({ url: HOME_PAGE_URL })
-    .catch(() => Taro.reLaunch({ url: HOME_PAGE_URL }))
-    .catch(() => {});
+  const currentPage = pages[pages.length - 1];
+  return currentPage?.route ? `/${currentPage.route}` : '';
 }
 
 export default function GamePlay() {
@@ -54,6 +44,7 @@ export default function GamePlay() {
   const gameUrl = useGamePlayerStore((s) => s.gameUrl);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
   const gameCover = useGamePlayerStore((s) => s.gameCover);
+  const gameOrientation = useGamePlayerStore((s) => s.gameOrientation);
   const gameId = useGamePlayerStore((s) => s.gameId);
   const setGameContext = useGamePlayerStore((s) => s.setGameContext);
   const [sourceGameUrl, setSourceGameUrl] = useState('');
@@ -63,14 +54,23 @@ export default function GamePlay() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [authSignature, setAuthSignature] = useState(getAuthSignature());
+  const routePagePath = getRoutePagePath(route);
+  const routeDefaultOrientation = isLandscapePlayPagePath(routePagePath) ? 'landscape' : 'portrait';
   const routeGameId = route.params?.id || '';
   const activeGameId = gameId || routeGameId;
   const activeGameCover = getGameCoverUrl(gameMeta || {}, gameCover);
+  const activeGameOrientation = gameMeta
+    ? getGameOrientation(gameMeta, routeDefaultOrientation)
+    : getGameOrientation(
+        route.params?.orientation || (routeDefaultOrientation === 'landscape' ? routeDefaultOrientation : gameOrientation),
+        routeDefaultOrientation,
+      );
   const shareConfig = getShareConfig(
     {
       id: activeGameId,
       title: gameMeta?.title || gameTitle || '游戏',
       coverUrl: activeGameCover,
+      orientation: activeGameOrientation,
     },
     undefined,
     { target: 'detail' },
@@ -176,6 +176,7 @@ export default function GamePlay() {
           gameUrl: resolvedUrl,
           gameTitle: game?.title || '游戏',
           gameCover: getGameCoverUrl(game),
+          gameOrientation: getGameOrientation(game, routeDefaultOrientation),
           gameId: game?.id || routeGameId,
           minimized: false,
         });
@@ -205,7 +206,7 @@ export default function GamePlay() {
     return () => {
       cancelled = true;
     };
-  }, [gameUrl, routeGameId, setGameContext, syncGameMeta]);
+  }, [gameUrl, routeDefaultOrientation, routeGameId, setGameContext, syncGameMeta]);
 
   useEffect(() => {
     if (!sourceGameUrl) {
@@ -218,13 +219,14 @@ export default function GamePlay() {
       gameUrl: sourceGameUrl,
       title: gameMeta?.title || gameTitle || '游戏',
       coverUrl: activeGameCover,
+      orientation: activeGameOrientation,
       accessToken: Storage.getToken(),
       refreshToken: Storage.getRefreshToken(),
       bookmarked: isBookmarked,
     });
 
     setCurrentUrl(shellUrl || sourceGameUrl);
-  }, [activeGameId, authSignature, gameCover, gameMeta, gameTitle, isBookmarked, sourceGameUrl]);
+  }, [activeGameCover, activeGameId, activeGameOrientation, authSignature, gameMeta, gameTitle, isBookmarked, sourceGameUrl]);
 
   useEffect(() => {
     loadGameMeta();
@@ -296,7 +298,7 @@ export default function GamePlay() {
   };
 
   return (
-    <View className="game-play-page">
+    <View className={`game-play-page${activeGameOrientation === 'landscape' ? ' is-landscape' : ''}`}>
       {currentUrl ? (
         <WebView
           className="game-webview"

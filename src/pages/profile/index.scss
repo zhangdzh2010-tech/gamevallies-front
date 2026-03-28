@@ -2164,6 +2164,10 @@
 
 .profile-container .profile-header .header-top .quota-subscribe-btn {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56rpx;
   margin-left: 16rpx;
   padding: 14rpx 28rpx;
   border-radius: 14rpx;
@@ -2175,9 +2179,858 @@
   font-size: 26rpx;
   font-weight: 600;
   color: #6e56ff;
+  line-height: 1;
   white-space: nowrap;
 }
 
 .profile-container .profile-header .header-top .quota-subscribe-btn:active {
   opacity: 0.85;
+}
+
+.profile-container.profile-container--h5 {
+  display: block;
+  min-height: 100vh;
+  overflow: visible;
+
+  .profile-header {
+    padding: 18px 14px 16px;
+
+    .header-top {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+      column-gap: 12px;
+      margin-bottom: 10px;
+
+      .header-avatar {
+        min-width: 0;
+      }
+
+      .avatar,
+      .avatar-img {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+      }
+
+      .avatar {
+        font-size: 34px;
+      }
+
+      .header-right {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: 'quota actions';
+        align-items: start;
+        min-width: 0;
+        width: 100%;
+        margin-left: 0;
+        gap: 10px;
+      }
+
+      .header-actions {
+        grid-area: actions;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 8px;
+        min-width: 54px;
+
+        .settings-btn {
+          width: 38px;
+          height: 38px;
+          align-self: flex-end;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: linear-gradient(180deg, rgba(110, 86, 255, 0.18), rgba(110, 86, 255, 0.08));
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+
+          .settings-icon {
+            width: 19px;
+            height: 19px;
+          }
+        }
+
+        .logout-btn {
+          min-height: 38px;
+          padding: 0 12px;
+          border-radius: 12px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+
+          .logout-text {
+            font-size: 14px;
+            line-height: 1;
+          }
+        }
+      }
+
+      .quota-info-bar {
+        grid-area: quota;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+          'icon text button'
+          'icon sub button';
+        width: 100%;
+        min-width: 0;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(18, 18, 28, 0.74), rgba(9, 13, 22, 0.84));
+        border: 1px solid rgba(110, 86, 255, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        column-gap: 8px;
+        row-gap: 4px;
+      }
+
+      .quota-info-icon {
+        grid-area: icon;
+        margin-right: 0;
+        min-width: 42px;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(110, 86, 255, 0.16);
+        color: #d6d0ff;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .quota-info-text {
+        grid-area: text;
+        min-width: 0;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      .quota-info-sub {
+        grid-area: sub;
+        min-width: 0;
+        margin-left: 0;
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      .quota-subscribe-btn {
+        grid-area: button;
+        justify-self: end;
+        align-self: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 58px;
+        min-height: 34px;
+        margin-left: 0;
+        margin-top: 0;
+        padding: 0 14px;
+        border-radius: 12px;
+        white-space: nowrap;
+
+        .quota-subscribe-text {
+          font-size: 13px;
+          line-height: 1;
+          white-space: nowrap;
+        }
+      }
+    }
+
+    .user-info {
+      margin-bottom: 16px;
+
+      .user-name {
+        font-size: 24px;
+      }
+
+      .user-bio {
+        font-size: 14px;
+      }
+    }
+
+    .stats-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+
+      .stat {
+        padding: 14px 8px 12px;
+        border-radius: 16px;
+
+        .stat-value {
+          font-size: 22px;
+        }
+
+        .stat-label {
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .creator-identity {
+    margin: 14px 16px 0;
+    padding: 16px;
+    border-radius: 20px;
+
+    .identity-main {
+      gap: 14px;
+    }
+
+    .identity-badges {
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .identity-title {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .identity-desc {
+      font-size: 14px;
+    }
+
+    .identity-orb {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+    }
+
+    .identity-orb-value {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .identity-orb-label {
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .creator-links {
+    margin: 14px 16px 16px;
+    gap: 10px;
+  }
+
+  .link-item {
+    padding: 14px 16px;
+    border-radius: 18px;
+
+    .link-main {
+      gap: 12px;
+    }
+
+    .link-icon-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+    }
+
+    .link-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .link-label {
+      font-size: 18px;
+    }
+
+    .link-desc {
+      font-size: 14px;
+    }
+
+    .link-status {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+  }
+
+  .profile-scroll,
+  taro-scroll-view-core.profile-scroll,
+  taro-scroll-view-core.profile-scroll .taro-scroll-view__scroll-y {
+    display: block;
+    flex: none;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible !important;
+  }
+
+  .profile-scroll {
+    .tabs-container {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+
+      .tab-item {
+        padding: 16px 4px 14px;
+        font-size: 15px;
+
+        .tab-count {
+          font-size: 13px;
+        }
+      }
+    }
+
+    .games-section {
+      padding: 16px 16px 24px;
+
+      .games-list {
+        gap: 14px;
+      }
+
+      .empty-state {
+        padding: 72px 24px;
+
+        .empty-icon {
+          width: 58px;
+          height: 58px;
+          margin-bottom: 14px;
+        }
+
+        .empty-text {
+          font-size: 16px;
+        }
+
+        .empty-action {
+          margin-top: 18px;
+          padding: 12px 18px;
+          border-radius: 14px;
+          font-size: 16px;
+        }
+      }
+
+      .tasks-panel__hero {
+        padding: 16px;
+        border-radius: 18px;
+      }
+
+      .tasks-panel__hero-title,
+      .tasks-panel__title {
+        font-size: 20px;
+      }
+
+      .tasks-panel__hero-desc,
+      .tasks-panel__empty-text {
+        font-size: 14px;
+      }
+
+      .tasks-panel__count {
+        min-width: 30px;
+        height: 30px;
+        padding: 0 8px;
+        font-size: 14px;
+      }
+
+      .tasks-panel__empty {
+        padding: 24px 18px;
+      }
+
+      .tasks-panel__empty-action,
+      .tasks-panel__primary-btn {
+        padding: 14px 16px;
+        border-radius: 14px;
+        font-size: 16px;
+      }
+    }
+
+    .bottom-spacer {
+      height: calc(138px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  .more-overlay {
+    padding: 0 12px calc(env(safe-area-inset-bottom, 0px) + 102px);
+
+    .more-menu {
+      max-width: 100%;
+      max-height: calc(100vh - 28px);
+      border-radius: 22px 22px 0 0;
+      box-sizing: border-box;
+
+      .more-handle {
+        width: 56px;
+        height: 6px;
+        margin: 12px auto 4px;
+      }
+
+      .more-header {
+        padding: 14px 18px 16px;
+
+        .more-title {
+          font-size: 14px;
+          margin-bottom: 6px;
+        }
+
+        .more-game-name {
+          font-size: 20px;
+        }
+      }
+
+      .more-list {
+        gap: 10px;
+        padding: 12px 12px 8px;
+      }
+
+      .more-item {
+        gap: 12px;
+        padding: 14px;
+        border-radius: 18px;
+
+        .more-icon-badge {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+        }
+
+        .more-icon {
+          width: 22px;
+          height: 22px;
+        }
+
+        .more-label {
+          font-size: 18px;
+        }
+
+        .more-desc {
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
+        .more-arrow {
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      .more-cancel {
+        margin: 6px 12px 18px;
+        padding: 14px;
+        border-radius: 16px;
+        font-size: 16px;
+      }
+    }
+  }
+
+  .modal-overlay {
+    padding: 0 12px;
+    box-sizing: border-box;
+
+    .visibility-modal,
+    .optimize-modal,
+    .edit-profile-modal {
+      width: 100%;
+      max-width: 100%;
+      max-height: calc(100vh - 22px);
+      box-sizing: border-box;
+    }
+
+    .visibility-modal {
+      padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+      border-radius: 22px 22px 0 0;
+
+      .modal-title {
+        font-size: 22px;
+        margin-bottom: 20px;
+      }
+
+      .setting-group {
+        margin-bottom: 16px;
+        border-radius: 16px;
+
+        .setting-section-label {
+          font-size: 12px;
+          padding: 14px 16px 8px;
+        }
+
+        .vis-option,
+        .toggle-row {
+          gap: 10px;
+          padding: 14px 16px;
+        }
+
+        .vis-icon {
+          width: 28px;
+          font-size: 20px;
+        }
+
+        .vis-text .vis-label,
+        .toggle-info .toggle-label {
+          font-size: 16px;
+        }
+
+        .vis-text .vis-desc,
+        .toggle-info .toggle-desc {
+          font-size: 12px;
+          line-height: 1.5;
+        }
+
+        .vis-radio {
+          width: 18px;
+          height: 18px;
+        }
+
+        .toggle-switch {
+          width: 46px;
+          height: 26px;
+          border-radius: 13px;
+
+          &.on .toggle-thumb {
+            transform: translateX(20px);
+          }
+
+          .toggle-thumb {
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+          }
+        }
+      }
+
+      .modal-actions {
+        gap: 10px;
+
+        .modal-btn {
+          padding: 14px;
+          border-radius: 14px;
+          font-size: 16px;
+        }
+      }
+    }
+
+    .optimize-modal {
+      position: static;
+      padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+      border-radius: 22px 22px 0 0;
+
+      .modal-title {
+        font-size: 22px;
+      }
+
+      .optimize-game-name {
+        font-size: 14px;
+        margin-bottom: 18px;
+      }
+
+      .optimize-hint-label {
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .optimize-hints {
+        gap: 8px;
+        margin-bottom: 16px;
+
+        .hint-chip {
+          padding: 8px 14px;
+          font-size: 13px;
+        }
+      }
+
+      .optimize-textarea {
+        min-height: 132px;
+        padding: 14px;
+        border-radius: 14px;
+        font-size: 15px;
+      }
+
+      .optimize-counter {
+        font-size: 12px;
+        margin-bottom: 18px;
+      }
+
+      .modal-actions {
+        gap: 10px;
+
+        .modal-btn {
+          padding: 14px;
+          border-radius: 14px;
+          font-size: 16px;
+        }
+      }
+    }
+
+    .edit-profile-modal {
+      border-radius: 22px 22px 0 0;
+
+      .edit-modal-header {
+        padding: 18px 16px 0;
+      }
+
+      .edit-modal-title {
+        font-size: 22px;
+      }
+
+      .edit-modal-close {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+      }
+
+      taro-scroll-view-core.edit-modal-body,
+      taro-scroll-view-core.edit-modal-body .taro-scroll-view__scroll-y {
+        display: block;
+        height: auto !important;
+        min-height: 0;
+      }
+
+      .edit-modal-body {
+        padding: 16px 16px 12px;
+      }
+
+      .edit-modal-footer {
+        padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .edit-save-btn {
+        padding: 16px;
+        border-radius: 14px;
+        font-size: 16px;
+      }
+
+      .edit-avatar-section {
+        margin-bottom: 24px;
+      }
+
+      .edit-avatar-bg {
+        width: 120px;
+        height: 120px;
+        top: -8px;
+      }
+
+      .edit-avatar-preview {
+        width: 80px;
+        height: 80px;
+
+        .edit-avatar-img,
+        .edit-avatar-emoji {
+          width: 80px;
+          height: 80px;
+          border-radius: 22px;
+        }
+
+        .edit-avatar-emoji {
+          font-size: 38px;
+        }
+
+        .edit-avatar-badge {
+          right: -4px;
+          bottom: -4px;
+          width: 28px;
+          height: 28px;
+          font-size: 12px;
+        }
+      }
+
+      .edit-avatar-hint {
+        font-size: 13px;
+        margin-top: 10px;
+      }
+
+      .edit-field {
+        margin-bottom: 18px;
+      }
+
+      .edit-label {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+
+      .edit-input-wrap {
+        border-radius: 14px;
+        padding: 0 12px;
+      }
+
+      .edit-input,
+      .edit-textarea {
+        font-size: 15px;
+      }
+
+      .edit-textarea {
+        min-height: 96px;
+        padding: 14px 0;
+      }
+
+      .edit-counter {
+        margin-top: 8px;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .profile-game-card {
+    border-radius: 18px;
+
+    .pgc-preview {
+      height: 240px;
+
+      .pgc-emoji {
+        font-size: 72px;
+      }
+
+      .hot-badge {
+        top: 12px;
+        left: 12px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+      }
+
+      .pgc-status-wrap {
+        top: 12px;
+        right: 12px;
+      }
+    }
+
+    .pgc-body {
+      padding: 14px;
+
+      .pgc-title {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+
+      .pgc-actions {
+        gap: 6px;
+
+        .pgc-action {
+          gap: 6px;
+          padding: 8px 10px;
+          border-radius: 14px;
+
+          .pgc-action-icon {
+            width: 20px;
+            height: 20px;
+          }
+
+          .pgc-action-count {
+            font-size: 14px;
+          }
+
+          .pgc-action-label {
+            font-size: 11px;
+          }
+        }
+
+        .pgc-more-btn {
+          padding: 8px 10px;
+
+          .pgc-more-dots {
+            font-size: 20px;
+          }
+        }
+      }
+    }
+  }
+
+  .status-badge {
+    font-size: 12px;
+  }
+
+  .profile-task-card {
+    padding: 16px;
+    border-radius: 18px;
+
+    .profile-task-card__type,
+    .profile-task-card__status,
+    .profile-task-card__time,
+    .profile-task-card__progress-text {
+      font-size: 13px;
+    }
+
+    .profile-task-card__title {
+      font-size: 18px;
+    }
+
+    .profile-task-card__message,
+    .profile-task-card__detail-text {
+      font-size: 14px;
+    }
+
+    .profile-task-card__detail-label {
+      font-size: 13px;
+    }
+
+    .profile-task-card__btn {
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .profile-container.profile-container--h5 {
+    .profile-header {
+      .header-top {
+        .header-right {
+          grid-template-columns: minmax(0, 1fr) 50px;
+          gap: 8px;
+        }
+
+        .quota-info-bar {
+          padding: 9px 10px;
+          column-gap: 7px;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .profile-container.profile-container--h5 {
+    .profile-header {
+      padding-left: 12px;
+      padding-right: 12px;
+
+      .header-top {
+        grid-template-columns: 64px minmax(0, 1fr);
+        column-gap: 10px;
+
+        .avatar,
+        .avatar-img {
+          width: 64px;
+          height: 64px;
+          border-radius: 18px;
+        }
+
+        .avatar {
+          font-size: 30px;
+        }
+
+        .quota-info-bar {
+          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-areas:
+            'icon text'
+            'sub sub'
+            'button button';
+          align-items: start;
+        }
+
+        .quota-info-sub {
+          padding-left: 0;
+        }
+
+        .quota-subscribe-btn {
+          justify-self: start;
+          margin-top: 2px;
+        }
+      }
+    }
+  }
 }

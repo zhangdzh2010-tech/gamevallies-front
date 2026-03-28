@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { isH5Runtime } from '../../../utils/runtime';
 import './PasswordChangeModal.scss';
 
 /**
  * 密码修改模态框组件
  */
 export function PasswordChangeModal({ onClose, onSave }) {
+  const isH5 = isH5Runtime();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -63,7 +65,7 @@ export function PasswordChangeModal({ onClose, onSave }) {
 
   return (
     <View className="modal-overlay" onClick={onClose}>
-      <View className="password-change-modal" onClick={(e) => e.stopPropagation()}>
+      <View className={`password-change-modal${isH5 ? ' password-change-modal--h5' : ''}`} onClick={(e) => e.stopPropagation()}>
         {/* 模态框头部 */}
         <View className="modal-header">
           <Text className="modal-title">修改密码</Text>

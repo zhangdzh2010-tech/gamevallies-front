@@ -81,6 +81,13 @@
   padding: 0 16px 12px;
 }
 
+.paywall-plans-scroll--h5 {
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 .paywall-plans {
   display: flex;
   flex-direction: column;
@@ -233,4 +240,97 @@
 .subscriber-count {
   font-size: 12px;
   color: #55516e;
+}
+
+@media screen and (max-width: 480px) {
+  .paywall-overlay {
+    align-items: flex-end;
+  }
+
+  .paywall-panel {
+    max-height: 84vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .paywall-header {
+    padding: 16px 16px 10px;
+  }
+
+  .paywall-close {
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .paywall-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  .paywall-title {
+    font-size: 18px;
+  }
+
+  .paywall-subtitle {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .paywall-plans-scroll {
+    padding: 0 12px 10px;
+  }
+
+  .paywall-plans {
+    gap: 10px;
+  }
+
+  .paywall-plan-card {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .plan-top {
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .plan-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+  }
+
+  .plan-price {
+    font-size: 21px;
+  }
+
+  .plan-period,
+  .plan-quota-text,
+  .plan-feature-text {
+    font-size: 12px;
+  }
+
+  .plan-features {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .plan-subscribe-btn {
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 15px;
+    letter-spacing: 0;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .paywall-panel {
+    max-height: 88vh;
+  }
+
+  .plan-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
