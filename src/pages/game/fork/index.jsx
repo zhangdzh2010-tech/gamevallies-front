@@ -15,6 +15,7 @@ import {
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
 import { Storage } from '../../../utils/storage';
+import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
 
 function formatNumber(num) {
@@ -45,7 +46,7 @@ export default function GameForkPage() {
   const [pageError, setPageError] = useState('');
   const currentUser = Storage.getUser() || {};
   const currentUserId = currentUser?.id || '';
-  const { windowHeight = 720 } = Taro.getSystemInfoSync();
+  const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const containerClassName = `fork-page${isWeapp ? ' fork-page--weapp' : ''}`;
 

@@ -20,6 +20,7 @@ import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../../utils/gameUnlock';
 import { getGameCoverUrl } from '../../../utils/media';
 import { Storage } from '../../../utils/storage';
+import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
 import { ENV } from '../../../config/env';
 import './index.scss';
@@ -246,7 +247,7 @@ export default function GameDetail() {
   const gameId = route.params?.id;
   const authorViewRequested = route.params?.authorView === '1';
   const isWeapp = process.env.TARO_ENV === 'weapp';
-  const systemInfo = Taro.getSystemInfoSync();
+  const systemInfo = getSafeSystemInfo();
   const menuButtonRect =
     isWeapp && typeof Taro.getMenuButtonBoundingClientRect === 'function'
       ? Taro.getMenuButtonBoundingClientRect()

@@ -24,6 +24,7 @@ import {
 import { formatDate } from '../../../utils/date';
 import { getGameTypeLabel } from '../../../utils/gameTypes';
 import { getGameCoverUrl } from '../../../utils/media';
+import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
 import './index.scss';
 
@@ -125,7 +126,7 @@ export default function GameIteratePage() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pageError, setPageError] = useState('');
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
-  const { windowHeight = 720 } = Taro.getSystemInfoSync();
+  const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const containerClassName = `iterate-page${isWeapp ? ' iterate-page--weapp' : ''}`;
 
