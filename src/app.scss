@@ -1,6 +1,108 @@
 @import './styles/global.scss';
 @import './styles/variables.scss';
 
+html,
+body,
+#app,
+#container,
+.taro_router,
+.taro-tabbar__container,
+.taro-tabbar__panel,
+.taro_page,
+.taro_page_stationed {
+  background: $bg;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+html,
+body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+}
+
+html.h5-page-flow,
+body.h5-page-flow {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body.h5-page-flow {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.taro-tabbar__container,
+.taro-tabbar__panel,
+.taro_router {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+.taro_page.taro_page_show {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+.taro_page.taro_page_show > * {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+.taro_page.taro_page_show > * > taro-scroll-view-core[scroll-y='true'] {
+  display: block;
+  flex: none !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+@media screen and (max-width: 480px) {
+  .taro-tabbar__container,
+  .taro-tabbar__panel,
+  .taro_router,
+  .taro_page.taro_page_show,
+  .taro_page.taro_page_show > * {
+    min-height: 100dvh !important;
+  }
+}
+
+.h5-page-flow-shell {
+  overflow: visible !important;
+}
+
+.taro_page.h5-page-flow-shell {
+  height: auto !important;
+  min-height: 100vh !important;
+}
+
+.h5-page-flow-root {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+taro-scroll-view-core.h5-page-flow-scroll,
+.h5-page-flow-scroll.taro-scroll-view__scroll-y {
+  display: block;
+  flex: none !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
 // Page styles
 page {
   background: $bg;
@@ -226,3 +328,81 @@ page {
 .shadow-sm { box-shadow: $shadow-sm; }
 .shadow-md { box-shadow: $shadow-md; }
 .shadow-lg { box-shadow: $shadow-lg; }
+
+.page-scroll-container--h5-refreshable {
+  position: relative;
+}
+
+.page-scroll-container__refresh-wrap {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  z-index: 32;
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 16px 6px;
+  pointer-events: none;
+}
+
+.page-scroll-container__refresh-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(13, 16, 27, 0.88);
+  border: 1px solid rgba(110, 86, 255, 0.22);
+  box-shadow: 0 10px 24px rgba(4, 6, 14, 0.22);
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.is-refreshing {
+    .page-scroll-container__refresh-icon {
+      animation: page-scroll-refresh-spin 0.85s linear infinite;
+    }
+  }
+}
+
+.page-scroll-container__refresh-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(234, 232, 244, 0.26);
+  border-top-color: #8a7aff;
+  box-sizing: border-box;
+}
+
+.page-scroll-container__refresh-text {
+  font-size: 13px;
+  line-height: 1;
+  color: #eae8f4;
+  white-space: nowrap;
+}
+
+@keyframes page-scroll-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .page-scroll-container__refresh-wrap {
+    padding: 8px 14px 4px;
+  }
+
+  .page-scroll-container__refresh-btn {
+    min-height: 34px;
+    padding: 0 10px;
+  }
+
+  .page-scroll-container__refresh-text {
+    font-size: 12px;
+  }
+}

@@ -15,7 +15,7 @@ export default {
     },
     {
       root: 'pages/game',
-      pages: ['detail/index', 'play/index', 'web-shell/index', 'iterate/index', 'fork/index'],
+      pages: ['detail/index', 'play/index', 'play-landscape/index', 'web-shell/index', 'iterate/index', 'fork/index'],
     },
     {
       root: 'pages/subscription',

@@ -9,6 +9,7 @@ import {
   parseGameWebShellParams,
 } from '../../../utils/gameWebShell';
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
+import { getGameOrientation } from '../../../utils/gameOrientation';
 import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../../utils/profileDisplay';
 import './index.scss';
 
@@ -250,6 +251,7 @@ export default function GameWebShellPage() {
         gameUrl: shellParams.gameUrl,
         title: shellParams.title,
         coverUrl: shellParams.coverUrl,
+        orientation: shellParams.orientation,
         bookmarked: shellParams.bookmarked,
       },
       { includeAuth: false },
@@ -268,6 +270,7 @@ export default function GameWebShellPage() {
     shellParams.coverUrl,
     shellParams.gameId,
     shellParams.gameUrl,
+    shellParams.orientation,
     shellParams.refreshToken,
     shellParams.title,
   ]);
@@ -613,9 +616,10 @@ export default function GameWebShellPage() {
   const authorAvatarFallback = getAvatarFallback(getAuthorAvatarRaw(gameMeta), authorName, '创');
   const displayTitle = gameMeta?.title || shellParams.title || '游戏';
   const isOwnGame = Boolean(currentUserId && authorId && String(currentUserId) === String(authorId));
+  const activeOrientation = getGameOrientation(gameMeta || shellParams.orientation, shellParams.orientation);
 
   return (
-    <View className="game-web-shell-page">
+    <View className={`game-web-shell-page${activeOrientation === 'landscape' ? ' is-landscape' : ''}`}>
       <View className="game-web-shell-page__player">
         {shellParams.gameUrl ? (
           <iframe

@@ -153,12 +153,21 @@ retryConfig = DEFAULT_RETRY_CONFIG)
 {
   const { method, url, data, timeout = API_CONFIG.TIMEOUT } = config;
   const finalUrl = url.startsWith('http') ? url : `${resolveBaseUrl(url)}${url}`;
+  const normalizedMethod = String(method || 'GET').toUpperCase();
 
   try {
     const headers = {
-      'Content-Type': 'application/json',
       ...config.header
     };
+
+    if (
+      normalizedMethod !== 'GET' &&
+      normalizedMethod !== 'HEAD' &&
+      !Object.prototype.hasOwnProperty.call(headers, 'Content-Type') &&
+      !Object.prototype.hasOwnProperty.call(headers, 'content-type')
+    ) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Add authorization token
     const token = Storage.getToken();
@@ -166,13 +175,20 @@ retryConfig = DEFAULT_RETRY_CONFIG)
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await Taro.request({
-      url: finalUrl,
-      method,
-      data,
-      header: headers,
-      timeout
-    });
+    const response = shouldUseH5NoStoreFetch(method, config)
+      ? await requestWithH5Fetch({
+          url: finalUrl,
+          method,
+          timeout,
+          headers,
+        })
+      : await Taro.request({
+          url: finalUrl,
+          method,
+          data,
+          header: headers,
+          timeout
+        });
 
     // Handle response
     const result = response.data;
@@ -297,6 +313,65 @@ function formatErrorMessage(error) {
   return 'Unknown error';
 }
 
+function appendQueryString(url, params) {
+  if (!params || !params.length) {
+    return url;
+  }
+
+  const joiner = url.includes('?') ? '&' : '?';
+  return `${url}${joiner}${params.join('&')}`;
+}
+
+function shouldUseH5NoStoreFetch(method, config) {
+  if (process.env.TARO_ENV !== 'h5' || config?.useCache === true) {
+    return false;
+  }
+
+  return String(method || 'GET').toUpperCase() === 'GET' && typeof fetch === 'function';
+}
+
+async function requestWithH5Fetch({ url, method, timeout, headers }) {
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeout) : null;
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers,
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller?.signal,
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    let responseData = null;
+
+    if (contentType.includes('application/json')) {
+      responseData = await response.json();
+    } else {
+      const text = await response.text();
+      responseData = text ? { message: text } : null;
+    }
+
+    return {
+      statusCode: response.status,
+      data: responseData,
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new Error('request:fail timeout');
+      timeoutError.errMsg = 'request:fail timeout';
+      throw timeoutError;
+    }
+
+    throw error;
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 /**
  * GET request — query params are explicitly appended to the URL
  */
@@ -306,13 +381,18 @@ config)
 {
   let finalUrl = url;
   const { data: queryParams, ...restConfig } = config || {};
+  const queryEntries = [];
+
   if (queryParams && typeof queryParams === 'object') {
-    const entries = Object.entries(queryParams).filter(([, v]) => v !== undefined && v !== null);
-    if (entries.length > 0) {
-      const qs = entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-      finalUrl = `${url}?${qs}`;
-    }
+    queryEntries.push(
+      ...Object.entries(queryParams)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    );
   }
+
+  finalUrl = appendQueryString(url, queryEntries);
+
   return createRequest(
     {
       method: 'GET',

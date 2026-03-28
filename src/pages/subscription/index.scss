@@ -269,3 +269,215 @@
 .bottom-spacer {
   height: 200rpx;
 }
+
+.subscription-container.subscription-container--h5 {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+
+  .subscription-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+    padding: 0 12px calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .quota-card,
+  .sub-status-card,
+  .plan-card {
+    border-radius: 20px;
+  }
+
+  .quota-card {
+    margin-top: 14px;
+    padding: 18px 16px;
+  }
+
+  .quota-card-title,
+  .sub-status-title {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .quota-progress-wrap {
+    margin-bottom: 14px;
+  }
+
+  .quota-progress-bg {
+    height: 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .quota-progress-text {
+    font-size: 13px;
+  }
+
+  .quota-remaining {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .quota-remaining-num {
+    font-size: 32px;
+    line-height: 1;
+  }
+
+  .quota-remaining-label {
+    font-size: 14px;
+  }
+
+  .sub-status-card {
+    margin-top: 12px;
+    padding: 18px 16px;
+  }
+
+  .sub-status-info {
+    gap: 12px;
+  }
+
+  .sub-info-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .sub-info-label,
+  .sub-info-value {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .sub-info-value {
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .plans-section {
+    margin-top: 20px;
+  }
+
+  .plans-section-title {
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+
+  .plans-list {
+    gap: 12px;
+  }
+
+  .plan-card {
+    padding: 18px 14px 14px;
+  }
+
+  .plan-card-badge {
+    right: 14px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 0 0 10px 10px;
+  }
+
+  .plan-card-header {
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .plan-card-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .plan-card-price {
+    flex-shrink: 0;
+  }
+
+  .plan-card-currency {
+    font-size: 13px;
+  }
+
+  .plan-card-amount {
+    font-size: 28px;
+  }
+
+  .plan-card-period,
+  .plan-card-quota,
+  .feature-dot,
+  .feature-text {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .plan-card-quota {
+    margin-bottom: 12px;
+  }
+
+  .plan-card-features {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .plan-card-subscribe-btn {
+    min-height: 52px;
+    padding: 0 12px;
+    border-radius: 16px;
+    font-size: 16px;
+    box-shadow: 0 6px 18px rgba(110, 86, 255, 0.3);
+  }
+
+  .subscriber-bar {
+    padding: 18px 0 8px;
+  }
+
+  .subscriber-bar text {
+    font-size: 13px;
+  }
+
+  .bottom-spacer {
+    height: 0;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .subscription-container.subscription-container--h5 {
+    .plan-card-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .plan-card-price {
+      width: 100%;
+    }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .subscription-container.subscription-container--h5 {
+    .subscription-scroll {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .quota-card,
+    .sub-status-card,
+    .plan-card {
+      border-radius: 18px;
+    }
+
+    .sub-info-row {
+      grid-template-columns: 1fr;
+    }
+
+    .sub-info-value {
+      text-align: left;
+    }
+
+    .plan-card-amount {
+      font-size: 24px;
+    }
+  }
+}

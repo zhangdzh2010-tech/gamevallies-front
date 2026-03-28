@@ -984,6 +984,207 @@
   }
 }
 
+.create-container.create-container--h5 {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  width: 100%;
+  overflow: visible;
+
+  .create-header {
+    padding: 16px 18px;
+
+    .create-header-top {
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .header-title {
+      font-size: 28px;
+      line-height: 1.2;
+    }
+
+    .header-subtitle {
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .orientation-switch {
+      gap: 6px;
+      padding: 4px;
+    }
+
+    .orientation-option {
+      min-width: 72px;
+      padding: 10px 14px;
+    }
+
+    .orientation-option__text {
+      font-size: 14px;
+    }
+  }
+
+  .create-scroll,
+  taro-scroll-view-core.create-scroll,
+  taro-scroll-view-core.create-scroll .taro-scroll-view__scroll-y {
+    display: block;
+    flex: none;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible !important;
+    width: 100%;
+  }
+
+  .form-section,
+  .examples-section,
+  .tips-section,
+  .chat-scroll,
+  .progress-panel,
+  .completion-panel,
+  .confirm-section {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .form-section {
+    padding-top: 16px;
+
+    .form-group {
+      margin-bottom: 18px;
+
+      .form-label {
+        font-size: 17px;
+        margin-bottom: 10px;
+      }
+
+      .form-input-wrap,
+      .form-textarea {
+        border-radius: 14px;
+      }
+
+      .form-input {
+        min-height: 56px;
+        padding: 16px;
+        font-size: 16px;
+        line-height: 24px;
+      }
+
+      .form-textarea {
+        min-height: 148px;
+        padding: 16px;
+        font-size: 15px;
+
+        textarea {
+          min-height: 116px;
+        }
+      }
+
+      .input-count {
+        font-size: 13px;
+      }
+    }
+
+    .error-banner {
+      padding: 12px 14px;
+      margin-bottom: 16px;
+
+      .error-text {
+        font-size: 14px;
+      }
+    }
+
+    .form-actions .submit-btn {
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 17px;
+    }
+  }
+
+  .examples-section {
+    padding-bottom: 18px;
+
+    .section-title {
+      font-size: 18px;
+      margin-bottom: 12px;
+
+      .section-hint {
+        font-size: 13px;
+      }
+    }
+
+    .example-list {
+      gap: 10px;
+
+      .example-card {
+        gap: 12px;
+        padding: 14px;
+        border-radius: 14px;
+
+        .example-emoji {
+          font-size: 24px;
+        }
+
+        .example-text {
+          font-size: 14px;
+          line-height: 1.6;
+        }
+      }
+    }
+  }
+
+  .tips-section {
+    padding-bottom: 20px;
+
+    .tips-title {
+      font-size: 17px;
+      margin-bottom: 10px;
+    }
+
+    .tip-item .tip-text {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  }
+
+  .progress-panel {
+    padding-top: 28px;
+    padding-bottom: 20px;
+  }
+
+  .completion-panel {
+    padding-top: 32px;
+
+    .completion-emoji {
+      font-size: 56px;
+      margin-bottom: 14px;
+    }
+
+    .completion-title {
+      font-size: 24px;
+    }
+
+    .completion-error-text {
+      font-size: 14px;
+    }
+
+    .completion-actions {
+      gap: 12px;
+
+      .action-btn {
+        min-width: 100%;
+        padding: 16px;
+        border-radius: 14px;
+        font-size: 16px;
+      }
+    }
+  }
+
+  .bottom-spacer {
+    height: calc(138px + env(safe-area-inset-bottom));
+  }
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;

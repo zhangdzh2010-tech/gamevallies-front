@@ -243,3 +243,97 @@
     }
   }
 }
+
+@media screen and (max-width: 480px) {
+  .game-card {
+    border-radius: 14px;
+
+    .game-preview {
+      .game-emoji {
+        font-size: clamp(38px, 11vw, 46px);
+      }
+
+      .hot-badge {
+        top: 6px;
+        left: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+
+      .detail-entry-btn {
+        right: 8px;
+        bottom: 8px;
+        min-width: 36px;
+        height: 32px;
+        padding: 0 10px;
+        border-radius: 18px;
+
+        .detail-entry-dots {
+          font-size: 24px;
+        }
+      }
+
+      .preview-overlay {
+        padding: 16px 10px 8px;
+
+        .author-row {
+          .author-name {
+            font-size: 14px;
+          }
+        }
+
+        .stats-row {
+          gap: 10px;
+          margin-left: 6px;
+
+          &.stats-row--play-only {
+            .stat-text {
+              gap: 6px;
+              font-size: 18px;
+
+              .stat-icon {
+                width: 18px;
+                height: 18px;
+              }
+
+              .stat-value {
+                font-size: 18px;
+              }
+            }
+          }
+
+          .stat-text {
+            gap: 4px;
+            font-size: 15px;
+
+            &.play-text {
+              gap: 8px;
+            }
+
+            .stat-icon {
+              width: 18px;
+              height: 18px;
+            }
+
+            .stat-value {
+              font-size: 15px;
+            }
+
+            &.bookmark-text {
+              min-width: 42px;
+            }
+          }
+        }
+      }
+    }
+
+    .game-info {
+      padding: 10px 12px 12px;
+
+      .game-title {
+        font-size: 18px;
+      }
+    }
+  }
+}

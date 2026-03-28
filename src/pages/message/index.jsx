@@ -3,7 +3,10 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
+import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import * as socialService from '../../services/social';
+import { getH5PageScrollContainer } from '../../utils/h5Scroll';
+import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
 function getNotificationIconType(type) {
@@ -66,7 +69,8 @@ function getTimeText(message) {
 }
 
 export default function Message() {
-  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
+  const isWeapp = isWeappRuntime();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -112,11 +116,59 @@ export default function Message() {
     }
   });
 
-  const handleLoadMore = () => {
+  const getH5ScrollContainer = useCallback(() => {
+    return isH5 ? getH5PageScrollContainer() : null;
+  }, [isH5]);
+
+  const handleLoadMore = useCallback(() => {
     if (loadingMore || !hasMore || refreshing) return;
     setLoadingMore(true);
     loadMessages(page + 1);
-  };
+  }, [hasMore, loadMessages, loadingMore, page, refreshing]);
+
+  useEffect(() => {
+    if (!isH5) {
+      return undefined;
+    }
+
+    let ticking = false;
+    const threshold = 280;
+
+    const maybeLoadMore = () => {
+      if (ticking) {
+        return;
+      }
+
+      ticking = true;
+      const runCheck = () => {
+        ticking = false;
+        const scrollContainer = getH5ScrollContainer();
+        if (!scrollContainer) {
+          return;
+        }
+
+        const remaining = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight);
+        if (remaining <= threshold) {
+          handleLoadMore();
+        }
+      };
+
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(runCheck);
+      } else {
+        runCheck();
+      }
+    };
+
+    window.addEventListener('scroll', maybeLoadMore, { passive: true });
+    document.addEventListener('scroll', maybeLoadMore, true);
+    maybeLoadMore();
+
+    return () => {
+      window.removeEventListener('scroll', maybeLoadMore);
+      document.removeEventListener('scroll', maybeLoadMore, true);
+    };
+  }, [getH5ScrollContainer, handleLoadMore, isH5]);
 
   const handlePullDownRefresh = async () => {
     await loadMessages(1, true);
@@ -162,7 +214,7 @@ export default function Message() {
   const unreadCount = messages.filter(isUnread).length;
 
   return (
-    <View className={`messages-page${isWeapp ? ' messages-page--weapp' : ''}`}>
+    <View className={`messages-page${isH5 ? ' messages-page--h5' : ''}${isWeapp ? ' messages-page--weapp' : ''}`}>
       <AppTopBar />
       <View className="messages-header">
         <View className="header-content">
@@ -176,9 +228,8 @@ export default function Message() {
         )}
       </View>
 
-      <ScrollView
+      <PageScrollContainer
         className="messages-list"
-        scrollY
         refresherEnabled
         refresherTriggered={refreshing}
         onRefresherRefresh={handlePullDownRefresh}
@@ -227,7 +278,7 @@ export default function Message() {
             )}
           </View>
         )}
-      </ScrollView>
+      </PageScrollContainer>
 
       <CustomTabBar activeIndex={3} />
     </View>

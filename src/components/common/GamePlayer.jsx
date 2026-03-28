@@ -1,11 +1,90 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Taro from '@tarojs/taro';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import { getSafeStatusBarHeight } from '../../utils/systemInfo';
 import './GamePlayer.scss';
 
-export function GamePlayer({ gameUrl, gameTitle, onClose }) {
+function requestElementFullscreen(element) {
+  if (!element || typeof document === 'undefined') {
+    return Promise.resolve(false);
+  }
+
+  const requestFullscreen = element.requestFullscreen
+    || element.webkitRequestFullscreen
+    || element.msRequestFullscreen;
+
+  if (!requestFullscreen) {
+    return Promise.resolve(false);
+  }
+
+  try {
+    const result = requestFullscreen.call(element);
+    if (result && typeof result.then === 'function') {
+      return result.then(() => true).catch(() => false);
+    }
+    return Promise.resolve(true);
+  } catch {
+    return Promise.resolve(false);
+  }
+}
+
+function exitAnyFullscreen() {
+  if (typeof document === 'undefined') {
+    return Promise.resolve(false);
+  }
+
+  const exitFullscreen = document.exitFullscreen
+    || document.webkitExitFullscreen
+    || document.msExitFullscreen;
+
+  if (!getActiveFullscreenElement() || !exitFullscreen) {
+    return Promise.resolve(false);
+  }
+
+  try {
+    const result = exitFullscreen.call(document);
+    if (result && typeof result.then === 'function') {
+      return result.then(() => true).catch(() => false);
+    }
+    return Promise.resolve(true);
+  } catch {
+    return Promise.resolve(false);
+  }
+}
+
+function getActiveFullscreenElement() {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return document.fullscreenElement
+    || document.webkitFullscreenElement
+    || document.msFullscreenElement
+    || null;
+}
+
+async function lockLandscapeOrientation() {
+  if (typeof screen === 'undefined' || !screen.orientation?.lock) {
+    return false;
+  }
+
+  try {
+    await screen.orientation.lock('landscape');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function unlockScreenOrientation() {
+  try {
+    screen.orientation?.unlock?.();
+  } catch {
+    // Ignore unlock failures in unsupported browsers.
+  }
+}
+
+export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', onClose }) {
   const statusBarHeight = process.env.TARO_ENV === 'weapp' ? getSafeStatusBarHeight() : 0;
   const [fullscreen, setFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -14,14 +93,17 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
   const [displayTitle, setDisplayTitle] = useState('');
   const exitTimer = useRef(null);
   const iframeRef = useRef(null);
+  const panelRef = useRef(null);
+  const requestedFullscreenRef = useRef(false);
+  const isLandscapeGame = gameOrientation === 'landscape';
 
   useEffect(() => {
     if (gameUrl) {
       if (exitTimer.current) clearTimeout(exitTimer.current);
       setDisplayUrl(gameUrl);
-      setDisplayTitle(gameTitle || '游戏');
+      setDisplayTitle(gameTitle || 'Game');
       setLoading(true);
-      setFullscreen(false);
+      setFullscreen(isLandscapeGame);
       setTimeout(() => setVisible(true), 20);
     } else {
       setVisible(false);
@@ -33,36 +115,92 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
     return () => {
       if (exitTimer.current) clearTimeout(exitTimer.current);
     };
-  }, [gameUrl, gameTitle]);
+  }, [gameUrl, gameTitle, isLandscapeGame]);
+
+  useEffect(() => {
+    if (process.env.TARO_ENV !== 'h5' || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const handleFullscreenChange = () => {
+      const currentFullscreenElement = getActiveFullscreenElement();
+      if (currentFullscreenElement !== panelRef.current) {
+        requestedFullscreenRef.current = false;
+        unlockScreenOrientation();
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+      unlockScreenOrientation();
+      if (requestedFullscreenRef.current || getActiveFullscreenElement() === panelRef.current) {
+        exitAnyFullscreen().catch(() => {});
+        requestedFullscreenRef.current = false;
+      }
+    };
+  }, []);
+
+  const handleToggleFullscreen = async () => {
+    const nextFullscreen = !fullscreen;
+    setFullscreen(nextFullscreen);
+
+    if (process.env.TARO_ENV !== 'h5') {
+      return;
+    }
+
+    if (nextFullscreen) {
+      const enteredFullscreen = await requestElementFullscreen(panelRef.current);
+      if (enteredFullscreen) {
+        requestedFullscreenRef.current = true;
+        if (isLandscapeGame) {
+          await lockLandscapeOrientation();
+        }
+      }
+      return;
+    }
+
+    unlockScreenOrientation();
+    if (requestedFullscreenRef.current || getActiveFullscreenElement() === panelRef.current) {
+      await exitAnyFullscreen();
+      requestedFullscreenRef.current = false;
+    }
+  };
 
   if (!displayUrl) return null;
 
   return (
     <View className={`game-player-overlay${visible ? ' visible' : ''}`}>
       <View className="game-player-backdrop" onClick={onClose} />
-      <View className={`game-player-panel${visible ? ' visible' : ''}${fullscreen ? ' fullscreen' : ''}`}>
-        {/* Header with close/back and fullscreen */}
+      <View
+        ref={panelRef}
+        className={`game-player-panel${visible ? ' visible' : ''}${fullscreen ? ' fullscreen' : ''}${isLandscapeGame ? ' landscape' : ''}`}
+      >
         <View className="player-header" style={{ paddingTop: `${statusBarHeight}px` }}>
           <View className="player-btn back-btn" onClick={onClose}>
             <View className="back-arrow" />
-            <Text className="back-text">关闭</Text>
+            <Text className="back-text">Close</Text>
           </View>
           <Text className="player-title">{displayTitle}</Text>
           <View
             className="player-btn fullscreen-btn"
-            onClick={() => setFullscreen(!fullscreen)}
+            onClick={handleToggleFullscreen}
           >
-            <Text className="fs-icon">{fullscreen ? '退出全屏' : '全屏'}</Text>
+            <Text className="fs-icon">{fullscreen ? 'Exit' : 'Full'}</Text>
           </View>
         </View>
 
         {loading && (
           <View className="player-loading">
-            <Text className="loading-text">正在加载游戏...</Text>
+            <Text className="loading-text">Loading game...</Text>
           </View>
         )}
 
-        {/* Use raw iframe instead of Taro WebView for proper z-index control */}
         <View className="player-iframe-wrapper">
           <iframe
             ref={iframeRef}
@@ -71,7 +209,7 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
             onLoad={() => setLoading(false)}
             onError={() => setLoading(false)}
             sandbox="allow-scripts allow-same-origin allow-popups"
-            allow="autoplay"
+            allow="autoplay; fullscreen"
           />
         </View>
       </View>
@@ -83,6 +221,7 @@ export function GlobalGamePlayer() {
   if (process.env.TARO_ENV === 'weapp') return null;
   const gameUrl = useGamePlayerStore((s) => s.gameUrl);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
+  const gameOrientation = useGamePlayerStore((s) => s.gameOrientation);
   const closeGame = useGamePlayerStore((s) => s.closeGame);
-  return <GamePlayer gameUrl={gameUrl} gameTitle={gameTitle} onClose={closeGame} />;
+  return <GamePlayer gameUrl={gameUrl} gameTitle={gameTitle} gameOrientation={gameOrientation} onClose={closeGame} />;
 }

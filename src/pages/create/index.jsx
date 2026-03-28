@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Textarea, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
+import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import { PipelineOrbit } from '../../components/common/PipelineOrbit';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import * as gameService from '../../services/game';
@@ -25,7 +26,9 @@ import {
   openProfilePageWithTab,
 } from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
+import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
+import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
 const EXAMPLE_PROMPTS = [
@@ -74,7 +77,8 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
 }
 
 export default function Create() {
-  const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
+  const isWeapp = isWeappRuntime();
   const {
     createGame,
     restorePersistedTask,
@@ -102,7 +106,7 @@ export default function Create() {
   const authRedirectingRef = useRef(false);
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
-  const containerClassName = `create-container${isWeapp ? ' create-container--weapp' : ''}`;
+  const containerClassName = `create-container${isH5 ? ' create-container--h5' : ''}${isWeapp ? ' create-container--weapp' : ''}`;
 
   const openTaskCenter = () => {
     openProfilePageWithTab('tasks');
@@ -338,6 +342,7 @@ export default function Create() {
         canPlay,
         isOwnGame: true,
         gameId: currentGame.id,
+        orientation: getGameOrientation(currentGame, orientation),
       });
     }
   };
@@ -348,6 +353,7 @@ export default function Create() {
       gameUrl: currentGame?.gameUrl,
       gameTitle: currentGame?.title || gameName,
       gameCover: getGameCoverUrl(currentGame),
+      gameOrientation: getGameOrientation(currentGame, orientation),
       resumePlay: true,
     });
   };
@@ -388,7 +394,10 @@ export default function Create() {
           <Text className="header-subtitle">AI 正在为你生成游戏，请稍候</Text>
         </View>
 
-        <ScrollView className="create-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
+        <PageScrollContainer
+          className="create-scroll"
+          style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
+        >
           <View className="progress-panel">
             <PipelineOrbit
               stages={PIPELINE_STAGES}
@@ -411,7 +420,7 @@ export default function Create() {
           </View>
 
           <View className="bottom-spacer" />
-        </ScrollView>
+        </PageScrollContainer>
 
         <CustomTabBar activeIndex={2} />
       </View>
@@ -428,7 +437,10 @@ export default function Create() {
           <Text className="header-subtitle">{currentGame.title || gameName || '你的游戏'}已经准备好了</Text>
         </View>
 
-        <ScrollView className="create-scroll" style={{ height: `${scrollViewHeight}px` }} scrollY>
+        <PageScrollContainer
+          className="create-scroll"
+          style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
+        >
         <View className="completion-panel">
           <Text className="completion-emoji">OK</Text>
           <Text className="completion-title">{currentGame.title || gameName || '新游戏'}</Text>
@@ -461,7 +473,7 @@ export default function Create() {
 
         </View>
         <View style={{ height: '80px' }} />
-        </ScrollView>
+        </PageScrollContainer>
 
         <CustomTabBar activeIndex={2} />
         <GlobalGamePlayer />
@@ -495,7 +507,7 @@ export default function Create() {
         <Text className="header-subtitle">描述你的游戏想法，AI 会帮你设计并生成</Text>
       </View>
 
-      <ScrollView className="create-scroll" scrollY>
+      <PageScrollContainer className="create-scroll">
         <View className="form-section">
           <View className="form-group">
             <Text className="form-label">游戏名称</Text>
@@ -560,7 +572,7 @@ export default function Create() {
         </View>
 
         <View className="bottom-spacer" />
-      </ScrollView>
+      </PageScrollContainer>
 
       <CustomTabBar activeIndex={2} />
     </View>

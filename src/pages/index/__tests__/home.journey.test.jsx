@@ -141,7 +141,7 @@ function mockFeedGame(overrides = {}) {
   return {
     id: 'game-1',
     title: '飞船闪避',
-    author: { displayName: '作者A' },
+    author: { displayName: '作者 A' },
     type: 'casual',
     playCount: 128,
     likeCount: 16,

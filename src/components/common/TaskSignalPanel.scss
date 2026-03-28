@@ -135,3 +135,65 @@
   color: #f4f2ff;
   word-break: break-word;
 }
+
+@media screen and (max-width: 480px) {
+  .task-signal-panel {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .task-signal-panel__header {
+    gap: 12px;
+  }
+
+  .task-signal-panel__copy {
+    gap: 6px;
+  }
+
+  .task-signal-panel__eyebrow {
+    font-size: 12px;
+    letter-spacing: 1.2px;
+  }
+
+  .task-signal-panel__title {
+    font-size: 20px;
+  }
+
+  .task-signal-panel__desc {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .task-signal-panel__status {
+    padding: 8px 12px;
+  }
+
+  .task-signal-panel__status-text {
+    font-size: 13px;
+  }
+
+  .task-signal-panel__dots {
+    margin: 14px 0 12px;
+  }
+
+  .task-signal-panel__items {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .task-signal-panel__item {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .task-signal-panel__label {
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .task-signal-panel__value {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+}

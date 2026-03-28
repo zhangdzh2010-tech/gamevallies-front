@@ -1,10 +1,11 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
-import { useRoute, useNavigation } from '@tarojs/hooks';
+import { View, Text, Image, Input } from '@tarojs/components';
+import { useRoute } from '@tarojs/hooks';
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import * as gameService from '../../../services/game';
 import * as socialService from '../../../services/social';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
+import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import { SharePanel } from '../../../components/common/SharePanel';
 import useGamePlayerStore from '../../../stores/gamePlayer';
@@ -19,9 +20,12 @@ import {
 import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../../utils/gameUnlock';
 import { getGameCoverUrl } from '../../../utils/media';
+import { getGameOrientation } from '../../../utils/gameOrientation';
+import { navigateBackOrHome } from '../../../utils/navigation';
 import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
+import { isH5Runtime } from '../../../utils/runtime';
 import { ENV } from '../../../config/env';
 import './index.scss';
 
@@ -243,10 +247,10 @@ function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply
 
 export default function GameDetail() {
   const route = useRoute();
-  const navigation = useNavigation();
   const gameId = route.params?.id;
   const authorViewRequested = route.params?.authorView === '1';
   const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
   const systemInfo = getSafeSystemInfo();
   const menuButtonRect =
     isWeapp && typeof Taro.getMenuButtonBoundingClientRect === 'function'
@@ -255,6 +259,7 @@ export default function GameDetail() {
   const { windowHeight = 750, safeArea, statusBarHeight = 0 } = systemInfo;
   const safeBottomInset = safeArea ? Math.max(windowHeight - safeArea.bottom, 0) : 0;
   const scrollViewHeight = windowHeight;
+  const detailScrollStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const menuTopInset = menuButtonRect
     ? Math.max(Math.round((menuButtonRect.top - statusBarHeight) * 0.92), 6)
     : 24;
@@ -263,10 +268,16 @@ export default function GameDetail() {
         paddingTop: `${statusBarHeight + menuTopInset}px`,
         minHeight: `${menuButtonRect.bottom + 14}px`,
       }
-    : {
-        paddingTop: '24px',
-        minHeight: '96px',
-      };
+    : isH5
+      ? {
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          minHeight: 'calc(env(safe-area-inset-top, 0px) + 68px)',
+        }
+      : {
+          paddingTop: '24px',
+          minHeight: '96px',
+        };
+  const containerClassName = `game-detail${isH5 ? ' game-detail--h5' : ''}`;
 
   const openGame = useGamePlayerStore((s) => s.openGame);
   const storeCurrentGame = useGameStore((state) => state.currentGame);
@@ -297,6 +308,19 @@ export default function GameDetail() {
   const [showSharePanel, setShowSharePanel] = useState(false);
   const [commentInputFocused, setCommentInputFocused] = useState(false);
   const [commentScrollTarget, setCommentScrollTarget] = useState('');
+
+  const focusCommentComposer = (delay = 0) => setTimeout(() => {
+    setCommentScrollTarget('');
+    if (isH5 && typeof document !== 'undefined') {
+      document.getElementById(COMMENTS_SECTION_ID)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    } else {
+      setCommentScrollTarget(COMMENTS_SECTION_ID);
+    }
+    setCommentInputFocused(true);
+  }, delay);
 
   const shareConfig = getShareConfig(game || { id: gameId, title: '游戏' });
   const authorId = game?.author?.id || game?.authorId;
@@ -475,13 +499,10 @@ export default function GameDetail() {
       return undefined;
     }
 
-    const timer = setTimeout(() => {
-      setCommentScrollTarget(COMMENTS_SECTION_ID);
-      setCommentInputFocused(true);
-    }, 120);
+    const timer = focusCommentComposer(120);
 
     return () => clearTimeout(timer);
-  }, [route.params?.openComment, loading]);
+  }, [isH5, route.params?.openComment, loading]);
 
   const loadComments = async (page, append) => {
     if (!gameId) {
@@ -705,13 +726,8 @@ export default function GameDetail() {
   };
 
   const handleOpenCommentComposer = () => {
-    setCommentScrollTarget('');
     setCommentInputFocused(false);
-
-    setTimeout(() => {
-      setCommentScrollTarget(COMMENTS_SECTION_ID);
-      setCommentInputFocused(true);
-    }, 0);
+    focusCommentComposer();
   };
 
   const handleForkAction = async () => {
@@ -812,7 +828,7 @@ export default function GameDetail() {
 
   if (loading || !game) {
     return (
-      <View className="game-detail">
+      <View className={containerClassName}>
         <View style={{ padding: '40px', textAlign: 'center' }}>
           <Text style={{ color: '#8b87a3', fontSize: '28px' }}>{loading ? '加载中...' : '游戏不存在'}</Text>
         </View>
@@ -821,17 +837,18 @@ export default function GameDetail() {
   }
 
   const detailCoverUrl = getGameCoverUrl(game);
+  const handleBack = () => navigateBackOrHome();
 
   return (
-    <View className="game-detail">
+    <View className={containerClassName}>
       <View className="detail-top-bar" style={topBarStyle}>
-        <View className="back-btn" onClick={() => navigation.back()}>
+        <View className="back-btn" onClick={handleBack}>
           <View className="back-btn__icon" />
         </View>
       </View>
-      <ScrollView
+      <PageScrollContainer
         className="detail-scroll"
-        style={{ height: `${scrollViewHeight}px` }}
+        style={detailScrollStyle}
         scrollY
         scrollWithAnimation
         scrollIntoView={commentScrollTarget}
@@ -844,7 +861,7 @@ export default function GameDetail() {
           )}
         </View>
 
-        <View className="back-btn" onClick={() => navigation.back()}>
+        <View className="back-btn" onClick={handleBack}>
           <View className="back-btn__icon" />
         </View>
 
@@ -895,6 +912,7 @@ export default function GameDetail() {
                     gameUrl: game.gameUrl,
                     gameTitle: game.title,
                     gameCover: getGameCoverUrl(game),
+                    gameOrientation: getGameOrientation(game),
                     resumePlay: true,
                   });
                   return;
@@ -904,6 +922,7 @@ export default function GameDetail() {
                     canPlay: game.canPlay !== false,
                     isOwnGame: currentUserId === game.author?.id,
                     gameId: game.id,
+                    orientation: getGameOrientation(game),
                   });
                   return;
                 }
@@ -1004,9 +1023,14 @@ export default function GameDetail() {
             )}
           </View>
 
-          <View className="bottom-spacer" style={{ height: `${Math.max(180, 132 + safeBottomInset)}px` }} />
+          <View
+            className="bottom-spacer"
+            style={{
+              height: `${Math.max(isH5 ? 120 : 180, (isH5 ? 92 : 132) + safeBottomInset)}px`,
+            }}
+          />
         </View>
-      </ScrollView>
+      </PageScrollContainer>
 
       <View className="comment-input-bar">
         {replyingTo && (

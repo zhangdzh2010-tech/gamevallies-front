@@ -3,6 +3,7 @@ import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import * as authService from '../../services/auth';
 import { handleLoginBackNavigation, navigateAfterLogin } from '../../utils/authNavigation';
+import { isH5Runtime } from '../../utils/runtime';
 import './index.scss';
 
 const COOLDOWN = 60;
@@ -30,6 +31,7 @@ function buildWechatUserInfo(nickname, avatarUrl) {
 
 export default function Login() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
+  const isH5 = isH5Runtime();
   const [mode, setMode] = useState('password');
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
@@ -187,7 +189,7 @@ export default function Login() {
   const wechatBtnText = loadingAction === 'wechat' ? '登录中...' : '微信一键登录';
 
   return (
-    <View className={`login-container${isWeapp ? ' login-container--weapp' : ''}`}>
+    <View className={`login-container${isWeapp ? ' login-container--weapp' : ''}${isH5 ? ' login-container--h5' : ''}`}>
       <View className="back-header" onClick={handleLoginBackNavigation}>
         <Text className="back-arrow">←</Text>
         <Text className="back-text">返回</Text>
@@ -195,7 +197,7 @@ export default function Login() {
 
       <View className="login-content">
         <View className="logo-section">
-          <Text className="logo">智趣空间</Text>
+          <Text className="logo">智了空间</Text>
           <Text className="tagline">AI 驱动的全民游戏创作平台</Text>
         </View>
 

@@ -264,3 +264,137 @@
   line-height: 1.5;
   color: #8b87a3;
 }
+
+@media screen and (max-width: 480px) {
+  .share-overlay {
+    padding: 0 12px;
+  }
+
+  .share-panel {
+    max-width: 100%;
+    border-radius: 22px 22px 0 0;
+    padding: 10px 14px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .share-panel__handle {
+    width: 56px;
+    height: 6px;
+    margin-bottom: 10px;
+  }
+
+  .share-header {
+    margin-bottom: 14px;
+  }
+
+  .share-title {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  .share-subtitle {
+    font-size: 14px;
+  }
+
+  .share-game-card {
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border-radius: 16px;
+  }
+
+  .share-game-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+  }
+
+  .share-game-emoji {
+    font-size: 26px;
+  }
+
+  .share-game-copy {
+    gap: 4px;
+  }
+
+  .share-game-name {
+    font-size: 18px;
+  }
+
+  .share-game-meta {
+    font-size: 13px;
+  }
+
+  .share-stats {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .share-stat {
+    border-radius: 14px;
+    padding: 12px 8px;
+  }
+
+  .share-stat__value {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .share-stat__label {
+    font-size: 12px;
+  }
+
+  .share-actions {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .share-primary-btn,
+  .share-secondary-btn {
+    padding: 14px;
+    border-radius: 16px;
+    margin-bottom: 0;
+  }
+
+  .share-primary-btn {
+    gap: 12px;
+  }
+
+  .share-primary-btn__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background-size: 22px 22px;
+  }
+
+  .share-primary-btn__title,
+  .share-secondary-btn__title {
+    font-size: 16px;
+  }
+
+  .share-primary-btn__desc,
+  .share-secondary-btn__desc,
+  .share-tip-card__text {
+    font-size: 13px;
+  }
+
+  .share-tip-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .share-tip-card__title {
+    font-size: 15px;
+  }
+
+  .share-cancel {
+    padding: 14px;
+    border-radius: 16px;
+    font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .share-stats {
+    grid-template-columns: 1fr;
+  }
+}
