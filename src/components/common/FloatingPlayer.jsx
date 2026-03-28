@@ -48,7 +48,7 @@ export function FloatingPlayer() {
     return (
       <View className="floating-player">
         <View className="floating-ball" onClick={handleBallClick}>
-          <View className="ball-icon">🎮</View>
+          <View className="ball-icon" />
           <View className="ball-pulse" />
         </View>
       </View>
@@ -61,16 +61,19 @@ export function FloatingPlayer() {
       <View className="floating-card">
         <View className="card-header">
           <View className="card-title-row" onClick={handlePlay}>
-            <View className="card-icon">🎮</View>
+            <View className="card-icon" />
             <Text className="card-title">{gameTitle || '游戏试玩中'}</Text>
-            <Text className="card-play-hint">点击继续 ▶</Text>
+            <View className="card-play-hint">
+              <Text>点击继续</Text>
+              <View className="card-play-hint-icon" />
+            </View>
           </View>
           <View className="card-actions">
             <View className="card-action-btn" onClick={handleCollapse}>
-              <Text className="action-icon">−</Text>
+              <View className="action-icon action-icon--minus" />
             </View>
             <View className="card-action-btn close" onClick={handleClose}>
-              <Text className="action-icon">✕</Text>
+              <View className="action-icon action-icon--close" />
             </View>
           </View>
         </View>
@@ -80,7 +83,10 @@ export function FloatingPlayer() {
           </View>
         )}
         <View className="card-footer" onClick={handlePlay}>
-          <Text className="card-play-btn">▶ 继续试玩</Text>
+          <View className="card-play-btn">
+            <View className="card-play-btn-icon" />
+            <Text>继续试玩</Text>
+          </View>
         </View>
       </View>
     </View>

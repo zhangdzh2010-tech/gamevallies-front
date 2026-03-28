@@ -187,17 +187,30 @@
   }
 
   &__icon {
-    font-size: 38px;
-    font-weight: 700;
-    color: $text;
-    line-height: 1;
+    width: 38px;
+    height: 38px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+
+    &--like {
+      background-image: url('../../../images/detail-icons/heart.svg');
+    }
+
+    &--bookmark {
+      background-image: url('../../../images/detail-icons/bookmark.svg');
+    }
+
+    &--comment {
+      background-image: url('../../../images/detail-icons/comment.svg');
+    }
 
     &.is-active {
-      color: #ff5c8a;
+      background-image: url('../../../images/detail-icons/heart-active.svg');
     }
 
     &.is-bookmarked {
-      color: #fbbf24;
+      background-image: url('../../../images/detail-icons/bookmark-active.svg');
     }
   }
 

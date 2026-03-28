@@ -74,9 +74,11 @@
       text-align: center;
 
       .empty-icon {
-        font-size: 87px;
+        width: 87px;
+        height: 87px;
         margin-bottom: 30px;
         opacity: 0.6;
+        background: center / contain no-repeat url('../../images/ui-icons/inbox.svg');
       }
 
       .empty-text {
@@ -125,10 +127,41 @@
             height: 72px;
             border-radius: 50%;
             background: rgba(110, 86, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 33px;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 34px 34px;
+
+            &.notification-icon--like {
+              background-image: url('../../images/detail-icons/heart-active.svg');
+            }
+
+            &.notification-icon--comment {
+              background-image: url('../../images/detail-icons/comment.svg');
+            }
+
+            &.notification-icon--follow {
+              background-image: url('../../images/ui-icons/users.svg');
+            }
+
+            &.notification-icon--fork {
+              background-image: url('../../images/detail-icons/fork.svg');
+            }
+
+            &.notification-icon--system {
+              background-image: url('../../images/ui-icons/bell.svg');
+            }
+
+            &.notification-icon--award {
+              background-image: url('../../images/ui-icons/award.svg');
+            }
+
+            &.notification-icon--earning {
+              background-image: url('../../images/ui-icons/coin.svg');
+            }
+
+            &.notification-icon--default {
+              background-image: url('../../images/ui-icons/inbox.svg');
+            }
           }
 
           .unread-dot {
@@ -173,8 +206,9 @@
         }
 
         .notification-arrow {
-          font-size: 30px;
-          color: #55516e;
+          width: 22px;
+          height: 22px;
+          background: center / contain no-repeat url('../../images/ui-icons/arrow-right.svg');
           flex-shrink: 0;
         }
       }
@@ -235,7 +269,7 @@
 
         .notification-left {
           .notification-icon {
-            font-size: 36rpx;
+            background-size: 38rpx 38rpx;
           }
         }
 
@@ -256,7 +290,8 @@
         }
 
         .notification-arrow {
-          font-size: 32rpx;
+          width: 32rpx;
+          height: 32rpx;
         }
       }
 

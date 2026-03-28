@@ -97,9 +97,19 @@
       }
 
       .preview-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         font-size: 12px;
         color: #2dd4a8;
         font-weight: 600;
+
+        .preview-status__icon {
+          width: 14px;
+          height: 14px;
+          background: center / contain no-repeat url('../../../images/ui-icons/check.svg');
+        }
       }
     }
 
@@ -110,6 +120,10 @@
       margin-bottom: 24px;
 
       .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
         padding: 12px 16px;
         border-radius: 14px;
         text-align: center;
@@ -139,6 +153,22 @@
           }
         }
       }
+
+      .btn-icon {
+        width: 18px;
+        height: 18px;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+
+        &.btn-icon--play {
+          background-image: url('../../../images/detail-icons/play.svg');
+        }
+
+        &.btn-icon--publish {
+          background-image: url('../../../images/ui-icons/publish.svg');
+        }
+      }
     }
 
     .quick-stats {
@@ -158,8 +188,24 @@
         text-align: center;
 
         .stat-icon {
-          font-size: 20px;
+          width: 20px;
+          height: 20px;
           margin-bottom: 4px;
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: contain;
+
+          &.stat-icon--heat {
+            background-image: url('../../../images/ui-icons/award.svg');
+          }
+
+          &.stat-icon--genre {
+            background-image: url('../../../images/ui-icons/gamepad.svg');
+          }
+
+          &.stat-icon--time {
+            background-image: url('../../../images/detail-icons/clock.svg');
+          }
         }
 
         .stat-content {
@@ -196,9 +242,10 @@
     flex: 1;
 
     .empty-icon {
-      font-size: 40px;
+      width: 40px;
+      height: 40px;
       margin-bottom: 16px;
-      color: #55516e;
+      background: center / contain no-repeat url('../../../images/ui-icons/gamepad.svg');
     }
 
     .empty-text {

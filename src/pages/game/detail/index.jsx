@@ -219,18 +219,18 @@ function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply
         <Text className="comment-content">{comment.content}</Text>
         <View className="comment-actions">
           <View className={`comment-action ${isLiked ? 'liked' : ''}`} onClick={() => onLike(comment.id)}>
-            <Text className="comment-action-icon">♥</Text>
+            <View className="comment-action-icon comment-action-icon--like" />
             <Text className="comment-action-count">{comment.likes > 0 ? comment.likes : ''}</Text>
           </View>
           {!isReply && (
             <View className="comment-action" onClick={() => onReply(comment)}>
-              <Text className="comment-action-icon">💬</Text>
+              <View className="comment-action-icon comment-action-icon--comment" />
               <Text className="comment-action-label">回复</Text>
             </View>
           )}
           {isOwn && (
             <View className="comment-action danger" onClick={() => onDelete(comment.id)}>
-              <Text className="comment-action-icon">🗑</Text>
+              <View className="comment-action-icon comment-action-icon--trash" />
               <Text className="comment-action-label">删除</Text>
             </View>
           )}
@@ -316,6 +316,13 @@ export default function GameDetail() {
     ? '继续优化'
     : (canForkGame ? '复刻后继续创作' : '作者未开放复刻权限');
   const continueCreateDisabled = Boolean(game) && !isOwnGame && !canForkGame;
+  const canUnlockOwnGame = game?.canPlay === false && currentUserId === game?.author?.id;
+  const detailStats = [
+    { key: 'plays', value: formatNumber(game?.plays), label: '次游玩' },
+    { key: 'likes', value: formatNumber(game?.likes), label: '次点赞' },
+    { key: 'forks', value: formatNumber(game?.forks), label: '次复刻' },
+    { key: 'clock', value: game?.avgPlayTime || '--', label: '平均时长' },
+  ];
 
   const reportShare = (platform) => {
     if (!gameId) {
@@ -812,10 +819,14 @@ export default function GameDetail() {
     );
   }
 
+  const detailCoverUrl = getGameCoverUrl(game);
+
   return (
     <View className="game-detail">
       <View className="detail-top-bar" style={topBarStyle}>
-        <View className="back-btn" onClick={() => navigation.back()}>←</View>
+        <View className="back-btn" onClick={() => navigation.back()}>
+          <View className="back-btn__icon" />
+        </View>
       </View>
       <ScrollView
         className="detail-scroll"
@@ -824,11 +835,17 @@ export default function GameDetail() {
         scrollWithAnimation
         scrollIntoView={commentScrollTarget}
       >
-        <View className="preview-banner" style={{ background: 'linear-gradient(135deg, #6e56ff30 0%, #6e56ff50 100%)' }}>
-          <Text className="preview-emoji">{game.emoji || '🎮'}</Text>
+        <View className="preview-banner">
+          {detailCoverUrl ? (
+            <Image className="preview-cover" src={detailCoverUrl} mode="aspectFill" />
+          ) : (
+            <Text className="preview-emoji">{game.emoji || '🎮'}</Text>
+          )}
         </View>
 
-        <View className="back-btn" onClick={() => navigation.back()}>←</View>
+        <View className="back-btn" onClick={() => navigation.back()}>
+          <View className="back-btn__icon" />
+        </View>
 
         <View className="detail-content">
           <View className="title-section">
@@ -858,14 +875,9 @@ export default function GameDetail() {
           </View>
 
           <View className="stats-row">
-            {[
-              { icon: '▶', value: formatNumber(game.plays), label: '次游玩' },
-              { icon: '♥', value: formatNumber(game.likes), label: '次点赞' },
-              { icon: '⎇', value: formatNumber(game.forks), label: '次复刻' },
-              { icon: '⏱', value: game.avgPlayTime || '--', label: '平均时长' },
-            ].map((stat) => (
-              <View key={stat.label} className="stat-item">
-                <Text className="stat-label">{stat.icon}</Text>
+            {detailStats.map((stat) => (
+              <View key={stat.key} className="stat-item">
+                <View className={`stat-icon stat-icon--${stat.key}`} />
                 <Text className="stat-value">{stat.value}</Text>
                 <Text className="stat-text">{stat.label}</Text>
               </View>
@@ -876,7 +888,7 @@ export default function GameDetail() {
             <View
               className={`play-btn ${!game.canPlay ? 'locked' : ''}`}
               onClick={() => {
-                if (game.canPlay === false && currentUserId === game.author?.id) {
+                if (canUnlockOwnGame) {
                   useQuotaStore.getState().openPaywall({
                     gameId: game.id,
                     gameUrl: game.gameUrl,
@@ -897,44 +909,44 @@ export default function GameDetail() {
                 Taro.showToast({ title: '游戏暂不可用', icon: 'none' });
               }}
             >
-              <Text className="btn-icon">{game.canPlay === false && currentUserId === game.author?.id ? '🔒' : '▶'}</Text>
+              <View className={`btn-icon ${canUnlockOwnGame ? 'btn-icon--lock' : 'btn-icon--play'}`} />
               <View className="btn-copy">
-                <Text className="btn-text">{game.canPlay === false && currentUserId === game.author?.id ? '订阅后试玩' : '立即试玩'}</Text>
+                <Text className="btn-text">{canUnlockOwnGame ? '订阅后试玩' : '立即试玩'}</Text>
                 <Text className="btn-subtext">
-                  {game.canPlay === false && currentUserId === game.author?.id ? '开通后自动解锁当前作品' : '沉浸体验这个小游戏'}
+                  {canUnlockOwnGame ? '开通后自动解锁当前作品' : '沉浸体验这个小游戏'}
                 </Text>
               </View>
             </View>
             <View className={`icon-btn like-btn ${isLiked ? 'liked' : ''}`} onClick={handleLikeGame}>
-              <Text className="icon-symbol">♥</Text>
+              <View className="icon-symbol icon-symbol--like" />
               <View className="icon-copy">
                 <Text className="icon-value">{likeLoading ? '...' : formatNumber(likeCount)}</Text>
                 <Text className="icon-label">点赞</Text>
               </View>
             </View>
             <View className="icon-btn comment-btn" onClick={handleOpenCommentComposer}>
-              <Text className="icon-symbol">💬</Text>
+              <View className="icon-symbol icon-symbol--comment" />
               <View className="icon-copy">
                 <Text className="icon-value">{formatNumber(totalComments)}</Text>
                 <Text className="icon-label">评论</Text>
               </View>
             </View>
             <View className={`icon-btn bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`} onClick={handleBookmarkGame}>
-              <Text className="icon-symbol">{isBookmarked ? '★' : '☆'}</Text>
+              <View className="icon-symbol icon-symbol--bookmark" />
               <View className="icon-copy">
                 <Text className="icon-value">{isBookmarked ? '已收藏' : '收藏'}</Text>
                 <Text className="icon-label">稍后再玩</Text>
               </View>
             </View>
             <View className="icon-btn share-btn" onClick={() => setShowSharePanel(true)}>
-              <Text className="icon-symbol icon-symbol--share">分享</Text>
+              <View className="icon-symbol icon-symbol--share" />
               <View className="icon-copy">
                 <Text className="icon-value">分享</Text>
                 <Text className="icon-label">发给朋友</Text>
               </View>
             </View>
             <View className={`icon-btn fork-btn ${canForkGame ? '' : 'disabled'}`} onClick={handleForkAction}>
-              <Text className="icon-symbol">⎇</Text>
+              <View className="icon-symbol icon-symbol--fork" />
               <View className="icon-copy">
                 <Text className="icon-value">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
                 <Text className="icon-label">{canForkGame ? '继续创作' : (isOwnGame ? '无需复刻' : '暂不可用')}</Text>
@@ -949,9 +961,12 @@ export default function GameDetail() {
           )}
 
           <View id={COMMENTS_SECTION_ID} className="comments-section">
-            <Text className="comments-title">
-              💬 评论 {totalComments > 0 ? `(${formatNumber(totalComments)})` : ''}
-            </Text>
+            <View className="comments-title">
+              <View className="comments-title-icon" />
+              <Text className="comments-title-text">
+                评论 {totalComments > 0 ? `(${formatNumber(totalComments)})` : ''}
+              </Text>
+            </View>
 
             {loadingComments && comments.length === 0 && (
               <View className="comments-loading"><Text>加载评论中...</Text></View>
@@ -959,7 +974,7 @@ export default function GameDetail() {
 
             {!loadingComments && comments.length === 0 && (
               <View className="comments-empty">
-                <Text className="comments-empty-icon">💬</Text>
+                <View className="comments-empty-icon" />
                 <Text className="comments-empty-text">还没有评论，来说点什么吧</Text>
               </View>
             )}

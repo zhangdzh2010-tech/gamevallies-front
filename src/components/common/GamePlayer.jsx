@@ -43,7 +43,7 @@ export function GamePlayer({ gameUrl, gameTitle, onClose }) {
         {/* Header with close/back and fullscreen */}
         <View className="player-header" style={{ paddingTop: `${statusBarHeight}px` }}>
           <View className="player-btn back-btn" onClick={onClose}>
-            <Text className="back-arrow">✕</Text>
+            <View className="back-arrow" />
             <Text className="back-text">关闭</Text>
           </View>
           <Text className="player-title">{displayTitle}</Text>
