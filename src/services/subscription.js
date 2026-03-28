@@ -1,4 +1,5 @@
 import { get, post } from './api';
+import { isH5Runtime, isWechatBrowserRuntime } from '../utils/runtime';
 
 // ═══════════════════════════════════════════
 // Mock data — 后端接口就绪后删除此文件顶部的 mock 拦截
@@ -134,10 +135,28 @@ export async function createOrder(planId, gameId) {
     await delay(500);
     return { ...MOCK_ORDER };
   }
-  return post('/api/v1/subscription/order', {
-    planId,
-    ...(gameId ? { gameId } : {}),
-  });
+
+  let platformQuery = '';
+  if (isH5Runtime()) {
+    const query = new URLSearchParams({
+      clientPlatform: isWechatBrowserRuntime() ? 'wechat_h5' : 'h5',
+      wechatPayFlow: isWechatBrowserRuntime() ? 'jsapi' : 'mweb',
+    });
+
+    if (typeof window !== 'undefined' && window.location?.href) {
+      query.set('returnUrl', window.location.href);
+    }
+
+    platformQuery = `?${query.toString()}`;
+  }
+
+  return post(
+    `/api/v1/subscription/order${platformQuery}`,
+    {
+      planId,
+      ...(gameId ? { gameId } : {}),
+    }
+  );
 }
 
 /**

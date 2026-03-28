@@ -2,6 +2,7 @@ import './app.scss';
 import { Fragment, useEffect } from 'react';
 import Taro from '@tarojs/taro';
 import { isH5Runtime } from './utils/runtime';
+import useQuotaStore from './stores/quotaStore';
 import { LANDSCAPE_PLAY_PAGE_PATH, PORTRAIT_PLAY_PAGE_PATH } from './utils/gamePlayRoute';
 
 const H5_FULLSCREEN_PAGE_PREFIXES = [
@@ -162,6 +163,41 @@ function App({ children }) {
         window.cancelAnimationFrame(rafId);
       }
       timeoutIds.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isH5Runtime() || typeof window === 'undefined' || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    let disposed = false;
+    const syncPendingPayment = () => {
+      if (disposed) {
+        return;
+      }
+
+      void useQuotaStore.getState().hydratePaymentAttempt()
+        .then(() => useQuotaStore.getState().resumePendingPayment({ silent: true }))
+        .catch((error) => {
+          console.warn('resumePendingPayment failed:', error);
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncPendingPayment();
+      }
+    };
+
+    syncPendingPayment();
+    window.addEventListener('focus', syncPendingPayment);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      disposed = true;
+      window.removeEventListener('focus', syncPendingPayment);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

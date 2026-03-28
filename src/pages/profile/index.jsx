@@ -1285,20 +1285,23 @@ export default function Profile() {
             ) : (
               <Text className="avatar">{profileAvatarFallback}</Text>
             )}
-            </View>
-            <View className="header-right">
-              <View className="header-actions">
-                <View className="settings-btn" onClick={() => setEditProfile(true)}>
-                  <View className="settings-icon" />
-                </View>
+          </View>
+          <View className="header-main">
+            <View className="header-actions">
+              <View className="settings-btn" onClick={() => setEditProfile(true)}>
+                <View className="settings-icon" />
+              </View>
               <View className="logout-btn" onClick={handleLogout}>
                 <Text className="logout-text">退出</Text>
               </View>
             </View>
-            <View className="quota-info-bar">
-              <Text className="quota-info-icon">{subscriptionActive ? '会员' : '免费'}</Text>
-              <Text className="quota-info-text">{subscriptionActive ? '已订阅会员' : `剩余 ${freeQuota} 次免费额度`}</Text>
-              <Text className="quota-info-sub">{subscriptionActive ? '查看订阅详情' : `已使用 ${totalFreeQuota - freeQuota}/${totalFreeQuota}`}</Text>
+
+            <View className="header-quota-row">
+              <View className="quota-info-bar">
+                <Text className="quota-info-icon">{subscriptionActive ? '会员' : '免费'}</Text>
+                <Text className="quota-info-text">{subscriptionActive ? '已订阅会员' : `剩余 ${freeQuota} 次免费额度`}</Text>
+                <Text className="quota-info-sub">{subscriptionActive ? '查看订阅详情' : `已使用 ${totalFreeQuota - freeQuota}/${totalFreeQuota}`}</Text>
+              </View>
               <View
                 className="quota-subscribe-btn"
                 onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}

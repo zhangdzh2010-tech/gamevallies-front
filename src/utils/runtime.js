@@ -8,3 +8,11 @@ export function isH5Runtime() {
 export function isWeappRuntime() {
   return process.env.TARO_ENV === 'weapp';
 }
+
+export function isWechatBrowserRuntime() {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  return /micromessenger/i.test(navigator.userAgent || '');
+}

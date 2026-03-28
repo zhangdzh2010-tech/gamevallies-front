@@ -50,6 +50,9 @@ function shouldBypassUnauthorizedRecovery(url) {
     '/api/v1/auth/sms/register',
     '/api/v1/auth/sms/send-code',
     '/api/v1/auth/wechat/miniapp-login',
+    '/api/v1/auth/wechat/h5-login',
+    '/api/v1/auth/wechat/oauth-login',
+    '/api/v1/auth/wechat/web-login',
   ];
 
   return directAuthUrls.some((path) => url.includes(path));

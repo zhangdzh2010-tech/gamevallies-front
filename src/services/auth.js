@@ -1,7 +1,27 @@
 import { post, get, patch } from './api';
+import { ENV } from '../config/env';
 import { Storage } from '../utils/storage';
+import {
+  buildWechatOauthAuthorizeUrl,
+  buildWechatOauthRedirectUri,
+  clearWechatOauthParamsFromUrl,
+  clearWechatOauthState,
+  createWechatOauthState,
+  extractWechatOauthParamsFromUrl,
+  isWechatBrowser,
+  persistWechatOauthState,
+  readWechatOauthState,
+} from '../utils/wechatH5';
 
 const MINIAPP_LOGIN_URL = '/api/v1/auth/wechat/miniapp-login';
+const H5_LOGIN_ENDPOINTS = [
+  '/api/v1/auth/wechat/h5-login',
+  '/api/v1/auth/wechat/oauth-login',
+  '/api/v1/auth/wechat/web-login',
+];
+const H5_AUTHORIZE_ENDPOINTS = [
+  '/api/v1/auth/wechat/h5-authorize-url',
+];
 
 function extractWechatProfile(userInfo) {
   const nickname = typeof userInfo?.nickName === 'string' ? userInfo.nickName.trim() : '';
@@ -151,6 +171,140 @@ export async function loginByWechatMiniapp(code, userInfo = null) {
     }
     throw error;
   }
+}
+
+async function loginByWechatH5Endpoint(payload) {
+  let lastError = null;
+
+  for (const endpoint of H5_LOGIN_ENDPOINTS) {
+    try {
+      const response = await post(endpoint, payload);
+      return persistAuthResponse(response);
+    } catch (error) {
+      if (error?.statusCode === 404) {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    throw new Error('后端未部署 H5 微信授权登录接口，请补齐 /api/v1/auth/wechat/h5-login');
+  }
+
+  throw new Error('微信授权登录失败');
+}
+
+async function getWechatH5AuthorizeUrl(payload) {
+  let lastError = null;
+  const clientWechatOauthAppId =
+    ENV.WECHAT.H5_OAUTH_APP_ID || process.env.TARO_APP_WECHAT_OAUTH_APP_ID || '';
+
+  for (const endpoint of H5_AUTHORIZE_ENDPOINTS) {
+    try {
+      const query = new URLSearchParams(payload).toString();
+      return get(`${endpoint}?${query}`);
+    } catch (error) {
+      const message = String(error?.message || '').toLowerCase();
+      const shouldFallbackToClientConfig = Boolean(clientWechatOauthAppId) && (
+        error?.statusCode === 404
+        || error?.statusCode >= 500
+        || message.includes('appid')
+        || message.includes('appsecret')
+        || message.includes('未配置')
+      );
+
+      if (shouldFallbackToClientConfig) {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    return null;
+  }
+
+  return null;
+}
+
+export function getWechatH5AuthParams() {
+  return extractWechatOauthParamsFromUrl();
+}
+
+export function clearWechatH5AuthParams() {
+  clearWechatOauthParamsFromUrl();
+}
+
+export async function startWechatH5Login(options = {}) {
+  if (!isWechatBrowser()) {
+    throw new Error('请在微信内打开当前页面后再使用微信授权登录');
+  }
+
+  const clientWechatOauthAppId =
+    ENV.WECHAT.H5_OAUTH_APP_ID || process.env.TARO_APP_WECHAT_OAUTH_APP_ID || '';
+  const state = createWechatOauthState();
+  const redirectUri = buildWechatOauthRedirectUri();
+  const backendAuthorize = await getWechatH5AuthorizeUrl({
+    redirectUri,
+    state,
+    scope: ENV.WECHAT.H5_OAUTH_SCOPE,
+  });
+  const authorizeUrl = backendAuthorize?.authorizeUrl || (
+    clientWechatOauthAppId
+      ? buildWechatOauthAuthorizeUrl({
+          appId: clientWechatOauthAppId,
+          redirectUri,
+          state,
+        })
+      : ''
+  );
+
+  if (!authorizeUrl) {
+    throw new Error('未配置 H5 微信授权 AppID，请先补齐 TARO_APP_WECHAT_OAUTH_APP_ID');
+  }
+
+  if (!authorizeUrl) {
+    throw new Error('鏈厤缃?H5 寰俊鎺堟潈 AppID锛岃鍏堣ˉ榻?TARO_APP_WECHAT_OAUTH_APP_ID');
+  }
+
+  const locationLike = options.location || (typeof window !== 'undefined' ? window.location : null);
+  if (!locationLike || typeof locationLike.assign !== 'function') {
+    throw new Error('当前环境不支持微信 OAuth 跳转');
+  }
+
+  if (!locationLike || typeof locationLike.assign !== 'function') {
+    throw new Error('褰撳墠鐜涓嶆敮鎸佸井淇?OAuth 璺宠浆');
+  }
+
+  persistWechatOauthState(state);
+  locationLike.assign(authorizeUrl);
+}
+
+export async function loginByWechatH5AuthCode(code, state) {
+  if (!code) {
+    throw new Error('微信授权缺少 code');
+  }
+
+  const savedState = readWechatOauthState();
+  if (savedState && state && savedState !== state) {
+    clearWechatOauthState();
+    throw new Error('微信授权状态校验失败，请重新发起登录');
+  }
+
+  const redirectUri = buildWechatOauthRedirectUri();
+  const authData = await loginByWechatH5Endpoint({
+    code,
+    state,
+    redirectUri,
+  });
+
+  clearWechatOauthState();
+  return authData;
 }
 
 export async function syncWechatProfile(userInfo) {
