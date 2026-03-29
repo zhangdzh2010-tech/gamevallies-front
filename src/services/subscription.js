@@ -140,7 +140,7 @@ export async function createOrder(planId, gameId) {
   if (isH5Runtime()) {
     const query = new URLSearchParams({
       clientPlatform: isWechatBrowserRuntime() ? 'wechat_h5' : 'h5',
-      wechatPayFlow: isWechatBrowserRuntime() ? 'jsapi' : 'mweb',
+      wechatPayFlow: 'native',
     });
 
     if (typeof window !== 'undefined' && window.location?.href) {
