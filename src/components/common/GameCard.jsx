@@ -178,7 +178,6 @@ export const GameCard = ({
               <Text className="top-metric-badge__tag-text">{topMetricBadgeLabel}</Text>
             </View>
             <View className="top-metric-badge__metric">
-              <View className="top-metric-badge__play-icon" />
               <Text className="top-metric-badge__metric-text">{formatNumber(game.plays || 0)}</Text>
             </View>
           </View>
