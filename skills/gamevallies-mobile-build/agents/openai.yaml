@@ -1,0 +1,4 @@
+interface:
+  display_name: "GameVallies Mobile Build"
+  short_description: "Build the GameVallies Capacitor app for Android and iOS."
+  default_prompt: "Use this skill to package the GameVallies frontend into Android or iOS apps with Capacitor."

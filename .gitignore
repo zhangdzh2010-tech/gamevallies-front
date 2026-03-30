@@ -20,6 +20,7 @@ yarn.lock
 dist
 lib
 build
+release
 
 # Environment
 .env
