@@ -39,6 +39,20 @@ project.private.config.json
 .cache
 .parcel-cache
 .swc
+.gradle
+.tmp-*
+.tmp-*/
+tmp-*.html
+
+# Local test artifacts
+tmp/skill-staging/
+tmp/test-artifacts/*
+!tmp/test-artifacts/.gitkeep
+!tmp/test-artifacts/README.md
+android/local.properties
+ios/App/Pods
+ios/App/Podfile.lock
+ios/App/App.xcworkspace/xcuserdata
 
 # Environment (development)
 .env.development
