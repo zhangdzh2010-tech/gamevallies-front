@@ -368,9 +368,16 @@ export default function Create() {
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header">
-          <Text className="header-title">正在恢复创作</Text>
-          <Text className="header-subtitle">马上回到当前作品或进行中的创作任务</Text>
+        <View className="create-header create-header--restoring">
+          <View className="create-header__copy">
+            <Text className="create-header__eyebrow">AI Creation Pipeline</Text>
+            <Text className="header-title">正在恢复创作</Text>
+            <Text className="header-subtitle">马上回到当前作品或进行中的创作任务</Text>
+          </View>
+          <View className="create-header__meta">
+            <Text className="create-header__meta-label">Session</Text>
+            <Text className="create-header__meta-value">恢复中</Text>
+          </View>
         </View>
         <View className="expanding-panel">
           <View className="expanding-spinner" />
@@ -389,9 +396,16 @@ export default function Create() {
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header">
-          <Text className="header-title">AI 创作中</Text>
-          <Text className="header-subtitle">AI 正在为你生成游戏，请稍候</Text>
+        <View className="create-header create-header--progress">
+          <View className="create-header__copy">
+            <Text className="create-header__eyebrow">AI Creation Pipeline</Text>
+            <Text className="header-title">AI 创作中</Text>
+            <Text className="header-subtitle">AI 正在为你生成游戏，请稍候</Text>
+          </View>
+          <View className="create-header__meta">
+            <Text className="create-header__meta-label">{taskStatusLabel}</Text>
+            <Text className="create-header__meta-value">{`${progress.pct}%`}</Text>
+          </View>
         </View>
 
         <PageScrollContainer
@@ -399,12 +413,27 @@ export default function Create() {
           style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
         >
           <View className="progress-panel">
+            <View className="progress-panel__intro">
+              <View className="progress-panel__intro-copy">
+                <Text className="progress-panel__intro-label">当前焦点</Text>
+                <Text className="progress-panel__intro-title">{currentStageLabel}</Text>
+                <Text className="progress-panel__intro-desc">
+                  系统会自动完成创意拆解、规则编排和运行时装配，你也可以稍后去“我的-任务”继续查看。
+                </Text>
+              </View>
+              <View className="progress-panel__intro-chip">
+                <Text className="progress-panel__intro-chip-label">任务状态</Text>
+                <Text className="progress-panel__intro-chip-value">{taskStatusLabel}</Text>
+              </View>
+            </View>
+
             <PipelineOrbit
               stages={PIPELINE_STAGES}
               currentIndex={progress.stageIndex}
               progressPct={progress.pct}
               title="生成进度"
               stageLabel={currentStageLabel}
+              progressMessage="请稍候"
               statusLabel={taskStatusLabel}
               modeLabel="创作流程"
               coreLabel="AI 创作"
@@ -417,6 +446,12 @@ export default function Create() {
                 </View>
               </View>
             ) : null}
+
+            <View className="progress-panel__footnote">
+              <Text className="progress-panel__footnote-text">
+                任务记录会自动同步到个人中心，完成后可以继续试玩、优化或发布作品。
+              </Text>
+            </View>
           </View>
 
           <View className="bottom-spacer" />
@@ -432,9 +467,16 @@ export default function Create() {
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header">
-          <Text className="header-title">创作完成！</Text>
-          <Text className="header-subtitle">{currentGame.title || gameName || '你的游戏'}已经准备好了</Text>
+        <View className="create-header create-header--completion">
+          <View className="create-header__copy">
+            <Text className="create-header__eyebrow">Creation Completed</Text>
+            <Text className="header-title">创作完成！</Text>
+            <Text className="header-subtitle">{currentGame.title || gameName || '你的游戏'}已经准备好了</Text>
+          </View>
+          <View className="create-header__meta">
+            <Text className="create-header__meta-label">{canPlay ? 'Ready' : 'Locked'}</Text>
+            <Text className="create-header__meta-value">{canPlay ? '试玩' : '订阅'}</Text>
+          </View>
         </View>
 
         <PageScrollContainer
@@ -442,8 +484,14 @@ export default function Create() {
           style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
         >
         <View className="completion-panel">
+          <View className="completion-badge">
+            <Text>{canPlay ? '已就绪' : '待解锁'}</Text>
+          </View>
           <Text className="completion-emoji">OK</Text>
           <Text className="completion-title">{currentGame.title || gameName || '新游戏'}</Text>
+          <Text className="completion-subtitle">
+            {canPlay ? '可以直接试玩这款作品，也可以继续进入优化流程补全细节。' : '当前作品已经生成完成，订阅后即可继续试玩与验证体验。'}
+          </Text>
 
           {error ? (
             <View className="completion-error-banner">
@@ -486,9 +534,13 @@ export default function Create() {
   return (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-      <View className="create-header">
-        <View className="create-header-top">
+      <View className="create-header create-header--editor">
+        <View className="create-header__copy">
+          <Text className="create-header__eyebrow">AI Game Atelier</Text>
           <Text className="header-title">创作新游戏</Text>
+          <Text className="header-subtitle">描述你的游戏想法，AI 会帮你设计并生成</Text>
+        </View>
+        <View className="create-header-top">
           <View className="orientation-switch">
             {ORIENTATION_OPTIONS.map((option) => {
               const isActive = orientation === option.value;
@@ -504,10 +556,17 @@ export default function Create() {
             })}
           </View>
         </View>
-        <Text className="header-subtitle">描述你的游戏想法，AI 会帮你设计并生成</Text>
       </View>
 
       <PageScrollContainer className="create-scroll">
+        <View className="create-intro-card">
+          <Text className="create-intro-card__eyebrow">Quick Prompt</Text>
+          <Text className="create-intro-card__title">一句话说清玩法，剩下的交给 AI。</Text>
+          <Text className="create-intro-card__desc">
+            你可以先描述核心规则、胜负条件和想要的视觉气质，系统会自动扩展成完整的可玩作品。
+          </Text>
+        </View>
+
         <View className="form-section">
           <View className="form-group">
             <Text className="form-label">游戏名称</Text>

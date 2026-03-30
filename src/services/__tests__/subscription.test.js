@@ -20,7 +20,7 @@ describe('subscriptionService.createOrder', () => {
     });
   });
 
-  test('uses native payment flow markers for h5 wechat browser orders', async () => {
+  test('uses jsapi payment flow markers for h5 wechat browser orders', async () => {
     jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(true);
     jest.spyOn(runtime, 'isWechatBrowserRuntime').mockReturnValue(true);
     window.history.replaceState({}, '', '/#/pages/subscription/index');
@@ -29,7 +29,7 @@ describe('subscriptionService.createOrder', () => {
     await createOrder('plan-pro', 'game-1');
 
     expect(post).toHaveBeenCalledWith(
-      `/api/v1/subscription/order?clientPlatform=wechat_h5&wechatPayFlow=native&returnUrl=${expectedReturnUrl}`,
+      `/api/v1/subscription/order?clientPlatform=wechat_h5&wechatPayFlow=jsapi&returnUrl=${expectedReturnUrl}`,
       {
         planId: 'plan-pro',
         gameId: 'game-1',
@@ -37,7 +37,7 @@ describe('subscriptionService.createOrder', () => {
     );
   });
 
-  test('uses native payment flow markers for h5 browser orders outside wechat', async () => {
+  test('uses mweb payment flow markers for h5 browser orders outside wechat', async () => {
     jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(true);
     jest.spyOn(runtime, 'isWechatBrowserRuntime').mockReturnValue(false);
     window.history.replaceState({}, '', '/#/pages/subscription/index');
@@ -46,7 +46,7 @@ describe('subscriptionService.createOrder', () => {
     await createOrder('plan-pro');
 
     expect(post).toHaveBeenCalledWith(
-      `/api/v1/subscription/order?clientPlatform=h5&wechatPayFlow=native&returnUrl=${expectedReturnUrl}`,
+      `/api/v1/subscription/order?clientPlatform=h5&wechatPayFlow=mweb&returnUrl=${expectedReturnUrl}`,
       {
         planId: 'plan-pro',
       }

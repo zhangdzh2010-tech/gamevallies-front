@@ -519,10 +519,14 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
   return (
     <View className="more-overlay" onClick={onClose}>
       <View className="more-menu" onClick={(e) => e.stopPropagation()}>
-        <View className="more-handle" />
         <View className="more-header">
-          <Text className="more-title">作品操作</Text>
-          <Text className="more-game-name">{game.title}</Text>
+          <View className="more-header-copy">
+            <Text className="more-title">作品操作</Text>
+            <Text className="more-game-name">{game.title}</Text>
+          </View>
+          <View className="more-close" onClick={onClose}>
+            <Text>×</Text>
+          </View>
         </View>
         <View className="more-list">
           {actions.map((action) => (
@@ -564,7 +568,15 @@ function VisibilityModal({ game, onClose, onSave }) {
   return (
     <View className="modal-overlay" onClick={onClose}>
       <View className="visibility-modal" onClick={(e) => e.stopPropagation()}>
-        <Text className="modal-title">权限设置</Text>
+        <View className="visibility-modal__header">
+          <View className="visibility-modal__copy">
+            <Text className="modal-title">权限设置</Text>
+            <Text className="modal-subtitle">管理谁可以看到这款作品，以及评论和复刻权限。</Text>
+          </View>
+          <View className="modal-close-btn" onClick={onClose}>
+            <Text>×</Text>
+          </View>
+        </View>
 
         <View className="setting-group">
           <Text className="setting-section-label">可见范围</Text>
@@ -1278,52 +1290,63 @@ export default function Profile() {
     <View className={`profile-container${isH5 ? ' profile-container--h5' : ''}${isWeapp ? ' profile-container--weapp' : ''}`}>
       <AppTopBar />
       <View className="profile-header">
-        <View className="header-top">
-          <View className="header-avatar">
-            {profileAvatarSrc ? (
-              <Image className="avatar-img" src={profileAvatarSrc} mode="aspectFill" />
-            ) : (
-              <Text className="avatar">{profileAvatarFallback}</Text>
-            )}
+        <View className="profile-quota-bar">
+          <View className="quota-info-bar">
+            <Text className="quota-info-icon">{subscriptionActive ? '会员' : '免费'}</Text>
+            <Text className="quota-info-text">{subscriptionActive ? '已订阅会员' : `剩余 ${freeQuota} 次免费额度`}</Text>
+            <Text className="quota-info-sub">{subscriptionActive ? '查看订阅详情' : `已使用 ${totalFreeQuota - freeQuota}/${totalFreeQuota}`}</Text>
           </View>
-          <View className="header-main">
-            <View className="header-actions">
-              <View className="settings-btn" onClick={() => setEditProfile(true)}>
-                <View className="settings-icon" />
-              </View>
-              <View className="logout-btn" onClick={handleLogout}>
-                <Text className="logout-text">退出</Text>
-              </View>
-            </View>
-
-            <View className="header-quota-row">
-              <View className="quota-info-bar">
-                <Text className="quota-info-icon">{subscriptionActive ? '会员' : '免费'}</Text>
-                <Text className="quota-info-text">{subscriptionActive ? '已订阅会员' : `剩余 ${freeQuota} 次免费额度`}</Text>
-                <Text className="quota-info-sub">{subscriptionActive ? '查看订阅详情' : `已使用 ${totalFreeQuota - freeQuota}/${totalFreeQuota}`}</Text>
-              </View>
-              <View
-                className="quota-subscribe-btn"
-                onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
-              >
-                <Text className="quota-subscribe-text">{subscriptionActive ? '管理' : '订阅'}</Text>
-              </View>
-            </View>
+          <View
+            className="quota-subscribe-btn"
+            onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
+          >
+            <Text className="quota-subscribe-text">{subscriptionActive ? '管理' : '订阅'}</Text>
           </View>
         </View>
 
-        <View className="user-info">
-          <Text className="user-name">{profile.name || '用户'}</Text>
-          <Text className="user-bio">{profile.bio || '这个人很懒，还没有介绍自己'}</Text>
-        </View>
-
-        <View className="stats-row">
-          {stats.map((s) => (
-            <View key={s.label} className="stat">
-              <Text className="stat-value">{s.value}</Text>
-              <Text className="stat-label">{s.label}</Text>
+        <View className="profile-summary-card">
+          <View className="header-top">
+            <View className="header-avatar">
+              {profileAvatarSrc ? (
+                <Image className="avatar-img" src={profileAvatarSrc} mode="aspectFill" />
+              ) : (
+                <Text className="avatar">{profileAvatarFallback}</Text>
+              )}
             </View>
-          ))}
+            <View className="header-main">
+              <View className="profile-head-row">
+                <View className="profile-head-copy">
+                  <View className="profile-topline">
+                    <View className="profile-inline-meta">
+                      <Text className="profile-inline-meta__pill">{subscriptionActive ? '会员中' : '免费'}</Text>
+                      <Text className="profile-inline-meta__pill profile-inline-meta__pill--ghost">创作者空间</Text>
+                    </View>
+                    <Text className="user-name">{profile.name || '用户'}</Text>
+                  </View>
+
+                  <Text className="user-bio">{profile.bio || '这个人很懒，还没有介绍自己'}</Text>
+                </View>
+
+                <View className="header-actions">
+                  <View className="settings-btn" onClick={() => setEditProfile(true)}>
+                    <View className="settings-icon" />
+                  </View>
+                  <View className="logout-btn" onClick={handleLogout}>
+                    <Text className="logout-text">退出</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View className="stats-row">
+            {stats.map((s) => (
+              <View key={s.label} className="stat">
+                <Text className="stat-value">{s.value}</Text>
+                <Text className="stat-label">{s.label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
 

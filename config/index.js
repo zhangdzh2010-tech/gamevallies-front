@@ -75,6 +75,10 @@ module.exports = defineConfig({
         "process.env.TARO_APP_WS_URL": JSON.stringify(process.env.TARO_APP_WS_URL || ""),
         "process.env.TARO_APP_GAME_CONTENT_URL": JSON.stringify(process.env.TARO_APP_GAME_CONTENT_URL || ""),
         "process.env.TARO_APP_GAME_SHELL_URL": JSON.stringify(process.env.TARO_APP_GAME_SHELL_URL || ""),
+        "process.env.TARO_APP_ENABLE_WECHAT_H5_LOGIN": JSON.stringify(process.env.TARO_APP_ENABLE_WECHAT_H5_LOGIN || ""),
+        "process.env.TARO_APP_WECHAT_OAUTH_APP_ID": JSON.stringify(process.env.TARO_APP_WECHAT_OAUTH_APP_ID || ""),
+        "process.env.TARO_APP_WECHAT_OAUTH_SCOPE": JSON.stringify(process.env.TARO_APP_WECHAT_OAUTH_SCOPE || ""),
+        "process.env.TARO_APP_WECHAT_OAUTH_AUTHORIZE_URL": JSON.stringify(process.env.TARO_APP_WECHAT_OAUTH_AUTHORIZE_URL || ""),
         "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
         "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY || ""),
       };
@@ -113,6 +117,10 @@ module.exports = defineConfig({
         "process.env.TARO_APP_WS_URL": JSON.stringify(process.env.TARO_APP_WS_URL || ""),
         "process.env.TARO_APP_GAME_CONTENT_URL": JSON.stringify(process.env.TARO_APP_GAME_CONTENT_URL || ""),
         "process.env.TARO_APP_GAME_SHELL_URL": JSON.stringify(process.env.TARO_APP_GAME_SHELL_URL || ""),
+        "process.env.TARO_APP_ENABLE_WECHAT_H5_LOGIN": JSON.stringify(process.env.TARO_APP_ENABLE_WECHAT_H5_LOGIN || ""),
+        "process.env.TARO_APP_WECHAT_OAUTH_APP_ID": JSON.stringify(process.env.TARO_APP_WECHAT_OAUTH_APP_ID || ""),
+        "process.env.TARO_APP_WECHAT_OAUTH_SCOPE": JSON.stringify(process.env.TARO_APP_WECHAT_OAUTH_SCOPE || ""),
+        "process.env.TARO_APP_WECHAT_OAUTH_AUTHORIZE_URL": JSON.stringify(process.env.TARO_APP_WECHAT_OAUTH_AUTHORIZE_URL || ""),
         "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
         "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY || ""),
       }]);
