@@ -1,0 +1,6 @@
+{
+  "appId": "com.gamevallies.app",
+  "appName": "GameVallies",
+  "webDir": "dist/h5",
+  "bundledWebRuntime": false
+}
