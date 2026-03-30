@@ -4,7 +4,7 @@ import { useNavigation } from '@tarojs/hooks';
 import { getSafeGameImage } from '../../utils/media';
 import './GameCard.scss';
 
-const HOT_LABEL = '\u70ed\u95e8';
+const HOT_LABEL = '热门';
 
 function formatNumber(value) {
   const num = Number(value) || 0;
@@ -22,11 +22,11 @@ function formatNumber(value) {
 
 function getBookmarkCount(game) {
   return Number(
-    game.bookmarks ||
-    game.bookmarkCount ||
-    game.favoriteCount ||
-    game.favorites ||
-    0
+    game.bookmarks
+    || game.bookmarkCount
+    || game.favoriteCount
+    || game.favorites
+    || 0
   ) || 0;
 }
 
@@ -48,6 +48,10 @@ export const GameCard = ({
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const navigation = useNavigation();
   const isPlayOnlyVariant = variant === 'play-only';
+  const isHomeShowcaseVariant = variant === 'home-showcase';
+  const isCompactStatsVariant = isPlayOnlyVariant || isHomeShowcaseVariant;
+  const showTopMetricBadge = isHomeShowcaseVariant;
+  const topMetricBadgeLabel = game.isHot ? HOT_LABEL : '推荐';
 
   useEffect(() => {
     setIsLiked(Boolean(game.viewerHasLiked));
@@ -58,6 +62,12 @@ export const GameCard = ({
 
   const thumbnailUrl = getSafeGameImage(game);
   const hasThumbnail = Boolean(thumbnailUrl);
+  const rootClassName = [
+    'game-card',
+    hasThumbnail ? 'game-card--with-thumbnail' : '',
+    isHomeShowcaseVariant ? 'game-card--home-showcase' : '',
+  ].filter(Boolean).join(' ');
+
   const handlePlay = () => {
     if (onPlay) {
       onPlay(game);
@@ -155,12 +165,24 @@ export const GameCard = ({
   };
 
   return (
-    <View className="game-card" onClick={handlePlay}>
+    <View className={rootClassName} onClick={handlePlay}>
       <View className="game-preview">
         <Text className="game-emoji">{game.emoji}</Text>
         {hasThumbnail && <Image className="game-thumbnail" src={thumbnailUrl} mode="aspectFill" />}
 
-        {game.isHot && <View className="hot-badge">{HOT_LABEL}</View>}
+        {showTopMetricBadge ? (
+          <View className="top-metric-badge">
+            <View className={`top-metric-badge__tag${game.isHot ? ' is-hot' : ''}`}>
+              <Text className="top-metric-badge__tag-text">{topMetricBadgeLabel}</Text>
+            </View>
+            <View className="top-metric-badge__metric">
+              <View className="top-metric-badge__play-icon" />
+              <Text className="top-metric-badge__metric-text">{formatNumber(game.plays || 0)}</Text>
+            </View>
+          </View>
+        ) : (
+          game.isHot ? <View className="hot-badge">{HOT_LABEL}</View> : null
+        )}
 
         {showDetailEntry ? (
           <View className="detail-entry-btn" onClick={handleOpenDetail}>
@@ -169,18 +191,18 @@ export const GameCard = ({
         ) : null}
 
         <View className="preview-overlay">
-          <View className={`preview-footer${isPlayOnlyVariant ? ' preview-footer--play-only' : ''}`}>
-            {!isPlayOnlyVariant ? (
+          <View className={`preview-footer${isCompactStatsVariant ? ' preview-footer--play-only' : ''}`}>
+            {!isCompactStatsVariant ? (
               <View className="author-row">
                 <Text className="author-name">{game.author}</Text>
               </View>
             ) : null}
-            <View className={`stats-row${isPlayOnlyVariant ? ' stats-row--play-only' : ''}`}>
+            <View className={`stats-row${isCompactStatsVariant ? ' stats-row--play-only' : ''}`}>
               <View className="stat-text play-text">
                 <View className="stat-icon stat-icon--play" />
                 <Text className="stat-value">{formatNumber(game.plays || 0)}</Text>
               </View>
-              {!isPlayOnlyVariant ? (
+              {!isCompactStatsVariant ? (
                 <>
                   <View className="stat-text comment-text" onClick={handleComment}>
                     <View className="stat-icon stat-icon--comment" />

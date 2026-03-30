@@ -27,6 +27,24 @@ const GAME_EMOJIS = ['\ud83c\udfae', '\ud83d\ude80', '\ud83c\udfb2', '\ud83c\udf
 const TAB_RECOMMENDED = '\u63a8\u8350\u5173\u6ce8';
 const TAB_LATEST = '\u6700\u65b0\u52a8\u6001';
 
+function formatMetric(value) {
+  const num = Number(value) || 0;
+
+  if (num >= 100000) {
+    return `${Math.round(num / 10000)}w+`;
+  }
+
+  if (num >= 10000) {
+    return `${(num / 10000).toFixed(1)}w`;
+  }
+
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}k`;
+  }
+
+  return String(num);
+}
+
 function normalizeGame(game, index) {
   return {
     ...game,
@@ -379,12 +397,57 @@ export default function FollowPage() {
     }
   });
 
+  const heroTitle = activeTab === TAB_RECOMMENDED
+    ? '发现下一批值得关注的创作者'
+    : (loggedIn ? '追踪你关注创作者的最新作品' : '登录后建立你的专属关注流');
+  const heroDesc = activeTab === TAB_RECOMMENDED
+    ? '从热门创作者和最新灵感里快速找到更适合你的风格方向。'
+    : (loggedIn
+      ? '这里会持续更新你关注创作者的新作品、迭代和动态。'
+      : '登录后就能在这里看到关注创作者的最新发布与更新。');
+  const discoverStats = [
+    {
+      key: 'creators',
+      label: activeTab === TAB_RECOMMENDED ? '推荐创作者' : '关注作者',
+      value: activeTab === TAB_RECOMMENDED ? `${topCreators.length}` : (loggedIn ? 'Live' : '--'),
+    },
+    {
+      key: 'games',
+      label: activeTab === TAB_RECOMMENDED ? '灵感作品' : '最新动态',
+      value: `${followedGames.length}`,
+    },
+    {
+      key: 'status',
+      label: '浏览状态',
+      value: activeTab === TAB_RECOMMENDED ? '探索中' : (loggedIn ? '已同步' : '待登录'),
+    },
+  ];
+
   return (
     <View className={`follow-page${isH5 ? ' follow-page--h5' : ''}${isWeapp ? ' follow-page--weapp' : ''}`}>
       <AppTopBar />
 
+      <View className="follow-stage">
+        <View className="follow-stage__copy">
+          <Text className="follow-stage__eyebrow">Creator Radar</Text>
+          <Text className="follow-stage__title">{heroTitle}</Text>
+          <Text className="follow-stage__desc">{heroDesc}</Text>
+        </View>
+        <View className="follow-stage__metrics">
+          {discoverStats.map((stat) => (
+            <View key={stat.key} className="follow-stage__metric">
+              <Text className="follow-stage__metric-label">{stat.label}</Text>
+              <Text className="follow-stage__metric-value">{stat.value}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
       <View className="follow-header">
-        <Text className="header-title">{'\u5173\u6ce8'}</Text>
+        <View className="follow-header__copy">
+          <Text className="header-kicker">Discover</Text>
+          <Text className="header-title">{'\u5173\u6ce8'}</Text>
+        </View>
         <View className="header-tabs">
           {tabs.map((tab) => (
             <Text
@@ -409,12 +472,16 @@ export default function FollowPage() {
         {activeTab === TAB_RECOMMENDED && (
           <>
             <View className="section">
-              <View className="section-head">
-                <Text className="section-title">{'\u70ed\u95e8\u521b\u4f5c\u8005'}</Text>
+              <View className="section-head section-head--split">
+                <View className="section-head__copy">
+                  <Text className="section-kicker">Top Creators</Text>
+                  <Text className="section-title">{'\u70ed\u95e8\u521b\u4f5c\u8005'}</Text>
+                </View>
+                <Text className="section-meta">{`${topCreators.length} 位`}</Text>
               </View>
               <ScrollView className="creators-scroll" scrollX>
                 <View className="creators-list">
-                  {topCreators.map((creator) => {
+                  {topCreators.map((creator, index) => {
                     const creatorName = getSafeDisplayText([
                       creator.displayName,
                       creator.nickname,
@@ -435,6 +502,7 @@ export default function FollowPage() {
 
                     return (
                       <View key={creator.id} className="creator-card">
+                        <View className="creator-rank">{String(index + 1).padStart(2, '0')}</View>
                         <View className="creator-avatar">
                           {creatorAvatarSrc ? (
                             <Image className="avatar-img" src={creatorAvatarSrc} mode="aspectFill" />
@@ -445,9 +513,15 @@ export default function FollowPage() {
                         <Text className="creator-name">
                           {creatorName}
                         </Text>
-                        <Text className="creator-meta">
-                          {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
-                        </Text>
+                        <View className="creator-meta-row">
+                          <Text className="creator-meta">
+                            {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
+                          </Text>
+                          <Text className="creator-meta-dot" />
+                          <Text className="creator-meta">
+                            {`${formatMetric(creator.followerCount || creator.followers || 0)} 粉丝`}
+                          </Text>
+                        </View>
                         <View
                           className={`follow-btn${creator.isFollowing ? ' is-following' : ''}${creator.followLoading ? ' is-loading' : ''}${isOwnCreator ? ' disabled' : ''}`}
                           onClick={(event) => handleToggleCreatorFollow(creator, event)}
@@ -462,8 +536,12 @@ export default function FollowPage() {
             </View>
 
             <View className="section">
-              <View className="section-head">
-                <Text className="section-title">{'\u4f60\u53ef\u80fd\u559c\u6b22'}</Text>
+              <View className="section-head section-head--split">
+                <View className="section-head__copy">
+                  <Text className="section-kicker">Curated Feed</Text>
+                  <Text className="section-title">{'\u4f60\u53ef\u80fd\u559c\u6b22'}</Text>
+                </View>
+                <Text className="section-meta">{`${followedGames.length} 款`}</Text>
               </View>
               {loading ? (
                 <View className="empty-state">
@@ -509,6 +587,13 @@ export default function FollowPage() {
 
         {activeTab === TAB_LATEST && (
           <View className="section">
+            <View className="section-head section-head--split">
+              <View className="section-head__copy">
+                <Text className="section-kicker">Following Feed</Text>
+                <Text className="section-title">{loggedIn ? '关注动态' : '登录后查看关注动态'}</Text>
+              </View>
+              <Text className="section-meta">{loggedIn ? `${followedGames.length} 条` : '未登录'}</Text>
+            </View>
             {loading ? (
               <View className="empty-state">
                 <Text className="empty-text">{'\u52a0\u8f7d\u4e2d...'}</Text>

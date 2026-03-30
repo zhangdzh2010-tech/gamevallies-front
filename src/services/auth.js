@@ -23,6 +23,10 @@ const H5_AUTHORIZE_ENDPOINTS = [
   '/api/v1/auth/wechat/h5-authorize-url',
 ];
 
+export function isWechatH5LoginEnabled() {
+  return Boolean(ENV?.WECHAT?.H5_LOGIN_ENABLED);
+}
+
 function extractWechatProfile(userInfo) {
   const nickname = typeof userInfo?.nickName === 'string' ? userInfo.nickName.trim() : '';
   const avatarUrl = typeof userInfo?.avatarUrl === 'string' ? userInfo.avatarUrl.trim() : '';
@@ -241,6 +245,10 @@ export function clearWechatH5AuthParams() {
 }
 
 export async function startWechatH5Login(options = {}) {
+  if (!isWechatH5LoginEnabled()) {
+    throw new Error('微信登录暂未开放');
+  }
+
   if (!isWechatBrowser()) {
     throw new Error('请在微信内打开当前页面后再使用微信授权登录');
   }
@@ -286,6 +294,11 @@ export async function startWechatH5Login(options = {}) {
 }
 
 export async function loginByWechatH5AuthCode(code, state) {
+  if (!isWechatH5LoginEnabled()) {
+    clearWechatOauthState();
+    throw new Error('微信登录暂未开放');
+  }
+
   if (!code) {
     throw new Error('微信授权缺少 code');
   }

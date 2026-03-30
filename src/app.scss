@@ -333,37 +333,26 @@ page {
   position: relative;
 }
 
-.page-scroll-container__refresh-wrap {
+.page-scroll-container__refresh-status {
   position: sticky;
   top: calc(env(safe-area-inset-top, 0px) + 10px);
   z-index: 32;
   display: flex;
-  justify-content: flex-end;
-  padding: 10px 16px 6px;
+  justify-content: center;
+  padding: 10px 0 4px;
   pointer-events: none;
 }
 
-.page-scroll-container__refresh-btn {
-  pointer-events: auto;
+.page-scroll-container__refresh-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 12px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   background: rgba(13, 16, 27, 0.88);
   border: 1px solid rgba(110, 86, 255, 0.22);
   box-shadow: 0 10px 24px rgba(4, 6, 14, 0.22);
-
-  &:active {
-    transform: scale(0.98);
-  }
-
-  &.is-refreshing {
-    .page-scroll-container__refresh-icon {
-      animation: page-scroll-refresh-spin 0.85s linear infinite;
-    }
-  }
 }
 
 .page-scroll-container__refresh-icon {
@@ -373,13 +362,7 @@ page {
   border: 2px solid rgba(234, 232, 244, 0.26);
   border-top-color: #8a7aff;
   box-sizing: border-box;
-}
-
-.page-scroll-container__refresh-text {
-  font-size: 13px;
-  line-height: 1;
-  color: #eae8f4;
-  white-space: nowrap;
+  animation: page-scroll-refresh-spin 0.85s linear infinite;
 }
 
 @keyframes page-scroll-refresh-spin {
@@ -393,16 +376,12 @@ page {
 }
 
 @media screen and (max-width: 360px) {
-  .page-scroll-container__refresh-wrap {
-    padding: 8px 14px 4px;
+  .page-scroll-container__refresh-status {
+    padding-top: 8px;
   }
 
-  .page-scroll-container__refresh-btn {
-    min-height: 34px;
-    padding: 0 10px;
-  }
-
-  .page-scroll-container__refresh-text {
-    font-size: 12px;
+  .page-scroll-container__refresh-indicator {
+    width: 32px;
+    height: 32px;
   }
 }

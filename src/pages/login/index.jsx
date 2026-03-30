@@ -32,6 +32,8 @@ function buildWechatUserInfo(nickname, avatarUrl) {
 export default function Login() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const isH5 = isH5Runtime();
+  const isWechatH5LoginEnabled = isH5 && authService.isWechatH5LoginEnabled();
+  const showWechatLogin = isWeapp || isWechatH5LoginEnabled;
   const [mode, setMode] = useState('password');
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
@@ -59,6 +61,13 @@ export default function Login() {
     }
 
     const { code: wechatCode, state: wechatState } = authService.getWechatH5AuthParams();
+    if (!isWechatH5LoginEnabled) {
+      if (wechatCode || wechatState) {
+        authService.clearWechatH5AuthParams();
+      }
+      return;
+    }
+
     if (!wechatCode) {
       return;
     }
@@ -81,7 +90,7 @@ export default function Login() {
     };
 
     void completeWechatH5Login();
-  }, [isH5]);
+  }, [isH5, isWechatH5LoginEnabled]);
 
   const isPhoneValid = /^1[3-9]\d{9}$/.test(phone);
   const canSend = isPhoneValid && countdown === 0;
@@ -351,13 +360,15 @@ export default function Login() {
           </View>
         </View>
 
-        <View className="divider">
+        {showWechatLogin && (
+          <>
+            <View className="divider">
           <View className="divider-line" />
           <Text className="divider-text">或</Text>
           <View className="divider-line" />
         </View>
 
-        {isWeapp && (
+            {isWeapp && (
           <View className="wechat-profile-card">
             <View className="wechat-profile-card__header">
               <Text className="wechat-profile-card__title">完善微信资料</Text>
@@ -396,13 +407,15 @@ export default function Login() {
           </View>
         )}
 
-        <View
-          className={`wechat-btn ${isBusy && loadingAction !== 'wechat' ? 'is-disabled' : ''}`}
-          onClick={handleWechatLogin}
-          style={{ pointerEvents: isBusy ? 'none' : 'auto' }}
-        >
-          <Text>{wechatBtnText}</Text>
-        </View>
+            <View
+              className={`wechat-btn ${isBusy && loadingAction !== 'wechat' ? 'is-disabled' : ''}`}
+              onClick={handleWechatLogin}
+              style={{ pointerEvents: isBusy ? 'none' : 'auto' }}
+            >
+              <Text>{wechatBtnText}</Text>
+            </View>
+          </>
+        )}
       </View>
     </View>
   );

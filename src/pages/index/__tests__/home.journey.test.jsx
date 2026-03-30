@@ -171,8 +171,8 @@ describe('Home page journey coverage', () => {
   test('home loads feed, opens create entry, and routes play/detail actions correctly', async () => {
     const { container } = render(<HomePage />);
 
-    await screen.findByText('飞船闪避');
-    expect(screen.getByText('像素拼图')).toBeTruthy();
+    await screen.findByTestId('game-card-game-1');
+    expect(screen.getByTestId('game-card-game-2')).toBeTruthy();
 
     fireEvent.click(container.querySelector('.challenge-banner'));
     fireEvent.click(screen.getByText('play-game-1'));
@@ -191,13 +191,13 @@ describe('Home page journey coverage', () => {
   test('switching game type reloads the feed with the selected tab', async () => {
     render(<HomePage />);
 
-    await screen.findByText('飞船闪避');
+    await screen.findByTestId('game-card-game-1');
     fireEvent.click(screen.getByText('Puzzle'));
 
     await waitFor(() => {
       expect(mockGetGamesByType).toHaveBeenCalledWith('puzzle', 1, 10);
     });
-    expect(await screen.findByText('脑力迷宫')).toBeTruthy();
+    expect(await screen.findByTestId('game-card-game-3')).toBeTruthy();
   });
 
   test('feed loading failure surfaces retry guidance', async () => {

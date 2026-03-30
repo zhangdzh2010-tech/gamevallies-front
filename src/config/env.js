@@ -1,5 +1,23 @@
 const isProd = process.env.NODE_ENV === 'production';
 
+function parseBooleanEnv(value, defaultValue = false) {
+  if (value === undefined || value === null || value === '') {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
+}
+
 export const ENV = {
   // API Configuration — read from .env / .env.development
   API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL || 'https://gamevallies.com',
@@ -94,6 +112,7 @@ export const ENV = {
   },
 
   WECHAT: {
+    H5_LOGIN_ENABLED: parseBooleanEnv(process.env.TARO_APP_ENABLE_WECHAT_H5_LOGIN, false),
     H5_OAUTH_APP_ID: process.env.TARO_APP_WECHAT_OAUTH_APP_ID || '',
     H5_OAUTH_SCOPE: process.env.TARO_APP_WECHAT_OAUTH_SCOPE || 'snsapi_base',
     H5_OAUTH_AUTHORIZE_URL:

@@ -138,9 +138,10 @@ export async function createOrder(planId, gameId) {
 
   let platformQuery = '';
   if (isH5Runtime()) {
+    const isWechatBrowser = isWechatBrowserRuntime();
     const query = new URLSearchParams({
-      clientPlatform: isWechatBrowserRuntime() ? 'wechat_h5' : 'h5',
-      wechatPayFlow: 'native',
+      clientPlatform: isWechatBrowser ? 'wechat_h5' : 'h5',
+      wechatPayFlow: isWechatBrowser ? 'jsapi' : 'mweb',
     });
 
     if (typeof window !== 'undefined' && window.location?.href) {

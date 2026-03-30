@@ -8,6 +8,7 @@ function omitUnsupportedDomProps(props = {}) {
   const {
     placeholderStyle,
     autoHeight,
+    password,
     scrollX,
     scrollY,
     showScrollbar,
@@ -21,6 +22,7 @@ function omitUnsupportedDomProps(props = {}) {
 
   void placeholderStyle;
   void autoHeight;
+  void password;
   void scrollX;
   void scrollY;
   void showScrollbar;
