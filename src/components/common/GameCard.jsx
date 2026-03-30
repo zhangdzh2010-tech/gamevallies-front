@@ -39,6 +39,7 @@ export const GameCard = ({
   onToggleBookmark,
   variant = 'default',
   showDetailEntry = false,
+  badgeLabel,
 }) => {
   const [isLiked, setIsLiked] = useState(Boolean(game.viewerHasLiked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked));
@@ -51,7 +52,8 @@ export const GameCard = ({
   const isHomeShowcaseVariant = variant === 'home-showcase';
   const isCompactStatsVariant = isPlayOnlyVariant || isHomeShowcaseVariant;
   const showTopMetricBadge = isHomeShowcaseVariant;
-  const topMetricBadgeLabel = game.isHot ? HOT_LABEL : '推荐';
+  const topMetricBadgeLabel = badgeLabel || (game.isHot ? HOT_LABEL : '推荐');
+  const isHotMetricBadge = !badgeLabel && game.isHot;
 
   useEffect(() => {
     setIsLiked(Boolean(game.viewerHasLiked));
@@ -172,7 +174,7 @@ export const GameCard = ({
 
         {showTopMetricBadge ? (
           <View className="top-metric-badge">
-            <View className={`top-metric-badge__tag${game.isHot ? ' is-hot' : ''}`}>
+            <View className={`top-metric-badge__tag${isHotMetricBadge ? ' is-hot' : ''}`}>
               <Text className="top-metric-badge__tag-text">{topMetricBadgeLabel}</Text>
             </View>
             <View className="top-metric-badge__metric">

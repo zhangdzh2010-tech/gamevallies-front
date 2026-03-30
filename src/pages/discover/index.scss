@@ -381,6 +381,38 @@
   }
 }
 
+.follow-page {
+  .waterfall {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    max-width: none;
+    margin: 0;
+
+    .waterfall-col {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .waterfall-item {
+      min-width: 0;
+    }
+  }
+}
+
+.follow-page.follow-page--h5 {
+  .waterfall {
+    gap: 10px;
+
+    .waterfall-col {
+      gap: 10px;
+    }
+  }
+}
+
 .follow-page.follow-page--weapp {
   .follow-header {
     .header-title {

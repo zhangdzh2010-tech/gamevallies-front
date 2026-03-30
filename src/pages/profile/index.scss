@@ -4018,6 +4018,45 @@
   }
 }
 
+.profile-container {
+  .profile-scroll {
+    .games-section {
+      .games-list {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding-bottom: 12px;
+
+        &__col {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        &__item {
+          min-width: 0;
+        }
+      }
+    }
+  }
+}
+
+.profile-container.profile-container--h5 {
+  .profile-scroll {
+    .games-section {
+      .games-list {
+        gap: 10px;
+
+        &__col {
+          gap: 10px;
+        }
+      }
+    }
+  }
+}
+
 @media screen and (max-width: 360px) {
   .profile-container {
     .profile-quota-bar {

@@ -68,6 +68,17 @@ function normalizeGame(game, index) {
   };
 }
 
+function buildPosterColumns(games, desiredColumnCount = 3) {
+  const columnCount = Math.min(desiredColumnCount, Math.max(games.length, 1));
+  const columns = Array.from({ length: columnCount }, () => []);
+
+  games.forEach((game, index) => {
+    columns[index % columnCount].push(game);
+  });
+
+  return columns;
+}
+
 export default function FollowPage() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
@@ -387,15 +398,7 @@ export default function FollowPage() {
     }
   };
 
-  const leftCol = [];
-  const rightCol = [];
-  followedGames.forEach((game, index) => {
-    if (index % 2 === 0) {
-      leftCol.push(game);
-    } else {
-      rightCol.push(game);
-    }
-  });
+  const posterColumns = buildPosterColumns(followedGames);
 
   const heroTitle = activeTab === TAB_RECOMMENDED
     ? '发现下一批值得关注的创作者'
@@ -549,36 +552,24 @@ export default function FollowPage() {
                 </View>
               ) : (
                 <View className="waterfall">
-                  <View className="waterfall-col">
-                    {leftCol.map((game) => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        variant="play-only"
-                        onPlay={handlePlay}
-                        onComment={handleComment}
-                        onOpenDetail={handleOpenDetail}
-                        showDetailEntry
-                        onToggleLike={handleToggleLike}
-                        onToggleBookmark={handleToggleBookmark}
-                      />
-                    ))}
-                  </View>
-                  <View className="waterfall-col">
-                    {rightCol.map((game) => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        variant="play-only"
-                        onPlay={handlePlay}
-                        onComment={handleComment}
-                        onOpenDetail={handleOpenDetail}
-                        showDetailEntry
-                        onToggleLike={handleToggleLike}
-                        onToggleBookmark={handleToggleBookmark}
-                      />
-                    ))}
-                  </View>
+                  {posterColumns.map((column, columnIndex) => (
+                    <View key={`recommended-col-${columnIndex}`} className="waterfall-col">
+                      {column.map((game) => (
+                        <View key={game.id} className="waterfall-item">
+                          <GameCard
+                            game={game}
+                            variant="home-showcase"
+                            onPlay={handlePlay}
+                            onComment={handleComment}
+                            onOpenDetail={handleOpenDetail}
+                            showDetailEntry
+                            onToggleLike={handleToggleLike}
+                            onToggleBookmark={handleToggleBookmark}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  ))}
                 </View>
               )}
             </View>
@@ -623,36 +614,24 @@ export default function FollowPage() {
               </View>
             ) : (
               <View className="waterfall">
-                <View className="waterfall-col">
-                  {leftCol.map((game) => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        variant="play-only"
-                        onPlay={handlePlay}
-                        onComment={handleComment}
-                        onOpenDetail={handleOpenDetail}
-                        showDetailEntry
-                        onToggleLike={handleToggleLike}
-                        onToggleBookmark={handleToggleBookmark}
-                      />
+                {posterColumns.map((column, columnIndex) => (
+                  <View key={`latest-col-${columnIndex}`} className="waterfall-col">
+                    {column.map((game) => (
+                      <View key={game.id} className="waterfall-item">
+                        <GameCard
+                          game={game}
+                          variant="home-showcase"
+                          onPlay={handlePlay}
+                          onComment={handleComment}
+                          onOpenDetail={handleOpenDetail}
+                          showDetailEntry
+                          onToggleLike={handleToggleLike}
+                          onToggleBookmark={handleToggleBookmark}
+                        />
+                      </View>
                     ))}
-                </View>
-                <View className="waterfall-col">
-                  {rightCol.map((game) => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        variant="play-only"
-                        onPlay={handlePlay}
-                        onComment={handleComment}
-                        onOpenDetail={handleOpenDetail}
-                        showDetailEntry
-                        onToggleLike={handleToggleLike}
-                        onToggleBookmark={handleToggleBookmark}
-                      />
-                  ))}
-                </View>
+                  </View>
+                ))}
               </View>
             )}
           </View>
