@@ -65,30 +65,24 @@
       z-index: 3;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 8px 5px 6px;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 10px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(11, 15, 28, 0.78);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 14px 28px rgba(6, 8, 20, 0.28);
+      background: linear-gradient(135deg, #7aa4ff 0%, #7362ff 100%);
 
-      &__tag {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 24px;
-        padding: 0 10px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #7aa4ff 0%, #7362ff 100%);
+      &.is-hot {
+        background: linear-gradient(135deg, #ffd56d 0%, #ffb347 100%);
 
-        &.is-hot {
-          background: linear-gradient(135deg, #ffd56d 0%, #ffb347 100%);
-
-          .top-metric-badge__tag-text {
-            color: #432900;
-          }
+        .top-metric-badge__tag-text {
+          color: #432900;
         }
+      }
+
+      &--minimal {
+        border: none;
+        box-shadow: none;
+        backdrop-filter: none;
       }
 
       &__tag-text {
@@ -97,45 +91,32 @@
         font-weight: 800;
         line-height: 1;
       }
-
-      &__metric {
-        display: inline-flex;
-        align-items: center;
-      }
-
-      &__metric-text {
-        color: #ffffff;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1;
-      }
     }
 
     .detail-entry-btn {
       align-items: center;
-      background: rgba(17, 17, 24, 0.82);
-      border: 1px solid rgba(37, 37, 53, 0.9);
-      border-radius: 22px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
       bottom: 10px;
-      box-shadow: 0 10px 22px rgba(4, 6, 14, 0.28);
       display: flex;
-      height: 42px;
+      height: 26px;
       justify-content: center;
-      min-width: 46px;
-      padding: 0 12px;
+      min-width: 26px;
+      padding: 0;
       position: absolute;
       right: 10px;
       z-index: 3;
 
       &:active {
-        transform: scale(1.04);
+        transform: scale(1.08);
       }
 
       .detail-entry-dots {
         color: #ffffff;
-        font-size: 36px;
+        font-size: 22px;
         font-weight: 700;
-        letter-spacing: 0;
+        letter-spacing: 1px;
         line-height: 1;
       }
     }
@@ -192,8 +173,8 @@
             text-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 
             .stat-icon {
-              height: 38px;
-              width: 38px;
+              height: 76px;
+              width: 76px;
             }
 
             .stat-value {
@@ -299,27 +280,19 @@
 .game-card.game-card--with-thumbnail {
   .game-preview {
     .top-metric-badge {
-      background: rgba(9, 12, 24, 0.48);
-      border-color: rgba(255, 255, 255, 0.09);
-      box-shadow: 0 8px 18px rgba(6, 8, 20, 0.18);
-      backdrop-filter: blur(6px);
+      &.top-metric-badge--minimal {
+        background: linear-gradient(135deg, rgba(122, 164, 255, 0.96) 0%, rgba(115, 98, 255, 0.96) 100%);
 
-      &__tag {
-        min-height: 22px;
-        padding: 0 9px;
-      }
-
-      &__tag-text,
-      &__metric-text {
-        font-size: 10px;
+        &.is-hot {
+          background: linear-gradient(135deg, #ffe9a7 0%, #ffd56d 100%);
+        }
       }
     }
 
     .detail-entry-btn {
-      background: rgba(10, 12, 22, 0.44);
-      border-color: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 8px 18px rgba(4, 6, 14, 0.16);
-      backdrop-filter: blur(6px);
+      .detail-entry-dots {
+        text-shadow: 0 6px 16px rgba(4, 6, 14, 0.42);
+      }
     }
 
     .preview-overlay {
@@ -357,43 +330,26 @@
     .top-metric-badge {
       top: 12px;
       left: 12px;
-      padding: 4px 8px 4px 5px;
-      background: rgba(10, 14, 25, 0.7);
-      border-color: rgba(255, 255, 255, 0.1);
-
-      &__tag {
-        min-height: 22px;
-        padding: 0 9px;
-        background: linear-gradient(135deg, #7398ff 0%, #7468ff 100%);
-      }
+      min-height: 22px;
+      padding: 0 10px;
+      background: linear-gradient(135deg, #7398ff 0%, #7468ff 100%);
 
       &__tag-text {
         font-size: 10px;
         letter-spacing: 0.2px;
       }
-
-      &__metric {
-      }
-
-      &__metric-text {
-        font-size: 10px;
-      }
     }
 
     .detail-entry-btn {
-      background: rgba(13, 15, 24, 0.74);
-      backdrop-filter: blur(10px);
-      border-color: rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
       bottom: 12px;
-      height: 34px;
-      min-width: 36px;
-      padding: 0 10px;
+      height: 24px;
+      min-width: 24px;
+      padding: 0;
       right: 12px;
       top: auto;
 
       .detail-entry-dots {
-        font-size: 20px;
+        font-size: 18px;
       }
     }
 
@@ -411,8 +367,8 @@
           text-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
 
           .stat-icon {
-            height: 12px;
-            width: 12px;
+            height: 24px;
+            width: 24px;
             opacity: 0.78;
           }
 
@@ -445,14 +401,15 @@
 .game-card.game-card--home-showcase.game-card--with-thumbnail {
   .game-preview {
     .top-metric-badge {
-      background: rgba(7, 10, 19, 0.46);
-      border-color: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 8px 18px rgba(4, 6, 14, 0.16);
+      &.is-hot {
+        background: linear-gradient(135deg, #ffe9a7 0%, #ffd56d 100%);
+      }
     }
 
     .detail-entry-btn {
-      background: rgba(8, 10, 18, 0.42);
-      box-shadow: 0 8px 16px rgba(4, 6, 14, 0.14);
+      .detail-entry-dots {
+        text-shadow: 0 6px 14px rgba(4, 6, 14, 0.32);
+      }
     }
 
     .preview-overlay {
@@ -481,15 +438,14 @@
       }
 
       .detail-entry-btn {
-        border-radius: 16px;
         bottom: 8px;
-        height: 30px;
-        min-width: 34px;
-        padding: 0 9px;
+        height: 22px;
+        min-width: 22px;
+        padding: 0;
         right: 8px;
 
         .detail-entry-dots {
-          font-size: 22px;
+          font-size: 16px;
         }
       }
 
@@ -512,8 +468,8 @@
               gap: 5px;
 
               .stat-icon {
-                height: 16px;
-                width: 16px;
+                height: 32px;
+                width: 32px;
               }
 
               .stat-value {

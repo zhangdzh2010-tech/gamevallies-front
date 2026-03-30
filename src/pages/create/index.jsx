@@ -35,9 +35,6 @@ const EXAMPLE_PROMPTS = [
   { emoji: '🐍', text: '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。' },
   { emoji: '🐹', text: '做一个打地鼠小游戏，九宫格随机出现地鼠，点击得分，30 秒倒计时挑战。' },
   { emoji: '🔢', text: '做一个 2048 益智游戏，上下左右滑动合并相同数字，目标达到 2048。' },
-  { emoji: '🚀', text: '做一个太空飞船躲避陨石游戏，左右移动躲避掉落障碍，存活越久分数越高。' },
-  { emoji: '🎵', text: '做一个音乐节奏点击游戏，彩色圆点出现后及时点击，连续命中可以加分。' },
-  { emoji: '🏃', text: '做一个无尽跑酷游戏，点击屏幕跳跃躲避障碍，速度会越来越快。' },
 ];
 
 const TASK_STATUS_LABELS = {
@@ -536,9 +533,11 @@ export default function Create() {
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
       <View className="create-header create-header--editor">
         <View className="create-header__copy">
-          <Text className="create-header__eyebrow">AI Game Atelier</Text>
-          <Text className="header-title">创作新游戏</Text>
-          <Text className="header-subtitle">描述你的游戏想法，AI 会帮你设计并生成</Text>
+          <Text className="create-header__eyebrow">Quick Prompt</Text>
+          <Text className="header-title">一句话说清玩法，剩下的交给 AI。</Text>
+          <Text className="header-subtitle">
+            你可以先描述核心规则、胜负条件和想要的视觉气质，系统会自动扩展成完整的可玩作品。
+          </Text>
         </View>
         <View className="create-header-top">
           <View className="orientation-switch">
@@ -559,14 +558,6 @@ export default function Create() {
       </View>
 
       <PageScrollContainer className="create-scroll">
-        <View className="create-intro-card">
-          <Text className="create-intro-card__eyebrow">Quick Prompt</Text>
-          <Text className="create-intro-card__title">一句话说清玩法，剩下的交给 AI。</Text>
-          <Text className="create-intro-card__desc">
-            你可以先描述核心规则、胜负条件和想要的视觉气质，系统会自动扩展成完整的可玩作品。
-          </Text>
-        </View>
-
         <View className="form-section">
           <View className="form-group">
             <Text className="form-label">游戏名称</Text>
@@ -639,8 +630,6 @@ export default function Create() {
     </View>
   );
 }
-
-
 
 
 
