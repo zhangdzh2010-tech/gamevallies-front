@@ -1190,10 +1190,10 @@ export default function Profile() {
   ];
 
   const stats = [
-    { value: formatNumber(profile.totalLikes),   label: '获赞' },
-    { value: formatNumber(profile.following),     label: '关注' },
-    { value: formatNumber(profile.followers),     label: '粉丝' },
-    { value: formatNumber(profile.mutualFollows), label: '互关' },
+    { value: formatNumber(profile.totalLikes), label: '获赞' },
+    { value: formatNumber(profile.following), label: '关注' },
+    { value: formatNumber(trackedTasks.length), label: '分析' },
+    { value: formatNumber(normalizedBookmarkedGames.length), label: '收藏' },
   ];
   const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
@@ -1361,4 +1361,3 @@ export default function Profile() {
     </View>
   );
 }
-

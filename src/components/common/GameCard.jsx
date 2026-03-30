@@ -173,13 +173,8 @@ export const GameCard = ({
         {hasThumbnail && <Image className="game-thumbnail" src={thumbnailUrl} mode="aspectFill" />}
 
         {showTopMetricBadge ? (
-          <View className="top-metric-badge">
-            <View className={`top-metric-badge__tag${isHotMetricBadge ? ' is-hot' : ''}`}>
-              <Text className="top-metric-badge__tag-text">{topMetricBadgeLabel}</Text>
-            </View>
-            <View className="top-metric-badge__metric">
-              <Text className="top-metric-badge__metric-text">{formatNumber(game.plays || 0)}</Text>
-            </View>
+          <View className={`top-metric-badge top-metric-badge--minimal${isHotMetricBadge ? ' is-hot' : ''}`}>
+            <Text className="top-metric-badge__tag-text">{topMetricBadgeLabel}</Text>
           </View>
         ) : (
           game.isHot ? <View className="hot-badge">{HOT_LABEL}</View> : null

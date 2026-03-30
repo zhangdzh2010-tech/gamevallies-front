@@ -133,22 +133,33 @@
 
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      padding: 18px 8px 0;
+      border-top: 1px solid rgba(124, 136, 192, 0.14);
 
       .stat {
-        background: rgba(17, 17, 24, 0.5);
-        border: 1px solid rgba(110, 86, 255, 0.2);
-        border-radius: 18px;
-        padding: 18px 8px 16px;
+        position: relative;
+        padding: 0 6px;
         text-align: center;
+
+        &:not(:last-child)::after {
+          content: '';
+          position: absolute;
+          top: 10px;
+          right: 0;
+          width: 1px;
+          height: 42px;
+          background: rgba(124, 136, 192, 0.12);
+        }
 
         .stat-value {
           display: block;
           font-size: 30px;
           font-weight: 800;
-          color: #6e56ff;
-          margin-bottom: 6px;
+          line-height: 1.05;
+          color: #f3f5ff;
+          margin-bottom: 8px;
         }
 
         .stat-label {
@@ -2342,15 +2353,20 @@
     }
 
     .stats-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 0;
+      padding: 14px 0 0;
 
       .stat {
-        padding: 14px 8px 12px;
-        border-radius: 16px;
+        padding: 0 4px;
+
+        &:not(:last-child)::after {
+          top: 8px;
+          height: 34px;
+        }
 
         .stat-value {
           font-size: 22px;
+          margin-bottom: 6px;
         }
 
         .stat-label {
@@ -3324,27 +3340,41 @@
 
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      margin-top: 2px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(126, 136, 188, 0.12);
     }
 
     .stat {
-      padding: 16px 12px;
-      border-radius: 22px;
-      border: 1px solid rgba(113, 125, 180, 0.14);
-      background: rgba(11, 14, 24, 0.84);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      position: relative;
+      padding: 0 6px;
+      text-align: center;
+
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 8px;
+        right: 0;
+        width: 1px;
+        height: 42px;
+        background: rgba(126, 136, 188, 0.12);
+      }
     }
 
     .stat-value {
-      margin-bottom: 6px;
-      font-size: 26px;
-      color: #b567ff;
+      margin-bottom: 7px;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.05;
+      color: #f5f7ff;
     }
 
     .stat-label {
       font-size: 14px;
-      color: rgba(149, 154, 179, 0.86);
+      color: rgba(169, 174, 196, 0.82);
+      line-height: 1.2;
     }
   }
 
