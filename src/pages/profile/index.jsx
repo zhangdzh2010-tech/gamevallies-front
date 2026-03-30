@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Textarea, Image, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
+import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
@@ -133,14 +134,14 @@ function resolveAvatarValue({ avatar, avatarUrl, name, fallbackAvatar = '👤' }
   return getAvatarFallback(avatar || fallbackAvatar, name);
 }
 
-const STATUS_CONFIG = {
-  generating: { label: '生成中', color: '#fbbf24' },
-  review:     { label: '审核中', color: '#6e56ff' },
-  failed:     { label: '生成失败', color: '#ff5c8a' },
-  banned:     { label: '已下架', color: '#ff5c8a' },
-  draft:      { label: '草稿',     color: '#8b87a3' },
-  ready:      { label: '待发布', color: '#2dd4a8' },
-  published:  { label: '已发布', color: '#2dd4a8' },
+const GAME_STATUS_BADGE_LABELS = {
+  generating: '生成中',
+  review: '审核中',
+  failed: '失败',
+  banned: '已下架',
+  draft: '草稿',
+  ready: '待发布',
+  published: '已发布',
 };
 
 const TASK_TYPE_LABELS = {
@@ -277,13 +278,19 @@ function mergeTrackedTaskStatusIntoGames(games, trackedTasks) {
   });
 }
 
-function StatusBadge({ status }) {
-  const s = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
-  return (
-    <View className="status-badge" style={{ background: `${s.color}22`, border: `1px solid ${s.color}55` }}>
-      <Text style={{ color: s.color }}>{s.label}</Text>
-    </View>
-  );
+function buildPosterColumns(games, desiredColumnCount = 3) {
+  const columnCount = Math.min(desiredColumnCount, Math.max(games.length, 1));
+  const columns = Array.from({ length: columnCount }, () => []);
+
+  games.forEach((game, index) => {
+    columns[index % columnCount].push(game);
+  });
+
+  return columns;
+}
+
+function getGameBadgeLabel(game) {
+  return GAME_STATUS_BADGE_LABELS[game?.status] || (game?.isHot ? '热门' : '推荐');
 }
 
 function formatTaskTime(timestamp) {
@@ -303,103 +310,6 @@ function formatTaskTime(timestamp) {
   return `${month}-${day} ${hours}:${minutes}`;
 }
 
-function ProfileGameCard({ game, onPlay, onMore, onLike, onComment, onBookmark, initialBookmarked, showMore = true }) {
-  const [isLiked, setIsLiked] = useState(Boolean(game.viewerHasLiked));
-  const [likeCount, setLikeCount] = useState(game.likes || 0);
-  const [likeLoading, setLikeLoading] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked || initialBookmarked));
-  const gameCover = getGameCoverUrl(game);
-
-  useEffect(() => {
-    setIsLiked(Boolean(game.viewerHasLiked));
-    setLikeCount(game.likes || 0);
-  }, [game.id, game.viewerHasLiked, game.likes]);
-
-  useEffect(() => {
-    setIsBookmarked(Boolean(game.viewerHasBookmarked || initialBookmarked));
-  }, [game.id, game.viewerHasBookmarked, initialBookmarked]);
-
-  const handleLike = async (e) => {
-    e.stopPropagation();
-
-    if (!onLike || likeLoading) {
-      return;
-    }
-
-    setLikeLoading(true);
-    try {
-      const result = await onLike(game);
-      const nextLiked = typeof result?.liked === 'boolean' ? result.liked : !isLiked;
-      const nextLikes = Number.isFinite(Number(result?.likes))
-        ? Number(result.likes)
-        : Math.max(0, likeCount + (nextLiked ? 1 : -1));
-
-      setIsLiked(nextLiked);
-      setLikeCount(nextLikes);
-    } finally {
-      setLikeLoading(false);
-    }
-  };
-
-  const handleBookmark = (e) => {
-    e.stopPropagation();
-    const next = !isBookmarked;
-    setIsBookmarked(next);
-    onBookmark && onBookmark(game, next);
-  };
-
-  return (
-    <View className="profile-game-card">
-      <View
-        className="pgc-preview"
-        onClick={() => onPlay && onPlay(game)}
-        style={{ background: `linear-gradient(135deg, ${game.color}20 0%, ${game.color}40 100%)` }}
-      >
-        {gameCover ? (
-          <Image className="pgc-cover" src={gameCover} mode="aspectFill" />
-        ) : (
-          <Text className="pgc-emoji">{game.emoji}</Text>
-        )}
-        {game.isHot && <View className="hot-badge">热门</View>}
-        <View className="pgc-status-wrap">
-          <StatusBadge status={game.status} />
-        </View>
-      </View>
-
-      <View className="pgc-body">
-        <Text className="pgc-title" onClick={() => onPlay && onPlay(game)}>{game.title}</Text>
-        <View className="pgc-actions">
-          <View className="pgc-action" onClick={handleLike}>
-            <View className={`pgc-action-icon pgc-action-icon--like ${isLiked ? 'liked' : ''}`} />
-            <View className="pgc-action-copy">
-              <Text className={`pgc-action-count ${isLiked ? 'liked' : ''}`}>{likeLoading ? '...' : formatNumber(likeCount)}</Text>
-              <Text className="pgc-action-label">点赞</Text>
-            </View>
-          </View>
-          <View className="pgc-action" onClick={(e) => { e.stopPropagation(); onComment && onComment(game); }}>
-            <View className="pgc-action-icon pgc-action-icon--comment" />
-            <View className="pgc-action-copy">
-              <Text className="pgc-action-count">{formatNumber(game.comments || 0)}</Text>
-              <Text className="pgc-action-label">评论</Text>
-            </View>
-          </View>
-          <View className="pgc-action" onClick={handleBookmark}>
-            <View className={`pgc-action-icon pgc-action-icon--bookmark ${isBookmarked ? 'bookmarked' : ''}`} />
-            <View className="pgc-action-copy">
-              <Text className={`pgc-action-count ${isBookmarked ? 'bookmarked' : ''}`}>{isBookmarked ? '已收藏' : '收藏'}</Text>
-              <Text className="pgc-action-label">稍后再玩</Text>
-            </View>
-          </View>
-          {showMore && (
-            <View className="pgc-action pgc-more-btn" onClick={(e) => { e.stopPropagation(); onMore && onMore(game); }}>
-              <Text className="pgc-more-dots">⋯</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-}
 
 function ProfileTaskCard({ task, onResume, onCancel, onDelete }) {
   const isActive = isActiveTaskStatus(task.status);
@@ -832,6 +742,10 @@ export default function Profile() {
     () => mergeTrackedTaskStatusIntoGames(allGames, trackedTasks),
     [allGames, trackedTasks]
   );
+  const normalizedBookmarkedGames = useMemo(
+    () => mergeBookmarkedFlags(bookmarkedGames.map((game, index) => normalizeGame(game, index))),
+    [bookmarkedGames]
+  );
   const publishedGames = displayGames.filter((g) => PUBLISHED_STATUSES.includes(g.status));
   const draftGames = displayGames.filter((g) => DRAFT_STATUSES.includes(g.status));
 
@@ -1002,15 +916,20 @@ export default function Profile() {
     Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) }).catch(() => {});
   };
 
-  const handleBookmark = (game, isNowBookmarked) => {
-    const nextBookmarkedGames = setGameBookmarked(game, isNowBookmarked);
+  const handleToggleBookmark = async (targetGame) => {
+    const nextBookmarked = !targetGame.viewerHasBookmarked;
+    const nextBookmarks = Math.max(0, (Number(targetGame.bookmarks) || 0) + (nextBookmarked ? 1 : -1));
+    const nextBookmarkedGames = setGameBookmarked(targetGame, nextBookmarked);
+
     setBookmarkedGames(nextBookmarkedGames);
     setAllGames((prev) => prev.map((item) => (
-      item.id === game.id
-        ? { ...item, viewerHasBookmarked: isNowBookmarked }
+      item.id === targetGame.id
+        ? { ...item, viewerHasBookmarked: nextBookmarked, bookmarks: nextBookmarks }
         : item
     )));
-    Taro.showToast({ title: isNowBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
+
+    Taro.showToast({ title: nextBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
+    return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
   const handleOptimize = (game) => {
@@ -1178,20 +1097,29 @@ export default function Profile() {
         </View>
       );
     }
+
+    const posterColumns = buildPosterColumns(games);
+
     return (
       <View className="games-list">
-        {games.map((game) => (
-          <ProfileGameCard
-            key={game.id}
-            game={game}
-            onPlay={handlePlay}
-            onMore={setMoreGame}
-            onLike={handleLike}
-            onComment={handleComment}
-            onBookmark={handleBookmark}
-            initialBookmarked={Boolean(game.viewerHasBookmarked)}
-            showMore={showMore}
-          />
+        {posterColumns.map((column, columnIndex) => (
+          <View key={`profile-games-col-${columnIndex}`} className="games-list__col">
+            {column.map((game) => (
+              <View key={game.id} className="games-list__item">
+                <GameCard
+                  game={game}
+                  variant="home-showcase"
+                  badgeLabel={getGameBadgeLabel(game)}
+                  onPlay={handlePlay}
+                  onComment={handleComment}
+                  onOpenDetail={showMore ? setMoreGame : undefined}
+                  showDetailEntry={showMore}
+                  onToggleLike={handleLike}
+                  onToggleBookmark={handleToggleBookmark}
+                />
+              </View>
+            ))}
+          </View>
         ))}
       </View>
     );
@@ -1273,7 +1201,7 @@ export default function Profile() {
     { key: 'works',     label: '作品', count: publishedGames.length },
     { key: 'drafts',    label: '草稿', count: draftGames.length },
     { key: 'liked',     label: '点赞', count: null },
-    { key: 'bookmarks', label: '收藏', count: bookmarkedGames.length || null },
+    { key: 'bookmarks', label: '收藏', count: normalizedBookmarkedGames.length || null },
     { key: 'tasks',     label: '任务', count: trackedTasks.length || null },
   ];
 
@@ -1410,7 +1338,7 @@ export default function Profile() {
               <Text className="empty-text">你还没有点赞过游戏</Text>
             </View>
           )}
-          {activeTab === 'bookmarks' && renderGameList(bookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
+          {activeTab === 'bookmarks' && renderGameList(normalizedBookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
           {activeTab === 'tasks'     && renderTaskPanel()}
         </View>
 
