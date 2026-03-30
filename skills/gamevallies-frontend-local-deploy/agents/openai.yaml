@@ -1,0 +1,7 @@
+interface:
+  display_name: "GameVallies Frontend Deploy"
+  short_description: "Build and locally deploy the GameVallies H5 frontend safely."
+  default_prompt: "Use $gamevallies-frontend-local-deploy to build and locally deploy the GameVallies frontend H5 bundle."
+
+policy:
+  allow_implicit_invocation: true
