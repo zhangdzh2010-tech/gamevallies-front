@@ -235,12 +235,12 @@
 
       .action-buttons {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 14px;
         margin-bottom: 36px;
 
         .play-btn {
-          flex: 1 1 100%;
+          width: 100%;
           background: $brand-gradient;
           border-radius: 26px;
           padding: 26px 28px;
@@ -297,8 +297,13 @@
           }
         }
 
+        .secondary-actions-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr);
+          gap: 14px;
+        }
+
         .icon-btn {
-          flex: 1 1 calc(33.333% - 10px);
           @include game-surface-card();
           padding: 18px 18px 16px;
           color: #8b87a3;
@@ -313,18 +318,17 @@
           gap: 14px;
           min-height: 118px;
 
+          &--wide {
+            background:
+              radial-gradient(circle at top right, rgba(111, 85, 255, 0.18), transparent 34%),
+              linear-gradient(135deg, rgba(17, 20, 32, 0.96) 0%, rgba(10, 12, 22, 0.98) 100%);
+            border-color: rgba(118, 129, 180, 0.18);
+          }
+
           .icon-symbol {
             width: 46px;
             height: 46px;
             opacity: 0.96;
-
-            &.icon-symbol--like {
-              background-image: url('../../../images/detail-icons/heart.svg');
-            }
-
-            &.icon-symbol--comment {
-              background-image: url('../../../images/detail-icons/comment.svg');
-            }
 
             &.icon-symbol--bookmark {
               background-image: url('../../../images/detail-icons/bookmark.svg');
@@ -361,18 +365,6 @@
             color: #8b87a3;
           }
 
-          &.like-btn.liked {
-            color: #ff5c8a;
-            border-color: rgba(255, 92, 138, 0.32);
-
-            .icon-value {
-              color: #ff5c8a;
-            }
-
-            .icon-symbol--like {
-              background-image: url('../../../images/detail-icons/heart-active.svg');
-            }
-          }
           &.bookmark-btn.bookmarked {
             color: #fbbf24;
             border-color: rgba(251, 191, 36, 0.3);
@@ -383,26 +375,6 @@
 
             .icon-symbol--bookmark {
               background-image: url('../../../images/detail-icons/bookmark-active.svg');
-            }
-          }
-          &.bookmark-btn {
-            .count {
-              font-size: 0;
-              line-height: 0;
-
-              &::after {
-                content: '收藏';
-                font-size: 23px;
-                line-height: 1.3;
-              }
-            }
-          }
-          &.share-btn {
-            > text:first-child {
-              width: 36px;
-              height: 36px;
-              font-size: 0;
-              background: url('../../../images/share-action-icon.svg') center / contain no-repeat;
             }
           }
           &.disabled {
@@ -438,8 +410,16 @@
         .comments-title {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 14px;
           margin-bottom: 28px;
+
+          .comments-title-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+          }
 
           .comments-title-icon {
             width: 30px;
@@ -451,6 +431,25 @@
             font-size: 34px;
             font-weight: 700;
             color: #eae8f4;
+          }
+
+          .comments-compose-btn {
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 999px;
+            border: 1px solid rgba(120, 131, 187, 0.16);
+            background: rgba(15, 18, 30, 0.92);
+            color: #f2effd;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            Text {
+              font-size: 18px;
+              font-weight: 700;
+              line-height: 1;
+            }
           }
         }
 
@@ -835,13 +834,10 @@
       }
 
       .action-buttons {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
         margin-bottom: 18px;
 
         .play-btn {
-          grid-column: 1 / -1;
           min-height: 74px;
           padding: 16px;
           border-radius: 20px;
@@ -864,6 +860,12 @@
             font-size: 13px;
             line-height: 1.4;
           }
+        }
+
+        .secondary-actions-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
         }
 
         .icon-btn {
@@ -893,6 +895,10 @@
             font-size: 12px;
             line-height: 1.35;
           }
+
+          &--wide {
+            grid-column: 1 / -1;
+          }
         }
       }
 
@@ -910,6 +916,11 @@
         .comments-title {
           gap: 8px;
           margin-bottom: 14px;
+          align-items: center;
+
+          .comments-title-main {
+            gap: 8px;
+          }
 
           .comments-title-icon {
             width: 16px;
@@ -918,6 +929,15 @@
 
           .comments-title-text {
             font-size: 18px;
+          }
+
+          .comments-compose-btn {
+            min-height: 32px;
+            padding: 0 12px;
+
+            Text {
+              font-size: 12px;
+            }
           }
         }
 
@@ -1085,9 +1105,18 @@
             }
           }
 
+          .secondary-actions-row {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 8px;
+          }
+
           .icon-btn {
             min-height: 78px;
             padding: 12px 10px;
+
+            &--wide {
+              grid-column: 1 / -1;
+            }
           }
         }
 
@@ -1121,6 +1150,10 @@
 
         .action-buttons {
           gap: 8px;
+
+          .secondary-actions-row {
+            gap: 8px;
+          }
 
           .icon-btn {
             min-height: 74px;

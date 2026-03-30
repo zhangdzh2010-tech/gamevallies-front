@@ -3096,92 +3096,6 @@
     background: transparent;
   }
 
-  .profile-quota-bar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding: 14px 14px 14px 16px;
-    border-radius: 24px;
-    border: 1px solid rgba(103, 116, 165, 0.18);
-    background:
-      linear-gradient(135deg, rgba(13, 16, 27, 0.96) 0%, rgba(9, 10, 18, 0.98) 100%);
-    box-shadow: 0 22px 38px rgba(2, 5, 16, 0.22);
-  }
-
-  .quota-info-bar {
-    flex: 1;
-    min-width: 0;
-    padding: 0;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      'icon text'
-      'icon sub';
-    column-gap: 10px;
-    row-gap: 4px;
-  }
-
-  .quota-info-icon {
-    grid-area: icon;
-    align-self: center;
-    min-width: 50px;
-    min-height: 30px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(116, 89, 255, 0.26), rgba(81, 161, 255, 0.24));
-    border: 1px solid rgba(132, 140, 255, 0.18);
-    color: #eadcff;
-    font-size: 12px;
-    font-weight: 800;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .quota-info-text {
-    grid-area: text;
-    font-size: 18px;
-    font-weight: 800;
-    color: #f5f7ff;
-    line-height: 1.2;
-  }
-
-  .quota-info-sub {
-    grid-area: sub;
-    font-size: 12px;
-    color: rgba(158, 165, 193, 0.84);
-    line-height: 1.35;
-  }
-
-  .quota-subscribe-btn {
-    min-width: 88px;
-    min-height: 48px;
-    padding: 0 18px;
-    border-radius: 18px;
-    border: 1px solid rgba(123, 137, 255, 0.2);
-    background: linear-gradient(135deg, rgba(67, 80, 255, 0.22) 0%, rgba(196, 85, 255, 0.2) 100%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    align-self: center;
-    flex-shrink: 0;
-  }
-
-  .quota-subscribe-text {
-    display: block;
-    font-size: 17px;
-    font-weight: 800;
-    color: #edf2ff;
-    line-height: 1;
-    text-align: center;
-  }
-
   .profile-summary-card {
     padding: 18px;
     border-radius: 30px;
@@ -3336,6 +3250,84 @@
       color: rgba(196, 203, 227, 0.74);
       font-size: 14px;
       line-height: 1.65;
+    }
+
+    .profile-membership-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      margin-top: 4px;
+      padding: 14px 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(124, 135, 188, 0.14);
+      background: rgba(12, 15, 26, 0.78);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .profile-membership-plan {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 66px;
+      min-height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(111, 85, 255, 0.22) 0%, rgba(55, 214, 181, 0.18) 100%);
+      border: 1px solid rgba(122, 132, 255, 0.18);
+      color: #eef2ff;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .profile-membership-copy {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .profile-membership-text {
+      display: block;
+      font-size: 18px;
+      font-weight: 800;
+      color: #f5f7ff;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-membership-sub {
+      display: block;
+      font-size: 12px;
+      color: rgba(158, 165, 193, 0.84);
+      line-height: 1.35;
+    }
+
+    .profile-membership-btn {
+      min-width: 84px;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(123, 137, 255, 0.2);
+      background: linear-gradient(135deg, rgba(67, 80, 255, 0.22) 0%, rgba(196, 85, 255, 0.2) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      &__text {
+        display: block;
+        font-size: 15px;
+        font-weight: 800;
+        color: #edf2ff;
+        line-height: 1;
+        text-align: center;
+      }
     }
 
     .stats-row {
@@ -3500,6 +3492,36 @@
 
     .games-list {
       gap: 16px;
+    }
+
+    .games-list__item {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .game-publish-primary-btn {
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(119, 132, 255, 0.18);
+      background: linear-gradient(135deg, rgba(73, 115, 255, 0.22) 0%, rgba(144, 83, 255, 0.22) 100%);
+      box-shadow: 0 16px 28px rgba(6, 10, 28, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      Text {
+        font-size: 15px;
+        font-weight: 800;
+        color: #f4f7ff;
+        line-height: 1;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
     }
 
     .empty-state {
@@ -3945,26 +3967,11 @@
       padding-right: 14px;
     }
 
-    .profile-quota-bar,
     .profile-summary-card,
     .creator-identity,
     .creator-links {
       margin-left: 0;
       margin-right: 0;
-    }
-
-    .profile-quota-bar {
-      gap: 10px;
-      padding: 14px;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-    }
-
-    .quota-subscribe-btn {
-      width: auto;
-      min-width: 84px;
-      min-height: 46px;
-      padding: 0 16px;
     }
 
     .profile-summary-card {
@@ -3996,6 +4003,45 @@
 
       .user-bio {
         font-size: 13px;
+      }
+
+      .profile-membership-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 12px 14px;
+      }
+
+      .profile-membership-plan {
+        grid-column: 1;
+        justify-self: start;
+        min-height: 30px;
+        padding: 0 12px;
+        font-size: 12px;
+      }
+
+      .profile-membership-copy {
+        grid-column: 1;
+      }
+
+      .profile-membership-text {
+        font-size: 16px;
+      }
+
+      .profile-membership-sub {
+        font-size: 11px;
+      }
+
+      .profile-membership-btn {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        align-self: center;
+        min-width: 72px;
+        min-height: 42px;
+        padding: 0 14px;
+
+        &__text {
+          font-size: 14px;
+        }
       }
 
       .settings-btn,
@@ -4069,39 +4115,24 @@
 .profile-container.profile-container--h5 {
   .profile-scroll {
     .games-section {
-      .games-list {
-        gap: 10px;
+    .games-list {
+      gap: 10px;
+    }
+
+    .game-publish-primary-btn {
+      min-height: 44px;
+      border-radius: 16px;
+
+      Text {
+        font-size: 14px;
       }
     }
   }
 }
+}
 
 @media screen and (max-width: 360px) {
   .profile-container {
-    .profile-quota-bar {
-      padding: 12px;
-      column-gap: 8px;
-    }
-
-    .quota-info-icon {
-      min-width: 44px;
-      padding: 0 10px;
-    }
-
-    .quota-info-text {
-      font-size: 16px;
-    }
-
-    .quota-info-sub {
-      font-size: 11px;
-    }
-
-    .quota-subscribe-btn {
-      min-width: 72px;
-      min-height: 42px;
-      padding: 0 12px;
-    }
-
     .profile-summary-card {
       .header-top {
         grid-template-columns: 64px minmax(0, 1fr);
@@ -4129,6 +4160,26 @@
 
       .user-name {
         font-size: 22px;
+      }
+
+      .profile-membership-row {
+        gap: 8px;
+        padding: 11px 12px;
+      }
+
+      .profile-membership-plan {
+        min-width: 58px;
+        padding: 0 10px;
+      }
+
+      .profile-membership-text {
+        font-size: 15px;
+      }
+
+      .profile-membership-btn {
+        min-width: 64px;
+        min-height: 38px;
+        padding: 0 12px;
       }
     }
   }

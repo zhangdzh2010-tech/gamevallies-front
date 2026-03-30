@@ -1070,6 +1070,8 @@ export default function Profile() {
     setActiveTab(tab.key);
   };
 
+  const canShowPublishButton = (game) => ['ready', 'draft'].includes(game?.status);
+
   const renderGameList = (games, emptyIconClass, emptyText, showCreate = true, showMore = true) => {
     if (loadingGames) {
       return <View className="empty-state"><Text className="empty-text">加载中...</Text></View>;
@@ -1103,6 +1105,17 @@ export default function Profile() {
               onToggleLike={handleLike}
               onToggleBookmark={handleToggleBookmark}
             />
+            {showMore && canShowPublishButton(game) ? (
+              <View
+                className="game-publish-primary-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePublish(game);
+                }}
+              >
+                <Text>发布作品</Text>
+              </View>
+            ) : null}
           </View>
         ))}
       </View>
@@ -1195,6 +1208,10 @@ export default function Profile() {
     { value: formatNumber(trackedTasks.length), label: '分析' },
     { value: formatNumber(normalizedBookmarkedGames.length), label: '收藏' },
   ];
+  const quotaUsed = Math.max(0, totalFreeQuota - freeQuota);
+  const membershipPlanLabel = subscriptionActive ? '会员卡' : '免费卡';
+  const membershipQuotaText = subscriptionActive ? '已解锁更多创作额度' : `剩余 ${freeQuota} 次免费额度`;
+  const membershipQuotaSub = subscriptionActive ? '查看订阅权益与有效期' : `已使用 ${quotaUsed}/${totalFreeQuota}`;
   const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
@@ -1202,20 +1219,6 @@ export default function Profile() {
     <View className={`profile-container${isH5 ? ' profile-container--h5' : ''}${isWeapp ? ' profile-container--weapp' : ''}`}>
       <AppTopBar />
       <View className="profile-header">
-        <View className="profile-quota-bar">
-          <View className="quota-info-bar">
-            <Text className="quota-info-icon">{subscriptionActive ? '会员' : '免费'}</Text>
-            <Text className="quota-info-text">{subscriptionActive ? '已订阅会员' : `剩余 ${freeQuota} 次免费额度`}</Text>
-            <Text className="quota-info-sub">{subscriptionActive ? '查看订阅详情' : `已使用 ${totalFreeQuota - freeQuota}/${totalFreeQuota}`}</Text>
-          </View>
-          <View
-            className="quota-subscribe-btn"
-            onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
-          >
-            <Text className="quota-subscribe-text">{subscriptionActive ? '管理' : '订阅'}</Text>
-          </View>
-        </View>
-
         <View className="profile-summary-card">
           <View className="header-top">
             <View className="header-avatar">
@@ -1237,6 +1240,20 @@ export default function Profile() {
                   </View>
 
                   <Text className="user-bio">{profile.bio || '这个人很懒，还没有介绍自己'}</Text>
+
+                  <View className="profile-membership-row">
+                    <Text className="profile-membership-plan">{membershipPlanLabel}</Text>
+                    <View className="profile-membership-copy">
+                      <Text className="profile-membership-text">{membershipQuotaText}</Text>
+                      <Text className="profile-membership-sub">{membershipQuotaSub}</Text>
+                    </View>
+                    <View
+                      className="profile-membership-btn"
+                      onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
+                    >
+                      <Text className="profile-membership-btn__text">{subscriptionActive ? '管理' : '订阅'}</Text>
+                    </View>
+                  </View>
                 </View>
 
                 <View className="header-actions">

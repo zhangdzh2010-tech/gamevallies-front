@@ -286,9 +286,6 @@ export default function GameDetail() {
 
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [likeLoading, setLikeLoading] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -383,8 +380,6 @@ export default function GameDetail() {
       }
 
       setGame(gameData);
-      setLikeCount(gameData?.likes || 0);
-      setIsLiked(Boolean(gameData?.viewerHasLiked));
 
       const bookmarked = Boolean(gameData?.viewerHasBookmarked) || isGameBookmarked(gameData?.id || gameId);
       setIsBookmarked(bookmarked);
@@ -399,16 +394,6 @@ export default function GameDetail() {
         const gameData = await gameService.getGame(gameId);
         applyLoadedGame(gameData);
 
-        if (Storage.getToken()) {
-          try {
-            const liked = await socialService.checkLikeStatus('game', gameId);
-            if (!cancelled) {
-              setIsLiked(Boolean(liked));
-            }
-          } catch {
-            // Ignore like-status failures and keep server fallback.
-          }
-        }
       } catch {
         let fallbackGame = null;
 
@@ -690,29 +675,6 @@ export default function GameDetail() {
     setCommentText('');
   };
 
-  const handleLikeGame = async () => {
-    if (likeLoading) {
-      return;
-    }
-
-    try {
-      setLikeLoading(true);
-      const result = await socialService.likeGame('game', gameId);
-      const nextLiked = typeof result?.liked === 'boolean' ? result.liked : !isLiked;
-      const nextLikes = Number.isFinite(Number(result?.likes))
-        ? Number(result.likes)
-        : Math.max(0, likeCount + (nextLiked ? 1 : -1));
-
-      setIsLiked(nextLiked);
-      setLikeCount(nextLikes);
-      setGame((prev) => (prev ? { ...prev, likes: nextLikes, viewerHasLiked: nextLiked } : prev));
-    } catch {
-      Taro.showToast({ title: '操作失败', icon: 'none' });
-    } finally {
-      setLikeLoading(false);
-    }
-  };
-
   const handleBookmarkGame = () => {
     if (!game) {
       return;
@@ -730,28 +692,14 @@ export default function GameDetail() {
     focusCommentComposer();
   };
 
-  const handleForkAction = async () => {
-    if (!Storage.getToken()) {
-      openForkPageWithAuth(gameId);
-      return;
-    }
-
+  const handleContinueCreate = async () => {
     if (isOwnGame) {
-      Taro.showToast({ title: '不能复刻自己的作品', icon: 'none' });
+      openIteratePageWithAuth(game, game?.id);
       return;
     }
 
     if (!canForkGame) {
       Taro.showToast({ title: '作者未开放复刻权限', icon: 'none' });
-      return;
-    }
-
-    openForkPageWithAuth(gameId);
-  };
-
-  const handleContinueCreate = async () => {
-    if (isOwnGame) {
-      openIteratePageWithAuth(game, game?.id);
       return;
     }
 
@@ -937,39 +885,27 @@ export default function GameDetail() {
                 </Text>
               </View>
             </View>
-            <View className={`icon-btn like-btn ${isLiked ? 'liked' : ''}`} onClick={handleLikeGame}>
-              <View className="icon-symbol icon-symbol--like" />
-              <View className="icon-copy">
-                <Text className="icon-value">{likeLoading ? '...' : formatNumber(likeCount)}</Text>
-                <Text className="icon-label">点赞</Text>
+            <View className="secondary-actions-row">
+              <View className={`icon-btn bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`} onClick={handleBookmarkGame}>
+                <View className="icon-symbol icon-symbol--bookmark" />
+                <View className="icon-copy">
+                  <Text className="icon-value">{isBookmarked ? '已收藏' : '收藏'}</Text>
+                  <Text className="icon-label">稍后再玩</Text>
+                </View>
               </View>
-            </View>
-            <View className="icon-btn comment-btn" onClick={handleOpenCommentComposer}>
-              <View className="icon-symbol icon-symbol--comment" />
-              <View className="icon-copy">
-                <Text className="icon-value">{formatNumber(totalComments)}</Text>
-                <Text className="icon-label">评论</Text>
+              <View className="icon-btn share-btn" onClick={() => setShowSharePanel(true)}>
+                <View className="icon-symbol icon-symbol--share" />
+                <View className="icon-copy">
+                  <Text className="icon-value">分享</Text>
+                  <Text className="icon-label">发给朋友</Text>
+                </View>
               </View>
-            </View>
-            <View className={`icon-btn bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`} onClick={handleBookmarkGame}>
-              <View className="icon-symbol icon-symbol--bookmark" />
-              <View className="icon-copy">
-                <Text className="icon-value">{isBookmarked ? '已收藏' : '收藏'}</Text>
-                <Text className="icon-label">稍后再玩</Text>
-              </View>
-            </View>
-            <View className="icon-btn share-btn" onClick={() => setShowSharePanel(true)}>
-              <View className="icon-symbol icon-symbol--share" />
-              <View className="icon-copy">
-                <Text className="icon-value">分享</Text>
-                <Text className="icon-label">发给朋友</Text>
-              </View>
-            </View>
-            <View className={`icon-btn fork-btn ${canForkGame ? '' : 'disabled'}`} onClick={handleForkAction}>
-              <View className="icon-symbol icon-symbol--fork" />
-              <View className="icon-copy">
-                <Text className="icon-value">{canForkGame ? '复刻' : (isOwnGame ? '自己' : '未授权')}</Text>
-                <Text className="icon-label">{canForkGame ? '继续创作' : (isOwnGame ? '无需复刻' : '暂不可用')}</Text>
+              <View className={`icon-btn icon-btn--wide fork-btn ${continueCreateDisabled ? 'disabled' : ''}`} onClick={handleContinueCreate}>
+                <View className="icon-symbol icon-symbol--fork" />
+                <View className="icon-copy">
+                  <Text className="icon-value">{isOwnGame ? '继续优化' : '复刻后继续创作'}</Text>
+                  <Text className="icon-label">{isOwnGame ? '继续完善玩法与体验' : (canForkGame ? '基于当前玩法继续创作' : '作者未开放复刻权限')}</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -982,10 +918,15 @@ export default function GameDetail() {
 
           <View id={COMMENTS_SECTION_ID} className="comments-section">
             <View className="comments-title">
-              <View className="comments-title-icon" />
-              <Text className="comments-title-text">
-                评论 {totalComments > 0 ? `(${formatNumber(totalComments)})` : ''}
-              </Text>
+              <View className="comments-title-main">
+                <View className="comments-title-icon" />
+                <Text className="comments-title-text">
+                  评论 {totalComments > 0 ? `(${formatNumber(totalComments)})` : ''}
+                </Text>
+              </View>
+              <View className="comments-compose-btn" onClick={handleOpenCommentComposer}>
+                <Text>写评论</Text>
+              </View>
             </View>
 
             {loadingComments && comments.length === 0 && (
