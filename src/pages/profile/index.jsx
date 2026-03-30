@@ -278,17 +278,6 @@ function mergeTrackedTaskStatusIntoGames(games, trackedTasks) {
   });
 }
 
-function buildPosterColumns(games, desiredColumnCount = 3) {
-  const columnCount = Math.min(desiredColumnCount, Math.max(games.length, 1));
-  const columns = Array.from({ length: columnCount }, () => []);
-
-  games.forEach((game, index) => {
-    columns[index % columnCount].push(game);
-  });
-
-  return columns;
-}
-
 function getGameBadgeLabel(game) {
   return GAME_STATUS_BADGE_LABELS[game?.status] || (game?.isHot ? '热门' : '推荐');
 }
@@ -748,6 +737,7 @@ export default function Profile() {
   );
   const publishedGames = displayGames.filter((g) => PUBLISHED_STATUSES.includes(g.status));
   const draftGames = displayGames.filter((g) => DRAFT_STATUSES.includes(g.status));
+  const likedGames = displayGames.filter((g) => g.viewerHasLiked);
 
   const refreshBookmarkedGames = () => {
     setBookmarkedGames(getBookmarkedGames());
@@ -1098,27 +1088,21 @@ export default function Profile() {
       );
     }
 
-    const posterColumns = buildPosterColumns(games);
-
     return (
       <View className="games-list">
-        {posterColumns.map((column, columnIndex) => (
-          <View key={`profile-games-col-${columnIndex}`} className="games-list__col">
-            {column.map((game) => (
-              <View key={game.id} className="games-list__item">
-                <GameCard
-                  game={game}
-                  variant="home-showcase"
-                  badgeLabel={getGameBadgeLabel(game)}
-                  onPlay={handlePlay}
-                  onComment={handleComment}
-                  onOpenDetail={showMore ? setMoreGame : undefined}
-                  showDetailEntry={showMore}
-                  onToggleLike={handleLike}
-                  onToggleBookmark={handleToggleBookmark}
-                />
-              </View>
-            ))}
+        {games.map((game) => (
+          <View key={game.id} className="games-list__item">
+            <GameCard
+              game={game}
+              variant="home-showcase"
+              badgeLabel={getGameBadgeLabel(game)}
+              onPlay={handlePlay}
+              onComment={handleComment}
+              onOpenDetail={showMore ? setMoreGame : undefined}
+              showDetailEntry={showMore}
+              onToggleLike={handleLike}
+              onToggleBookmark={handleToggleBookmark}
+            />
           </View>
         ))}
       </View>
@@ -1200,7 +1184,7 @@ export default function Profile() {
   const TABS = [
     { key: 'works',     label: '作品', count: publishedGames.length },
     { key: 'drafts',    label: '草稿', count: draftGames.length },
-    { key: 'liked',     label: '点赞', count: null },
+    { key: 'liked',     label: '点赞', count: likedGames.length || null },
     { key: 'bookmarks', label: '收藏', count: normalizedBookmarkedGames.length || null },
     { key: 'tasks',     label: '任务', count: trackedTasks.length || null },
   ];
@@ -1332,12 +1316,7 @@ export default function Profile() {
         <View className="games-section">
           {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的游戏作品')}
           {activeTab === 'drafts'    && renderGameList(draftGames, 'empty-icon--drafts', '还没有草稿作品')}
-          {activeTab === 'liked'     && (
-            <View className="empty-state">
-              <View className="empty-icon empty-icon--liked" />
-              <Text className="empty-text">你还没有点赞过游戏</Text>
-            </View>
-          )}
+          {activeTab === 'liked'     && renderGameList(likedGames, 'empty-icon--liked', '你还没有点赞过游戏', false, false)}
           {activeTab === 'bookmarks' && renderGameList(normalizedBookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
           {activeTab === 'tasks'     && renderTaskPanel()}
         </View>

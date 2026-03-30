@@ -4022,18 +4022,11 @@
   .profile-scroll {
     .games-section {
       .games-list {
-        display: flex;
-        align-items: flex-start;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 14px;
         padding-bottom: 12px;
-
-        &__col {
-          flex: 1;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
+        width: 100%;
 
         &__item {
           min-width: 0;
@@ -4048,10 +4041,6 @@
     .games-section {
       .games-list {
         gap: 10px;
-
-        &__col {
-          gap: 10px;
-        }
       }
     }
   }
