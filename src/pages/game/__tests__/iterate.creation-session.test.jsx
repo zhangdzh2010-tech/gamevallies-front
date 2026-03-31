@@ -65,6 +65,45 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 }));
 
 jest.mock('../../../components/creation', () => ({
+  CreationSessionShell: ({ title, sections }) => (
+    <div>
+      <div>{title}</div>
+      {sections?.map((section) => (
+        <div key={section.key}>{section.node}</div>
+      ))}
+    </div>
+  ),
+  CreationQuestionCard: ({ title, question, hint }) => (
+    <div>
+      <div>{title}</div>
+      <div>{question?.content}</div>
+      <div>{hint}</div>
+    </div>
+  ),
+  CreationAnswerComposer: ({ value, onChange, placeholder, suggestions }) => (
+    <div>
+      <textarea
+        aria-label="iterate-initial-answer"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange({ detail: { value: e.target.value } })}
+      />
+      {(suggestions || []).map((item) => (
+        <button key={item} type="button" onClick={() => onChange({ detail: { value: item } })}>
+          {item}
+        </button>
+      ))}
+    </div>
+  ),
+  CreationSessionActions: ({ actions }) => (
+    <div>
+      {(actions || []).map((action) => (
+        <button key={action.key} type="button" onClick={action.onClick} disabled={action.disabled}>
+          {action.label}
+        </button>
+      ))}
+    </div>
+  ),
   buildCreationSessionActions: jest.fn((config) => ([
     {
       key: 'submit',
@@ -220,12 +259,27 @@ describe('Iterate page creation session flow', () => {
     mockGameStoreState = buildGameStoreState();
   });
 
-  test('bootstraps an iterate creation session for the current game', async () => {
+  test('does not auto-start an iterate session before the user gives the first instruction', async () => {
     render(<IteratePage />);
 
     await waitFor(() => {
+      expect(screen.getByText('先说说这次最想优化哪里')).toBeTruthy();
+    });
+
+    expect(mockStartCreationSession).not.toHaveBeenCalled();
+  });
+
+  test('starts an iterate session from the first user instruction', async () => {
+    render(<IteratePage />);
+
+    fireEvent.change(screen.getByLabelText('iterate-initial-answer'), {
+      target: { value: '我想先把节奏提快一点，并强化吃到食物时的反馈。' },
+    });
+    fireEvent.click(screen.getByText('开始这轮优化对话'));
+
+    await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '一款节奏很快的像素跑酷游戏',
+        '我想先把节奏提快一点，并强化吃到食物时的反馈。',
         '像素跑酷',
         expect.objectContaining({
           entryMode: 'iterate',

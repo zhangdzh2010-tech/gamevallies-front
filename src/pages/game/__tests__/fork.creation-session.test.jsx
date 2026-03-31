@@ -60,6 +60,45 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 }));
 
 jest.mock('../../../components/creation', () => ({
+  CreationSessionShell: ({ title, sections }) => (
+    <div>
+      <div>{title}</div>
+      {sections?.map((section) => (
+        <div key={section.key}>{section.node}</div>
+      ))}
+    </div>
+  ),
+  CreationQuestionCard: ({ title, question, hint }) => (
+    <div>
+      <div>{title}</div>
+      <div>{question?.content}</div>
+      <div>{hint}</div>
+    </div>
+  ),
+  CreationAnswerComposer: ({ value, onChange, placeholder, suggestions }) => (
+    <div>
+      <textarea
+        aria-label="fork-initial-answer"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange({ detail: { value: e.target.value } })}
+      />
+      {(suggestions || []).map((item) => (
+        <button key={item} type="button" onClick={() => onChange({ detail: { value: item } })}>
+          {item}
+        </button>
+      ))}
+    </div>
+  ),
+  CreationSessionActions: ({ actions }) => (
+    <div>
+      {(actions || []).map((action) => (
+        <button key={action.key} type="button" onClick={action.onClick} disabled={action.disabled}>
+          {action.label}
+        </button>
+      ))}
+    </div>
+  ),
   buildCreationSessionActions: jest.fn((config) => ([
     {
       key: 'submit',
@@ -190,6 +229,7 @@ function buildGameStoreState(overrides = {}) {
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
     skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
     generateFromCreationSession: mockGenerateFromCreationSession,
+    abandonCreationSession: jest.fn(() => Promise.resolve()),
     resetCreationSessionState: jest.fn(),
     ...overrides,
   };
@@ -201,12 +241,31 @@ describe('Fork page creation session flow', () => {
     mockGameStoreState = buildGameStoreState();
   });
 
-  test('starts a fork creation session from the source game', async () => {
+  test('does not auto-start a fork session before the user gives the first instruction', async () => {
     render(<ForkPage />);
 
     await waitFor(() => {
+      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+    });
+
+    expect(mockStartCreationSession).not.toHaveBeenCalled();
+  });
+
+  test('starts a fork session from the first user instruction', async () => {
+    render(<ForkPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
+      target: { value: '保留贪吃蛇核心玩法，但换成赛博风，节奏更快一些。' },
+    });
+    fireEvent.click(screen.getByText('开始这轮新版本对话'));
+
+    await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '一款节奏紧凑的跑酷作品',
+        '保留贪吃蛇核心玩法，但换成赛博风，节奏更快一些。',
         '原始跑酷',
         expect.objectContaining({
           entryMode: 'fork',
@@ -275,7 +334,9 @@ describe('Fork page creation session flow', () => {
   });
 
   test('restart on fork session starts a brand new fork session', async () => {
+    const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
     mockGameStoreState = buildGameStoreState({
+      abandonCreationSession: mockAbandonCreationSession,
       resetCreationSessionState: mockResetCreationSessionState,
       creationSession: {
         sessionId: 'session-3',
@@ -299,14 +360,8 @@ describe('Fork page creation session flow', () => {
 
     await waitFor(() => {
       expect(mockResetCreationSessionState).toHaveBeenCalledTimes(1);
-      expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '一款节奏紧凑的跑酷作品',
-        '原始跑酷',
-        expect.objectContaining({
-          entryMode: 'fork',
-          sourceGameId: 'source-1',
-        })
-      );
+      expect(mockAbandonCreationSession).toHaveBeenCalledWith('session-3');
+      expect(mockStartCreationSession).not.toHaveBeenCalled();
     });
   });
 
@@ -326,15 +381,9 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '一款节奏紧凑的跑酷作品',
-        '原始跑酷',
-        expect.objectContaining({
-          entryMode: 'fork',
-          sourceGameId: 'source-1',
-        })
-      );
+      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
     });
+    expect(mockStartCreationSession).not.toHaveBeenCalled();
     expect(screen.queryByText('AI 正在生成复刻作品')).toBeNull();
   });
 });
