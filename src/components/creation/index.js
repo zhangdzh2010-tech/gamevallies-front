@@ -8,6 +8,9 @@ export { CreationSessionActions } from './CreationSessionActions';
 export { CreationSessionStatusNotice } from './CreationSessionStatusNotice';
 export { CreationSessionPanel } from './CreationSessionPanel';
 export { CreationSessionScene } from './CreationSessionScene';
+export { CreationResumeScene } from './CreationResumeScene';
+export { CreationResumePrompt } from './CreationResumePrompt';
+export { CreationEntryErrorCard } from './CreationEntryErrorCard';
 export { buildCreationSessionActions } from './sessionActions';
 export {
   buildCreationSessionSceneProps,
@@ -18,3 +21,4 @@ export {
   getCreationSessionNotice,
   isCreationSessionQuestioning,
 } from './sessionState';
+export { getCreationEntryErrorContent } from './entryState';

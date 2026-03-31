@@ -7,11 +7,13 @@ const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
 const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockRestoreActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
 const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
 const mockResetCreationSessionState = jest.fn();
 const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockOpenIteratePageWithAuth = jest.fn();
+const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
 
 let mockGameStoreState;
 
@@ -99,6 +101,22 @@ jest.mock('../../../components/creation', () => ({
       ))}
     </div>
   ),
+  CreationResumePrompt: ({ title, prompt, continueLabel, restartLabel, onContinue, onRestart }) => (
+    <div>
+      <div>{title}</div>
+      <div>{prompt}</div>
+      <button type="button" onClick={onContinue}>{continueLabel}</button>
+      <button type="button" onClick={onRestart}>{restartLabel}</button>
+    </div>
+  ),
+  CreationResumeScene: ({ subjectTitle, session }) => (
+    <div>
+      <div>resume-scene</div>
+      <div>{subjectTitle}</div>
+      <div>{session?.prompt}</div>
+    </div>
+  ),
+  CreationEntryErrorCard: ({ error }) => <div>{error}</div>,
   buildCreationSessionActions: jest.fn((config) => ([
     {
       key: 'submit',
@@ -188,6 +206,7 @@ jest.mock('../../../services/game', () => ({
       displayName: '作者A',
     },
   })),
+  getActiveCreationSession: mockGetActiveCreationSession,
 }));
 
 jest.mock('../../../store/gameStore', () => ({
@@ -224,13 +243,13 @@ function buildGameStoreState(overrides = {}) {
     creationSession: null,
     creationSessionError: null,
     creationSessionSubmitting: false,
-    restoreActiveCreationSession: mockRestoreActiveCreationSession,
+    refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
     skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
     generateFromCreationSession: mockGenerateFromCreationSession,
     abandonCreationSession: jest.fn(() => Promise.resolve()),
-    resetCreationSessionState: jest.fn(),
+    resetCreationSessionState: mockResetCreationSessionState,
     ...overrides,
   };
 }
@@ -385,5 +404,68 @@ describe('Fork page creation session flow', () => {
     });
     expect(mockStartCreationSession).not.toHaveBeenCalled();
     expect(screen.queryByText('AI 正在生成复刻作品')).toBeNull();
+  });
+
+  test('initial fork retry keeps the first instruction and offers a retry action', async () => {
+    mockStartCreationSession.mockImplementationOnce(() => Promise.reject(new Error('创建失败，请重试')));
+    mockGameStoreState = buildGameStoreState({
+      creationSessionError: '创建失败，请重试',
+    });
+
+    render(<ForkPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
+      target: { value: '保留核心玩法，但改成美食主题，节奏更轻快。' },
+    });
+    fireEvent.click(screen.getByText('重新提交这段方向'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        '保留核心玩法，但改成美食主题，节奏更轻快。',
+        '原始跑酷',
+        expect.objectContaining({
+          entryMode: 'fork',
+          sourceGameId: 'source-1',
+        })
+      );
+    });
+
+    expect(screen.getByLabelText('fork-initial-answer').value).toBe('保留核心玩法，但改成美食主题，节奏更轻快。');
+  });
+
+  test('fork page clears a stale store session before showing the resume choice for the matching active session', async () => {
+    mockResetCreationSessionState.mockImplementation(() => {
+      mockGameStoreState = {
+        ...mockGameStoreState,
+        creationSession: null,
+        creationSessionError: null,
+      };
+    });
+    mockGameStoreState = buildGameStoreState({
+      creationSession: {
+        sessionId: 'session-other',
+        entryMode: 'create',
+        status: 'collecting',
+      },
+    });
+    mockGetActiveCreationSession.mockResolvedValueOnce({
+      sessionId: 'session-fork',
+      entryMode: 'fork',
+      sourceGameId: 'source-1',
+      title: '原始跑酷',
+      prompt: '继续这轮新版本对话',
+    });
+
+    render(<ForkPage />);
+
+    await waitFor(() => {
+      expect(mockResetCreationSessionState).toHaveBeenCalled();
+      expect(screen.getByText('resume-scene')).toBeTruthy();
+      expect(screen.getByText('继续这轮新版本对话')).toBeTruthy();
+    });
   });
 });

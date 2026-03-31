@@ -7,13 +7,17 @@ const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
 const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockRestoreActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
+const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockRestorePersistedTask = jest.fn(() => Promise.resolve(true));
 const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
 const mockSetCurrentGame = jest.fn();
+const mockResetCreationSessionState = jest.fn();
 const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockOpenGame = jest.fn();
 const mockOpenPaywall = jest.fn();
+const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
 
 let mockGameStoreState;
 
@@ -104,6 +108,22 @@ jest.mock('../../../components/creation', () => ({
       ))}
     </div>
   ),
+  CreationResumePrompt: ({ title, prompt, continueLabel, restartLabel, onContinue, onRestart }) => (
+    <div>
+      <div>{title}</div>
+      <div>{prompt}</div>
+      <button type="button" onClick={onContinue}>{continueLabel}</button>
+      <button type="button" onClick={onRestart}>{restartLabel}</button>
+    </div>
+  ),
+  CreationResumeScene: ({ subjectTitle, session }) => (
+    <div>
+      <div>resume-scene</div>
+      <div>{subjectTitle}</div>
+      <div>{session?.prompt}</div>
+    </div>
+  ),
+  CreationEntryErrorCard: ({ error }) => <div>{error}</div>,
   buildCreationSessionActions: jest.fn((config) => ([
     {
       key: 'submit',
@@ -190,6 +210,7 @@ jest.mock('../../../services/game', () => ({
     canPlay: true,
   })),
   getGenerationStatus: jest.fn(() => Promise.resolve(null)),
+  getActiveCreationSession: mockGetActiveCreationSession,
 }));
 
 jest.mock('../../../stores/gamePlayer', () => ({
@@ -242,12 +263,13 @@ function buildGameStoreState(overrides = {}) {
     creationSessionError: null,
     creationSessionSubmitting: false,
     getCreationFlowStage: jest.fn(() => 'idle'),
-    restoreActiveCreationSession: mockRestoreActiveCreationSession,
+    refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
     skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
     generateFromCreationSession: mockGenerateFromCreationSession,
-    resetCreationSessionState: jest.fn(),
+    abandonCreationSession: mockAbandonCreationSession,
+    resetCreationSessionState: mockResetCreationSessionState,
     setCurrentGame: mockSetCurrentGame,
     ...overrides,
   };
@@ -344,5 +366,64 @@ describe('Iterate page creation session flow', () => {
     expect(screen.queryByText('这个问题不该继续出现')).toBeNull();
     expect(screen.getByText('直接开始优化').disabled).toBe(true);
     expect(screen.getByText('跳过此题').disabled).toBe(true);
+  });
+
+  test('initial iterate retry keeps the first instruction and offers a retry action', async () => {
+    mockStartCreationSession.mockImplementationOnce(() => Promise.reject(new Error('创建失败，请重试')));
+    mockGameStoreState = buildGameStoreState({
+      creationSessionError: '创建失败，请重试',
+    });
+
+    render(<IteratePage />);
+
+    fireEvent.change(screen.getByLabelText('iterate-initial-answer'), {
+      target: { value: '保留核心玩法，把角色反馈和速度都再提一档。' },
+    });
+    fireEvent.click(screen.getByText('重新提交这段方向'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        '保留核心玩法，把角色反馈和速度都再提一档。',
+        '像素跑酷',
+        expect.objectContaining({
+          entryMode: 'iterate',
+          sourceGameId: 'game-1',
+        })
+      );
+    });
+
+    expect(screen.getByLabelText('iterate-initial-answer').value).toBe('保留核心玩法，把角色反馈和速度都再提一档。');
+  });
+
+  test('iterate page clears a stale store session before showing the resume choice for the matching active session', async () => {
+    mockResetCreationSessionState.mockImplementation(() => {
+      mockGameStoreState = {
+        ...mockGameStoreState,
+        creationSession: null,
+        creationSessionError: null,
+      };
+    });
+    mockGameStoreState = buildGameStoreState({
+      creationSession: {
+        sessionId: 'session-other',
+        entryMode: 'create',
+        status: 'collecting',
+      },
+    });
+    mockGetActiveCreationSession.mockResolvedValueOnce({
+      sessionId: 'session-iterate',
+      entryMode: 'iterate',
+      sourceGameId: 'game-1',
+      title: '像素跑酷',
+      prompt: '继续这轮优化',
+    });
+
+    render(<IteratePage />);
+
+    await waitFor(() => {
+      expect(mockResetCreationSessionState).toHaveBeenCalled();
+      expect(screen.getByText('resume-scene')).toBeTruthy();
+      expect(screen.getByText('继续这轮优化')).toBeTruthy();
+    });
   });
 });

@@ -42,6 +42,7 @@ export function CreationSessionPanel({
     if (action.key === 'submit') {
       return {
         ...action,
+        tone: allowDirectGenerate ? 'ghost' : action.tone,
         disabled: Boolean(action.disabled) || !allowQuestionAnswer,
       };
     }
@@ -56,6 +57,7 @@ export function CreationSessionPanel({
     if (action.key === 'generate') {
       return {
         ...action,
+        tone: allowDirectGenerate ? 'primary' : action.tone,
         disabled: Boolean(action.disabled) || !allowDirectGenerate,
       };
     }

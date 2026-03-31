@@ -4,15 +4,19 @@ import { render, screen } from '@testing-library/react';
 import { View, Text, Textarea } from '@tarojs/components';
 import {
   CreationAnswerComposer,
+  CreationEntryErrorCard,
   CreationConfidenceCard,
   CreationConversationList,
   CreationPlanDraftCard,
   CreationQuestionCard,
+  CreationResumeScene,
+  CreationResumePrompt,
   CreationSessionActions,
   CreationSessionScene,
   CreationSessionShell,
   buildCreationSessionActions,
   buildCreationSessionSceneProps,
+  getCreationEntryErrorContent,
 } from '..';
 
 jest.mock('@tarojs/components', () => ({
@@ -152,5 +156,78 @@ describe('CreationSession components', () => {
       answerPlaceholder: '例如：保留核心玩法，把节奏再推快一点，打击反馈更爽。',
       errorClassName: 'iterate-error-banner',
     }));
+  });
+
+  test('renders shared resume prompt actions', () => {
+    render(
+      <CreationResumePrompt
+        title="上次的优化方向"
+        prompt="继续这轮优化，或者结束它开始新的方向。"
+        continueLabel="继续上次优化"
+        restartLabel="开始新的优化"
+      />
+    );
+
+    expect(screen.getByText('上次的优化方向')).toBeTruthy();
+    expect(screen.getByText('继续这轮优化，或者结束它开始新的方向。')).toBeTruthy();
+    expect(screen.getByText('继续上次优化')).toBeTruthy();
+    expect(screen.getByText('开始新的优化')).toBeTruthy();
+  });
+
+  test('renders shared resume scene with summary metadata', () => {
+    render(
+      <CreationResumeScene
+        entryMode="fork"
+        session={{
+          status: 'collecting',
+          title: '赛博贪吃蛇',
+          prompt: '继续这轮新版本对话，或者结束它重新开始。',
+          updatedAt: '2026-03-31T12:00:00.000Z',
+        }}
+        subjectTitle="赛博贪吃蛇"
+      />
+    );
+
+    expect(screen.getByText('继续上次复刻，还是重新来一轮？')).toBeTruthy();
+    expect(screen.getByText('赛博贪吃蛇')).toBeTruthy();
+    expect(screen.getByText('上次停在')).toBeTruthy();
+    expect(screen.getByText('最近更新')).toBeTruthy();
+    expect(screen.getAllByText('继续上次复刻').length).toBeGreaterThan(0);
+  });
+
+  test('falls back gracefully when resume scene receives an invalid timestamp', () => {
+    render(
+      <CreationResumeScene
+        entryMode="create"
+        session={{
+          status: 'collecting',
+          prompt: '继续这轮创作',
+          updatedAt: 'not-a-date',
+        }}
+      />
+    );
+
+    expect(screen.getByText('最近更新')).toBeTruthy();
+    expect(screen.getByText('最近整理过')).toBeTruthy();
+    expect(screen.queryByText(/NaN/)).toBeNull();
+  });
+
+  test('builds friendly entry error content and renders the shared error card', () => {
+    const content = getCreationEntryErrorContent('iterate', 'timeout');
+
+    expect(content).toEqual(expect.objectContaining({
+      title: '刚才没把这轮优化准备好',
+    }));
+
+    render(
+      <CreationEntryErrorCard
+        entryMode="iterate"
+        error="timeout"
+      />
+    );
+
+    expect(screen.getByText('需要重新试一次')).toBeTruthy();
+    expect(screen.getByText('刚才没把这轮优化准备好')).toBeTruthy();
+    expect(screen.getByText('你刚才写的内容还在，直接点下面的重试按钮就好。')).toBeTruthy();
   });
 });
