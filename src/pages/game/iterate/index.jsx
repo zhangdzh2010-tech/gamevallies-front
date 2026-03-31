@@ -607,30 +607,12 @@ export default function GameIteratePage() {
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={() => openProfilePageWithTab('tasks')} />
       <View className="iterate-hero">
-        <Text className="iterate-hero__title">优化游戏</Text>
-        <Text className="iterate-hero__subtitle">基于当前版本继续优化玩法、文案和体验</Text>
+        <Text className="iterate-hero__title">继续打磨这款作品</Text>
+        <Text className="iterate-hero__subtitle">先说清楚这次最想提升的部分，AI 会帮你整理方向，再继续追问。</Text>
       </View>
 
       <PageScrollContainer className="iterate-scroll" style={scrollContainerStyle} scrollY>
         <View className="iterate-panel">
-          <View className="iterate-metadata-card">
-            <Text className="iterate-metadata-card__title">当前版本信息</Text>
-            <Text className="iterate-metadata-card__hint">
-              优化会基于这个版本继续生成
-            </Text>
-            {currentGame?.description ? (
-              <Text className="iterate-metadata-card__summary">{currentGame.description}</Text>
-            ) : null}
-            <View className="iterate-metadata-grid">
-              {metadataItems.map((item) => (
-                <View key={item.label} className="iterate-metadata-item">
-                  <Text className="iterate-metadata-item__label">{item.label}</Text>
-                  <Text className="iterate-metadata-item__value">{item.value}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
           {(error || pageError) ? (
             <View className="iterate-error-banner">
               <Text className="iterate-error-banner__text">
@@ -638,21 +620,6 @@ export default function GameIteratePage() {
               </Text>
             </View>
           ) : null}
-
-          <View className="iterate-actions">
-            {canPlay ? (
-              <View className="iterate-action-btn iterate-action-btn--primary" onClick={handlePlayGame}>
-                <Text>试玩当前版本</Text>
-              </View>
-            ) : (
-              <View className="iterate-action-btn iterate-action-btn--secondary" onClick={handleLockedPlay}>
-                <Text>订阅后试玩</Text>
-              </View>
-            )}
-            <View className="iterate-action-btn iterate-action-btn--ghost" onClick={handleOpenDetail}>
-              <Text>查看作品详情</Text>
-            </View>
-          </View>
 
           {creationSession?.entryMode === 'iterate' && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage) ? (
             <CreationSessionScene
@@ -692,6 +659,44 @@ export default function GameIteratePage() {
               </View>
             </>
           )}
+
+          <View className="iterate-reference-card">
+            <View className="iterate-reference-card__header">
+              <View>
+                <Text className="iterate-reference-card__eyebrow">当前底稿</Text>
+                <Text className="iterate-reference-card__title">{currentGame?.title || '未命名作品'}</Text>
+              </View>
+              <View className="iterate-reference-card__badge">
+                <Text className="iterate-reference-card__badge-text">这次优化会基于这一版继续生成</Text>
+              </View>
+            </View>
+            {currentGame?.description ? (
+              <Text className="iterate-reference-card__summary">{currentGame.description}</Text>
+            ) : null}
+            <View className="iterate-metadata-grid">
+              {metadataItems.map((item) => (
+                <View key={item.label} className="iterate-metadata-item">
+                  <Text className="iterate-metadata-item__label">{item.label}</Text>
+                  <Text className="iterate-metadata-item__value">{item.value}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View className="iterate-actions">
+            {canPlay ? (
+              <View className="iterate-action-btn iterate-action-btn--primary" onClick={handlePlayGame}>
+                <Text>试玩当前版本</Text>
+              </View>
+            ) : (
+              <View className="iterate-action-btn iterate-action-btn--secondary" onClick={handleLockedPlay}>
+                <Text>订阅后试玩</Text>
+              </View>
+            )}
+            <View className="iterate-action-btn iterate-action-btn--ghost" onClick={handleOpenDetail}>
+              <Text>查看作品详情</Text>
+            </View>
+          </View>
         </View>
 
         <View style={{ height: '80px' }} />

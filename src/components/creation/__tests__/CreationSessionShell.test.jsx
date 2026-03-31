@@ -141,15 +141,15 @@ describe('CreationSession components', () => {
       className: '',
     }));
     expect(props.shell).toEqual(expect.objectContaining({
-      eyebrow: 'AI Optimize Session',
-      title: '先确认这次想怎么优化，再交给 AI 动手',
-      subtitle: '系统会先理解你最想改的部分，再补问 1 个最关键的细节。',
-      statusLabel: '当前阶段',
+      eyebrow: '继续打磨',
+      title: '先说这次最想改什么，再一起把改动方向敲定',
+      subtitle: 'AI 会基于当前版本整理优化思路，再补问一个最值得确认的细节。',
+      statusLabel: '进行到',
     }));
     expect(props.panel).toEqual(expect.objectContaining({
       entryMode: 'iterate',
-      planHint: '这是系统基于当前作品和上下文整理出的优化方案草案。',
-      answerPlaceholder: '例如：保留核心玩法，把节奏再快一点，角色改成像素风。',
+      planHint: '这是 AI 基于当前版本整理出的优化思路，你可以继续补充或直接开始生成。',
+      answerPlaceholder: '例如：保留核心玩法，把节奏再推快一点，打击反馈更爽。',
       errorClassName: 'iterate-error-banner',
     }));
   });

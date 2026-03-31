@@ -409,7 +409,7 @@ export default function Create() {
   const initialCreateActions = [
     {
       key: 'start-session',
-      label: creationSessionSubmitting ? '整理创意中...' : '进入动态创作会话',
+      label: creationSessionSubmitting ? 'AI 正在整理你的想法...' : '先看 AI 怎么理解',
       tone: 'primary',
       disabled: creationSessionSubmitting || !prompt.trim() || prompt.trim().length < 5,
       onClick: handleSubmit,
@@ -664,11 +664,11 @@ export default function Create() {
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
       <PageScrollContainer className="create-scroll">
         <CreationSessionShell
-          eyebrow="Dynamic Creation Session"
-          title="先把第一轮创意说给 AI"
-          subtitle="创建页现在直接进入会话式首屏。你先描述玩法与风格，系统再整理方案草案并继续追问。"
-          statusLabel="当前阶段"
-          statusValue="等待首轮创意"
+          eyebrow="开始新创作"
+          title="先把脑海里的想法说出来"
+          subtitle="不用一开始就想得特别完整。先告诉 AI 你想做什么，它会帮你把方向慢慢整理清楚。"
+          statusLabel="进行到"
+          statusValue="等待你的想法"
           sections={[
             {
               key: 'create-setup',
@@ -676,8 +676,8 @@ export default function Create() {
                 <View className="creation-session-card">
                   <View className="creation-session-card__header">
                     <View>
-                      <Text className="creation-session-card__title">本轮创作设置</Text>
-                      <Text className="creation-session-card__hint">先补充几个基础设置，AI 会一起理解你的创作方向。</Text>
+                      <Text className="creation-session-card__title">创作偏好</Text>
+                      <Text className="creation-session-card__hint">这些设置会帮助 AI 更快贴近你想要的节奏和呈现方式。</Text>
                     </View>
                   </View>
                   <View className="form-section">
@@ -740,11 +740,11 @@ export default function Create() {
               node: (
                 <>
                   <CreationQuestionCard
-                    title="第一轮创意"
-                    hint="先把玩法、胜负规则、节奏和视觉方向说出来，系统会据此生成第一版理解。"
+                    title="先说说你的灵感"
+                    hint="把玩法、氛围、节奏，或者你脑海里的一个瞬间说出来都可以。AI 会先整理出一版理解，再继续追问。"
                     question={{
-                      content: '这次你想做一个什么样的游戏？',
-                      description: '至少写 5 个字，越具体越容易得到贴近预期的方案草案。',
+                      content: '你这次最想做一个什么样的游戏？',
+                      description: '写得越具体，AI 越容易整理出贴近你预期的方案。',
                     }}
                   />
                   <CreationAnswerComposer
