@@ -31,7 +31,9 @@ import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import {
   CreationAnswerComposer,
+  CreationEntryErrorCard,
   CreationQuestionCard,
+  CreationResumeScene,
   CreationSessionActions,
   CreationSessionShell,
   CreationSessionScene,
@@ -116,11 +118,12 @@ export default function Create() {
     creationSessionError,
     creationSessionSubmitting,
     getCreationFlowStage,
-    restoreActiveCreationSession,
+    refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
     generateFromCreationSession,
+    abandonCreationSession,
     resetCreationSessionState,
     createEntryIntent,
     consumeCreateEntryIntent,
@@ -136,6 +139,8 @@ export default function Create() {
   const [generationTier, setGenerationTier] = useState('standard');
   const [sessionAnswer, setSessionAnswer] = useState('');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
+  const [resumeCandidate, setResumeCandidate] = useState(null);
+  const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const authRedirectingRef = useRef(false);
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
@@ -184,6 +189,14 @@ export default function Create() {
       return;
     }
 
+    if (creationSession?.entryMode === 'create') {
+      return;
+    }
+
+    if (creationSession && creationSession.entryMode !== 'create') {
+      resetCreationSessionState();
+    }
+
     const persistedCreateEntryIntent = getPersistedCreateEntryIntent();
     if (persistedCreateEntryIntent) {
       setCreateEntryIntent(persistedCreateEntryIntent);
@@ -192,7 +205,17 @@ export default function Create() {
 
     const activeTaskSnapshot = getPersistedGenerationTaskSnapshot();
     if (!activeTaskSnapshot?.taskId || activeTaskSnapshot?.taskType === 'pipeline_iterate') {
-      restoreActiveCreationSession({ silentIfMissing: true }).catch(() => {});
+      gameService.getActiveCreationSession()
+        .then((session) => {
+          if (session?.entryMode === 'create') {
+            setResumeCandidate(session);
+          } else {
+            setResumeCandidate(null);
+          }
+        })
+        .catch(() => {
+          setResumeCandidate(null);
+        });
       return;
     }
 
@@ -395,6 +418,7 @@ export default function Create() {
 
     clearError();
     try {
+      setResumeCandidate(null);
       await startCreationSession(prompt.trim(), gameName.trim(), {
         entryMode: 'create',
         orientation,
@@ -406,6 +430,40 @@ export default function Create() {
     }
   };
 
+  const handleContinuePreviousSession = async () => {
+    if (!resumeCandidate?.sessionId) {
+      return;
+    }
+
+    setResumeDecisionSubmitting(true);
+    try {
+      await refreshCreationSession(resumeCandidate.sessionId);
+      setResumeCandidate(null);
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '恢复上次创作失败，请重试', icon: 'none' });
+    } finally {
+      setResumeDecisionSubmitting(false);
+    }
+  };
+
+  const handleStartFreshSession = async () => {
+    if (!resumeCandidate?.sessionId) {
+      setResumeCandidate(null);
+      return;
+    }
+
+    setResumeDecisionSubmitting(true);
+    try {
+      await abandonCreationSession(resumeCandidate.sessionId);
+      resetCreationSessionState();
+      setResumeCandidate(null);
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '开始新的创作失败，请重试', icon: 'none' });
+    } finally {
+      setResumeDecisionSubmitting(false);
+    }
+  };
+
   const initialCreateActions = [
     {
       key: 'start-session',
@@ -414,6 +472,15 @@ export default function Create() {
       disabled: creationSessionSubmitting || !prompt.trim() || prompt.trim().length < 5,
       onClick: handleSubmit,
     },
+    ...(creationSessionError
+      ? [{
+          key: 'retry-session',
+          label: creationSessionSubmitting ? '重试中...' : '重新提交这段想法',
+          tone: 'ghost',
+          disabled: creationSessionSubmitting || !prompt.trim() || prompt.trim().length < 5,
+          onClick: handleSubmit,
+        }]
+      : []),
   ];
 
   const handlePlayGame = () => {
@@ -659,6 +726,27 @@ export default function Create() {
     );
   }
 
+  if (resumeCandidate?.entryMode === 'create') {
+    return (
+      <View className={containerClassName}>
+        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
+        <PageScrollContainer className="create-scroll">
+          <CreationResumeScene
+            entryMode="create"
+            session={resumeCandidate}
+            subjectTitle={resumeCandidate?.title || '上一轮创作'}
+            submitting={resumeDecisionSubmitting}
+            onContinue={handleContinuePreviousSession}
+            onRestart={handleStartFreshSession}
+          />
+          <View className="bottom-spacer" />
+        </PageScrollContainer>
+
+        <CustomTabBar activeIndex={2} />
+      </View>
+    );
+  }
+
   return (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
@@ -763,12 +851,7 @@ export default function Create() {
                     </View>
                   ) : null}
 
-                  {creationSessionError ? (
-                    <View className="error-banner">
-                      <Text className="error-text">{creationSessionError}</Text>
-                      <Text className="error-dismiss" onClick={clearError}>×</Text>
-                    </View>
-                  ) : null}
+                  {creationSessionError ? <CreationEntryErrorCard entryMode="create" error={creationSessionError} /> : null}
 
                   <CreationSessionActions actions={initialCreateActions} />
                 </>

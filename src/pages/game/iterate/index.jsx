@@ -31,7 +31,9 @@ import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
 import {
   CreationAnswerComposer,
+  CreationEntryErrorCard,
   CreationQuestionCard,
+  CreationResumeScene,
   CreationSessionActions,
   CreationSessionScene,
   CreationSessionShell,
@@ -132,7 +134,7 @@ export default function GameIteratePage() {
     creationSessionError,
     creationSessionSubmitting,
     getCreationFlowStage,
-    restoreActiveCreationSession,
+    refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
@@ -147,6 +149,8 @@ export default function GameIteratePage() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pageError, setPageError] = useState('');
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
+  const [resumeCandidate, setResumeCandidate] = useState(null);
+  const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const iterateSessionBootstrappedGameIdRef = useRef('');
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
@@ -298,20 +302,27 @@ export default function GameIteratePage() {
 
     iterateSessionBootstrappedGameIdRef.current = currentCompletedGameId;
 
-    restoreActiveCreationSession({ silentIfMissing: true })
+    gameService.getActiveCreationSession()
       .then((restoredSession) => {
         const restoredMatches = restoredSession
           && restoredSession.entryMode === 'iterate'
           && String(restoredSession.sourceGameId || '') === currentCompletedGameId;
 
         if (restoredMatches) {
+          resetCreationSessionState();
+          setResumeCandidate(restoredSession);
           return restoredSession;
         }
 
         resetCreationSessionState();
+        setResumeCandidate(null);
         return null;
       })
       .catch((err) => {
+        if (err?.statusCode === 404) {
+          setResumeCandidate(null);
+          return;
+        }
         setPageError(err?.message || '初始化优化会话失败，请稍后重试');
         iterateSessionBootstrappedGameIdRef.current = '';
       });
@@ -321,7 +332,6 @@ export default function GameIteratePage() {
     isBootstrapping,
     isIterateTaskActive,
     resetCreationSessionState,
-    restoreActiveCreationSession,
     taskId,
   ]);
 
@@ -456,6 +466,7 @@ export default function GameIteratePage() {
     }
 
     try {
+      setResumeCandidate(null);
       await startCreationSession(
         iterateFeedback.trim(),
         currentGame?.title || '',
@@ -470,6 +481,41 @@ export default function GameIteratePage() {
       setIterateFeedback('');
     } catch (err) {
       Taro.showToast({ title: err?.message || '开启优化对话失败，请稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleContinueIterateSession = async () => {
+    if (!resumeCandidate?.sessionId) {
+      return;
+    }
+
+    setResumeDecisionSubmitting(true);
+    try {
+      await refreshCreationSession(resumeCandidate.sessionId);
+      setResumeCandidate(null);
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '恢复上次优化失败，请稍后重试', icon: 'none' });
+    } finally {
+      setResumeDecisionSubmitting(false);
+    }
+  };
+
+  const handleStartFreshIterateSession = async () => {
+    if (!resumeCandidate?.sessionId) {
+      setResumeCandidate(null);
+      return;
+    }
+
+    setResumeDecisionSubmitting(true);
+    try {
+      await abandonCreationSession(resumeCandidate.sessionId);
+      resetCreationSessionState();
+      setResumeCandidate(null);
+      iterateSessionBootstrappedGameIdRef.current = '';
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '开始新一轮优化失败，请稍后重试', icon: 'none' });
+    } finally {
+      setResumeDecisionSubmitting(false);
     }
   };
 
@@ -617,6 +663,26 @@ export default function GameIteratePage() {
     );
   }
 
+  if (resumeCandidate?.entryMode === 'iterate' && !creationSession) {
+    return (
+      <View className={containerClassName}>
+        <AppTopBar showBack rightText="任务" onRightClick={() => openProfilePageWithTab('tasks')} />
+        <PageScrollContainer className="iterate-scroll" style={scrollContainerStyle} scrollY>
+          <View className="iterate-panel">
+            <CreationResumeScene
+              entryMode="iterate"
+              session={resumeCandidate}
+              subjectTitle={resumeCandidate?.title || currentGame?.title || '未命名作品'}
+              submitting={resumeDecisionSubmitting}
+              onContinue={handleContinueIterateSession}
+              onRestart={handleStartFreshIterateSession}
+            />
+          </View>
+        </PageScrollContainer>
+      </View>
+    );
+  }
+
   return (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={() => openProfilePageWithTab('tasks')} />
@@ -660,9 +726,7 @@ export default function GameIteratePage() {
           ) : (
             <>
               {!creationSession && creationSessionError ? (
-                <View className="iterate-error-banner">
-                  <Text className="iterate-error-banner__text">{getUserFacingIterateError(creationSessionError || pageError)}</Text>
-                </View>
+                <CreationEntryErrorCard entryMode="iterate" error={creationSessionError || pageError} />
               ) : null}
               <CreationSessionShell
                 eyebrow="继续打磨"
@@ -696,15 +760,24 @@ export default function GameIteratePage() {
                         />
                         <CreationSessionActions
                           actions={[
-                            {
-                              key: 'start-iterate-session',
-                              label: creationSessionSubmitting ? 'AI 正在整理你的方向...' : '开始这轮优化对话',
-                              tone: 'primary',
-                              disabled: creationSessionSubmitting || !iterateFeedback.trim(),
-                              onClick: handleStartIterateSession,
-                            },
-                          ]}
-                        />
+                              {
+                                key: 'start-iterate-session',
+                                label: creationSessionSubmitting ? 'AI 正在整理你的方向...' : '开始这轮优化对话',
+                                tone: 'primary',
+                                disabled: creationSessionSubmitting || !iterateFeedback.trim(),
+                                onClick: handleStartIterateSession,
+                              },
+                              ...(creationSessionError
+                                ? [{
+                                    key: 'retry-iterate-session',
+                                    label: creationSessionSubmitting ? '重试中...' : '重新提交这段方向',
+                                    tone: 'ghost',
+                                    disabled: creationSessionSubmitting || !iterateFeedback.trim(),
+                                    onClick: handleStartIterateSession,
+                                  }]
+                                : []),
+                            ]}
+                          />
                       </>
                     ),
                   },

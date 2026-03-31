@@ -80,6 +80,68 @@
   gap: 16px;
 }
 
+.creation-entry-error-card {
+  padding: 22px 24px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 127, 158, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(34, 18, 29, 0.98), rgba(24, 13, 22, 0.98));
+  border: 1px solid rgba(255, 108, 154, 0.2);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.creation-entry-error-card__eyebrow {
+  display: block;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 108, 154, 0.12);
+  border: 1px solid rgba(255, 108, 154, 0.18);
+  font-size: 18px;
+  color: #ff95ba;
+}
+
+.creation-entry-error-card__title {
+  display: block;
+  margin-top: 14px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff0f6;
+  line-height: 1.4;
+}
+
+.creation-entry-error-card__text,
+.creation-entry-error-card__hint {
+  display: block;
+  margin-top: 10px;
+  font-size: 21px;
+  line-height: 1.7;
+  color: #f0d7e2;
+}
+
+.creation-entry-error-card__hint {
+  color: #ffbfd4;
+}
+
+.creation-resume-summary {
+  position: relative;
+  overflow: hidden;
+}
+
+.creation-resume-summary::after {
+  content: '';
+  position: absolute;
+  right: -24px;
+  top: -24px;
+  width: 124px;
+  height: 124px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(139, 216, 197, 0.12), transparent 68%);
+  pointer-events: none;
+}
+
 .creation-session-panel__title {
   display: block;
   font-size: 28px;

@@ -1,6 +1,6 @@
 /* eslint-env jest */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockShowToast = jest.fn();
 const mockGetSystemInfoSync = jest.fn(() => ({ windowHeight: 720 }));
@@ -11,6 +11,8 @@ const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
 const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
+const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
+const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockClearError = jest.fn();
 const mockConsumeCreateEntryIntent = jest.fn();
 const mockResetCreateSession = jest.fn();
@@ -22,9 +24,11 @@ const mockOpenProfilePageWithTab = jest.fn();
 const mockOpenPaywall = jest.fn();
 const mockOpenGame = jest.fn();
 const mockEnsureCreateAccess = jest.fn();
+const didShowCallbacks = [];
 const mockGameService = {
   getGame: jest.fn(),
   forkGame: jest.fn(),
+  getActiveCreationSession: jest.fn(() => Promise.resolve(null)),
 };
 
 let mockGameStoreState;
@@ -50,7 +54,9 @@ jest.mock('@tarojs/taro', () => {
     __esModule: true,
     default: api,
     ...api,
-    useDidShow: jest.fn(),
+    useDidShow: jest.fn((callback) => {
+      didShowCallbacks.push(callback);
+    }),
     useDidHide: jest.fn(),
   };
 });
@@ -113,6 +119,22 @@ jest.mock('../../../components/creation', () => ({
       ))}
     </div>
   ),
+  CreationResumePrompt: ({ title, prompt, continueLabel, restartLabel, onContinue, onRestart }) => (
+    <div>
+      <div>{title}</div>
+      <div>{prompt}</div>
+      <button type="button" onClick={onContinue}>{continueLabel}</button>
+      <button type="button" onClick={onRestart}>{restartLabel}</button>
+    </div>
+  ),
+  CreationResumeScene: ({ subjectTitle, session }) => (
+    <div>
+      <div>resume-scene</div>
+      <div>{subjectTitle}</div>
+      <div>{session?.prompt}</div>
+    </div>
+  ),
+  CreationEntryErrorCard: ({ error }) => <div>{error}</div>,
   buildCreationSessionActions: jest.fn((config) => ([
     {
       key: 'submit',
@@ -242,11 +264,12 @@ function buildGameStoreState(overrides = {}) {
     creationSessionError: null,
     creationSessionSubmitting: false,
     getCreationFlowStage: jest.fn(() => 'idle'),
-    restoreActiveCreationSession: mockRestoreActiveCreationSession,
+    refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
     skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
     generateFromCreationSession: mockGenerateFromCreationSession,
+    abandonCreationSession: mockAbandonCreationSession,
     resetCreationSessionState: mockResetCreationSessionState,
     createEntryIntent: null,
     consumeCreateEntryIntent: mockConsumeCreateEntryIntent,
@@ -260,8 +283,23 @@ function buildGameStoreState(overrides = {}) {
 describe('Create page journey coverage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    didShowCallbacks.length = 0;
     mockGameStoreState = buildGameStoreState();
   });
+
+  async function flushDidShowCallbacks() {
+    for (const callback of didShowCallbacks) {
+      // Taro calls these after page show, so run them after render inside act.
+      await act(async () => {
+        await callback();
+      });
+    }
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+  }
 
   test('creative textarea keeps the intended 2000-char limit and submits long input', async () => {
     render(<CreatePage />);
@@ -427,5 +465,64 @@ describe('Create page journey coverage', () => {
     expect(screen.getByText('先确认创作理解，再交给 AI 开始生成')).toBeTruthy();
     expect(screen.getByText('新的创作方案')).toBeTruthy();
     expect(screen.queryByText('创作完成！')).toBeNull();
+  });
+
+  test('create page still probes active create sessions when store keeps a stale session from another entry mode', async () => {
+    mockResetCreationSessionState.mockImplementation(() => {
+      mockGameStoreState = {
+        ...mockGameStoreState,
+        creationSession: null,
+        creationSessionError: null,
+      };
+    });
+    mockGameStoreState = buildGameStoreState({
+      creationSession: {
+        sessionId: 'session-other',
+        entryMode: 'iterate',
+        status: 'collecting',
+      },
+    });
+    mockGameService.getActiveCreationSession.mockResolvedValueOnce({
+      sessionId: 'session-create',
+      entryMode: 'create',
+      title: '旧创作',
+      prompt: '继续这轮创作',
+    });
+
+    render(<CreatePage />);
+    await flushDidShowCallbacks();
+
+    await waitFor(() => {
+      expect(mockResetCreationSessionState).toHaveBeenCalled();
+      expect(mockGameService.getActiveCreationSession).toHaveBeenCalled();
+    });
+  });
+
+  test('initial create retry keeps the first prompt and offers a retry action', async () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSessionError: '创建失败，请重试',
+    });
+
+    render(<CreatePage />);
+
+    fireEvent.change(screen.getByLabelText('create-initial-answer'), {
+      target: { value: '做一个节奏更快的像素风闯关游戏' },
+    });
+
+    fireEvent.click(screen.getByText('重新提交这段想法'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        '做一个节奏更快的像素风闯关游戏',
+        '',
+        {
+          entryMode: 'create',
+          orientation: 'portrait',
+          generationTier: 'standard',
+        }
+      );
+    });
+
+    expect(screen.getByLabelText('create-initial-answer').value).toBe('做一个节奏更快的像素风闯关游戏');
   });
 });

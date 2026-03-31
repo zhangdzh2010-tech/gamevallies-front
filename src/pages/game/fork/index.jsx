@@ -25,7 +25,9 @@ import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import {
   CreationAnswerComposer,
+  CreationEntryErrorCard,
   CreationQuestionCard,
+  CreationResumeScene,
   CreationSessionActions,
   CreationSessionScene,
   CreationSessionShell,
@@ -75,7 +77,7 @@ export default function GameForkPage() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
-    restoreActiveCreationSession,
+    refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
@@ -87,6 +89,8 @@ export default function GameForkPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [forkAnswer, setForkAnswer] = useState('');
   const [pageError, setPageError] = useState('');
+  const [resumeCandidate, setResumeCandidate] = useState(null);
+  const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const forkSessionBootstrappedSourceIdRef = useRef('');
   const currentUser = Storage.getUser() || {};
   const currentUserId = currentUser?.id || '';
@@ -184,20 +188,27 @@ export default function GameForkPage() {
 
     forkSessionBootstrappedSourceIdRef.current = sourceGameId;
 
-    restoreActiveCreationSession({ silentIfMissing: true })
+    gameService.getActiveCreationSession()
       .then((restoredSession) => {
         const restoredMatches = restoredSession
           && restoredSession.entryMode === 'fork'
           && String(restoredSession.sourceGameId || '') === String(sourceGameId);
 
         if (restoredMatches) {
+          resetCreationSessionState();
+          setResumeCandidate(restoredSession);
           return restoredSession;
         }
 
         resetCreationSessionState();
+        setResumeCandidate(null);
         return null;
       })
       .catch((error) => {
+        if (error?.statusCode === 404) {
+          setResumeCandidate(null);
+          return;
+        }
         setPageError(error?.message || '初始化复刻会话失败，请重试');
         forkSessionBootstrappedSourceIdRef.current = '';
       });
@@ -206,7 +217,6 @@ export default function GameForkPage() {
     isCurrentForkSession,
     isLoading,
     resetCreationSessionState,
-    restoreActiveCreationSession,
     sourceGame,
     sourceGameId,
   ]);
@@ -236,6 +246,7 @@ export default function GameForkPage() {
     }
 
     try {
+      setResumeCandidate(null);
       await startCreationSession(
         forkAnswer.trim(),
         sourceGame?.title || '',
@@ -250,6 +261,41 @@ export default function GameForkPage() {
       setForkAnswer('');
     } catch (error) {
       Taro.showToast({ title: error?.message || '开启新版本对话失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleContinueForkSession = async () => {
+    if (!resumeCandidate?.sessionId) {
+      return;
+    }
+
+    setResumeDecisionSubmitting(true);
+    try {
+      await refreshCreationSession(resumeCandidate.sessionId);
+      setResumeCandidate(null);
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '恢复上次复刻失败，请重试', icon: 'none' });
+    } finally {
+      setResumeDecisionSubmitting(false);
+    }
+  };
+
+  const handleStartFreshForkSession = async () => {
+    if (!resumeCandidate?.sessionId) {
+      setResumeCandidate(null);
+      return;
+    }
+
+    setResumeDecisionSubmitting(true);
+    try {
+      await abandonCreationSession(resumeCandidate.sessionId);
+      resetCreationSessionState();
+      setResumeCandidate(null);
+      forkSessionBootstrappedSourceIdRef.current = '';
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '开始新一轮复刻失败，请重试', icon: 'none' });
+    } finally {
+      setResumeDecisionSubmitting(false);
     }
   };
 
@@ -423,6 +469,26 @@ export default function GameForkPage() {
     );
   }
 
+  if (resumeCandidate?.entryMode === 'fork' && !creationSession) {
+    return (
+      <View className={containerClassName}>
+        <AppTopBar showBack />
+        <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
+          <View className="fork-panel">
+            <CreationResumeScene
+              entryMode="fork"
+              session={resumeCandidate}
+              subjectTitle={resumeCandidate?.title || sourceGame?.title || '原作品'}
+              submitting={resumeDecisionSubmitting}
+              onContinue={handleContinueForkSession}
+              onRestart={handleStartFreshForkSession}
+            />
+          </View>
+        </PageScrollContainer>
+      </View>
+    );
+  }
+
   return (
     <View className={containerClassName}>
       <AppTopBar showBack />
@@ -466,9 +532,7 @@ export default function GameForkPage() {
           ) : (
             <>
               {!creationSession && creationSessionError ? (
-                <View className="fork-warning-card">
-                  <Text className="fork-warning-card__text">{creationSessionError}</Text>
-                </View>
+                <CreationEntryErrorCard entryMode="fork" error={creationSessionError} />
               ) : null}
               {canForkGame ? (
                 <CreationSessionShell
@@ -510,6 +574,15 @@ export default function GameForkPage() {
                                 disabled: creationSessionSubmitting || !forkAnswer.trim(),
                                 onClick: handleStartForkSession,
                               },
+                              ...(creationSessionError
+                                ? [{
+                                    key: 'retry-fork-session',
+                                    label: creationSessionSubmitting ? '重试中...' : '重新提交这段方向',
+                                    tone: 'ghost',
+                                    disabled: creationSessionSubmitting || !forkAnswer.trim(),
+                                    onClick: handleStartForkSession,
+                                  }]
+                                : []),
                             ]}
                           />
                         </>
