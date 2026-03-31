@@ -274,7 +274,7 @@ describe('Create page journey coverage', () => {
     fireEvent.change(textarea, { target: { value: longPrompt } });
     expect(screen.getByText(`${longPrompt.length}/2000`)).toBeTruthy();
 
-    fireEvent.click(screen.getByText('进入动态创作会话'));
+    fireEvent.click(screen.getByText('先看 AI 怎么理解'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(longPrompt, '', {
@@ -295,7 +295,7 @@ describe('Create page journey coverage', () => {
     fireEvent.change(screen.getByLabelText('create-initial-answer'), {
       target: { value: '\u592a\u77ed' },
     });
-    expect(screen.getByText('进入动态创作会话').disabled).toBe(true);
+    expect(screen.getByText('先看 AI 怎么理解').disabled).toBe(true);
     expect(mockStartCreationSession).not.toHaveBeenCalled();
   });
 
@@ -306,7 +306,7 @@ describe('Create page journey coverage', () => {
       target: { value: 'build a horizontal shooter game with a spaceship and enemies' },
     });
     fireEvent.click(screen.getByText(LANDSCAPE_TEXT));
-    fireEvent.click(screen.getByText('进入动态创作会话'));
+    fireEvent.click(screen.getByText('先看 AI 怎么理解'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(

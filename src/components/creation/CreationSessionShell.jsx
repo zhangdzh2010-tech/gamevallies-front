@@ -4,11 +4,11 @@ import { View, Text } from '@tarojs/components';
 import './CreationSession.scss';
 
 export function CreationSessionShell({
-  eyebrow = 'Dynamic Creation Session',
-  title = '和 AI 一起把方案说清楚',
-  subtitle = '先确认方案草案，再决定继续补充还是直接生成。',
-  statusLabel = '会话状态',
-  statusValue = '收集中',
+  eyebrow = '开始创作',
+  title = '和 AI 一起把想法慢慢说清楚',
+  subtitle = '先把方向聊明白，再决定继续补充还是直接开始生成。',
+  statusLabel = '进行到',
+  statusValue = '整理中',
   sections = [],
   footer = null,
 }) {

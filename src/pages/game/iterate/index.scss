@@ -8,7 +8,7 @@
   }
 
   .iterate-hero {
-    padding: 28px 24px 18px;
+    padding: 30px 24px 20px;
   }
 
   .iterate-hero__title {
@@ -22,8 +22,8 @@
   .iterate-hero__subtitle {
     display: block;
     font-size: 24px;
-    line-height: 1.6;
-    color: #8b87a3;
+    line-height: 1.65;
+    color: #a6a1bc;
   }
 
   .iterate-scroll {
@@ -38,6 +38,7 @@
   .iterate-loading-card,
   .iterate-empty-card,
   .iterate-metadata-card,
+  .iterate-reference-card,
   .task-meta-card,
   .task-events-card {
     background: #111118;
@@ -98,6 +99,62 @@
   .iterate-metadata-card {
     padding: 24px;
     margin-bottom: 24px;
+  }
+
+  .iterate-reference-card {
+    margin-top: 22px;
+    padding: 24px;
+    background:
+      radial-gradient(circle at right top, rgba(45, 212, 168, 0.1), transparent 28%),
+      linear-gradient(180deg, rgba(20, 22, 34, 0.98), rgba(14, 16, 24, 0.98));
+  }
+
+  .iterate-reference-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .iterate-reference-card__eyebrow {
+    display: inline-flex;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(110, 86, 255, 0.14);
+    color: #b8aefc;
+    font-size: 18px;
+  }
+
+  .iterate-reference-card__title {
+    display: block;
+    margin-top: 12px;
+    font-size: 30px;
+    font-weight: 700;
+    color: #f4f2ff;
+  }
+
+  .iterate-reference-card__badge {
+    flex-shrink: 0;
+    max-width: 220px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(45, 212, 168, 0.08);
+    border: 1px solid rgba(45, 212, 168, 0.16);
+  }
+
+  .iterate-reference-card__badge-text {
+    font-size: 18px;
+    line-height: 1.5;
+    color: #bfe9de;
+  }
+
+  .iterate-reference-card__summary {
+    display: block;
+    margin-bottom: 18px;
+    font-size: 23px;
+    line-height: 1.7;
+    color: #d7d3ea;
   }
 
   .iterate-metadata-card__title {
@@ -169,7 +226,7 @@
   .iterate-actions {
     display: flex;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-top: 20px;
   }
 
   .iterate-session-panel {
@@ -536,8 +593,47 @@
     border-radius: 16px;
   }
 
+  .iterate-reference-card {
+    margin-top: 14px;
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .iterate-reference-card__header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .iterate-reference-card__eyebrow {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .iterate-reference-card__title {
+    margin-top: 8px;
+    font-size: 18px;
+  }
+
+  .iterate-reference-card__badge {
+    max-width: 148px;
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+
+  .iterate-reference-card__badge-text {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .iterate-reference-card__summary {
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
   .iterate-metadata-card__hint,
   .iterate-metadata-card__summary,
+  .iterate-reference-card__summary,
   .iterate-error-banner__text,
   .iterate-hint,
   .task-event-text {
@@ -662,6 +758,15 @@
   .iterate-page.iterate-page--h5 {
     .iterate-metadata-grid {
       grid-template-columns: 1fr;
+    }
+
+    .iterate-reference-card__header {
+      flex-direction: column;
+    }
+
+    .iterate-reference-card__badge {
+      max-width: none;
+      width: 100%;
     }
 
     .iterate-hero {

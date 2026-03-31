@@ -417,45 +417,16 @@ export default function GameForkPage() {
     <View className={containerClassName}>
       <AppTopBar showBack />
       <View className="fork-hero">
-        <Text className="fork-hero__title">复刻这款游戏</Text>
-        <Text className="fork-hero__subtitle">先确认你想保留和改变的部分，再生成新的创作版本</Text>
+        <Text className="fork-hero__title">基于这款作品做出新版本</Text>
+        <Text className="fork-hero__subtitle">先说你想延续什么、改变什么，AI 会先帮你整理方向，再继续追问。</Text>
       </View>
 
       <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
         <View className="fork-panel">
-          <View className="fork-source-card">
-            <View className="fork-source-card__preview">
-              <Text className="fork-source-card__emoji">{sourceGame.emoji || '🎮'}</Text>
-            </View>
-            <View className="fork-source-card__copy">
-              <Text className="fork-source-card__title">{sourceGame.title || '未命名游戏'}</Text>
-              <Text className="fork-source-card__meta">{authorName}</Text>
-              {sourceGame.description ? (
-                <Text className="fork-source-card__desc">{sourceGame.description}</Text>
-              ) : null}
-            </View>
-          </View>
-
-          <View className="fork-stat-grid">
-            {statItems.map((item) => (
-              <View key={item.label} className="fork-stat-item">
-                <Text className="fork-stat-item__value">{item.value}</Text>
-                <Text className="fork-stat-item__label">{item.label}</Text>
-              </View>
-            ))}
-          </View>
-
-          <View className="fork-guide-card">
-            <Text className="fork-guide-card__title">这次复刻会怎么进行？</Text>
-            <Text className="fork-guide-card__text">1. 先基于原作品整理一版复刻方向</Text>
-            <Text className="fork-guide-card__text">2. 系统只追问最关键的差异化细节</Text>
-            <Text className="fork-guide-card__text">3. 你确认后会直接生成新的创作版本</Text>
-          </View>
-
           {!canForkGame ? (
             <View className="fork-warning-card">
               <Text className="fork-warning-card__text">
-                {isOwnGame ? '这是你自己的作品，直接去优化即可。' : '作者未开放复刻权限，当前不能复刻这款作品。'}
+                {isOwnGame ? '这是你自己的作品，直接去优化会更合适。' : '作者暂未开放复刻权限，目前还不能基于这款作品生成新版本。'}
               </Text>
             </View>
           ) : null}
@@ -500,6 +471,36 @@ export default function GameForkPage() {
               ) : null}
             </>
           )}
+
+          <View className="fork-source-card">
+            <View className="fork-source-card__preview">
+              <Text className="fork-source-card__emoji">{sourceGame.emoji || '🎮'}</Text>
+            </View>
+            <View className="fork-source-card__copy">
+              <Text className="fork-source-card__eyebrow">原作品参考</Text>
+              <Text className="fork-source-card__title">{sourceGame.title || '未命名游戏'}</Text>
+              <Text className="fork-source-card__meta">{authorName}</Text>
+              {sourceGame.description ? (
+                <Text className="fork-source-card__desc">{sourceGame.description}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View className="fork-stat-grid">
+            {statItems.map((item) => (
+              <View key={item.label} className="fork-stat-item">
+                <Text className="fork-stat-item__value">{item.value}</Text>
+                <Text className="fork-stat-item__label">{item.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View className="fork-guide-card">
+            <Text className="fork-guide-card__title">你可以这样描述</Text>
+            <Text className="fork-guide-card__text">保留哪些核心玩法或节奏感</Text>
+            <Text className="fork-guide-card__text">想换成什么题材、角色或视觉风格</Text>
+            <Text className="fork-guide-card__text">希望它和原作拉开多大差异</Text>
+          </View>
         </View>
 
         <View style={{ height: '80px' }} />
