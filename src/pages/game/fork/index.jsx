@@ -5,9 +5,14 @@ import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
+import { PipelineOrbit } from '../../../components/common/PipelineOrbit';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import * as gameService from '../../../services/game';
-import { useGameStore } from '../../../store/gameStore';
+import {
+  PIPELINE_STAGES,
+  isCompletedGameStatus,
+  useGameStore,
+} from '../../../store/gameStore';
 import {
   LOGIN_PAGE_URL,
   buildForkPageUrl,
@@ -18,6 +23,11 @@ import {
 import { Storage } from '../../../utils/storage';
 import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
+import {
+  CreationSessionScene,
+  buildCreationSessionActions,
+  buildCreationSessionSceneProps,
+} from '../../../components/creation';
 import './index.scss';
 
 function formatNumber(num) {
@@ -37,15 +47,41 @@ function getAuthorName(game) {
     || '创作者';
 }
 
+const TASK_STATUS_LABELS = {
+  queued: '排队中',
+  submitted: '执行中',
+  running: '执行中',
+  succeeded: '已完成',
+  failed: '失败',
+  canceled: '已取消',
+  timed_out: '超时',
+};
+
 export default function GameForkPage() {
   const route = useRoute();
   const sourceGameId = route?.params?.sourceGameId || '';
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const isH5 = isH5Runtime();
-  const { setCurrentGame } = useGameStore();
+  const {
+    cancelCurrentTask,
+    currentGame,
+    currentTask,
+    isGenerating,
+    generationProgress,
+    creationSession,
+    creationSessionError,
+    creationSessionSubmitting,
+    restoreActiveCreationSession,
+    startCreationSession,
+    answerCreationSessionQuestion,
+    skipCreationSessionQuestion,
+    generateFromCreationSession,
+    resetCreationSessionState,
+  } = useGameStore();
   const [sourceGame, setSourceGame] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forkAnswer, setForkAnswer] = useState('');
   const [pageError, setPageError] = useState('');
   const currentUser = Storage.getUser() || {};
   const currentUserId = currentUser?.id || '';
@@ -109,6 +145,41 @@ export default function GameForkPage() {
     { label: '点赞', value: formatNumber(sourceGame?.likes) },
     { label: '复刻', value: formatNumber(sourceGame?.forks) },
   ]), [sourceGame?.forks, sourceGame?.likes, sourceGame?.plays]);
+  const isCurrentForkSession = Boolean(
+    creationSession
+    && creationSession.entryMode === 'fork'
+    && String(creationSession.sourceGameId || '') === String(sourceGameId)
+  );
+  const isCurrentForkGenerating = Boolean(
+    isGenerating
+    && isCurrentForkSession
+    && (creationSession?.status === 'generating' || currentTask?.taskId)
+  );
+  const isCurrentForkCompleted = Boolean(
+    isCurrentForkSession
+    && currentGame
+    && String(currentGame?.id || '') !== String(sourceGameId)
+    && String(creationSession?.gameId || currentGame?.id || '') === String(currentGame?.id || '')
+    && isCompletedGameStatus(currentGame?.status)
+  );
+
+  useEffect(() => {
+    if (!sourceGameId || !sourceGame || isLoading) {
+      return;
+    }
+
+    if (isCurrentForkSession) {
+      return;
+    }
+
+    restoreActiveCreationSession({ silentIfMissing: true }).catch(() => {});
+  }, [
+    isCurrentForkSession,
+    isLoading,
+    restoreActiveCreationSession,
+    sourceGame,
+    sourceGameId,
+  ]);
 
   const handleFork = async () => {
     if (!sourceGameId) {
@@ -129,45 +200,104 @@ export default function GameForkPage() {
     setIsSubmitting(true);
 
     try {
-      const newGameId = await gameService.forkGame(sourceGameId);
-      let forkedGame = null;
-
-      try {
-        forkedGame = await gameService.getGame(newGameId);
-      } catch (_error) {
-        const fallbackAuthorName = currentUser?.displayName
-          || currentUser?.nickname
-          || currentUser?.username
-          || '我';
-
-        forkedGame = {
-          ...(sourceGame || {}),
-          id: newGameId,
-          status: 'draft',
-          title: sourceGame?.title || '未命名游戏',
-          description: sourceGame?.description || '',
-          author: {
-            ...(typeof sourceGame?.author === 'object' ? sourceGame.author : {}),
-            id: currentUserId || sourceGame?.author?.id || sourceGame?.authorId || '',
-            username: fallbackAuthorName,
-            displayName: fallbackAuthorName,
-          },
-          authorId: currentUserId || sourceGame?.authorId || '',
-          viewerHasLiked: false,
-          viewerHasBookmarked: false,
-        };
-      }
-
-      setCurrentGame(forkedGame);
-      Taro.showToast({ title: '已加入我的创作', icon: 'success' });
-      setTimeout(() => {
-        openIteratePageWithAuth(forkedGame, newGameId);
-      }, 220);
+      await startCreationSession(
+        sourceGame?.description || `基于《${sourceGame?.title || '当前作品'}》继续创作`,
+        sourceGame?.title || '',
+        {
+          entryMode: 'fork',
+          sourceGameId,
+          orientation: sourceGame?.orientation || 'portrait',
+          generationTier: 'standard',
+        }
+      );
+      setForkAnswer('');
     } catch (error) {
-      Taro.showToast({ title: error?.message || '复刻失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '创建复刻会话失败，请重试', icon: 'none' });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmitForkAnswer = async () => {
+    if (!forkAnswer.trim()) {
+      Taro.showToast({ title: '请先补充你想修改的方向', icon: 'none' });
+      return;
+    }
+
+    try {
+      await answerCreationSessionQuestion(forkAnswer.trim());
+      setForkAnswer('');
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '提交回答失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleSkipForkQuestion = async () => {
+    try {
+      await skipCreationSessionQuestion();
+      setForkAnswer('');
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '跳过问题失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleGenerateFork = async () => {
+    try {
+      await generateFromCreationSession({
+        orientation: sourceGame?.orientation || 'portrait',
+        generationTier: creationSession?.generationTier || 'standard',
+      });
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleRestartForkSession = async () => {
+    if (!sourceGameId) {
+      return;
+    }
+
+    resetCreationSessionState();
+    setForkAnswer('');
+
+    try {
+      await startCreationSession(
+        sourceGame?.description || `基于《${sourceGame?.title || '当前作品'}》继续创作`,
+        sourceGame?.title || '',
+        {
+          entryMode: 'fork',
+          sourceGameId,
+          orientation: sourceGame?.orientation || 'portrait',
+          generationTier: 'standard',
+        }
+      );
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '重新开始复刻会话失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleCancelTask = () => {
+    if (!currentTask?.taskId) {
+      return;
+    }
+
+    Taro.showModal({
+      title: '取消复刻任务',
+      content: '确认取消当前复刻任务吗？已经生成的结果不会继续更新。',
+      confirmColor: '#ff5c8a',
+      success: async (res) => {
+        if (!res.confirm) {
+          return;
+        }
+
+        try {
+          await cancelCurrentTask();
+          Taro.showToast({ title: '任务已取消', icon: 'success' });
+        } catch (err) {
+          Taro.showToast({ title: err?.message || '取消失败，请重试', icon: 'none' });
+        }
+      },
+    });
   };
 
   if (isLoading) {
@@ -203,12 +333,92 @@ export default function GameForkPage() {
     );
   }
 
+  if (isCurrentForkGenerating) {
+    const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
+    const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
+    const currentStageLabel = progress.stageLabel || '正在生成复刻作品';
+
+    return (
+      <View className={containerClassName}>
+        <AppTopBar showBack />
+        <View className="fork-hero">
+          <Text className="fork-hero__title">AI 正在生成复刻作品</Text>
+          <Text className="fork-hero__subtitle">系统正在根据你的调整方向生成新版本，请稍候</Text>
+        </View>
+
+        <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
+          <View className="fork-panel">
+            <PipelineOrbit
+              stages={PIPELINE_STAGES}
+              currentIndex={progress.stageIndex}
+              progressPct={progress.pct}
+              title="复刻进度"
+              stageLabel={currentStageLabel}
+              statusLabel={taskStatusLabel}
+              modeLabel="复刻流程"
+              coreLabel="AI 复刻"
+            />
+
+            {currentTask?.taskId ? (
+              <View className="fork-actions">
+                <View className="fork-submit-btn" onClick={handleCancelTask}>
+                  <Text>取消任务</Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+        </PageScrollContainer>
+
+        <GlobalGamePlayer />
+        <PaywallPopup />
+      </View>
+    );
+  }
+
+  if (isCurrentForkCompleted) {
+    return (
+      <View className={containerClassName}>
+        <AppTopBar showBack />
+        <View className="fork-hero">
+          <Text className="fork-hero__title">复刻完成</Text>
+          <Text className="fork-hero__subtitle">新的创作版本已经准备好了，你可以继续优化它。</Text>
+        </View>
+
+        <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
+          <View className="fork-panel">
+            <View className="fork-source-card">
+              <View className="fork-source-card__preview">
+                <Text className="fork-source-card__emoji">{currentGame?.emoji || '🎮'}</Text>
+              </View>
+              <View className="fork-source-card__copy">
+                <Text className="fork-source-card__title">{currentGame?.title || '未命名游戏'}</Text>
+                <Text className="fork-source-card__meta">已加入我的创作</Text>
+                {currentGame?.description ? (
+                  <Text className="fork-source-card__desc">{currentGame.description}</Text>
+                ) : null}
+              </View>
+            </View>
+
+            <View className="fork-actions">
+              <View className="fork-submit-btn" onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}>
+                <Text>继续优化这版作品</Text>
+              </View>
+            </View>
+          </View>
+        </PageScrollContainer>
+
+        <GlobalGamePlayer />
+        <PaywallPopup />
+      </View>
+    );
+  }
+
   return (
     <View className={containerClassName}>
       <AppTopBar showBack />
       <View className="fork-hero">
         <Text className="fork-hero__title">复刻这款游戏</Text>
-        <Text className="fork-hero__subtitle">先将当前版本加入你的创作，再进入专属优化页面继续完善</Text>
+        <Text className="fork-hero__subtitle">先确认复刻方案，再决定继续补充还是直接生成新的创作版本</Text>
       </View>
 
       <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
@@ -237,9 +447,9 @@ export default function GameForkPage() {
 
           <View className="fork-guide-card">
             <Text className="fork-guide-card__title">复刻后会发生什么？</Text>
-            <Text className="fork-guide-card__text">1. 将当前版本加入你的创作</Text>
-            <Text className="fork-guide-card__text">2. 自动进入专属优化页面</Text>
-            <Text className="fork-guide-card__text">3. 再由你提交优化想法继续创作</Text>
+            <Text className="fork-guide-card__text">1. 先基于原作品生成一份复刻方案草案</Text>
+            <Text className="fork-guide-card__text">2. 系统只追问最关键的差异化问题</Text>
+            <Text className="fork-guide-card__text">3. 你确认后会直接生成新的创作版本</Text>
           </View>
 
           {!canForkGame ? (
@@ -250,14 +460,43 @@ export default function GameForkPage() {
             </View>
           ) : null}
 
-          <View className="fork-actions">
-            <View
-              className={`fork-submit-btn ${(!canForkGame || isSubmitting) ? 'disabled' : ''}`}
-              onClick={(!canForkGame || isSubmitting) ? undefined : handleFork}
-            >
-              <Text>{isSubmitting ? '复刻中...' : '立即复刻'}</Text>
+          {isCurrentForkSession ? (
+            <CreationSessionScene
+              {...buildCreationSessionSceneProps({
+                entryMode: 'fork',
+                session: creationSession,
+                answerValue: forkAnswer,
+                onAnswerChange: (e) => setForkAnswer(e?.detail?.value || ''),
+                answerPlaceholder: creationSession?.currentQuestion?.placeholder,
+                answerSuggestions: creationSession?.currentQuestion?.options || [],
+                submitting: creationSessionSubmitting,
+                actions: buildCreationSessionActions({
+                  submitting: creationSessionSubmitting,
+                  answerValue: forkAnswer,
+                  generateLabel: '直接开始复刻',
+                  onSubmit: handleSubmitForkAnswer,
+                  onSkip: handleSkipForkQuestion,
+                  onGenerate: handleGenerateFork,
+                  onRestart: handleRestartForkSession,
+                }),
+                errorMessage: creationSessionError,
+              })}
+            />
+          ) : (
+            <View className="fork-actions">
+              {!creationSession && creationSessionError ? (
+                <View className="fork-warning-card">
+                  <Text className="fork-warning-card__text">{creationSessionError}</Text>
+                </View>
+              ) : null}
+              <View
+                className={`fork-submit-btn ${(!canForkGame || isSubmitting) ? 'disabled' : ''}`}
+                onClick={(!canForkGame || isSubmitting) ? undefined : handleFork}
+              >
+                <Text>{isSubmitting ? '准备中...' : '开始复刻会话'}</Text>
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         <View style={{ height: '80px' }} />

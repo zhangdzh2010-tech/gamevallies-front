@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Textarea, Input } from '@tarojs/components';
+import { View, Text, Textarea, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
@@ -29,6 +29,11 @@ import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
+import {
+  CreationSessionScene,
+  buildCreationSessionActions,
+  buildCreationSessionSceneProps,
+} from '../../components/creation';
 import './index.scss';
 
 const EXAMPLE_PROMPTS = [
@@ -51,6 +56,22 @@ const ORIENTATION_OPTIONS = [
   { value: 'portrait', label: '竖屏' },
   { value: 'landscape', label: '横屏' },
 ];
+
+const GENERATION_TIER_OPTIONS = [
+  { value: 'safe', label: '安全生成', description: '更稳，生成更快，适合快速出稿' },
+  { value: 'standard', label: '标准生成', description: '平衡稳定性和丰富度' },
+  { value: 'showcase', label: '精品生成', description: '更有层次和风格，耗时更长' },
+];
+
+const CREATION_SESSION_STATUS_LABELS = {
+  collecting: '继续补充',
+  ready: '可以生成',
+  generating: '生成中',
+  completed: '已完成',
+  abandoned: '已结束',
+  expired: '已过期',
+  failed: '会话异常',
+};
 
 function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
@@ -77,7 +98,6 @@ export default function Create() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
   const {
-    createGame,
     restorePersistedTask,
     cancelCurrentTask,
     isGenerating,
@@ -88,6 +108,16 @@ export default function Create() {
     terminalError,
     clearError,
     canPlay,
+    creationSession,
+    creationSessionError,
+    creationSessionSubmitting,
+    getCreationFlowStage,
+    restoreActiveCreationSession,
+    startCreationSession,
+    answerCreationSessionQuestion,
+    skipCreationSessionQuestion,
+    generateFromCreationSession,
+    resetCreationSessionState,
     createEntryIntent,
     consumeCreateEntryIntent,
     resetCreateSession,
@@ -99,6 +129,8 @@ export default function Create() {
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [orientation, setOrientation] = useState('portrait');
+  const [generationTier, setGenerationTier] = useState('standard');
+  const [sessionAnswer, setSessionAnswer] = useState('');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
   const { windowHeight = 720 } = getSafeSystemInfo();
@@ -156,6 +188,7 @@ export default function Create() {
 
     const activeTaskSnapshot = getPersistedGenerationTaskSnapshot();
     if (!activeTaskSnapshot?.taskId || activeTaskSnapshot?.taskType === 'pipeline_iterate') {
+      restoreActiveCreationSession({ silentIfMissing: true }).catch(() => {});
       return;
     }
 
@@ -175,6 +208,8 @@ export default function Create() {
     setPrompt('');
     setGameName('');
     setOrientation('portrait');
+    setGenerationTier('standard');
+    setSessionAnswer('');
   };
 
   useEffect(() => {
@@ -190,6 +225,7 @@ export default function Create() {
       resetLocalCreateState();
       clearError();
       resetCreateSession({ clearPersistedTask: mode === 'fresh' });
+      resetCreationSessionState();
 
       if (mode === 'resume' && gameId) {
         if (!cancelled) {
@@ -278,6 +314,7 @@ export default function Create() {
     consumeCreateEntryIntent,
     createEntryIntent,
     currentGame?.id,
+    resetCreationSessionState,
     resetCreateSession,
     restorePersistedTask,
     setCurrentGame,
@@ -312,26 +349,62 @@ export default function Create() {
     setPrompt(text);
   };
 
-  // Step 1: submit prompt, then enter clarification flow or create directly
+  const handleSessionAnswerInput = (event) => {
+    setSessionAnswer(event?.detail?.value || '');
+  };
+
+  const handleSubmitSessionAnswer = async () => {
+    if (!sessionAnswer.trim()) {
+      Taro.showToast({ title: '先写下这轮补充内容', icon: 'none' });
+      return;
+    }
+
+    try {
+      await answerCreationSessionQuestion(sessionAnswer.trim());
+      setSessionAnswer('');
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '提交回答失败，请稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleSkipSessionQuestion = async () => {
+    try {
+      await skipCreationSessionQuestion();
+      setSessionAnswer('');
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '跳过问题失败，请稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleGenerateFromSession = async () => {
+    try {
+      await generateFromCreationSession({
+        orientation,
+        generationTier,
+      });
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!prompt.trim() || prompt.trim().length < 5) {
       Taro.showToast({ title: '请输入游戏描述', icon: 'none' });
       return;
     }
-    clearError();
-    await doCreate(prompt.trim(), gameName, orientation);
-  };
 
-  async function doCreate(description, name, nextOrientation) {
-    const title = (name || gameName).trim(); // Empty title lets the backend generate one.
+    clearError();
     try {
-      await createGame(description, title, {
-        orientation: nextOrientation || orientation,
+      await startCreationSession(prompt.trim(), gameName.trim(), {
+        entryMode: 'create',
+        orientation,
+        generationTier,
       });
+      setSessionAnswer('');
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
+      Taro.showToast({ title: err?.message || '创建创作会话失败，请稍后重试', icon: 'none' });
     }
-  }
+  };
 
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
@@ -357,6 +430,7 @@ export default function Create() {
 
   const handleNewGame = () => {
     resetCreateSession();
+    resetCreationSessionState();
     resetLocalCreateState();
   };
 
@@ -460,7 +534,12 @@ export default function Create() {
   }
 
   // Completion view
-  if (currentGame && !isGenerating && isCompletedGameStatus(currentGame?.status)) {
+  if (
+    currentGame
+    && !creationSession
+    && !isGenerating
+    && isCompletedGameStatus(currentGame?.status)
+  ) {
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
@@ -523,6 +602,49 @@ export default function Create() {
         <CustomTabBar activeIndex={2} />
         <GlobalGamePlayer />
         <PaywallPopup />
+      </View>
+    );
+  }
+
+  const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
+
+  if (
+    creationSession?.entryMode === 'create'
+    && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage)
+  ) {
+    const statusValue = CREATION_SESSION_STATUS_LABELS[creationSession?.status] || '创作会话';
+    const sessionActions = buildCreationSessionActions({
+      submitting: creationSessionSubmitting,
+      answerValue: sessionAnswer,
+      generateLabel: '直接开始创作',
+      onSubmit: handleSubmitSessionAnswer,
+      onSkip: handleSkipSessionQuestion,
+      onGenerate: handleGenerateFromSession,
+      onRestart: handleNewGame,
+    });
+
+    return (
+      <View className={containerClassName}>
+        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
+        <PageScrollContainer className="create-scroll">
+          <CreationSessionScene
+            {...buildCreationSessionSceneProps({
+              entryMode: 'create',
+              session: creationSession,
+              statusValue,
+              answerValue: sessionAnswer,
+              onAnswerChange: handleSessionAnswerInput,
+              answerPlaceholder: creationSession?.currentQuestion?.placeholder,
+              answerSuggestions: creationSession?.currentQuestion?.options || [],
+              submitting: creationSessionSubmitting,
+              actions: sessionActions,
+              errorMessage: creationSessionError,
+            })}
+          />
+          <View className="bottom-spacer" />
+        </PageScrollContainer>
+
+        <CustomTabBar activeIndex={2} />
       </View>
     );
   }
@@ -590,12 +712,38 @@ export default function Create() {
             <Text className="input-count">{prompt.length}/2000</Text>
           </View>
 
+          <View className="form-group">
+            <Text className="form-label">生成档位</Text>
+            <View className="tier-grid">
+              {GENERATION_TIER_OPTIONS.map((option) => {
+                const isActive = generationTier === option.value;
+                return (
+                  <View
+                    key={option.value}
+                    className={`tier-card${isActive ? ' is-active' : ''}`}
+                    onClick={() => setGenerationTier(option.value)}
+                  >
+                    <Text className="tier-card__title">{option.label}</Text>
+                    <Text className="tier-card__desc">{option.description}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
           {error && (
             <View className="error-banner">
               <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
               <Text className="error-dismiss" onClick={clearError}>×</Text>
             </View>
           )}
+
+          {!creationSession && creationSessionError ? (
+            <View className="error-banner">
+              <Text className="error-text">{creationSessionError}</Text>
+              <Text className="error-dismiss" onClick={clearError}>×</Text>
+            </View>
+          ) : null}
 
           <View className="form-actions">
             <View className="submit-btn" onClick={handleSubmit}>
@@ -619,8 +767,9 @@ export default function Create() {
         <View className="tips-section">
           <Text className="tips-title">创作流程</Text>
           <View className="tip-item"><Text className="tip-text">1. 描述你的游戏想法（可以很简短）</Text></View>
-          <View className="tip-item"><Text className="tip-text">2. 提交后会直接进入 AI 创作任务</Text></View>
-          <View className="tip-item"><Text className="tip-text">3. 生成完成后即可在“我的作品”继续编辑或试玩</Text></View>
+          <View className="tip-item"><Text className="tip-text">2. 系统会先整理方案草案，再追问 1 个最关键的问题</Text></View>
+          <View className="tip-item"><Text className="tip-text">3. 你可以继续补充、跳过，或直接开始创作</Text></View>
+          <View className="tip-item"><Text className="tip-text">4. 生成完成后即可在“我的作品”继续编辑或试玩</Text></View>
         </View>
 
         <View className="bottom-spacer" />
@@ -630,6 +779,3 @@ export default function Create() {
     </View>
   );
 }
-
-
-

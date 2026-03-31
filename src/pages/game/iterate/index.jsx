@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Textarea } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
@@ -29,6 +29,11 @@ import { getGameOrientation } from '../../../utils/gameOrientation';
 import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
+import {
+  CreationSessionScene,
+  buildCreationSessionActions,
+  buildCreationSessionSceneProps,
+} from '../../../components/creation';
 import './index.scss';
 
 const TASK_STATUS_LABELS = {
@@ -121,6 +126,16 @@ export default function GameIteratePage() {
     terminalError,
     clearError,
     canPlay,
+    creationSession,
+    creationSessionError,
+    creationSessionSubmitting,
+    getCreationFlowStage,
+    restoreActiveCreationSession,
+    startCreationSession,
+    answerCreationSessionQuestion,
+    skipCreationSessionQuestion,
+    generateFromCreationSession,
+    resetCreationSessionState,
     setCurrentGame,
   } = useGameStore();
   const openGame = useGamePlayerStore((s) => s.openGame);
@@ -130,6 +145,7 @@ export default function GameIteratePage() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pageError, setPageError] = useState('');
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
+  const iterateSessionBootstrappedGameIdRef = useRef('');
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
@@ -141,6 +157,7 @@ export default function GameIteratePage() {
     && activeIterateTask
     && (!gameId || !activeIterateTask.gameId || String(activeIterateTask.gameId) === String(gameId))
   );
+  const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -250,6 +267,67 @@ export default function GameIteratePage() {
     currentGame?.status,
     gameId,
     isIterateTaskActive,
+  ]);
+
+  useEffect(() => {
+    const currentCompletedGameId = String(currentGame?.id || '');
+    if (
+      !currentCompletedGameId
+      || isBootstrapping
+      || taskId
+      || isIterateTaskActive
+      || !isCompletedGameStatus(currentGame?.status)
+    ) {
+      return;
+    }
+
+    const matchesCurrentIterateSession = creationSession
+      && creationSession.entryMode === 'iterate'
+      && String(creationSession.sourceGameId || '') === currentCompletedGameId;
+
+    if (matchesCurrentIterateSession) {
+      iterateSessionBootstrappedGameIdRef.current = currentCompletedGameId;
+      return;
+    }
+
+    if (iterateSessionBootstrappedGameIdRef.current === currentCompletedGameId) {
+      return;
+    }
+
+    iterateSessionBootstrappedGameIdRef.current = currentCompletedGameId;
+
+    const bootstrapPrompt = currentGame?.description
+      || `继续优化《${currentGame?.title || '当前作品'}》`;
+
+    restoreActiveCreationSession({ silentIfMissing: true })
+      .then((restoredSession) => {
+        const restoredMatches = restoredSession
+          && restoredSession.entryMode === 'iterate'
+          && String(restoredSession.sourceGameId || '') === currentCompletedGameId;
+
+        if (restoredMatches) {
+          return restoredSession;
+        }
+
+        return startCreationSession(bootstrapPrompt, currentGame?.title || '', {
+          entryMode: 'iterate',
+          sourceGameId: currentCompletedGameId,
+          orientation: getGameOrientation(currentGame),
+          generationTier: 'standard',
+        });
+      })
+      .catch((err) => {
+        setPageError(err?.message || '初始化优化会话失败，请稍后重试');
+        iterateSessionBootstrappedGameIdRef.current = '';
+      });
+  }, [
+    creationSession,
+    currentGame,
+    isBootstrapping,
+    isIterateTaskActive,
+    restoreActiveCreationSession,
+    startCreationSession,
+    taskId,
   ]);
 
   const taskMetadata = useMemo(() => {
@@ -379,6 +457,65 @@ export default function GameIteratePage() {
       Taro.showToast({ title: getUserFacingIterateError(err?.message), icon: 'none' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitSessionAnswer = async () => {
+    if (!iterateFeedback.trim()) {
+      Taro.showToast({ title: '请输入本轮优化说明', icon: 'none' });
+      return;
+    }
+
+    try {
+      await answerCreationSessionQuestion(iterateFeedback.trim());
+      setIterateFeedback('');
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '提交回答失败，请稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleSkipSessionQuestion = async () => {
+    try {
+      await skipCreationSessionQuestion();
+      setIterateFeedback('');
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '跳过问题失败，请稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleGenerateFromSession = async () => {
+    try {
+      await generateFromCreationSession({
+        orientation: getGameOrientation(currentGame),
+        generationTier: creationSession?.generationTier || 'standard',
+      });
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleRestartIterateSession = async () => {
+    if (!currentGame?.id) {
+      return;
+    }
+
+    resetCreationSessionState();
+    iterateSessionBootstrappedGameIdRef.current = '';
+    setIterateFeedback('');
+
+    try {
+      await startCreationSession(
+        currentGame?.description || `继续优化《${currentGame?.title || '当前作品'}》`,
+        currentGame?.title || '',
+        {
+          entryMode: 'iterate',
+          sourceGameId: currentGame.id,
+          orientation: getGameOrientation(currentGame),
+          generationTier: 'standard',
+        }
+      );
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '重新开始优化会话失败', icon: 'none' });
     }
   };
 
@@ -544,24 +681,55 @@ export default function GameIteratePage() {
             </View>
           </View>
 
-          <Text className="iterate-section-title">这次想改什么？</Text>
-          <Text className="iterate-hint">描述你想优化的点，越具体越容易得到你想要的结果</Text>
-          <Textarea
-            className="iterate-textarea"
-            placeholder="例如：保留现有玩法，把速度再调快一点；角色改成像素风；加入二段跳和音效反馈..."
-            placeholderStyle="color: #55516e"
-            value={iterateFeedback}
-            onInput={(e) => setIterateFeedback(e.detail.value)}
-            maxlength={500}
-            autoHeight
-          />
-          <Text className="iterate-count">{iterateFeedback.length}/500</Text>
-          <View
-            className={`iterate-submit-btn ${isSubmitting ? 'disabled' : ''}`}
-            onClick={isSubmitting ? undefined : handleSubmit}
-          >
-            <Text>{isSubmitting ? '提交中...' : '提交优化'}</Text>
-          </View>
+          {creationSession?.entryMode === 'iterate' && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage) ? (
+            <CreationSessionScene
+              {...buildCreationSessionSceneProps({
+                entryMode: 'iterate',
+                session: creationSession,
+                answerValue: iterateFeedback,
+                onAnswerChange: (e) => setIterateFeedback(e?.detail?.value || ''),
+                answerPlaceholder: creationSession?.currentQuestion?.placeholder,
+                answerSuggestions: creationSession?.currentQuestion?.options || [],
+                submitting: creationSessionSubmitting,
+                actions: buildCreationSessionActions({
+                  submitting: creationSessionSubmitting,
+                  answerValue: iterateFeedback,
+                  generateLabel: '直接开始优化',
+                  onSubmit: handleSubmitSessionAnswer,
+                  onSkip: handleSkipSessionQuestion,
+                  onGenerate: handleGenerateFromSession,
+                  onRestart: handleRestartIterateSession,
+                }),
+                errorMessage: creationSessionError,
+              })}
+            />
+          ) : (
+            <>
+              {!creationSession && creationSessionError ? (
+                <View className="iterate-error-banner">
+                  <Text className="iterate-error-banner__text">{creationSessionError}</Text>
+                </View>
+              ) : null}
+              <Text className="iterate-section-title">这次想改什么？</Text>
+              <Text className="iterate-hint">会话暂时不可用时，你仍然可以走旧的兜底优化链路。</Text>
+              <Textarea
+                className="iterate-textarea"
+                placeholder="例如：保留现有玩法，把速度再调快一点；角色改成像素风；加入二段跳和音效反馈..."
+                placeholderStyle="color: #55516e"
+                value={iterateFeedback}
+                onInput={(e) => setIterateFeedback(e.detail.value)}
+                maxlength={500}
+                autoHeight
+              />
+              <Text className="iterate-count">{iterateFeedback.length}/500</Text>
+              <View
+                className={`iterate-submit-btn ${isSubmitting ? 'disabled' : ''}`}
+                onClick={isSubmitting ? undefined : handleSubmit}
+              >
+                <Text>{isSubmitting ? '提交中...' : '提交优化'}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={{ height: '80px' }} />
