@@ -677,7 +677,7 @@ export default function Create() {
                   <View className="creation-session-card__header">
                     <View>
                       <Text className="creation-session-card__title">本轮创作设置</Text>
-                      <Text className="creation-session-card__hint">这些设置会随着首轮创意一起提交，不再先走旧表单。</Text>
+                      <Text className="creation-session-card__hint">先补充几个基础设置，AI 会一起理解你的创作方向。</Text>
                     </View>
                   </View>
                   <View className="form-section">
