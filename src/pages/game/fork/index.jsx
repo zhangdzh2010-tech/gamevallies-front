@@ -418,7 +418,7 @@ export default function GameForkPage() {
       <AppTopBar showBack />
       <View className="fork-hero">
         <Text className="fork-hero__title">复刻这款游戏</Text>
-        <Text className="fork-hero__subtitle">先确认复刻方案，再决定继续补充还是直接生成新的创作版本</Text>
+        <Text className="fork-hero__subtitle">先确认你想保留和改变的部分，再生成新的创作版本</Text>
       </View>
 
       <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
@@ -446,9 +446,9 @@ export default function GameForkPage() {
           </View>
 
           <View className="fork-guide-card">
-            <Text className="fork-guide-card__title">复刻后会发生什么？</Text>
-            <Text className="fork-guide-card__text">1. 先基于原作品生成一份复刻方案草案</Text>
-            <Text className="fork-guide-card__text">2. 系统只追问最关键的差异化问题</Text>
+            <Text className="fork-guide-card__title">这次复刻会怎么进行？</Text>
+            <Text className="fork-guide-card__text">1. 先基于原作品整理一版复刻方向</Text>
+            <Text className="fork-guide-card__text">2. 系统只追问最关键的差异化细节</Text>
             <Text className="fork-guide-card__text">3. 你确认后会直接生成新的创作版本</Text>
           </View>
 
@@ -493,8 +493,8 @@ export default function GameForkPage() {
                 <View className="fork-warning-card">
                   <Text className="fork-warning-card__text">
                     {creationSessionSubmitting
-                      ? '正在为这款作品建立动态复刻会话...'
-                      : '正在准备动态复刻会话，请稍候。'}
+                      ? '正在整理这次复刻方向，请稍候...'
+                      : '正在准备复刻会话，请稍候。'}
                   </Text>
                 </View>
               ) : null}
