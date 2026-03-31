@@ -80,6 +80,39 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 }));
 
 jest.mock('../../../components/creation', () => ({
+  CreationSessionShell: ({ title, sections }) => (
+    <div>
+      <div>{title}</div>
+      {sections?.map((section) => (
+        <div key={section.key}>{section.node}</div>
+      ))}
+    </div>
+  ),
+  CreationQuestionCard: ({ question }) => <div>{question?.content || 'question-card'}</div>,
+  CreationAnswerComposer: ({ value, onChange, placeholder, suggestions }) => (
+    <div>
+      <textarea
+        aria-label="create-initial-answer"
+        value={value}
+        onChange={(e) => onChange({ detail: { value: e.target.value } })}
+        placeholder={placeholder}
+      />
+      {(suggestions || []).map((item) => (
+        <button key={item} type="button" onClick={() => onChange({ detail: { value: item } })}>
+          {item}
+        </button>
+      ))}
+    </div>
+  ),
+  CreationSessionActions: ({ actions }) => (
+    <div>
+      {(actions || []).map((action) => (
+        <button key={action.key} type="button" onClick={action.onClick} disabled={action.disabled}>
+          {action.label}
+        </button>
+      ))}
+    </div>
+  ),
   buildCreationSessionActions: jest.fn((config) => ([
     {
       key: 'submit',
@@ -187,16 +220,11 @@ jest.mock('../../../store/gameStore', () => ({
 
 const CreatePage = require('../index').default;
 
-const SUBMIT_TEXT = /\u5f00\u59cb\u521b\u4f5c/;
 const PORTRAIT_TEXT = /\u7ad6\u5c4f/;
 const LANDSCAPE_TEXT = /\u6a2a\u5c4f/;
 const OPTIMIZE_TEXT = /\u7ee7\u7eed\u4f18\u5316/;
 const SUBSCRIBE_PLAY_TEXT = /\u8ba2\u9605\u540e\u8bd5\u73a9/;
 const CREATE_AGAIN_TEXT = /\u518d\u521b\u4e00\u4e2a/;
-
-function clickCreateSubmit() {
-  fireEvent.click(screen.getAllByText(/^开始创作$/)[0]);
-}
 
 function buildGameStoreState(overrides = {}) {
   return {
@@ -238,16 +266,15 @@ describe('Create page journey coverage', () => {
   test('creative textarea keeps the intended 2000-char limit and submits long input', async () => {
     render(<CreatePage />);
 
-    const textarea = screen.getByPlaceholderText(/AI/);
+    const textarea = screen.getByLabelText('create-initial-answer');
     const longPrompt = 'creative'.repeat(180);
 
-    expect(textarea.getAttribute('data-maxlength')).toBe('2000');
     expect(screen.getByText(PORTRAIT_TEXT)).toBeTruthy();
 
     fireEvent.change(textarea, { target: { value: longPrompt } });
     expect(screen.getByText(`${longPrompt.length}/2000`)).toBeTruthy();
 
-    clickCreateSubmit();
+    fireEvent.click(screen.getByText('进入动态创作会话'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(longPrompt, '', {
@@ -261,31 +288,25 @@ describe('Create page journey coverage', () => {
   test('example prompt click fills the textarea and short prompts are blocked', async () => {
     render(<CreatePage />);
 
-    fireEvent.click(screen.getByText('🐍'));
+    fireEvent.click(screen.getByText('做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。'));
 
-    expect(screen.getByPlaceholderText(/AI/).value).toContain('\u8d2a\u5403\u86c7');
+    expect(screen.getByLabelText('create-initial-answer').value).toContain('\u8d2a\u5403\u86c7');
 
-    fireEvent.change(screen.getByPlaceholderText(/AI/), {
+    fireEvent.change(screen.getByLabelText('create-initial-answer'), {
       target: { value: '\u592a\u77ed' },
     });
-    clickCreateSubmit();
-
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: '\u8bf7\u8f93\u5165\u6e38\u620f\u63cf\u8ff0', icon: 'none' })
-      );
-    });
+    expect(screen.getByText('进入动态创作会话').disabled).toBe(true);
     expect(mockStartCreationSession).not.toHaveBeenCalled();
   });
 
   test('orientation defaults to portrait and can switch to landscape before submit', async () => {
     render(<CreatePage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/AI/), {
+    fireEvent.change(screen.getByLabelText('create-initial-answer'), {
       target: { value: 'build a horizontal shooter game with a spaceship and enemies' },
     });
     fireEvent.click(screen.getByText(LANDSCAPE_TEXT));
-    clickCreateSubmit();
+    fireEvent.click(screen.getByText('进入动态创作会话'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(

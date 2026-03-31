@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Textarea } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
@@ -115,7 +115,6 @@ export default function GameIteratePage() {
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const isH5 = isH5Runtime();
   const {
-    iterateGame,
     restorePersistedTask,
     cancelCurrentTask,
     isGenerating,
@@ -124,7 +123,6 @@ export default function GameIteratePage() {
     currentTask,
     error,
     terminalError,
-    clearError,
     canPlay,
     creationSession,
     creationSessionError,
@@ -141,7 +139,6 @@ export default function GameIteratePage() {
   const openGame = useGamePlayerStore((s) => s.openGame);
   const openPaywall = useQuotaStore((s) => s.openPaywall);
   const [iterateFeedback, setIterateFeedback] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pageError, setPageError] = useState('');
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
@@ -436,30 +433,6 @@ export default function GameIteratePage() {
     });
   };
 
-  const handleSubmit = async () => {
-    if (!iterateFeedback.trim()) {
-      Taro.showToast({ title: '请输入优化说明', icon: 'none' });
-      return;
-    }
-
-    if (!currentGame?.id) {
-      Taro.showToast({ title: '未找到作品信息，请返回重试', icon: 'none' });
-      return;
-    }
-
-    clearError();
-    setIsSubmitting(true);
-
-    try {
-      await iterateGame(currentGame.id, iterateFeedback.trim());
-      setIterateFeedback('');
-    } catch (err) {
-      Taro.showToast({ title: getUserFacingIterateError(err?.message), icon: 'none' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleSubmitSessionAnswer = async () => {
     if (!iterateFeedback.trim()) {
       Taro.showToast({ title: '请输入本轮优化说明', icon: 'none' });
@@ -707,26 +680,15 @@ export default function GameIteratePage() {
             <>
               {!creationSession && creationSessionError ? (
                 <View className="iterate-error-banner">
-                  <Text className="iterate-error-banner__text">{creationSessionError}</Text>
+                  <Text className="iterate-error-banner__text">{getUserFacingIterateError(creationSessionError || pageError)}</Text>
                 </View>
               ) : null}
-              <Text className="iterate-section-title">这次想改什么？</Text>
-              <Text className="iterate-hint">会话暂时不可用时，你仍然可以走旧的兜底优化链路。</Text>
-              <Textarea
-                className="iterate-textarea"
-                placeholder="例如：保留现有玩法，把速度再调快一点；角色改成像素风；加入二段跳和音效反馈..."
-                placeholderStyle="color: #55516e"
-                value={iterateFeedback}
-                onInput={(e) => setIterateFeedback(e.detail.value)}
-                maxlength={500}
-                autoHeight
-              />
-              <Text className="iterate-count">{iterateFeedback.length}/500</Text>
-              <View
-                className={`iterate-submit-btn ${isSubmitting ? 'disabled' : ''}`}
-                onClick={isSubmitting ? undefined : handleSubmit}
-              >
-                <Text>{isSubmitting ? '提交中...' : '提交优化'}</Text>
+              <View className="iterate-error-banner">
+                <Text className="iterate-error-banner__text">
+                  {creationSessionSubmitting
+                    ? '正在为这款作品建立动态优化会话...'
+                    : '正在准备动态优化会话，请稍候。'}
+                </Text>
               </View>
             </>
           )}
