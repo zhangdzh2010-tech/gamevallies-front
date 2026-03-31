@@ -14,8 +14,8 @@ const CREATION_SESSION_MODE_CONFIG = {
   create: {
     layout: 'shell',
     shell: {
-      eyebrow: 'Dynamic Creation Session',
-      title: '先确认创作理解，再交给 AI 开始生成',
+      eyebrow: 'AI Creation Session',
+      title: '先确认创作方向，再交给 AI 开始生成',
       subtitle: '系统会先整理方案草案，并一次只追问一个最值得确认的问题。',
       statusLabel: '当前阶段',
     },
@@ -26,19 +26,27 @@ const CREATION_SESSION_MODE_CONFIG = {
     },
   },
   iterate: {
-    layout: 'panel',
-    className: 'iterate-session-panel',
+    layout: 'shell',
+    shell: {
+      eyebrow: 'AI Optimize Session',
+      title: '先确认这次想怎么优化，再交给 AI 动手',
+      subtitle: '系统会先理解你最想改的部分，再补问 1 个最关键的细节。',
+      statusLabel: '当前阶段',
+    },
     panel: {
-      headerTitle: '动态优化会话',
-      headerHint: '系统会先理解这次想改什么，再只追问最关键的细节。',
       planHint: '这是系统基于当前作品和上下文整理出的优化方案草案。',
       generateLabel: '直接开始优化',
       errorClassName: 'iterate-error-banner',
     },
   },
   fork: {
-    layout: 'panel',
-    className: 'fork-session-panel',
+    layout: 'shell',
+    shell: {
+      eyebrow: 'AI Remix Session',
+      title: '先确认想保留和改变的部分，再生成新版本',
+      subtitle: '系统会先理解你对原作品的改动方向，再决定是否继续追问。',
+      statusLabel: '当前阶段',
+    },
     panel: {
       planHint: '这是系统基于原作品和当前上下文整理出的复刻方案草案。',
       generateLabel: '直接开始复刻',

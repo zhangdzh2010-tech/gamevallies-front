@@ -686,8 +686,8 @@ export default function GameIteratePage() {
               <View className="iterate-error-banner">
                 <Text className="iterate-error-banner__text">
                   {creationSessionSubmitting
-                    ? '正在为这款作品建立动态优化会话...'
-                    : '正在准备动态优化会话，请稍候。'}
+                    ? '正在整理这次优化方向，请稍候...'
+                    : '正在准备优化会话，请稍候。'}
                 </Text>
               </View>
             </>
