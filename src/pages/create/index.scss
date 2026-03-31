@@ -261,6 +261,39 @@
       }
     }
 
+    .tier-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tier-card {
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: #111118;
+      border: 1px solid #252535;
+
+      &.is-active {
+        background: linear-gradient(135deg, rgba(110, 86, 255, 0.16), rgba(45, 212, 168, 0.1));
+        border-color: rgba(110, 86, 255, 0.42);
+      }
+    }
+
+    .tier-card__title {
+      display: block;
+      font-size: 24px;
+      font-weight: 700;
+      color: #eae8f4;
+    }
+
+    .tier-card__desc {
+      display: block;
+      margin-top: 8px;
+      font-size: 20px;
+      line-height: 1.5;
+      color: #8b87a3;
+    }
+
     .form-actions {
       .submit-btn {
         background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
@@ -357,6 +390,21 @@
 
   .bottom-spacer {
     height: calc(220px + env(safe-area-inset-bottom));
+  }
+
+  .create-session-error {
+    padding: 0 24px 12px;
+  }
+
+  .create-session-error__text {
+    display: block;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: rgba(255, 77, 77, 0.12);
+    border: 1px solid rgba(255, 77, 77, 0.24);
+    font-size: 22px;
+    line-height: 1.5;
+    color: #ff8d8d;
   }
 
   // ── Chat clarification UI ──

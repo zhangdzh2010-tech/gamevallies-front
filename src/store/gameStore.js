@@ -264,6 +264,93 @@ function deriveTaskErrorMessage(task) {
   return task.terminalError?.message || '创作失败，请稍后重试';
 }
 
+function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理失败，请稍后重试') {
+  const source = typeof error === 'string'
+    ? error.trim()
+    : error?.message
+      ? String(error.message).trim()
+      : '';
+
+  if (!source) {
+    return fallback;
+  }
+
+  if (/revision|版本冲突|冲突/i.test(source)) {
+    return '当前创作已在其他地方更新，请刷新后继续';
+  }
+
+  if (/expired|过期/i.test(source)) {
+    return '创作会话已过期，请重新开始';
+  }
+
+  if (/abandoned|已结束|已放弃/i.test(source)) {
+    return '当前创作会话已结束，请重新开启';
+  }
+
+  if (/restore|恢复/i.test(source)) {
+    return '恢复创作失败，请手动重新开始';
+  }
+
+  if (/generate|生成/i.test(source)) {
+    return '生成阶段遇到问题，可稍后重试';
+  }
+
+  return source || fallback;
+}
+
+function buildCreationSessionContext(input = {}) {
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
+
+  return {
+    prompt: input.prompt || input.description || '',
+    title: input.title || '',
+    entryMode: input.entryMode || 'create',
+    orientation: input.orientation || 'portrait',
+    generationTier: input.generationTier || 'standard',
+    sourceGameId: input.sourceGameId || '',
+  };
+}
+
+function getCreationFlowStageFromState(state) {
+  if (state.isGenerating) {
+    return 'generating';
+  }
+
+  const sessionStatus = state.creationSession?.status || '';
+
+  if (sessionStatus === 'ready') {
+    return 'ready_to_generate';
+  }
+
+  if (sessionStatus === 'collecting') {
+    return 'collecting';
+  }
+
+  if (sessionStatus === 'expired') {
+    return 'expired';
+  }
+
+  if (sessionStatus === 'abandoned') {
+    return 'abandoned';
+  }
+
+  if (sessionStatus === 'failed') {
+    return 'failed';
+  }
+
+  if (sessionStatus === 'completed') {
+    return 'completed';
+  }
+
+  if (state.currentGame && isCompletedGameStatus(state.currentGame?.status)) {
+    return 'completed';
+  }
+
+  return 'idle';
+}
+
 function normalizeTrackedTaskItem(item) {
   if (!item?.taskId) {
     return null;
@@ -541,6 +628,11 @@ export const useGameStore = create((set, get) => ({
   terminalError: null,
   latestTaskMessage: '',
   canPlay: true,
+  creationSession: null,
+  creationSessionError: null,
+  creationSessionSubmitting: false,
+  creationSessionRestoring: false,
+  creationSessionContext: null,
 
   createGame: async (description, title, options) => {
     clearActiveTaskRuntime();
@@ -556,6 +648,11 @@ export const useGameStore = create((set, get) => ({
       terminalError: null,
       latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
       canPlay: true,
+      creationSession: null,
+      creationSessionError: null,
+      creationSessionSubmitting: false,
+      creationSessionRestoring: false,
+      creationSessionContext: null,
       generationProgress: {
         stageIndex: 0,
         stageKey: DISPLAY_PIPELINE_STAGES[0].key,
@@ -632,6 +729,11 @@ export const useGameStore = create((set, get) => ({
       error: null,
       terminalError: null,
       latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
+      creationSession: null,
+      creationSessionError: null,
+      creationSessionSubmitting: false,
+      creationSessionRestoring: false,
+      creationSessionContext: null,
       generationProgress: {
         stageIndex: 0,
         stageKey: DISPLAY_PIPELINE_STAGES[0].key,
@@ -693,6 +795,320 @@ export const useGameStore = create((set, get) => ({
       throw error;
     }
   },
+
+  startCreationSession: async (prompt, title, options = {}) => {
+    const context = buildCreationSessionContext({
+      prompt,
+      title,
+      ...options,
+    });
+
+    clearActiveTaskRuntime();
+
+    set({
+      currentGame: null,
+      currentTask: null,
+      currentTaskEvents: [],
+      currentTaskCursor: 0,
+      isGenerating: false,
+      generationProgress: null,
+      generatingGameId: null,
+      error: null,
+      terminalError: null,
+      latestTaskMessage: '',
+      creationSession: null,
+      creationSessionError: null,
+      creationSessionSubmitting: true,
+      creationSessionRestoring: false,
+      creationSessionContext: context,
+    });
+
+    try {
+      const session = await gameService.createCreationSession(prompt, title, options);
+
+      set({
+        creationSession: session,
+        creationSessionSubmitting: false,
+        creationSessionError: null,
+      });
+
+      return session;
+    } catch (error) {
+      const message = deriveCreationSessionErrorMessage(error, '创建创作会话失败，请稍后重试');
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  restoreActiveCreationSession: async (options = {}) => {
+    const { silentIfMissing = false } = options;
+
+    set({
+      creationSessionRestoring: true,
+      creationSessionError: null,
+    });
+
+    try {
+      const session = await gameService.getActiveCreationSession();
+
+      set({
+        creationSession: session,
+        creationSessionContext: buildCreationSessionContext({
+          prompt: session?.prompt,
+          title: session?.title,
+          entryMode: session?.entryMode,
+          orientation: session?.orientation,
+          generationTier: session?.generationTier,
+          sourceGameId: session?.sourceGameId,
+        }),
+        creationSessionRestoring: false,
+      });
+
+      if (session?.generationTask?.taskId) {
+        await get()._beginTaskTracking(session.generationTask, {
+          gameId: session.gameId || session.generationTask.gameId,
+          resetEvents: true,
+          preloadGame: true,
+          taskMeta: {
+            gameTitle: session.title || '',
+            promptPreview: session.prompt ? String(session.prompt).slice(0, 80) : '',
+          },
+        });
+      }
+
+      return session;
+    } catch (error) {
+      if (silentIfMissing && (error?.statusCode === 404 || /not found|不存在|没有/i.test(error?.message || ''))) {
+        set({
+          creationSession: null,
+          creationSessionRestoring: false,
+          creationSessionError: null,
+        });
+        return null;
+      }
+
+      const message = deriveCreationSessionErrorMessage(error, '恢复创作会话失败，请手动重新开始');
+      set({
+        creationSessionRestoring: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  refreshCreationSession: async (sessionId) => {
+    const targetSessionId = sessionId || get().creationSession?.sessionId;
+    if (!targetSessionId) {
+      return null;
+    }
+
+    set({ creationSessionSubmitting: true, creationSessionError: null });
+
+    try {
+      const session = await gameService.getCreationSession(targetSessionId);
+      set({
+        creationSession: session,
+        creationSessionSubmitting: false,
+      });
+      return session;
+    } catch (error) {
+      const message = deriveCreationSessionErrorMessage(error, '刷新创作会话失败，请稍后重试');
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  answerCreationSessionQuestion: async (content, options = {}) => {
+    const session = get().creationSession;
+    if (!session?.sessionId) {
+      throw new Error('当前没有可回答的创作会话');
+    }
+
+    set({ creationSessionSubmitting: true, creationSessionError: null });
+
+    try {
+      const nextSession = await gameService.appendCreationSessionMessage(
+        session.sessionId,
+        content,
+        options.revision ?? session.revision
+      );
+
+      set({
+        creationSession: nextSession,
+        creationSessionSubmitting: false,
+      });
+
+      return nextSession;
+    } catch (error) {
+      const message = deriveCreationSessionErrorMessage(error, '提交回答失败，请稍后重试');
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  skipCreationSessionQuestion: async (options = {}) => {
+    const session = get().creationSession;
+    if (!session?.sessionId) {
+      throw new Error('当前没有可跳过的创作会话');
+    }
+
+    set({ creationSessionSubmitting: true, creationSessionError: null });
+
+    try {
+      const nextSession = await gameService.skipCreationSessionQuestion(
+        session.sessionId,
+        options.revision ?? session.revision
+      );
+
+      set({
+        creationSession: nextSession,
+        creationSessionSubmitting: false,
+      });
+
+      return nextSession;
+    } catch (error) {
+      const message = deriveCreationSessionErrorMessage(error, '跳过问题失败，请稍后重试');
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  generateFromCreationSession: async (options = {}) => {
+    const session = get().creationSession;
+    if (!session?.sessionId) {
+      throw new Error('当前没有可生成的创作会话');
+    }
+
+    clearActiveTaskRuntime();
+
+    set({
+      currentTask: null,
+      currentTaskEvents: [],
+      currentTaskCursor: 0,
+      creationSessionSubmitting: true,
+      creationSessionError: null,
+      error: null,
+      terminalError: null,
+      isGenerating: true,
+      generationProgress: {
+        stageIndex: 0,
+        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
+        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
+        pct: DISPLAY_PIPELINE_STAGES[0].pct,
+      },
+      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
+    });
+
+    try {
+      const result = await gameService.generateFromCreationSession(session.sessionId, options);
+      const gameId = result.gameId || session.gameId || '';
+      const gameTitle = result.title || session.title || '';
+      const promptPreview = session.prompt ? String(session.prompt).slice(0, 80) : '';
+
+      set({
+        generatingGameId: gameId,
+        isLoading: false,
+        canPlay: result.canPlay !== false,
+        creationSessionSubmitting: false,
+        creationSession: {
+          ...session,
+          status: 'generating',
+          gameId,
+        },
+      });
+
+      if (result.generationTask?.taskId) {
+        set((state) => ({
+          trackedTasks: mergeTrackedTaskItems(
+            state.trackedTasks,
+            buildTrackedTaskItem(result.generationTask, {
+              gameId,
+              gameTitle,
+              promptPreview,
+              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
+            })
+          ),
+        }));
+
+        await get()._beginTaskTracking(result.generationTask, {
+          gameId,
+          resetEvents: true,
+          preloadGame: false,
+          taskMeta: {
+            gameTitle,
+            promptPreview,
+          },
+        });
+      } else {
+        throw new Error('会话生成响应缺少 generationTask');
+      }
+
+      return result;
+    } catch (error) {
+      const message = deriveCreationSessionErrorMessage(error, '生成阶段遇到问题，可稍后重试');
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+        isGenerating: false,
+        generationProgress: null,
+        latestTaskMessage: '',
+      });
+      throw new Error(message);
+    }
+  },
+
+  abandonCreationSession: async (sessionId) => {
+    const targetSessionId = sessionId || get().creationSession?.sessionId;
+    if (!targetSessionId) {
+      return null;
+    }
+
+    set({ creationSessionSubmitting: true, creationSessionError: null });
+
+    try {
+      const nextSession = await gameService.abandonCreationSession(targetSessionId);
+      set({
+        creationSession: nextSession || {
+          ...(get().creationSession || {}),
+          sessionId: targetSessionId,
+          status: 'abandoned',
+        },
+        creationSessionSubmitting: false,
+      });
+      return nextSession;
+    } catch (error) {
+      const message = deriveCreationSessionErrorMessage(error, '结束创作会话失败，请稍后重试');
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  resetCreationSessionState: () => {
+    set({
+      creationSession: null,
+      creationSessionError: null,
+      creationSessionSubmitting: false,
+      creationSessionRestoring: false,
+      creationSessionContext: null,
+    });
+  },
+
+  getCreationFlowStage: () => getCreationFlowStageFromState(get()),
 
   _beginTaskTracking: async (task, options = {}) => {
     clearActiveTaskRuntime();
@@ -1061,6 +1477,7 @@ export const useGameStore = create((set, get) => ({
       isGenerating: true,
       error: null,
       terminalError: null,
+      creationSessionError: null,
       currentTask: {
         taskId: persistedTask.taskId,
         taskType: persistedTask.taskType || '',
@@ -1310,6 +1727,11 @@ export const useGameStore = create((set, get) => ({
       terminalError: null,
       latestTaskMessage: '',
       canPlay: true,
+      creationSession: null,
+      creationSessionError: null,
+      creationSessionSubmitting: false,
+      creationSessionRestoring: false,
+      creationSessionContext: null,
     });
   },
 
@@ -1325,7 +1747,7 @@ export const useGameStore = create((set, get) => ({
     currentGame: game,
     canPlay: game?.canPlay !== false,
   }),
-  clearError: () => set({ error: null, terminalError: null }),
+  clearError: () => set({ error: null, terminalError: null, creationSessionError: null }),
 }));
 
 let hasBoundUnlockedGameSync = false;

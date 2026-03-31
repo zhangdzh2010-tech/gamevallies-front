@@ -200,6 +200,12 @@
     padding-top: 4px;
   }
 
+  .fork-session-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
   .fork-submit-btn {
     min-height: 98px;
     border-radius: 18px;

@@ -172,6 +172,12 @@
     margin-bottom: 24px;
   }
 
+  .iterate-session-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
   .iterate-action-btn {
     flex: 1;
     min-height: 96px;

@@ -165,6 +165,93 @@ function normalizeIterateResponse(response, fallbackGameId = '') {
   };
 }
 
+function normalizeCreationSessionMessage(message, index = 0) {
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+
+  return {
+    id: message.id || message.messageId || `message-${index}`,
+    role: message.role || message.senderRole || message.type || 'assistant',
+    content: message.content || message.text || message.message || '',
+    createdAt: message.createdAt || message.timestamp || null,
+    revision: message.revision ?? null,
+    meta: message.meta || null,
+  };
+}
+
+function normalizeCreationQuestion(question) {
+  if (!question || typeof question !== 'object') {
+    return null;
+  }
+
+  return {
+    id: question.id || question.questionId || '',
+    key: question.key || question.slotKey || question.id || '',
+    title: question.title || question.label || '',
+    content: question.content || question.text || question.prompt || '',
+    description: question.description || question.hint || '',
+    answerType: question.answerType || question.inputType || 'text',
+    required: question.required !== false,
+    options: Array.isArray(question.options) ? question.options : [],
+    placeholder: question.placeholder || '',
+    metadata: question.metadata || null,
+  };
+}
+
+export function normalizeCreationSessionSnapshot(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const rawGenerationTask = raw.generationTask && typeof raw.generationTask === 'object'
+    ? raw.generationTask
+    : raw.generationTaskId
+      ? {
+          taskId: raw.generationTaskId,
+          gameId: raw.generatedGameId || raw.gameId || raw.resultGameId || '',
+        }
+    : raw.task && typeof raw.task === 'object'
+      ? raw.task
+      : null;
+  const generationTask = rawGenerationTask ? mergeTaskPayload(rawGenerationTask) : null;
+  const messages = Array.isArray(raw.messages)
+    ? raw.messages
+    : Array.isArray(raw.conversation)
+      ? raw.conversation
+      : Array.isArray(raw.dialogue)
+        ? raw.dialogue
+        : [];
+
+  const revision = Number(raw.revision ?? raw.version ?? raw.snapshotRevision ?? 0);
+
+  return {
+    sessionId: raw.sessionId || raw.id || raw.creationSessionId || '',
+    revision: Number.isFinite(revision) ? revision : 0,
+    status: raw.status || 'collecting',
+    entryMode: raw.entryMode || raw.mode || 'create',
+    title: raw.title || raw.titleDraft || raw.sessionTitle || '',
+    prompt: raw.prompt || raw.description || raw.initialPrompt || '',
+    orientation: normalizeGameOrientation(raw.orientation || raw.gameOrientation),
+    generationTier: raw.generationTier || raw.tier || 'standard',
+    sourceGameId: raw.sourceGameId || raw.baseGameId || raw.parentGameId || '',
+    gameId: raw.gameId || raw.generatedGameId || raw.resultGameId || '',
+    slotState: raw.slotState && typeof raw.slotState === 'object' ? raw.slotState : {},
+    missingRequired: Array.isArray(raw.missingRequired) ? raw.missingRequired : [],
+    planDraft: raw.planDraft || raw.plan || raw.specDraft || null,
+    confidenceSummary: raw.confidenceSummary || raw.confidence || null,
+    questionStrategy: raw.questionStrategy || raw.strategy || null,
+    currentQuestion: normalizeCreationQuestion(raw.currentQuestion || raw.question || null),
+    messages: messages.map((message, index) => normalizeCreationSessionMessage(message, index)).filter(Boolean),
+    generationTask: normalizeGenerationTask(generationTask),
+    metadata: raw.metadata || null,
+    createdAt: raw.createdAt || null,
+    updatedAt: raw.updatedAt || null,
+    expiresAt: raw.expiresAt || raw.expiredAt || null,
+    completedAt: raw.completedAt || null,
+  };
+}
+
 /**
  * Generate a new game from a prompt
  */
@@ -182,6 +269,62 @@ export async function generateGame(prompt, title, options) {
     orientation,
   });
   return normalizeGenerateResponse(response);
+}
+
+export async function createCreationSession(prompt, title, options = {}) {
+  const normalizedOptions = options && typeof options === 'object' ? options : {};
+  const orientation = normalizeGameOrientation(normalizedOptions.orientation);
+
+  const response = await post('/api/v1/games/creation-sessions', {
+    prompt,
+    ...(title ? { title } : {}),
+    ...(normalizedOptions.entryMode ? { entryMode: normalizedOptions.entryMode } : {}),
+    ...(orientation ? { orientation } : {}),
+    ...(normalizedOptions.generationTier ? { generationTier: normalizedOptions.generationTier } : {}),
+    ...(normalizedOptions.sourceGameId ? { sourceGameId: normalizedOptions.sourceGameId } : {}),
+  });
+
+  return normalizeCreationSessionSnapshot(response);
+}
+
+export async function getActiveCreationSession() {
+  const response = await get('/api/v1/games/creation-sessions/active');
+  return normalizeCreationSessionSnapshot(response);
+}
+
+export async function getCreationSession(sessionId) {
+  const response = await get(`/api/v1/games/creation-sessions/${sessionId}`);
+  return normalizeCreationSessionSnapshot(response);
+}
+
+export async function appendCreationSessionMessage(sessionId, content, revision) {
+  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/messages`, {
+    content,
+    ...(revision != null ? { revision } : {}),
+  });
+
+  return normalizeCreationSessionSnapshot(response);
+}
+
+export async function skipCreationSessionQuestion(sessionId, revision) {
+  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/skip`, {
+    ...(revision != null ? { revision } : {}),
+  });
+
+  return normalizeCreationSessionSnapshot(response);
+}
+
+export async function generateFromCreationSession(sessionId, options = {}) {
+  void options;
+
+  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/generate`, {});
+
+  return normalizeGenerateResponse(response);
+}
+
+export async function abandonCreationSession(sessionId) {
+  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/abandon`, {});
+  return normalizeCreationSessionSnapshot(response);
 }
 
 /**
@@ -289,6 +432,14 @@ export async function updateGameSettings(gameId, settings) {
 
 export default {
   generateGame,
+  normalizeCreationSessionSnapshot,
+  createCreationSession,
+  getActiveCreationSession,
+  getCreationSession,
+  appendCreationSessionMessage,
+  skipCreationSessionQuestion,
+  generateFromCreationSession,
+  abandonCreationSession,
   getGameTypes,
   getGame,
   getGenerationStatus,

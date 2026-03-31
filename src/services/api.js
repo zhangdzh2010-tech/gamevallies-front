@@ -80,7 +80,7 @@ function shouldRecoverUnauthorized(url) {
 
   return guardedUrls.some((path) => {
     if (path === '/api/v1/games/') {
-      return /\/api\/v1\/games\/[^/]+\/(unlock|iterate|publish|settings|fork)/.test(url);
+      return /\/api\/v1\/games\/(creation-sessions(?:\/|$)|[^/]+\/(unlock|iterate|publish|settings|fork))/.test(url);
     }
 
     return url.includes(path);
