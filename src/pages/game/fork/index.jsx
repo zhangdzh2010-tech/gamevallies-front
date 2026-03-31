@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
@@ -80,9 +80,9 @@ export default function GameForkPage() {
   } = useGameStore();
   const [sourceGame, setSourceGame] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [forkAnswer, setForkAnswer] = useState('');
   const [pageError, setPageError] = useState('');
+  const forkSessionBootstrappedSourceIdRef = useRef('');
   const currentUser = Storage.getUser() || {};
   const currentUserId = currentUser?.id || '';
   const { windowHeight = 720 } = getSafeSystemInfo();
@@ -164,59 +164,58 @@ export default function GameForkPage() {
   );
 
   useEffect(() => {
-    if (!sourceGameId || !sourceGame || isLoading) {
+    if (!sourceGameId || !sourceGame || isLoading || !canForkGame) {
       return;
     }
 
     if (isCurrentForkSession) {
+      forkSessionBootstrappedSourceIdRef.current = sourceGameId;
       return;
     }
 
-    restoreActiveCreationSession({ silentIfMissing: true }).catch(() => {});
+    if (forkSessionBootstrappedSourceIdRef.current === sourceGameId) {
+      return;
+    }
+
+    forkSessionBootstrappedSourceIdRef.current = sourceGameId;
+
+    restoreActiveCreationSession({ silentIfMissing: true })
+      .then((restoredSession) => {
+        const restoredMatches = restoredSession
+          && restoredSession.entryMode === 'fork'
+          && String(restoredSession.sourceGameId || '') === String(sourceGameId);
+
+        if (restoredMatches) {
+          return restoredSession;
+        }
+
+        return startCreationSession(
+          sourceGame?.description || `基于《${sourceGame?.title || '当前作品'}》继续创作`,
+          sourceGame?.title || '',
+          {
+            entryMode: 'fork',
+            sourceGameId,
+            orientation: sourceGame?.orientation || 'portrait',
+            generationTier: 'standard',
+          }
+        );
+      })
+      .catch((error) => {
+        setPageError(error?.message || '初始化复刻会话失败，请重试');
+        forkSessionBootstrappedSourceIdRef.current = '';
+      });
   }, [
+    canForkGame,
     isCurrentForkSession,
     isLoading,
     restoreActiveCreationSession,
+    sourceGame?.description,
+    sourceGame?.orientation,
+    sourceGame?.title,
     sourceGame,
     sourceGameId,
+    startCreationSession,
   ]);
-
-  const handleFork = async () => {
-    if (!sourceGameId) {
-      Taro.showToast({ title: '缺少作品信息', icon: 'none' });
-      return;
-    }
-
-    if (isOwnGame) {
-      Taro.showToast({ title: '不能复刻自己的作品', icon: 'none' });
-      return;
-    }
-
-    if (!canForkGame) {
-      Taro.showToast({ title: '作者未开放复刻权限', icon: 'none' });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await startCreationSession(
-        sourceGame?.description || `基于《${sourceGame?.title || '当前作品'}》继续创作`,
-        sourceGame?.title || '',
-        {
-          entryMode: 'fork',
-          sourceGameId,
-          orientation: sourceGame?.orientation || 'portrait',
-          generationTier: 'standard',
-        }
-      );
-      setForkAnswer('');
-    } catch (error) {
-      Taro.showToast({ title: error?.message || '创建复刻会话失败，请重试', icon: 'none' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleSubmitForkAnswer = async () => {
     if (!forkAnswer.trim()) {
@@ -258,6 +257,7 @@ export default function GameForkPage() {
     }
 
     resetCreationSessionState();
+    forkSessionBootstrappedSourceIdRef.current = '';
     setForkAnswer('');
 
     try {
@@ -483,19 +483,22 @@ export default function GameForkPage() {
               })}
             />
           ) : (
-            <View className="fork-actions">
+            <>
               {!creationSession && creationSessionError ? (
                 <View className="fork-warning-card">
                   <Text className="fork-warning-card__text">{creationSessionError}</Text>
                 </View>
               ) : null}
-              <View
-                className={`fork-submit-btn ${(!canForkGame || isSubmitting) ? 'disabled' : ''}`}
-                onClick={(!canForkGame || isSubmitting) ? undefined : handleFork}
-              >
-                <Text>{isSubmitting ? '准备中...' : '开始复刻会话'}</Text>
-              </View>
-            </View>
+              {canForkGame ? (
+                <View className="fork-warning-card">
+                  <Text className="fork-warning-card__text">
+                    {creationSessionSubmitting
+                      ? '正在为这款作品建立动态复刻会话...'
+                      : '正在准备动态复刻会话，请稍候。'}
+                  </Text>
+                </View>
+              ) : null}
+            </>
           )}
         </View>
 

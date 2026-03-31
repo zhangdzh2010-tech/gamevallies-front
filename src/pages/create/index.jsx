@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Textarea, Input } from '@tarojs/components';
+import { View, Text, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
@@ -30,6 +30,10 @@ import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import {
+  CreationAnswerComposer,
+  CreationQuestionCard,
+  CreationSessionActions,
+  CreationSessionShell,
   CreationSessionScene,
   buildCreationSessionActions,
   buildCreationSessionSceneProps,
@@ -345,10 +349,6 @@ export default function Create() {
   };
 
 
-  const handleExampleClick = (text) => {
-    setPrompt(text);
-  };
-
   const handleSessionAnswerInput = (event) => {
     setSessionAnswer(event?.detail?.value || '');
   };
@@ -405,6 +405,16 @@ export default function Create() {
       Taro.showToast({ title: err?.message || '创建创作会话失败，请稍后重试', icon: 'none' });
     }
   };
+
+  const initialCreateActions = [
+    {
+      key: 'start-session',
+      label: creationSessionSubmitting ? '整理创意中...' : '进入动态创作会话',
+      tone: 'primary',
+      disabled: creationSessionSubmitting || !prompt.trim() || prompt.trim().length < 5,
+      onClick: handleSubmit,
+    },
+  ];
 
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
@@ -649,128 +659,123 @@ export default function Create() {
     );
   }
 
-  // Main create form (step 1)
   return (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-      <View className="create-header create-header--editor">
-        <View className="create-header__copy">
-          <Text className="create-header__eyebrow">Quick Prompt</Text>
-          <Text className="header-title">一句话说清玩法，剩下的交给 AI。</Text>
-          <Text className="header-subtitle">
-            你可以先描述核心规则、胜负条件和想要的视觉气质，系统会自动扩展成完整的可玩作品。
-          </Text>
-        </View>
-        <View className="create-header-top">
-          <View className="orientation-switch">
-            {ORIENTATION_OPTIONS.map((option) => {
-              const isActive = orientation === option.value;
-              return (
-                <View
-                  key={option.value}
-                  className={`orientation-option${isActive ? ' is-active' : ''}`}
-                  onClick={() => setOrientation(option.value)}
-                >
-                  <Text className="orientation-option__text">{option.label}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      </View>
-
       <PageScrollContainer className="create-scroll">
-        <View className="form-section">
-          <View className="form-group">
-            <Text className="form-label">游戏名称</Text>
-            <View className="form-input-wrap">
-              <Input
-                className="form-input"
-                placeholder="给你的游戏起个名字（可选）"
-                placeholderStyle="color: #55516e"
-                value={gameName}
-                onInput={(e) => setGameName(e.detail.value)}
-                maxlength={30}
-              />
-            </View>
-          </View>
-
-
-          <View className="form-group">
-            <Text className="form-label">描述你的游戏创意</Text>
-            <View className="form-input-wrap form-input-wrap--textarea">
-              <Textarea
-                className="form-textarea"
-                placeholder="简单描述你想要的游戏，AI 会帮你扩展成完整方案..."
-                placeholderStyle="color: #55516e"
-                value={prompt}
-                onInput={(e) => setPrompt(e.detail.value)}
-                maxlength={2000}
-                autoHeight
-              />
-            </View>
-            <Text className="input-count">{prompt.length}/2000</Text>
-          </View>
-
-          <View className="form-group">
-            <Text className="form-label">生成档位</Text>
-            <View className="tier-grid">
-              {GENERATION_TIER_OPTIONS.map((option) => {
-                const isActive = generationTier === option.value;
-                return (
-                  <View
-                    key={option.value}
-                    className={`tier-card${isActive ? ' is-active' : ''}`}
-                    onClick={() => setGenerationTier(option.value)}
-                  >
-                    <Text className="tier-card__title">{option.label}</Text>
-                    <Text className="tier-card__desc">{option.description}</Text>
+        <CreationSessionShell
+          eyebrow="Dynamic Creation Session"
+          title="先把第一轮创意说给 AI"
+          subtitle="创建页现在直接进入会话式首屏。你先描述玩法与风格，系统再整理方案草案并继续追问。"
+          statusLabel="当前阶段"
+          statusValue="等待首轮创意"
+          sections={[
+            {
+              key: 'create-setup',
+              node: (
+                <View className="creation-session-card">
+                  <View className="creation-session-card__header">
+                    <View>
+                      <Text className="creation-session-card__title">本轮创作设置</Text>
+                      <Text className="creation-session-card__hint">这些设置会随着首轮创意一起提交，不再先走旧表单。</Text>
+                    </View>
                   </View>
-                );
-              })}
-            </View>
-          </View>
+                  <View className="form-section">
+                    <View className="form-group">
+                      <Text className="form-label">游戏名称</Text>
+                      <View className="form-input-wrap">
+                        <Input
+                          className="form-input"
+                          placeholder="给你的游戏起个名字（可选）"
+                          placeholderStyle="color: #55516e"
+                          value={gameName}
+                          onInput={(e) => setGameName(e.detail.value)}
+                          maxlength={30}
+                        />
+                      </View>
+                    </View>
 
-          {error && (
-            <View className="error-banner">
-              <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
-              <Text className="error-dismiss" onClick={clearError}>×</Text>
-            </View>
-          )}
+                    <View className="form-group">
+                      <Text className="form-label">屏幕方向</Text>
+                      <View className="orientation-switch">
+                        {ORIENTATION_OPTIONS.map((option) => {
+                          const isActive = orientation === option.value;
+                          return (
+                            <View
+                              key={option.value}
+                              className={`orientation-option${isActive ? ' is-active' : ''}`}
+                              onClick={() => setOrientation(option.value)}
+                            >
+                              <Text className="orientation-option__text">{option.label}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
 
-          {!creationSession && creationSessionError ? (
-            <View className="error-banner">
-              <Text className="error-text">{creationSessionError}</Text>
-              <Text className="error-dismiss" onClick={clearError}>×</Text>
-            </View>
-          ) : null}
+                    <View className="form-group">
+                      <Text className="form-label">生成档位</Text>
+                      <View className="tier-grid">
+                        {GENERATION_TIER_OPTIONS.map((option) => {
+                          const isActive = generationTier === option.value;
+                          return (
+                            <View
+                              key={option.value}
+                              className={`tier-card${isActive ? ' is-active' : ''}`}
+                              onClick={() => setGenerationTier(option.value)}
+                            >
+                              <Text className="tier-card__title">{option.label}</Text>
+                              <Text className="tier-card__desc">{option.description}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ),
+            },
+            {
+              key: 'create-first-prompt',
+              node: (
+                <>
+                  <CreationQuestionCard
+                    title="第一轮创意"
+                    hint="先把玩法、胜负规则、节奏和视觉方向说出来，系统会据此生成第一版理解。"
+                    question={{
+                      content: '这次你想做一个什么样的游戏？',
+                      description: '至少写 5 个字，越具体越容易得到贴近预期的方案草案。',
+                    }}
+                  />
+                  <CreationAnswerComposer
+                    value={prompt}
+                    onChange={(e) => setPrompt(e?.detail?.value || '')}
+                    placeholder="例如：做一个像素风横版闯关游戏，主角能二段跳，节奏偏爽快，Boss 战要有阶段变化。"
+                    suggestions={EXAMPLE_PROMPTS.map((item) => item.text)}
+                    disabled={creationSessionSubmitting}
+                  />
+                  <Text className="input-count">{prompt.length}/2000</Text>
 
-          <View className="form-actions">
-            <View className="submit-btn" onClick={handleSubmit}>
-              <Text>开始创作</Text>
-            </View>
-          </View>
-        </View>
+                  {error ? (
+                    <View className="error-banner">
+                      <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
+                      <Text className="error-dismiss" onClick={clearError}>×</Text>
+                    </View>
+                  ) : null}
 
-        <View className="examples-section">
-          <Text className="section-title">创意样例 <Text className="section-hint">点击即可直接使用</Text></Text>
-          <View className="example-list">
-            {EXAMPLE_PROMPTS.map((ex, idx) => (
-              <View key={idx} className="example-card" onClick={() => handleExampleClick(ex.text)}>
-                <Text className="example-emoji">{ex.emoji}</Text>
-                <Text className="example-text">{ex.text}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+                  {creationSessionError ? (
+                    <View className="error-banner">
+                      <Text className="error-text">{creationSessionError}</Text>
+                      <Text className="error-dismiss" onClick={clearError}>×</Text>
+                    </View>
+                  ) : null}
 
-        <View className="tips-section">
-          <Text className="tips-title">创作流程</Text>
-          <View className="tip-item"><Text className="tip-text">1. 描述你的游戏想法（可以很简短）</Text></View>
-          <View className="tip-item"><Text className="tip-text">2. 系统会先整理方案草案，再追问 1 个最关键的问题</Text></View>
-          <View className="tip-item"><Text className="tip-text">3. 你可以继续补充、跳过，或直接开始创作</Text></View>
-          <View className="tip-item"><Text className="tip-text">4. 生成完成后即可在“我的作品”继续编辑或试玩</Text></View>
-        </View>
+                  <CreationSessionActions actions={initialCreateActions} />
+                </>
+              ),
+            },
+          ]}
+        />
 
         <View className="bottom-spacer" />
       </PageScrollContainer>

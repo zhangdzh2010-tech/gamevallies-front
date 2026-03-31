@@ -205,12 +205,6 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('开始复刻会话')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText('开始复刻会话'));
-
-    await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
         '一款节奏紧凑的跑酷作品',
         '原始跑酷',
@@ -332,7 +326,14 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('开始复刻会话')).toBeTruthy();
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        '一款节奏紧凑的跑酷作品',
+        '原始跑酷',
+        expect.objectContaining({
+          entryMode: 'fork',
+          sourceGameId: 'source-1',
+        })
+      );
     });
     expect(screen.queryByText('AI 正在生成复刻作品')).toBeNull();
   });
