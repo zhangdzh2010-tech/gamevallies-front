@@ -30,7 +30,11 @@ import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
 import {
+  CreationAnswerComposer,
+  CreationQuestionCard,
+  CreationSessionActions,
   CreationSessionScene,
+  CreationSessionShell,
   buildCreationSessionActions,
   buildCreationSessionSceneProps,
 } from '../../../components/creation';
@@ -133,6 +137,7 @@ export default function GameIteratePage() {
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
     generateFromCreationSession,
+    abandonCreationSession,
     resetCreationSessionState,
     setCurrentGame,
   } = useGameStore();
@@ -293,9 +298,6 @@ export default function GameIteratePage() {
 
     iterateSessionBootstrappedGameIdRef.current = currentCompletedGameId;
 
-    const bootstrapPrompt = currentGame?.description
-      || `继续优化《${currentGame?.title || '当前作品'}》`;
-
     restoreActiveCreationSession({ silentIfMissing: true })
       .then((restoredSession) => {
         const restoredMatches = restoredSession
@@ -306,12 +308,8 @@ export default function GameIteratePage() {
           return restoredSession;
         }
 
-        return startCreationSession(bootstrapPrompt, currentGame?.title || '', {
-          entryMode: 'iterate',
-          sourceGameId: currentCompletedGameId,
-          orientation: getGameOrientation(currentGame),
-          generationTier: 'standard',
-        });
+        resetCreationSessionState();
+        return null;
       })
       .catch((err) => {
         setPageError(err?.message || '初始化优化会话失败，请稍后重试');
@@ -322,8 +320,8 @@ export default function GameIteratePage() {
     currentGame,
     isBootstrapping,
     isIterateTaskActive,
+    resetCreationSessionState,
     restoreActiveCreationSession,
-    startCreationSession,
     taskId,
   ]);
 
@@ -447,6 +445,34 @@ export default function GameIteratePage() {
     }
   };
 
+  const handleStartIterateSession = async () => {
+    if (!currentGame?.id) {
+      return;
+    }
+
+    if (!iterateFeedback.trim()) {
+      Taro.showToast({ title: '请先说说这次最想优化的部分', icon: 'none' });
+      return;
+    }
+
+    try {
+      await startCreationSession(
+        iterateFeedback.trim(),
+        currentGame?.title || '',
+        {
+          entryMode: 'iterate',
+          sourceGameId: currentGame.id,
+          orientation: getGameOrientation(currentGame),
+          generationTier: 'standard',
+        }
+      );
+      iterateSessionBootstrappedGameIdRef.current = String(currentGame.id);
+      setIterateFeedback('');
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '开启优化对话失败，请稍后重试', icon: 'none' });
+    }
+  };
+
   const handleSkipSessionQuestion = async () => {
     try {
       await skipCreationSessionQuestion();
@@ -468,25 +494,13 @@ export default function GameIteratePage() {
   };
 
   const handleRestartIterateSession = async () => {
-    if (!currentGame?.id) {
-      return;
-    }
-
-    resetCreationSessionState();
-    iterateSessionBootstrappedGameIdRef.current = '';
-    setIterateFeedback('');
-
     try {
-      await startCreationSession(
-        currentGame?.description || `继续优化《${currentGame?.title || '当前作品'}》`,
-        currentGame?.title || '',
-        {
-          entryMode: 'iterate',
-          sourceGameId: currentGame.id,
-          orientation: getGameOrientation(currentGame),
-          generationTier: 'standard',
-        }
-      );
+      if (creationSession?.sessionId) {
+        await abandonCreationSession(creationSession.sessionId);
+      }
+      resetCreationSessionState();
+      iterateSessionBootstrappedGameIdRef.current = '';
+      setIterateFeedback('');
     } catch (err) {
       Taro.showToast({ title: err?.message || '重新开始优化会话失败', icon: 'none' });
     }
@@ -650,13 +664,52 @@ export default function GameIteratePage() {
                   <Text className="iterate-error-banner__text">{getUserFacingIterateError(creationSessionError || pageError)}</Text>
                 </View>
               ) : null}
-              <View className="iterate-error-banner">
-                <Text className="iterate-error-banner__text">
-                  {creationSessionSubmitting
-                    ? '正在整理这次优化方向，请稍候...'
-                    : '正在准备优化会话，请稍候。'}
-                </Text>
-              </View>
+              <CreationSessionShell
+                eyebrow="继续打磨"
+                title="先说说这次最想优化哪里"
+                subtitle="先用一句话告诉 AI 这次要改什么。等你发出第一句，再开始追问和整理方案。"
+                statusLabel="进行到"
+                statusValue="等待你的方向"
+                sections={[
+                  {
+                    key: 'iterate-first-prompt',
+                    node: (
+                      <>
+                        <CreationQuestionCard
+                          title="这次想重点优化什么？"
+                          hint="你可以直接说节奏、手感、视觉、角色反馈，或者你觉得现在最不满意的地方。"
+                          question={{
+                            content: '这次你最想先把哪部分变得更好？',
+                            description: '比如更爽快、更紧张、更清晰，或者更换题材和视觉风格。',
+                          }}
+                        />
+                        <CreationAnswerComposer
+                          value={iterateFeedback}
+                          onChange={(e) => setIterateFeedback(e?.detail?.value || '')}
+                          placeholder="例如：保留贪吃蛇核心玩法，但节奏更快一点，吃到食物时的反馈更爽。"
+                          suggestions={[
+                            '保留核心玩法，但把节奏做得更快一点。',
+                            '我想重点优化视觉表现和吃到食物时的反馈。',
+                            '想让难度爬升更平滑，前期更轻松，后期更刺激。',
+                          ]}
+                          disabled={creationSessionSubmitting}
+                        />
+                        <CreationSessionActions
+                          actions={[
+                            {
+                              key: 'start-iterate-session',
+                              label: creationSessionSubmitting ? 'AI 正在整理你的方向...' : '开始这轮优化对话',
+                              tone: 'primary',
+                              disabled: creationSessionSubmitting || !iterateFeedback.trim(),
+                              onClick: handleStartIterateSession,
+                            },
+                          ]}
+                        />
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </>
           )}
 

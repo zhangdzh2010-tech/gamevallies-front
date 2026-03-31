@@ -24,7 +24,11 @@ import { Storage } from '../../../utils/storage';
 import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import {
+  CreationAnswerComposer,
+  CreationQuestionCard,
+  CreationSessionActions,
   CreationSessionScene,
+  CreationSessionShell,
   buildCreationSessionActions,
   buildCreationSessionSceneProps,
 } from '../../../components/creation';
@@ -76,6 +80,7 @@ export default function GameForkPage() {
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
     generateFromCreationSession,
+    abandonCreationSession,
     resetCreationSessionState,
   } = useGameStore();
   const [sourceGame, setSourceGame] = useState(null);
@@ -189,16 +194,8 @@ export default function GameForkPage() {
           return restoredSession;
         }
 
-        return startCreationSession(
-          sourceGame?.description || `基于《${sourceGame?.title || '当前作品'}》继续创作`,
-          sourceGame?.title || '',
-          {
-            entryMode: 'fork',
-            sourceGameId,
-            orientation: sourceGame?.orientation || 'portrait',
-            generationTier: 'standard',
-          }
-        );
+        resetCreationSessionState();
+        return null;
       })
       .catch((error) => {
         setPageError(error?.message || '初始化复刻会话失败，请重试');
@@ -208,13 +205,10 @@ export default function GameForkPage() {
     canForkGame,
     isCurrentForkSession,
     isLoading,
+    resetCreationSessionState,
     restoreActiveCreationSession,
-    sourceGame?.description,
-    sourceGame?.orientation,
-    sourceGame?.title,
     sourceGame,
     sourceGameId,
-    startCreationSession,
   ]);
 
   const handleSubmitForkAnswer = async () => {
@@ -228,6 +222,34 @@ export default function GameForkPage() {
       setForkAnswer('');
     } catch (error) {
       Taro.showToast({ title: error?.message || '提交回答失败，请重试', icon: 'none' });
+    }
+  };
+
+  const handleStartForkSession = async () => {
+    if (!sourceGameId) {
+      return;
+    }
+
+    if (!forkAnswer.trim()) {
+      Taro.showToast({ title: '请先说说你想保留和改变的部分', icon: 'none' });
+      return;
+    }
+
+    try {
+      await startCreationSession(
+        forkAnswer.trim(),
+        sourceGame?.title || '',
+        {
+          entryMode: 'fork',
+          sourceGameId,
+          orientation: sourceGame?.orientation || 'portrait',
+          generationTier: 'standard',
+        }
+      );
+      forkSessionBootstrappedSourceIdRef.current = sourceGameId;
+      setForkAnswer('');
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '开启新版本对话失败，请重试', icon: 'none' });
     }
   };
 
@@ -252,25 +274,13 @@ export default function GameForkPage() {
   };
 
   const handleRestartForkSession = async () => {
-    if (!sourceGameId) {
-      return;
-    }
-
-    resetCreationSessionState();
-    forkSessionBootstrappedSourceIdRef.current = '';
-    setForkAnswer('');
-
     try {
-      await startCreationSession(
-        sourceGame?.description || `基于《${sourceGame?.title || '当前作品'}》继续创作`,
-        sourceGame?.title || '',
-        {
-          entryMode: 'fork',
-          sourceGameId,
-          orientation: sourceGame?.orientation || 'portrait',
-          generationTier: 'standard',
-        }
-      );
+      if (creationSession?.sessionId) {
+        await abandonCreationSession(creationSession.sessionId);
+      }
+      resetCreationSessionState();
+      forkSessionBootstrappedSourceIdRef.current = '';
+      setForkAnswer('');
     } catch (error) {
       Taro.showToast({ title: error?.message || '重新开始复刻会话失败，请重试', icon: 'none' });
     }
@@ -461,13 +471,52 @@ export default function GameForkPage() {
                 </View>
               ) : null}
               {canForkGame ? (
-                <View className="fork-warning-card">
-                  <Text className="fork-warning-card__text">
-                    {creationSessionSubmitting
-                      ? '正在整理这次复刻方向，请稍候...'
-                      : '正在准备复刻会话，请稍候。'}
-                  </Text>
-                </View>
+                <CreationSessionShell
+                  eyebrow="做一个新版本"
+                  title="先说你想保留什么、改变什么"
+                  subtitle="先用一句话告诉 AI 这次准备怎么改，它会据此整理方向，再继续追问。"
+                  statusLabel="进行到"
+                  statusValue="等待你的方向"
+                  sections={[
+                    {
+                      key: 'fork-first-prompt',
+                      node: (
+                        <>
+                          <CreationQuestionCard
+                            title="你想怎么改这款作品？"
+                            hint="你可以直接说保留哪些核心体验，再补充想换掉的题材、角色、节奏或视觉风格。"
+                            question={{
+                              content: '这次你最想保留什么，又最想改变什么？',
+                              description: '比如玩法不变，但题材更换、节奏更快、视觉更鲜明。',
+                            }}
+                          />
+                          <CreationAnswerComposer
+                            value={forkAnswer}
+                            onChange={(e) => setForkAnswer(e?.detail?.value || '')}
+                            placeholder="例如：保留贪吃蛇的核心玩法，但换成赛博风，节奏更快，吃到食物时有更强的反馈。"
+                            suggestions={[
+                              '保留核心玩法，但把题材换成赛博风。',
+                              '想保留简单上手的节奏，但把视觉做得更有冲击力。',
+                              '我想让它和原作差异更大一些，角色和场景都重新设计。',
+                            ]}
+                            disabled={creationSessionSubmitting}
+                          />
+                          <CreationSessionActions
+                            actions={[
+                              {
+                                key: 'start-fork-session',
+                                label: creationSessionSubmitting ? 'AI 正在整理你的方向...' : '开始这轮新版本对话',
+                                tone: 'primary',
+                                disabled: creationSessionSubmitting || !forkAnswer.trim(),
+                                onClick: handleStartForkSession,
+                              },
+                            ]}
+                          />
+                        </>
+                      ),
+                    },
+                  ]}
+                />
               ) : null}
             </>
           )}
