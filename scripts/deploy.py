@@ -49,6 +49,24 @@ def shell(cmd: list) -> bool:
     return result.returncode == 0
 
 
+def resolve_image_tag():
+    explicit_tag = (IMAGE_TAG or "").strip()
+    if explicit_tag and explicit_tag.lower() != "latest":
+        return explicit_tag
+
+    try:
+        git_sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=ROOT_DIR,
+            text=True,
+        ).strip()
+    except Exception:
+        git_sha = "nogit"
+
+    timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
+    return f"{git_sha}-{timestamp}"
+
+
 def sync_root_txt_assets():
     if not os.path.isdir(DIST_DIR):
         print(f"❌ 缺少 H5 构建产物: {DIST_DIR}")
@@ -84,12 +102,14 @@ def main():
         print("❌ 请设置 VOLCENGINE_REGISTRY_USERNAME 和 VOLCENGINE_REGISTRY_PASSWORD")
         sys.exit(1)
 
-    image = f"{REGISTRY}/{NAMESPACE}/{FUNC_NAME}:{IMAGE_TAG}"
+    image_tag = resolve_image_tag()
+    image = f"{REGISTRY}/{NAMESPACE}/{FUNC_NAME}:{image_tag}"
 
     print(f"📍 部署配置:")
     print(f"   函数名:   {FUNC_NAME} (ID: {FUNC_ID})")
     print(f"   地域:     {REGION}")
     print(f"   镜像:     {image}")
+    print(f"   Tag:      {image_tag}")
     print(f"   VPC ID:   {VPC_ID or '未设置'}")
     print(f"   Subnet:   {SUBNET_ID or '未设置'}")
     print(f"   SecGroup: {SECURITY_GROUP_ID or '未设置'}")
