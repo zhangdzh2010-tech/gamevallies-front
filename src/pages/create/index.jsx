@@ -26,6 +26,7 @@ import {
 } from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
+import { getInputEventValue } from '../../utils/inputValue';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import {
@@ -84,6 +85,10 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
   return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
 }
 
+function buildInputChangeHandler(setter) {
+  return (event) => setter(getInputEventValue(event));
+}
+
 export default function Create() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
@@ -114,6 +119,9 @@ export default function Create() {
   const [orientation, setOrientation] = useState('portrait');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
+  const handleGameNameChange = buildInputChangeHandler(setGameName);
+  const handlePromptChange = buildInputChangeHandler(setPrompt);
+  const handleSessionAnswerChange = buildInputChangeHandler(setSessionAnswer);
   // Tracks the polling interval used while a creation session is initializing.
   const sessionPollingRef = useRef(null);
 
@@ -757,7 +765,8 @@ export default function Create() {
                     placeholder="游戏名称（可选）"
                     placeholderStyle="color: #67627d"
                     value={gameName}
-                    onInput={(e) => setGameName(e?.detail?.value || '')}
+                    onInput={handleGameNameChange}
+                    onChange={handleGameNameChange}
                     maxlength={30}
                   />
                 </View>
@@ -783,7 +792,8 @@ export default function Create() {
                   placeholder="先说一句你想做什么游戏"
                   placeholderStyle="color: #67627d"
                   value={prompt}
-                  onInput={(e) => setPrompt(e?.detail?.value || '')}
+                  onInput={handlePromptChange}
+                  onChange={handlePromptChange}
                   maxlength={2000}
                   autoHeight
                 />
@@ -804,7 +814,7 @@ export default function Create() {
                 entryMode: 'create',
                 session: creationSession,
                 answerValue: sessionAnswer,
-                onAnswerChange: (e) => setSessionAnswer(e?.detail?.value || ''),
+                onAnswerChange: handleSessionAnswerChange,
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,
                 answerSuggestions: creationSession?.currentQuestion?.options || [],
                 submitting: sessionBusy,

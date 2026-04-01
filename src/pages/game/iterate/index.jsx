@@ -25,6 +25,7 @@ import {
 } from '../../../utils/authNavigation';
 import { getGameCoverUrl } from '../../../utils/media';
 import { getGameOrientation } from '../../../utils/gameOrientation';
+import { getInputEventValue } from '../../../utils/inputValue';
 import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
@@ -95,6 +96,10 @@ function formatQualityScore(value) {
 
   const rounded = Math.round(numericValue * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function buildInputChangeHandler(setter) {
+  return (event) => setter(getInputEventValue(event));
 }
 
 export default function GameIteratePage() {
@@ -354,6 +359,7 @@ export default function GameIteratePage() {
 
     return null;
   }, [activeIterateTask, authorTaskMetadata, currentGame?.id]);
+  const handleIterateFeedbackChange = buildInputChangeHandler(setIterateFeedback);
 
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
@@ -688,7 +694,7 @@ export default function GameIteratePage() {
                 entryMode: 'iterate',
                 session: creationSession,
                 answerValue: iterateFeedback,
-                onAnswerChange: (e) => setIterateFeedback(e?.detail?.value || ''),
+                onAnswerChange: handleIterateFeedbackChange,
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder,
                 answerSuggestions: creationSession?.currentQuestion?.options || [],
                 submitting: creationSessionSubmitting,
@@ -716,7 +722,8 @@ export default function GameIteratePage() {
                   placeholder="说说这次最想优化的部分"
                   placeholderStyle="color: #67627d"
                   value={iterateFeedback}
-                  onInput={(e) => setIterateFeedback(e?.detail?.value || '')}
+                  onInput={handleIterateFeedbackChange}
+                  onChange={handleIterateFeedbackChange}
                   maxlength={1000}
                   autoHeight
                   disabled={creationSessionSubmitting}

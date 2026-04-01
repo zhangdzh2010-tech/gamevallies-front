@@ -21,6 +21,7 @@ import {
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
 import { Storage } from '../../../utils/storage';
+import { getInputEventValue } from '../../../utils/inputValue';
 import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import {
@@ -59,6 +60,10 @@ const TASK_STATUS_LABELS = {
   timed_out: '超时',
 };
 
+function buildInputChangeHandler(setter) {
+  return (event) => setter(getInputEventValue(event));
+}
+
 export default function GameForkPage() {
   const route = useRoute();
   const sourceGameId = route?.params?.sourceGameId || '';
@@ -94,6 +99,7 @@ export default function GameForkPage() {
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `fork-page${isWeapp ? ' fork-page--weapp' : ''}${isH5 ? ' fork-page--h5' : ''}`;
+  const handleForkAnswerChange = buildInputChangeHandler(setForkAnswer);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -495,7 +501,7 @@ export default function GameForkPage() {
                 entryMode: 'fork',
                 session: creationSession,
                 answerValue: forkAnswer,
-                onAnswerChange: (e) => setForkAnswer(e?.detail?.value || ''),
+                onAnswerChange: handleForkAnswerChange,
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder,
                 answerSuggestions: creationSession?.currentQuestion?.options || [],
                 submitting: creationSessionSubmitting,
@@ -524,7 +530,8 @@ export default function GameForkPage() {
                     placeholder="说说你想保留什么、改变什么"
                     placeholderStyle="color: #67627d"
                     value={forkAnswer}
-                    onInput={(e) => setForkAnswer(e?.detail?.value || '')}
+                    onInput={handleForkAnswerChange}
+                    onChange={handleForkAnswerChange}
                     maxlength={1000}
                     autoHeight
                     disabled={creationSessionSubmitting}
