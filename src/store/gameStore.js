@@ -944,87 +944,6 @@ export const useGameStore = create((set, get) => {
     }
   },
 
-  generateFromCreationSession: async (sessionId, options = {}) => {
-    clearActiveTaskRuntime();
-
-    set({
-      currentGame: null,
-      currentTask: null,
-      currentTaskEvents: [],
-      currentTaskCursor: 0,
-      isLoading: true,
-      isGenerating: true,
-      error: null,
-      terminalError: null,
-      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
-      canPlay: true,
-      generationProgress: {
-        stageIndex: 0,
-        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
-        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
-        pct: DISPLAY_PIPELINE_STAGES[0].pct,
-      },
-    });
-
-    try {
-      const result = await gameService.generateFromCreationSession(sessionId, {
-        revision: options.revision,
-        timeoutS: options.timeoutS,
-      });
-      const gameId = result.gameId;
-      const gameTitle = options.title || result.title || '';
-      const promptPreview = options.promptPreview ? String(options.promptPreview).slice(0, 80) : '';
-
-      set({
-        generatingGameId: gameId,
-        isLoading: false,
-        canPlay: result.canPlay !== false,
-      });
-
-      if (result.generationTask?.taskId) {
-        set((state) => ({
-          trackedTasks: mergeTrackedTaskItems(
-            state.trackedTasks,
-            buildTrackedTaskItem(result.generationTask, {
-              gameId,
-              gameTitle,
-              promptPreview,
-              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
-            })
-          ),
-        }));
-      }
-
-      if (result.generationTask?.taskId) {
-        await get()._beginTaskTracking(result.generationTask, {
-          gameId,
-          resetEvents: true,
-          preloadGame: false,
-          taskMeta: {
-            gameTitle,
-            promptPreview,
-          },
-        });
-      } else {
-        throw new Error('创建响应缺少 generationTask');
-      }
-
-      return result;
-    } catch (error) {
-      const message = error?.message || '游戏创建失败，请稍后重试';
-      clearPersistedGenerationTaskSnapshot();
-      set({
-        isLoading: false,
-        isGenerating: false,
-        generationProgress: null,
-        generatingGameId: null,
-        currentTask: null,
-        error: message,
-      });
-      throw new Error(message);
-    }
-  },
-
   iterateGame: async (gameId, feedback) => {
     clearActiveTaskRuntime();
     clearActiveSessionRuntime();
@@ -1294,13 +1213,22 @@ export const useGameStore = create((set, get) => {
     }
   },
 
-  generateFromCreationSession: async (options = {}) => {
+  generateFromCreationSession: async (sessionIdOrOptions = {}, maybeOptions = {}) => {
     const session = get().creationSession;
-    if (!session?.sessionId) {
+    const hasLegacySessionId = typeof sessionIdOrOptions === 'string' && sessionIdOrOptions.trim();
+    const targetSessionId = hasLegacySessionId
+      ? sessionIdOrOptions.trim()
+      : session?.sessionId || '';
+    const options = hasLegacySessionId
+      ? (maybeOptions && typeof maybeOptions === 'object' ? maybeOptions : {})
+      : (sessionIdOrOptions && typeof sessionIdOrOptions === 'object' ? sessionIdOrOptions : {});
+    const resolvedSession = session?.sessionId === targetSessionId ? session : null;
+
+    if (!targetSessionId) {
       throw new Error('当前没有可生成的创作会话');
     }
 
-    if (session.status === 'initializing') {
+    if (resolvedSession?.status === 'initializing') {
       const message = 'AI 还在整理第一轮问题，请稍等';
       set({ creationSessionError: message });
       throw new Error(message);
@@ -1328,21 +1256,27 @@ export const useGameStore = create((set, get) => {
     });
 
     try {
-      const result = await gameService.generateFromCreationSession(session.sessionId, options);
-      const gameId = result.gameId || session.gameId || '';
-      const gameTitle = result.title || session.title || '';
-      const promptPreview = session.prompt ? String(session.prompt).slice(0, 80) : '';
+      const result = await gameService.generateFromCreationSession(targetSessionId, options);
+      const gameId = result.gameId || resolvedSession?.gameId || '';
+      const gameTitle = options.title || result.title || resolvedSession?.title || '';
+      const promptPreview = options.promptPreview
+        ? String(options.promptPreview).slice(0, 80)
+        : resolvedSession?.prompt
+          ? String(resolvedSession.prompt).slice(0, 80)
+          : '';
 
       set({
         generatingGameId: gameId,
         isLoading: false,
         canPlay: result.canPlay !== false,
         creationSessionSubmitting: false,
-        creationSession: {
-          ...session,
-          status: 'generating',
-          gameId,
-        },
+        creationSession: resolvedSession
+          ? {
+              ...resolvedSession,
+              status: 'generating',
+              gameId,
+            }
+          : get().creationSession,
       });
 
       if (result.generationTask?.taskId) {
