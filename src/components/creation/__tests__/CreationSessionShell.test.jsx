@@ -17,7 +17,6 @@ describe('CreationSession components', () => {
       <CreationSessionScene
         shell={{
           title: '逐步把方向聊清楚',
-          statusValue: '继续补充',
         }}
         panel={{
           session: {
@@ -81,7 +80,6 @@ describe('CreationSession components', () => {
       session: {
         status: 'collecting',
       },
-      statusValue: '继续补充',
       answerValue: '加快节奏',
       answerSuggestions: ['像素风'],
       actions: [{ key: 'generate', label: '开始优化' }],
@@ -90,8 +88,6 @@ describe('CreationSession components', () => {
 
     expect(props.shell).toEqual(expect.objectContaining({
       title: '继续优化',
-      statusLabel: '状态',
-      statusValue: '继续补充',
     }));
     expect(props.panel).toEqual(expect.objectContaining({
       entryMode: 'iterate',

@@ -14,7 +14,6 @@ const CREATION_SESSION_MODE_CONFIG = {
   create: {
     shell: {
       title: '继续创作',
-      statusLabel: '状态',
     },
     panel: {
       generateLabel: '开始创作',
@@ -24,7 +23,6 @@ const CREATION_SESSION_MODE_CONFIG = {
   iterate: {
     shell: {
       title: '继续优化',
-      statusLabel: '状态',
     },
     panel: {
       generateLabel: '开始优化',
@@ -34,7 +32,6 @@ const CREATION_SESSION_MODE_CONFIG = {
   fork: {
     shell: {
       title: '继续复刻',
-      statusLabel: '状态',
     },
     panel: {
       generateLabel: '开始复刻',
@@ -50,7 +47,6 @@ export function getCreationSessionModeConfig(entryMode = 'create') {
 export function buildCreationSessionSceneProps({
   entryMode = 'create',
   session = null,
-  statusValue = '',
   answerValue = '',
   onAnswerChange,
   answerPlaceholder = '',
@@ -63,7 +59,6 @@ export function buildCreationSessionSceneProps({
   const shellConfig = modeConfig.shell
     ? {
         ...modeConfig.shell,
-        statusValue,
       }
     : null;
 
