@@ -1,0 +1,109 @@
+name: 部署前端到火山引擎函数服务
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGION:     cn-shanghai
+  REGISTRY:   gamevallies-repo-cn-shanghai.cr.volces.com
+  NAMESPACE:  gamevallies
+  IMAGE_NAME: gv-frontend
+  FUNC_ID:    tsrtwmbw
+  PORT:       8080
+
+jobs:
+  build-and-deploy:
+    name: 构建镜像 & 部署 H5
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # VCR 用户名含 '#'，必须用单引号包裹（见 DEPLOY_RUNBOOK 6.1）
+      - name: 登录 VCR
+        run: |
+          echo '${{ secrets.VOLCENGINE_REGISTRY_PASSWORD }}' | \
+            docker login ${{ env.REGISTRY }} \
+              -u '${{ secrets.VOLCENGINE_REGISTRY_USERNAME }}' \
+              --password-stdin
+
+      - name: 构建并推送镜像
+        run: |
+          IMAGE=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker build --platform linux/amd64 -t $IMAGE .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: 配置 Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: 安装 VeFaaS SDK
+        run: pip install volcengine-python-sdk
+
+      # gv-frontend 函数已存在 (ID: tsrtwmbw)，直接 UpdateFunction + Release
+      - name: 更新函数并发布
+        env:
+          VOLCENGINE_ACCESS_KEY: ${{ secrets.VOLCENGINE_ACCESS_KEY }}
+          VOLCENGINE_SECRET_KEY: ${{ secrets.VOLCENGINE_SECRET_KEY }}
+          VCR_USERNAME: ${{ secrets.VOLCENGINE_REGISTRY_USERNAME }}
+          VCR_PASSWORD: ${{ secrets.VOLCENGINE_REGISTRY_PASSWORD }}
+        run: |
+          python3 - <<PYEOF
+          import os, sys, time, warnings
+          warnings.filterwarnings("ignore")
+          import volcenginesdkvefaas, volcenginesdkcore
+
+          AK       = os.environ["VOLCENGINE_ACCESS_KEY"]
+          SK       = os.environ["VOLCENGINE_SECRET_KEY"]
+          USERNAME = os.environ["VCR_USERNAME"]
+          PASSWORD = os.environ["VCR_PASSWORD"]
+          IMAGE    = os.environ["IMAGE"]
+          FUNC_ID  = "${{ env.FUNC_ID }}"
+          REGION   = "${{ env.REGION }}"
+
+          cfg = volcenginesdkcore.Configuration()
+          cfg.ak, cfg.sk, cfg.region = AK, SK, REGION
+          api = volcenginesdkvefaas.VEFAASApi(volcenginesdkcore.ApiClient(cfg))
+
+          print(f"更新函数 gv-frontend (id={FUNC_ID}) → {IMAGE}")
+          api.update_function(volcenginesdkvefaas.UpdateFunctionRequest(
+              id=FUNC_ID,
+              source_type="image",
+              source=IMAGE,
+              source_access_config=volcenginesdkvefaas.SourceAccessConfigForUpdateFunctionInput(
+                  username=USERNAME, password=PASSWORD),
+          ))
+          print("函数配置已更新，等待镜像缓存就绪...")
+
+          deadline = time.time() + 300
+          cache_status = status = ""
+          while time.time() < deadline:
+              try:
+                  sync = api.get_image_sync_status(
+                      volcenginesdkvefaas.GetImageSyncStatusRequest(function_id=FUNC_ID, source=IMAGE))
+                  status = getattr(sync, "status", "") or ""
+                  cache_status = getattr(sync, "image_cache_status", "") or ""
+                  if cache_status.lower() == "ready" or status.lower() == "succeeded":
+                      print(f"镜像缓存就绪 (status={status})")
+                      break
+                  if status.lower() == "failed":
+                      print("镜像同步失败，请检查 VCR 凭证"); sys.exit(1)
+              except Exception as e:
+                  print(f"  查询异常: {e}")
+              print(f"  等待中... status={status} cache={cache_status}")
+              time.sleep(10)
+          else:
+              print("等待超时 (5 分钟)"); sys.exit(1)
+
+          rel = api.release(volcenginesdkvefaas.ReleaseRequest(function_id=FUNC_ID, revision_number=0))
+          print(f"发布成功 版本={rel.new_revision_number} 状态={rel.status}")
+          PYEOF
