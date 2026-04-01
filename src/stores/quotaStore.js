@@ -170,6 +170,8 @@ const useQuotaStore = create((set, get) => ({
     expiresAt: null,
     usedThisPeriod: 0,
     quotaThisPeriod: 0,
+    remaining: 0,
+    totalRemaining: 0,
   },
   plans: [],
   subscriberCount: 0,
@@ -752,9 +754,7 @@ const useQuotaStore = create((set, get) => ({
 
   updateAfterCreate: (canPlay, quotaRemaining) => {
     void canPlay;
-    set((prev) => ({
-      freeQuota: Math.max(0, quotaRemaining ?? prev.freeQuota - 1),
-    }));
+    void quotaRemaining;
   },
 
   reset: () => {
@@ -769,6 +769,8 @@ const useQuotaStore = create((set, get) => ({
         expiresAt: null,
         usedThisPeriod: 0,
         quotaThisPeriod: 0,
+        remaining: 0,
+        totalRemaining: 0,
       },
       plans: [],
       subscriberCount: 0,

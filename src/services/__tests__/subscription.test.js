@@ -1,6 +1,6 @@
 /* eslint-env jest */
-import { post } from '../api';
-import { createOrder } from '../subscription';
+import { get, post } from '../api';
+import { createOrder, getQuota } from '../subscription';
 import * as runtime from '../../utils/runtime';
 
 jest.mock('../api', () => ({
@@ -62,6 +62,38 @@ describe('subscriptionService.createOrder', () => {
     expect(post).toHaveBeenCalledWith('/api/v1/subscription/order', {
       planId: 'plan-pro',
       gameId: 'game-1',
+    });
+  });
+
+  test('normalizes free and subscription quota fields from the quota api', async () => {
+    get.mockResolvedValueOnce({
+      freeQuota: 5,
+      freeQuotaUsed: 1,
+      freeQuotaRemaining: 4,
+      subscriptionActive: true,
+      subscriptionQuota: 30,
+      subscriptionUsed: 12,
+      subscriptionRemaining: 18,
+      totalRemaining: 22,
+      planName: '专业月卡',
+    });
+
+    const quota = await getQuota();
+
+    expect(quota).toEqual({
+      freeQuota: 4,
+      totalFreeQuota: 5,
+      subscription: {
+        active: true,
+        planId: null,
+        planName: '专业月卡',
+        expiresAt: null,
+        usedThisPeriod: 12,
+        quotaThisPeriod: 30,
+        autoRenew: false,
+        remaining: 18,
+        totalRemaining: 22,
+      },
     });
   });
 });
