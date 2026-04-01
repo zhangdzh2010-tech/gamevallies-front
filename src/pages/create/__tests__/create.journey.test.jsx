@@ -246,9 +246,9 @@ describe('Create page journey coverage', () => {
       });
     });
 
-    expect(screen.getByText(/系统整理出的方案草案/)).toBeTruthy();
+    expect(screen.getByText(/方案草案/)).toBeTruthy();
     expect(screen.getByText(/办公室摸鱼计划/)).toBeTruthy();
-    expect(screen.getByText(/本轮追问策略/)).toBeTruthy();
+    expect(screen.getByText(/理解与追问/)).toBeTruthy();
   });
 
   test('example prompt click fills the textarea and short prompts are blocked', async () => {
@@ -370,7 +370,7 @@ describe('Create page journey coverage', () => {
       );
     });
 
-    fireEvent.click(screen.getAllByText('开始创作').slice(-1)[0]);
+    fireEvent.click(screen.getByText('开始创作'));
 
     await waitFor(() => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith(
@@ -430,7 +430,7 @@ describe('Create page journey coverage', () => {
 
     expect(screen.getByText(/你希望它发生在什么场景里/)).toBeTruthy();
 
-    fireEvent.change(screen.getByPlaceholderText(/你希望它发生在什么场景里/), {
+    fireEvent.change(screen.getByPlaceholderText(/比如办公室、农场、校园/), {
       target: { value: '农场闯关，三消为主' },
     });
     fireEvent.click(screen.getByText(ANSWER_TEXT));

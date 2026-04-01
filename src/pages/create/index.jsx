@@ -30,6 +30,11 @@ import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
+import {
+  CreationSessionScene,
+  buildCreationSessionActions,
+  buildCreationSessionSceneProps,
+} from '../../components/creation';
 import './index.scss';
 
 const EXAMPLE_PROMPTS = [
@@ -130,9 +135,6 @@ export default function Create() {
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
   const containerClassName = `create-container${isH5 ? ' create-container--h5' : ''}${isWeapp ? ' create-container--weapp' : ''}`;
-  const confidenceSummary = creationSession?.confidenceSummary || null;
-  const questionStrategy = creationSession?.questionStrategy || null;
-  const planDraft = creationSession?.planDraft || null;
   const creationSessionId = creationSession?.sessionId || creationSession?.id || '';
 
   const normalizeCreatePageSession = (snapshot) => {
@@ -877,179 +879,58 @@ export default function Create() {
               </View>
             </>
           ) : (
-            <>
-              <View className="create-intro-card">
-                <Text className="create-intro-card__eyebrow">Creation Session</Text>
-                <Text className="create-intro-card__title">AI 正在帮你补全关键设定</Text>
-                <Text className="create-intro-card__desc">
-                  当前信息完整度约 {Math.round((creationSession.slotFillPct || 0) * 100)}%。如果方向已经满意，你也可以直接开始创作。
-                </Text>
-              </View>
-
-              {planDraft ? (
-                <View className="form-group">
-                  <Text className="form-label">系统整理出的方案草案</Text>
-                  <View className="create-plan-card">
-                    <Text className="create-plan-card__eyebrow">Plan Draft</Text>
-                    <Text className="create-plan-card__title">{planDraft.title || '未命名方案'}</Text>
-                    <Text className="create-plan-card__summary">{planDraft.summary}</Text>
-                    <View className="create-plan-grid">
-                      {planDraft.concept ? (
-                        <View className="create-plan-item">
-                          <Text className="create-plan-item__label">玩法定位</Text>
-                          <Text className="create-plan-item__value">{planDraft.concept}</Text>
-                        </View>
-                      ) : null}
-                      {planDraft.interaction ? (
-                        <View className="create-plan-item">
-                          <Text className="create-plan-item__label">核心交互</Text>
-                          <Text className="create-plan-item__value">{planDraft.interaction}</Text>
-                        </View>
-                      ) : null}
-                      {planDraft.objective ? (
-                        <View className="create-plan-item">
-                          <Text className="create-plan-item__label">目标设计</Text>
-                          <Text className="create-plan-item__value">{planDraft.objective}</Text>
-                        </View>
-                      ) : null}
-                      {planDraft.pacing ? (
-                        <View className="create-plan-item">
-                          <Text className="create-plan-item__label">节奏结构</Text>
-                          <Text className="create-plan-item__value">{planDraft.pacing}</Text>
-                        </View>
-                      ) : null}
-                      {planDraft.visualDirection ? (
-                        <View className="create-plan-item">
-                          <Text className="create-plan-item__label">视觉方向</Text>
-                          <Text className="create-plan-item__value">{planDraft.visualDirection}</Text>
-                        </View>
-                      ) : null}
-                      {planDraft.signatureMoment ? (
-                        <View className="create-plan-item">
-                          <Text className="create-plan-item__label">记忆点</Text>
-                          <Text className="create-plan-item__value">{planDraft.signatureMoment}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              ) : null}
-
-              {confidenceSummary || questionStrategy ? (
-                <View className="form-group">
-                  <Text className="form-label">本轮追问策略</Text>
-                  <View className="create-quality-card">
-                    <Text className="create-quality-card__eyebrow">Quality Guidance</Text>
-                    {questionStrategy?.reason ? (
-                      <Text className="create-quality-card__title">{questionStrategy.reason}</Text>
-                    ) : null}
-                    {confidenceSummary ? (
-                      <Text className="create-quality-card__desc">
-                        当前整体理解把握度约 {Math.round((confidenceSummary.overallConfidence || 0) * 100)}%。
-                      </Text>
-                    ) : null}
-                    <View className="create-chip-row">
-                      {(confidenceSummary?.strongestSlots || []).slice(0, 2).map((slotKey) => (
-                        <View key={`strong-${slotKey}`} className="create-chip create-chip--good">
-                          <Text className="create-chip__text">已较明确：{formatSlotLabel(slotKey)}</Text>
-                        </View>
-                      ))}
-                      {(confidenceSummary?.weakestSlots || []).slice(0, 2).map((slotKey) => (
-                        <View key={`weak-${slotKey}`} className="create-chip create-chip--warn">
-                          <Text className="create-chip__text">仍需确认：{formatSlotLabel(slotKey)}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-              ) : null}
-
-              <View className="form-group">
-                <Text className="form-label">当前对话</Text>
-                <View className="example-list">
-                  {(creationSession.conversation || creationSession.messages || []).slice(-6).map((message, index) => (
-                    <View key={`${message.role}-${index}`} className="example-card">
-                      <Text className="example-emoji">{message.role === 'assistant' ? 'AI' : '你'}</Text>
-                      <Text className="example-text">{message.content}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              {creationSession.currentQuestion ? (
-                <View className="form-group">
-                  <Text className="form-label">当前问题</Text>
-                  <View className="create-intro-card">
-                    <Text className="create-intro-card__eyebrow">
-                      {creationSession.currentQuestion.label || creationSession.currentQuestion.title}
-                    </Text>
-                    <Text className="create-intro-card__title">
-                      {creationSession.currentQuestion.prompt || creationSession.currentQuestion.content}
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-
-              <View className="form-group">
-                <Text className="form-label">你的补充回答</Text>
-                <View className="form-input-wrap form-input-wrap--textarea">
-                  <Textarea
-                    className="form-textarea"
-                    placeholder={creationSession.currentQuestion?.prompt || creationSession.currentQuestion?.placeholder || '如果你想补充更多细节，可以继续输入...'}
-                    placeholderStyle="color: #55516e"
-                    value={sessionAnswer}
-                    onInput={(e) => setSessionAnswer(e.detail.value)}
-                    maxlength={1000}
-                    autoHeight
-                  />
-                </View>
-                <Text className="input-count">{sessionAnswer.length}/1000</Text>
-              </View>
-            </>
+            <CreationSessionScene
+              {...buildCreationSessionSceneProps({
+                entryMode: 'create',
+                session: creationSession,
+                answerValue: sessionAnswer,
+                onAnswerChange: (e) => setSessionAnswer(e?.detail?.value || ''),
+                answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,
+                answerSuggestions: [],
+                submitting: sessionBusy,
+                actions: buildCreationSessionActions({
+                  submitting: sessionBusy,
+                  answerValue: sessionAnswer,
+                  generateLabel: creationSession.readyToGenerate ? '开始创作' : '直接开始创作',
+                  onSubmit: handleSubmit,
+                  onSkip: handleSkipQuestion,
+                  onGenerate: handleGenerateFromSession,
+                  onRestart: handleRestartSession,
+                }),
+                errorMessage: error ? getUserFacingCreateError(terminalError?.message || error, '创建游戏') : '',
+              })}
+            />
           )}
 
-          {error && (
+          {!creationSession && error && (
             <View className="error-banner">
               <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
               <Text className="error-dismiss" onClick={clearError}>×</Text>
             </View>
           )}
 
-          <View className="form-actions">
-            {!creationSession ? (
+          {!creationSession ? (
+            <View className="form-actions">
               <View className="submit-btn" onClick={handleSubmit}>
                 <Text>{sessionBusy ? '分析中...' : '开始创作'}</Text>
               </View>
-            ) : (
-              <View className="form-actions form-actions--session">
-                <View className="submit-btn" onClick={handleSubmit}>
-                  <Text>{sessionBusy ? '处理中...' : '提交回答'}</Text>
-                </View>
-                <View className="action-btn new-btn" onClick={handleSkipQuestion}>
-                  <Text>跳过此题</Text>
-                </View>
-                <View className="action-btn play-btn" onClick={handleGenerateFromSession}>
-                  <Text>{creationSession.readyToGenerate ? '开始创作' : '直接生成游戏'}</Text>
-                </View>
-                <View className="action-btn new-btn" onClick={handleRestartSession}>
-                  <Text>重新开始</Text>
-                </View>
-              </View>
-            )}
-          </View>
+            </View>
+          ) : null}
         </View>
 
-        <View className="examples-section">
-          <Text className="section-title">创意样例 <Text className="section-hint">点击即可直接使用</Text></Text>
-          <View className="example-list">
-            {EXAMPLE_PROMPTS.map((ex, idx) => (
-              <View key={idx} className="example-card" onClick={() => handleExampleClick(ex.text)}>
-                <Text className="example-emoji">{ex.emoji}</Text>
-                <Text className="example-text">{ex.text}</Text>
-              </View>
-            ))}
+        {!creationSession ? (
+          <View className="examples-section">
+            <Text className="section-title">创意样例 <Text className="section-hint">点击即可直接使用</Text></Text>
+            <View className="example-list">
+              {EXAMPLE_PROMPTS.map((ex, idx) => (
+                <View key={idx} className="example-card" onClick={() => handleExampleClick(ex.text)}>
+                  <Text className="example-emoji">{ex.emoji}</Text>
+                  <Text className="example-text">{ex.text}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         <View className="bottom-spacer" />
       </PageScrollContainer>
