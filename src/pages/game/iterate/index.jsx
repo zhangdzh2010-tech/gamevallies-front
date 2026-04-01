@@ -147,12 +147,19 @@ export default function GameIteratePage() {
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `iterate-page${isWeapp ? ' iterate-page--weapp' : ''}${isH5 ? ' iterate-page--h5' : ''}`;
 
-  const activeIterateTask = currentTask?.taskType === 'pipeline_iterate' ? currentTask : null;
-  const isIterateTaskActive = Boolean(
-    isGenerating
-    && activeIterateTask
-    && (!gameId || !activeIterateTask.gameId || String(activeIterateTask.gameId) === String(gameId))
+  const iterateSourceGameId = String(currentGame?.id || gameId || '');
+  const isCurrentIterateSession = Boolean(
+    creationSession
+    && creationSession.entryMode === 'iterate'
+    && String(creationSession.sourceGameId || '') === iterateSourceGameId
   );
+  const activeIterateTask = currentTask && (
+    (taskId
+      && currentTask.taskType === 'pipeline_iterate'
+      && String(currentTask.taskId || '') === String(taskId))
+    || (isCurrentIterateSession && currentTask.taskId)
+  ) ? currentTask : null;
+  const isIterateTaskActive = Boolean(isGenerating && activeIterateTask);
   const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
   useEffect(() => {
     if (isLoggedIn()) {
