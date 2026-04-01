@@ -328,6 +328,7 @@ describe('gameStore creation session actions', () => {
       creationSession: {
         sessionId: 'session-3',
         status: 'ready',
+        revision: 4,
         prompt: '做一个双人赛车游戏',
         title: 'Race Rush',
       },
@@ -354,12 +355,57 @@ describe('gameStore creation session actions', () => {
     });
 
     expect(mockGenerateFromCreationSession).toHaveBeenCalledWith('session-3', {
+      revision: 4,
       generationTier: 'standard',
     });
     expect(beginTaskTracking).toHaveBeenCalledWith(expect.objectContaining({
       taskId: 'task-3',
     }), expect.objectContaining({
       gameId: 'game-3',
+    }));
+  });
+
+  test('generateFromCreationSession falls back to the current session revision when callers omit it', async () => {
+    const beginTaskTracking = jest.fn(() => Promise.resolve());
+
+    useGameStore.setState({
+      creationSession: {
+        sessionId: 'session-4',
+        status: 'ready',
+        revision: 9,
+        prompt: '做一个三消游戏',
+        title: 'Match Pop',
+      },
+      trackedTasks: [],
+      _beginTaskTracking: beginTaskTracking,
+    });
+
+    mockGenerateFromCreationSession.mockResolvedValue({
+      gameId: 'game-4',
+      title: 'Match Pop',
+      status: 'generating',
+      canPlay: true,
+      generationTask: {
+        taskId: 'task-4',
+        taskType: 'pipeline_run',
+        status: 'queued',
+        gameId: 'game-4',
+        progressPct: 5,
+      },
+    });
+
+    await useGameStore.getState().generateFromCreationSession({
+      generationTier: 'standard',
+    });
+
+    expect(mockGenerateFromCreationSession).toHaveBeenCalledWith('session-4', {
+      revision: 9,
+      generationTier: 'standard',
+    });
+    expect(beginTaskTracking).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: 'task-4',
+    }), expect.objectContaining({
+      gameId: 'game-4',
     }));
   });
 

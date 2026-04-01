@@ -379,6 +379,7 @@ describe('Iterate page creation session flow', () => {
         sessionId: 'session-1',
         entryMode: 'iterate',
         status: 'collecting',
+        revision: 6,
         sourceGameId: 'game-1',
         generationTier: 'standard',
         planDraft: '系统建议保留跑酷核心，重点优化节奏和反馈',
@@ -400,6 +401,7 @@ describe('Iterate page creation session flow', () => {
 
     await waitFor(() => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
+        revision: 6,
         orientation: 'portrait',
         generationTier: 'standard',
       });

@@ -1188,9 +1188,15 @@ export const useGameStore = create((set, get) => {
     const targetSessionId = hasLegacySessionId
       ? sessionIdOrOptions.trim()
       : session?.sessionId || '';
-    const options = hasLegacySessionId
+    const rawOptions = hasLegacySessionId
       ? (maybeOptions && typeof maybeOptions === 'object' ? maybeOptions : {})
       : (sessionIdOrOptions && typeof sessionIdOrOptions === 'object' ? sessionIdOrOptions : {});
+    const options = {
+      ...(rawOptions || {}),
+      ...((rawOptions?.revision == null && session?.revision != null)
+        ? { revision: session.revision }
+        : {}),
+    };
     const resolvedSession = session?.sessionId === targetSessionId ? session : null;
 
     if (!targetSessionId) {

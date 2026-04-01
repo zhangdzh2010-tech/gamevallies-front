@@ -511,6 +511,7 @@ export default function GameIteratePage() {
   const handleGenerateFromSession = async () => {
     try {
       await generateFromCreationSession({
+        revision: creationSession?.revision,
         orientation: getGameOrientation(currentGame),
         generationTier: creationSession?.generationTier || 'standard',
       });
