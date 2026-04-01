@@ -357,4 +357,26 @@ describe('quotaStore payment unlock flow', () => {
       paySign: 'sign-h5',
     });
   });
+
+  test('updateAfterCreate keeps quota display untouched until fetchQuota refreshes it', () => {
+    useQuotaStore.setState({
+      freeQuota: 4,
+      totalFreeQuota: 5,
+      subscription: {
+        active: true,
+        planId: 'plan-pro',
+        planName: '专业月卡',
+        expiresAt: null,
+        usedThisPeriod: 12,
+        quotaThisPeriod: 30,
+        remaining: 18,
+        totalRemaining: 22,
+      },
+    });
+
+    useQuotaStore.getState().updateAfterCreate(true, 17);
+
+    expect(useQuotaStore.getState().freeQuota).toBe(4);
+    expect(useQuotaStore.getState().subscription.remaining).toBe(18);
+  });
 });

@@ -25,6 +25,10 @@ export default function SubscriptionPage() {
 
   const usedQuota = totalFreeQuota - freeQuota;
   const usedPercent = totalFreeQuota > 0 ? Math.round((usedQuota / totalFreeQuota) * 100) : 0;
+  const subscriptionRemaining = Number(subscription?.remaining ?? Math.max(0, (subscription?.quotaThisPeriod || 0) - (subscription?.usedThisPeriod || 0))) || 0;
+  const subscriptionUsedPercent = subscription.quotaThisPeriod > 0
+    ? Math.round(((subscription.usedThisPeriod || 0) / subscription.quotaThisPeriod) * 100)
+    : 0;
   const featuredPlan = plans.find((plan) => plan.recommended) || plans[0] || null;
 
   useEffect(() => {
@@ -64,6 +68,11 @@ export default function SubscriptionPage() {
       value: subscription.active ? (subscription.planName || '会员中') : `${freeQuota} 次`,
     },
     {
+      key: 'subscription-remaining',
+      label: '订阅剩余',
+      value: subscription.active ? `${subscriptionRemaining}/${subscription.quotaThisPeriod || 0} 次` : '--',
+    },
+    {
       key: 'popular',
       label: '推荐方案',
       value: featuredPlan ? featuredPlan.name : '--',
@@ -100,19 +109,40 @@ export default function SubscriptionPage() {
           </View>
         </View>
 
-        <View className="quota-card">
-          <Text className="quota-card-eyebrow">Quota Overview</Text>
-          <Text className="quota-card-title">免费创作额度</Text>
-          <View className="quota-progress-wrap">
-            <View className="quota-progress-bg">
-              <View className="quota-progress-fill" style={{ width: `${usedPercent}%` }} />
+        <View className="quota-cards">
+          <View className="quota-card">
+            <Text className="quota-card-eyebrow">Quota Overview</Text>
+            <Text className="quota-card-title">免费创作额度</Text>
+            <View className="quota-progress-wrap">
+              <View className="quota-progress-bg">
+                <View className="quota-progress-fill" style={{ width: `${usedPercent}%` }} />
+              </View>
+              <Text className="quota-progress-text">已用 {usedQuota} / {totalFreeQuota} 次</Text>
             </View>
-            <Text className="quota-progress-text">已用 {usedQuota} / {totalFreeQuota} 次</Text>
+            <View className="quota-remaining">
+              <Text className="quota-remaining-num">{freeQuota}</Text>
+              <Text className="quota-remaining-label">次剩余</Text>
+            </View>
           </View>
-          <View className="quota-remaining">
-            <Text className="quota-remaining-num">{freeQuota}</Text>
-            <Text className="quota-remaining-label">次剩余</Text>
-          </View>
+
+          {subscription.active ? (
+            <View className="quota-card">
+              <Text className="quota-card-eyebrow">Subscription</Text>
+              <Text className="quota-card-title">订阅创作额度</Text>
+              <View className="quota-progress-wrap">
+                <View className="quota-progress-bg">
+                  <View className="quota-progress-fill" style={{ width: `${subscriptionUsedPercent}%` }} />
+                </View>
+                <Text className="quota-progress-text">
+                  已用 {subscription.usedThisPeriod || 0} / {subscription.quotaThisPeriod || 0} 次
+                </Text>
+              </View>
+              <View className="quota-remaining">
+                <Text className="quota-remaining-num">{subscriptionRemaining}</Text>
+                <Text className="quota-remaining-label">次剩余</Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {subscription.active ? (
@@ -133,6 +163,10 @@ export default function SubscriptionPage() {
                 <Text className="sub-info-value">
                   {subscription.usedThisPeriod} / {subscription.quotaThisPeriod} 次
                 </Text>
+              </View>
+              <View className="sub-info-row">
+                <Text className="sub-info-label">本期剩余</Text>
+                <Text className="sub-info-value">{subscriptionRemaining} 次</Text>
               </View>
             </View>
           </View>

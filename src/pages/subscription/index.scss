@@ -13,6 +13,11 @@
   padding: 0 32rpx;
 }
 
+.quota-cards {
+  display: grid;
+  gap: 24rpx;
+}
+
 /* Quota Card */
 .quota-card {
   background: #1a1a2e;

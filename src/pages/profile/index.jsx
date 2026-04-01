@@ -712,7 +712,7 @@ export default function Profile() {
   const currentUserId = Storage.getUser()?.id;
   const freeQuota = useQuotaStore((s) => s.freeQuota);
   const totalFreeQuota = useQuotaStore((s) => s.totalFreeQuota);
-  const subscriptionActive = useQuotaStore((s) => s.subscription.active);
+  const subscription = useQuotaStore((s) => s.subscription);
   const fetchQuota = useQuotaStore((s) => s.fetchQuota);
   const [activeTab, setActiveTab] = useState('works');
   const [profile, setProfile] = useState({
@@ -1209,9 +1209,17 @@ export default function Profile() {
     { value: formatNumber(normalizedBookmarkedGames.length), label: '收藏' },
   ];
   const quotaUsed = Math.max(0, totalFreeQuota - freeQuota);
-  const membershipPlanLabel = subscriptionActive ? '会员卡' : '免费卡';
-  const membershipQuotaText = subscriptionActive ? '已解锁更多创作额度' : `剩余 ${freeQuota} 次免费额度`;
-  const membershipQuotaSub = subscriptionActive ? '查看订阅权益与有效期' : `已使用 ${quotaUsed}/${totalFreeQuota}`;
+  const subscriptionActive = Boolean(subscription?.active);
+  const subscriptionTotal = Number(subscription?.quotaThisPeriod ?? 0) || 0;
+  const subscriptionUsed = Number(subscription?.usedThisPeriod ?? 0) || 0;
+  const subscriptionRemaining = Number(subscription?.remaining ?? Math.max(0, subscriptionTotal - subscriptionUsed)) || 0;
+  const membershipPlanLabel = subscriptionActive ? (subscription?.planName || '会员卡') : '免费卡';
+  const membershipQuotaText = subscriptionActive
+    ? `订阅剩余 ${subscriptionRemaining}/${subscriptionTotal} 次`
+    : `免费剩余 ${freeQuota}/${totalFreeQuota} 次`;
+  const membershipQuotaSub = subscriptionActive
+    ? `免费剩余 ${freeQuota}/${totalFreeQuota} 次`
+    : `已使用 ${quotaUsed}/${totalFreeQuota}`;
   const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
@@ -1251,7 +1259,7 @@ export default function Profile() {
                       className="profile-membership-btn"
                       onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
                     >
-                      <Text className="profile-membership-btn__text">{subscriptionActive ? '管理' : '订阅'}</Text>
+                      <Text className="profile-membership-btn__text">{subscriptionActive ? '查看' : '订阅'}</Text>
                     </View>
                   </View>
                 </View>

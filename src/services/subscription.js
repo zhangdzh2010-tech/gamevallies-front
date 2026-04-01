@@ -82,6 +82,12 @@ function normalizeQuotaResponse(data) {
   const freeQuota = Number(data.freeQuota ?? data.totalFreeQuota ?? 0) || 0;
   const freeQuotaUsed = Number(data.freeQuotaUsed ?? 0) || 0;
   const freeQuotaRemaining = Number(data.freeQuotaRemaining ?? Math.max(0, freeQuota - freeQuotaUsed)) || 0;
+  const subscriptionQuota = Number(data.subscription?.quotaThisPeriod ?? data.subscriptionQuota ?? 0) || 0;
+  const subscriptionUsed = Number(data.subscription?.usedThisPeriod ?? data.subscriptionUsed ?? 0) || 0;
+  const subscriptionRemaining = Number(
+    data.subscription?.remaining ?? data.subscriptionRemaining ?? Math.max(0, subscriptionQuota - subscriptionUsed)
+  ) || 0;
+  const totalRemaining = Number(data.totalRemaining ?? (freeQuotaRemaining + subscriptionRemaining)) || 0;
 
   return {
     freeQuota: freeQuotaRemaining,
@@ -91,11 +97,11 @@ function normalizeQuotaResponse(data) {
       planId: data.subscription?.planId ?? data.planId ?? null,
       planName: data.subscription?.planName ?? data.planName ?? null,
       expiresAt: data.subscription?.expiresAt ?? data.expiresAt ?? null,
-      usedThisPeriod: data.subscription?.usedThisPeriod ?? data.subscriptionUsed ?? 0,
-      quotaThisPeriod: data.subscription?.quotaThisPeriod ?? data.subscriptionQuota ?? 0,
+      usedThisPeriod: subscriptionUsed,
+      quotaThisPeriod: subscriptionQuota,
       autoRenew: data.subscription?.autoRenew ?? data.autoRenew ?? false,
-      remaining: data.subscription?.remaining ?? data.subscriptionRemaining ?? 0,
-      totalRemaining: data.totalRemaining ?? freeQuotaRemaining,
+      remaining: subscriptionRemaining,
+      totalRemaining,
     },
   };
 }
