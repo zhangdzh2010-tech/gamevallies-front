@@ -74,13 +74,19 @@ describe('gameService.createCreationSession', () => {
       generationTier: 'showcase',
     });
 
-    expect(post).toHaveBeenCalledWith('/api/v1/games/creation-sessions', expect.objectContaining({
-      prompt: '做一个双人竞速小游戏',
-      title: 'Wide Runner',
-      entryMode: 'create',
-      orientation: 'landscape',
-      generationTier: 'showcase',
-    }));
+    expect(post).toHaveBeenCalledWith(
+      '/api/v1/games/creation-sessions',
+      expect.objectContaining({
+        prompt: '做一个双人竞速小游戏',
+        title: 'Wide Runner',
+        entryMode: 'create',
+        orientation: 'landscape',
+        generationTier: 'showcase',
+      }),
+      expect.objectContaining({
+        timeout: 90000,
+      })
+    );
   });
 });
 
@@ -105,7 +111,13 @@ describe('creation session follow-up endpoints', () => {
       generationTier: 'standard',
     });
 
-    expect(post).toHaveBeenCalledWith('/api/v1/games/creation-sessions/session-11/generate', {});
+    expect(post).toHaveBeenCalledWith(
+      '/api/v1/games/creation-sessions/session-11/generate',
+      {},
+      expect.objectContaining({
+        timeout: 90000,
+      })
+    );
   });
 
   test('abandonCreationSession uses the abandon action endpoint', async () => {

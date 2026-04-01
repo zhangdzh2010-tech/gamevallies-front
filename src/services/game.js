@@ -275,14 +275,20 @@ export async function createCreationSession(prompt, title, options = {}) {
   const normalizedOptions = options && typeof options === 'object' ? options : {};
   const orientation = normalizeGameOrientation(normalizedOptions.orientation);
 
-  const response = await post('/api/v1/games/creation-sessions', {
-    prompt,
-    ...(title ? { title } : {}),
-    ...(normalizedOptions.entryMode ? { entryMode: normalizedOptions.entryMode } : {}),
-    ...(orientation ? { orientation } : {}),
-    ...(normalizedOptions.generationTier ? { generationTier: normalizedOptions.generationTier } : {}),
-    ...(normalizedOptions.sourceGameId ? { sourceGameId: normalizedOptions.sourceGameId } : {}),
-  });
+  const response = await post(
+    '/api/v1/games/creation-sessions',
+    {
+      prompt,
+      ...(title ? { title } : {}),
+      ...(normalizedOptions.entryMode ? { entryMode: normalizedOptions.entryMode } : {}),
+      ...(orientation ? { orientation } : {}),
+      ...(normalizedOptions.generationTier ? { generationTier: normalizedOptions.generationTier } : {}),
+      ...(normalizedOptions.sourceGameId ? { sourceGameId: normalizedOptions.sourceGameId } : {}),
+    },
+    {
+      timeout: 90000,
+    }
+  );
 
   return normalizeCreationSessionSnapshot(response);
 }
@@ -298,18 +304,30 @@ export async function getCreationSession(sessionId) {
 }
 
 export async function appendCreationSessionMessage(sessionId, content, revision) {
-  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/messages`, {
-    content,
-    ...(revision != null ? { revision } : {}),
-  });
+  const response = await post(
+    `/api/v1/games/creation-sessions/${sessionId}/messages`,
+    {
+      content,
+      ...(revision != null ? { revision } : {}),
+    },
+    {
+      timeout: 90000,
+    }
+  );
 
   return normalizeCreationSessionSnapshot(response);
 }
 
 export async function skipCreationSessionQuestion(sessionId, revision) {
-  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/skip`, {
-    ...(revision != null ? { revision } : {}),
-  });
+  const response = await post(
+    `/api/v1/games/creation-sessions/${sessionId}/skip`,
+    {
+      ...(revision != null ? { revision } : {}),
+    },
+    {
+      timeout: 90000,
+    }
+  );
 
   return normalizeCreationSessionSnapshot(response);
 }
@@ -317,7 +335,13 @@ export async function skipCreationSessionQuestion(sessionId, revision) {
 export async function generateFromCreationSession(sessionId, options = {}) {
   void options;
 
-  const response = await post(`/api/v1/games/creation-sessions/${sessionId}/generate`, {});
+  const response = await post(
+    `/api/v1/games/creation-sessions/${sessionId}/generate`,
+    {},
+    {
+      timeout: 90000,
+    }
+  );
 
   return normalizeGenerateResponse(response);
 }

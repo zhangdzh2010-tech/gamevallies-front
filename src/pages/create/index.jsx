@@ -8,7 +8,6 @@ import { PipelineOrbit } from '../../components/common/PipelineOrbit';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import * as gameService from '../../services/game';
 import {
-  getPersistedGenerationTaskSnapshot,
   isCompletedGameStatus,
   useGameStore,
   PIPELINE_STAGES,
@@ -75,6 +74,14 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
 
   if (/超时|timeout|timed out/i.test(source)) {
     return `${fallbackStageLabel}阶段处理超时，请稍后重试`;
+  }
+
+  if (/aborted a request|aborterror|aborted|取消了请求|中断了请求/i.test(source)) {
+    return `${fallbackStageLabel}请求被中断了，请再试一次`;
+  }
+
+  if (/network|request:fail|econn|enotfound|enetunreach|网络/i.test(source)) {
+    return '当前网络不稳定，请稍后重试';
   }
 
   return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
@@ -177,7 +184,7 @@ export default function Create() {
   ]);
 
   useDidShow(() => {
-    if (!isLoggedIn() || createEntryIntent || isGenerating || currentTask?.taskId || isRestoringEntry) {
+    if (!isLoggedIn() || createEntryIntent || isRestoringEntry) {
       return;
     }
 
@@ -195,31 +202,22 @@ export default function Create() {
       return;
     }
 
-    const activeTaskSnapshot = getPersistedGenerationTaskSnapshot();
-    if (!activeTaskSnapshot?.taskId || activeTaskSnapshot?.taskType === 'pipeline_iterate') {
-      gameService.getActiveCreationSession()
-        .then((session) => {
-          if (session?.entryMode === 'create') {
-            setResumeCandidate(session);
-          } else {
-            setResumeCandidate(null);
-          }
-        })
-        .catch(() => {
-          setResumeCandidate(null);
-        });
-      return;
+    // Opening the create tab should prioritize starting a new creation round.
+    // Old generation tasks stay in the task center instead of hijacking the page.
+    if (isGenerating || currentTask?.taskId || currentGame) {
+      resetCreateSession({ clearPersistedTask: false });
     }
 
-    setIsRestoringEntry(true);
-    restorePersistedTask(activeTaskSnapshot)
-      .then((restored) => {
-        if (!restored) {
-          Taro.showToast({ title: '恢复创作任务失败', icon: 'none' });
+    gameService.getActiveCreationSession()
+      .then((session) => {
+        if (session?.entryMode === 'create') {
+          setResumeCandidate(session);
+        } else {
+          setResumeCandidate(null);
         }
       })
-      .finally(() => {
-        setIsRestoringEntry(false);
+      .catch(() => {
+        setResumeCandidate(null);
       });
   });
 
@@ -378,7 +376,7 @@ export default function Create() {
       await answerCreationSessionQuestion(sessionAnswer.trim());
       setSessionAnswer('');
     } catch (err) {
-      Taro.showToast({ title: err?.message || '提交回答失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '回答问题'), icon: 'none' });
     }
   };
 
@@ -387,7 +385,7 @@ export default function Create() {
       await skipCreationSessionQuestion();
       setSessionAnswer('');
     } catch (err) {
-      Taro.showToast({ title: err?.message || '跳过问题失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '跳过问题'), icon: 'none' });
     }
   };
 
@@ -398,7 +396,7 @@ export default function Create() {
         generationTier,
       });
     } catch (err) {
-      Taro.showToast({ title: err?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '生成游戏'), icon: 'none' });
     }
   };
 
@@ -418,7 +416,7 @@ export default function Create() {
       });
       setSessionAnswer('');
     } catch (err) {
-      Taro.showToast({ title: err?.message || '创建创作会话失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
     }
   };
 
@@ -769,7 +767,9 @@ export default function Create() {
         {(error || creationSessionError) ? (
           <View className="create-chat-footer__error">
             <Text className="create-chat-footer__error-text">
-              {creationSessionError || getUserFacingCreateError(terminalError?.message || error, '创建游戏')}
+              {creationSessionError
+                ? getUserFacingCreateError(creationSessionError, '创建游戏')
+                : getUserFacingCreateError(terminalError?.message || error, '创建游戏')}
             </Text>
           </View>
         ) : null}
