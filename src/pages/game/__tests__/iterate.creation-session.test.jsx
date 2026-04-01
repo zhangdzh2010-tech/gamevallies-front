@@ -312,6 +312,23 @@ describe('Iterate page creation session flow', () => {
     });
   });
 
+  test('shows the store validation message when the first iterate instruction is too short', async () => {
+    mockStartCreationSession.mockRejectedValueOnce(new Error('至少输入 5 个字，再开始这一轮'));
+
+    render(<IteratePage />);
+
+    fireEvent.change(screen.getByLabelText('iterate-initial-answer'), {
+      target: { value: '美化页面' },
+    });
+    fireEvent.click(screen.getByText('开始优化'));
+
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({
+        title: '至少输入 5 个字，再开始这一轮',
+      }));
+    });
+  });
+
   test('renders creation session UI and can trigger direct generation', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: {

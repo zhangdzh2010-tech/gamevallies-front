@@ -340,11 +340,19 @@ function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理
     return '生成阶段遇到问题，可稍后重试';
   }
 
+  if (/must be longer than or equal to 5 characters|min length 5|at least 5/i.test(source)) {
+    return '至少输入 5 个字，再开始这一轮';
+  }
+
   if (!/[\u4e00-\u9fa5]/.test(source)) {
     return fallback;
   }
 
   return source || fallback;
+}
+
+function countPromptCharacters(value) {
+  return Array.from(String(value || '').trim()).length;
 }
 
 function buildCreationSessionContext(input = {}) {
@@ -1025,6 +1033,10 @@ export const useGameStore = create((set, get) => {
   },
 
   startCreationSession: async (prompt, title, options = {}) => {
+    if (countPromptCharacters(prompt) < 5) {
+      throw new Error('至少输入 5 个字，再开始这一轮');
+    }
+
     const context = buildCreationSessionContext({
       prompt,
       title,

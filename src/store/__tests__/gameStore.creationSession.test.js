@@ -276,6 +276,19 @@ describe('gameStore creation session actions', () => {
     expect(useGameStore.getState().creationSessionError).toBe('这次请求被中断了，请再试一次');
   });
 
+  test('startCreationSession rejects prompts shorter than five characters before calling the API', async () => {
+    await expect(
+      useGameStore.getState().startCreationSession('美化页面', '像素跑酷', {
+        entryMode: 'iterate',
+        sourceGameId: 'game-1',
+      })
+    ).rejects.toThrow('至少输入 5 个字，再开始这一轮');
+
+    expect(mockCreateCreationSession).not.toHaveBeenCalled();
+    expect(useGameStore.getState().creationSession).toBeNull();
+    expect(useGameStore.getState().creationSessionSubmitting).toBe(false);
+  });
+
   test('generateFromCreationSession delegates to task tracking', async () => {
     const beginTaskTracking = jest.fn(() => Promise.resolve());
 
