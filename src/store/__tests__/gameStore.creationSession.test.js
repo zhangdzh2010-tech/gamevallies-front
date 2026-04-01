@@ -209,6 +209,18 @@ describe('gameStore creation session actions', () => {
     }));
   });
 
+  test('startCreationSession normalizes aborted request errors for the UI', async () => {
+    mockCreateCreationSession.mockRejectedValue(new Error('The user aborted a request.'));
+
+    await expect(
+      useGameStore.getState().startCreationSession('做一个新游戏', 'New Game', {
+        entryMode: 'create',
+      })
+    ).rejects.toThrow('这次请求被中断了，请再试一次');
+
+    expect(useGameStore.getState().creationSessionError).toBe('这次请求被中断了，请再试一次');
+  });
+
   test('generateFromCreationSession delegates to task tracking', async () => {
     const beginTaskTracking = jest.fn(() => Promise.resolve());
 

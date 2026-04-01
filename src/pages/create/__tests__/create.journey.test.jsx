@@ -394,6 +394,30 @@ describe('Create page journey coverage', () => {
     });
   });
 
+  test('opening create clears stale generation task state instead of auto-restoring the old task', async () => {
+    mockGameStoreState = buildGameStoreState({
+      currentTask: {
+        taskId: 'task-old',
+        status: 'running',
+      },
+      currentGame: {
+        id: 'game-old',
+        title: '旧作品',
+        status: 'draft',
+      },
+    });
+
+    render(<CreatePage />);
+    await flushDidShowCallbacks();
+
+    await waitFor(() => {
+      expect(mockResetCreateSession).toHaveBeenCalledWith({ clearPersistedTask: false });
+      expect(mockGameService.getActiveCreationSession).toHaveBeenCalled();
+    });
+
+    expect(mockRestorePersistedTask).not.toHaveBeenCalled();
+  });
+
   test('initial create retry keeps the first prompt and offers a retry action', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSessionError: '创建失败，请重试',
@@ -420,5 +444,15 @@ describe('Create page journey coverage', () => {
     });
 
     expect(screen.getByLabelText('create-initial-answer').value).toBe('做一个节奏更快的像素风闯关游戏');
+  });
+
+  test('raw creation session abort errors are rendered as a friendly chinese message', () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSessionError: 'The user aborted a request.',
+    });
+
+    render(<CreatePage />);
+
+    expect(screen.getByText('创建游戏请求被中断了，请再试一次')).toBeTruthy();
   });
 });

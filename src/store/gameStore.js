@@ -287,12 +287,32 @@ function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理
     return '当前创作会话已结束，请重新开启';
   }
 
+  if (/aborted a request|aborterror|aborted|取消了请求|中断了请求/i.test(source)) {
+    return '这次请求被中断了，请再试一次';
+  }
+
+  if (/request:fail timeout|timeout|timed out|超时/i.test(source)) {
+    return '这次请求超时了，请稍后再试';
+  }
+
+  if (/network|request:fail|econn|enotfound|enetunreach|网络/i.test(source)) {
+    return '当前网络不稳定，请稍后重试';
+  }
+
+  if (/authentication required|unauthorized|请先登录/i.test(source)) {
+    return '登录状态已失效，请重新登录后继续';
+  }
+
   if (/restore|恢复/i.test(source)) {
     return '恢复创作失败，请手动重新开始';
   }
 
   if (/generate|生成/i.test(source)) {
     return '生成阶段遇到问题，可稍后重试';
+  }
+
+  if (!/[\u4e00-\u9fa5]/.test(source)) {
+    return fallback;
   }
 
   return source || fallback;
