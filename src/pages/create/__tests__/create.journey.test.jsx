@@ -246,8 +246,8 @@ describe('Create page journey coverage', () => {
       });
     });
 
-    expect(screen.getByText(/当前理解/)).toBeTruthy();
-    expect(screen.getByText(/方向：办公室摸鱼计划/)).toBeTruthy();
+    expect(screen.queryByText(/当前理解/)).toBeNull();
+    expect(screen.queryByText(/方向：办公室摸鱼计划/)).toBeNull();
     expect(screen.getByText(/你希望它发生在什么场景里/)).toBeTruthy();
   });
 

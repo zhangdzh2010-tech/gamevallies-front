@@ -12,7 +12,7 @@ jest.mock('@tarojs/components', () => ({
 }));
 
 describe('CreationSession components', () => {
-  test('renders the shared creation session scene with summary, thread and actions', () => {
+  test('renders the shared creation session scene without exposing draft fields', () => {
     render(
       <CreationSessionScene
         shell={{
@@ -30,7 +30,7 @@ describe('CreationSession components', () => {
               { id: '1', role: 'user', content: '我想做一个摸鱼游戏' },
             ],
             currentQuestion: {
-              content: '你希望它发生在什么场景里？',
+              content: '我已经整理出一版方向了，目前方向是：simulation / office。如果你愿意继续打磨，我还想确认一个点：你希望它发生在什么场景里？',
             },
           },
           entryMode: 'create',
@@ -42,10 +42,11 @@ describe('CreationSession components', () => {
     );
 
     expect(screen.getByText('逐步把方向聊清楚')).toBeTruthy();
-    expect(screen.getByText('当前理解')).toBeTruthy();
-    expect(screen.getByText('方向：办公室摸鱼计划')).toBeTruthy();
+    expect(screen.queryByText('当前理解')).toBeNull();
+    expect(screen.queryByText('方向：办公室摸鱼计划')).toBeNull();
     expect(screen.getByText('我想做一个摸鱼游戏')).toBeTruthy();
     expect(screen.getByText('你希望它发生在什么场景里？')).toBeTruthy();
+    expect(screen.queryByText(/目前方向是/)).toBeNull();
     expect(screen.getByDisplayValue('现代办公室')).toBeTruthy();
     expect(screen.getByText('提交回答')).toBeTruthy();
   });
