@@ -4,16 +4,6 @@ import { View, Text } from '@tarojs/components';
 import { formatDate, formatRelativeTime } from '../../utils/date';
 import { CreationSessionActions } from './CreationSessionActions';
 
-const RESUME_STATUS_LABELS = {
-  collecting: '继续补充',
-  ready: '可以直接生成',
-  generating: '生成中',
-  completed: '已完成',
-  abandoned: '已结束',
-  expired: '已过期',
-  failed: '会话异常',
-};
-
 const RESUME_MODE_COPY = {
   create: {
     title: '继续上次创作',
@@ -57,7 +47,6 @@ export function CreationResumeScene({
   submitting = false,
 }) {
   const copy = RESUME_MODE_COPY[entryMode] || RESUME_MODE_COPY.create;
-  const statusValue = RESUME_STATUS_LABELS[session?.status] || '未完成';
   const summaryTitle = subjectTitle || session?.title || '未命名内容';
 
   return (
@@ -66,9 +55,6 @@ export function CreationResumeScene({
         <View>
           <Text className="creation-resume-scene__title">{copy.title}</Text>
           <Text className="creation-resume-scene__subtitle">{copy.subtitle}</Text>
-        </View>
-        <View className="creation-resume-scene__status">
-          <Text className="creation-resume-scene__status-text">{statusValue}</Text>
         </View>
       </View>
 

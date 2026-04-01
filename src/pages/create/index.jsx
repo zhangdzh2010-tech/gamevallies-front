@@ -587,12 +587,6 @@ export default function Create() {
     resetLocalCreateState();
   };
 
-  const creationStatusValue = creationSession?.status === 'ready'
-    ? '可直接生成'
-    : creationSession?.status === 'initializing'
-      ? '整理中'
-      : '继续补充';
-
   if (isRestoringEntry) {
     return (
       <View className={containerClassName}>
@@ -809,7 +803,6 @@ export default function Create() {
               {...buildCreationSessionSceneProps({
                 entryMode: 'create',
                 session: creationSession,
-                statusValue: creationStatusValue,
                 answerValue: sessionAnswer,
                 onAnswerChange: (e) => setSessionAnswer(e?.detail?.value || ''),
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,

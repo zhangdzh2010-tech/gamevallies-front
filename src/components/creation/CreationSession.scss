@@ -43,35 +43,12 @@
   color: #8f89ab;
 }
 
-.creation-session-scene__status {
-  flex-shrink: 0;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(86, 91, 118, 0.28);
-}
-
-.creation-session-scene__status-label {
-  display: block;
-  font-size: 10px;
-  color: #817b97;
-}
-
-.creation-session-scene__status-value {
-  display: block;
-  margin-top: 3px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #f3f1ff;
-}
-
 .creation-session-flow {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.creation-session-summary,
 .creation-session-loading,
 .creation-resume-scene,
 .creation-entry-error-card {
@@ -80,20 +57,6 @@
   background: #111118;
   border: 1px solid #252535;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-}
-
-.creation-session-summary__label {
-  display: block;
-  font-size: 11px;
-  color: #8cd8c5;
-}
-
-.creation-session-summary__line {
-  display: block;
-  margin-top: 6px;
-  font-size: 14px;
-  line-height: 1.65;
-  color: #ece8fa;
 }
 
 .creation-session-notice {
@@ -368,19 +331,6 @@
   color: #9d97b4;
 }
 
-.creation-resume-scene__status {
-  flex-shrink: 0;
-  padding: 7px 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(86, 91, 118, 0.28);
-}
-
-.creation-resume-scene__status-text {
-  font-size: 12px;
-  color: #ece8fa;
-}
-
 .creation-resume-scene__summary {
   margin-top: 12px;
   display: flex;
@@ -452,11 +402,6 @@
 @media screen and (max-width: 420px) {
   .creation-session-scene__intro {
     flex-direction: column;
-  }
-
-  .creation-session-scene__status {
-    width: 100%;
-    box-sizing: border-box;
   }
 
   .creation-session-actions {

@@ -167,12 +167,6 @@ export default function GameForkPage() {
     && String(creationSession?.gameId || currentGame?.id || '') === String(currentGame?.id || '')
     && isCompletedGameStatus(currentGame?.status)
   );
-  const forkStatusValue = creationSession?.status === 'ready'
-    ? '可直接生成'
-    : creationSession?.status === 'initializing'
-      ? '整理中'
-      : '继续补充';
-
   useEffect(() => {
     if (!sourceGameId || !sourceGame || isLoading || !canForkGame) {
       return;
@@ -500,7 +494,6 @@ export default function GameForkPage() {
               {...buildCreationSessionSceneProps({
                 entryMode: 'fork',
                 session: creationSession,
-                statusValue: forkStatusValue,
                 answerValue: forkAnswer,
                 onAnswerChange: (e) => setForkAnswer(e?.detail?.value || ''),
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder,

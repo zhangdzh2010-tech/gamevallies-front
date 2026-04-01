@@ -10,7 +10,7 @@ export function CreationSessionScene({
 }) {
   const hasIntro = Boolean(
     shell
-    && (shell.eyebrow || shell.title || shell.subtitle || shell.statusValue)
+    && (shell.eyebrow || shell.title || shell.subtitle)
   );
 
   return (
@@ -28,13 +28,6 @@ export function CreationSessionScene({
               <Text className="creation-session-scene__subtitle">{shell.subtitle}</Text>
             ) : null}
           </View>
-
-          {shell?.statusValue ? (
-            <View className="creation-session-scene__status">
-              <Text className="creation-session-scene__status-label">{shell?.statusLabel || '当前状态'}</Text>
-              <Text className="creation-session-scene__status-value">{shell.statusValue}</Text>
-            </View>
-          ) : null}
         </View>
       ) : null}
 
