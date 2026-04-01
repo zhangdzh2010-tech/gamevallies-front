@@ -23,7 +23,7 @@ export function CreationSessionActions({ actions = [] }) {
         </View>
       </View>
 
-      <View className="creation-session-actions">
+      <View className={`creation-session-actions creation-session-actions--count-${actions.length || 0}`}>
         {actions.map((action) => (
           <View
             key={action.key}

@@ -536,7 +536,7 @@ export default function GameForkPage() {
                   actions={[
                     {
                       key: 'start-fork-session',
-                      label: creationSessionSubmitting ? 'AI 正在整理方向...' : '开始复刻对话',
+                      label: creationSessionSubmitting ? 'AI 正在整理方向...' : '开始复刻',
                       tone: 'primary',
                       disabled: creationSessionSubmitting || !forkAnswer.trim(),
                       onClick: handleStartForkSession,

@@ -705,7 +705,7 @@ export default function GameIteratePage() {
                   actions={[
                     {
                       key: 'start-iterate-session',
-                      label: creationSessionSubmitting ? 'AI 正在整理方向...' : '开始优化对话',
+                      label: creationSessionSubmitting ? 'AI 正在整理方向...' : '开始优化',
                       tone: 'primary',
                       disabled: creationSessionSubmitting || !iterateFeedback.trim(),
                       onClick: handleStartIterateSession,

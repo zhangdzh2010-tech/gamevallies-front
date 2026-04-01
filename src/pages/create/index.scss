@@ -725,6 +725,24 @@
       flex-direction: column;
       gap: 14px;
 
+      &.form-actions--session {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+
+        .submit-btn,
+        .action-btn {
+          min-width: 0;
+          padding: 12px 8px;
+          border-radius: 14px;
+          font-size: 16px;
+          line-height: 1.2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+
       .submit-btn {
         background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
         border-radius: 18px;
@@ -2734,6 +2752,16 @@
     }
 
     .form-actions {
+      &.form-actions--session {
+        gap: 6px;
+
+        .submit-btn,
+        .action-btn {
+          padding: 10px 6px;
+          font-size: 12px;
+        }
+      }
+
       .submit-btn {
         font-size: 30rpx;
       }
