@@ -264,6 +264,39 @@ describe('gameStore creation session actions', () => {
     }));
   });
 
+  test('startCreationSession preserves the current game context for iterate flows', async () => {
+    useGameStore.setState({
+      currentGame: {
+        id: 'game-iterate',
+        title: '贪吃蛇',
+        status: 'published',
+      },
+    });
+
+    mockCreateCreationSession.mockResolvedValue({
+      sessionId: 'session-iterate',
+      status: 'collecting',
+      prompt: '把节奏做得更爽一点',
+      title: '贪吃蛇',
+      entryMode: 'iterate',
+      sourceGameId: 'game-iterate',
+    });
+
+    await useGameStore.getState().startCreationSession('把节奏做得更爽一点', '贪吃蛇', {
+      entryMode: 'iterate',
+      sourceGameId: 'game-iterate',
+    });
+
+    expect(useGameStore.getState().currentGame).toEqual(expect.objectContaining({
+      id: 'game-iterate',
+      title: '贪吃蛇',
+    }));
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      sessionId: 'session-iterate',
+      entryMode: 'iterate',
+    }));
+  });
+
   test('startCreationSession normalizes aborted request errors for the UI', async () => {
     mockCreateCreationSession.mockRejectedValue(new Error('The user aborted a request.'));
 

@@ -314,6 +314,50 @@ describe('Iterate page creation session flow', () => {
     });
   });
 
+  test('keeps the current game context and enters the session view after starting iterate flow', async () => {
+    mockStartCreationSession.mockImplementationOnce(async (prompt, title, options) => {
+      mockGameStoreState = buildGameStoreState({
+        currentGame: {
+          id: 'game-1',
+          title: '像素跑酷',
+          status: 'ready',
+          description: '一款节奏很快的像素跑酷游戏',
+          orientation: 'portrait',
+          canPlay: true,
+        },
+        creationSession: {
+          sessionId: 'session-iterate',
+          entryMode: 'iterate',
+          sourceGameId: options.sourceGameId,
+          status: 'collecting',
+          generationTier: 'standard',
+          planDraft: '保留跑酷核心，继续强化反馈与节奏',
+          currentQuestion: {
+            content: '这次更想先改反馈还是改速度节奏？',
+          },
+          messages: [{ id: 'm1', role: 'user', content: prompt }],
+        },
+        creationSessionSubmitting: false,
+        getCreationFlowStage: jest.fn(() => 'collecting'),
+      });
+
+      return mockGameStoreState.creationSession;
+    });
+
+    render(<IteratePage />);
+
+    fireEvent.change(screen.getByLabelText('iterate-initial-answer'), {
+      target: { value: '我想先把节奏提快一点，并强化吃到食物时的反馈。' },
+    });
+    fireEvent.click(screen.getByText('开始优化'));
+
+    await waitFor(() => {
+      expect(screen.getByText('动态优化会话')).toBeTruthy();
+      expect(screen.queryByText('还没有可优化的作品')).toBeNull();
+      expect(screen.queryByText('返回我的作品')).toBeNull();
+    });
+  });
+
   test('shows the store validation message when the first iterate instruction is too short', async () => {
     mockStartCreationSession.mockRejectedValueOnce(new Error('至少输入 5 个字，再开始这一轮'));
 

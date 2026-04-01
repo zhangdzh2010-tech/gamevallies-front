@@ -1037,17 +1037,19 @@ export const useGameStore = create((set, get) => {
       throw new Error('至少输入 5 个字，再开始这一轮');
     }
 
+    const previousGame = get().currentGame;
     const context = buildCreationSessionContext({
       prompt,
       title,
       ...options,
     });
+    const shouldPreserveCurrentGame = context?.entryMode === 'iterate';
 
     clearActiveTaskRuntime();
     clearActiveSessionRuntime();
 
     set({
-      currentGame: null,
+      currentGame: shouldPreserveCurrentGame ? previousGame : null,
       currentTask: null,
       currentTaskEvents: [],
       currentTaskCursor: 0,
