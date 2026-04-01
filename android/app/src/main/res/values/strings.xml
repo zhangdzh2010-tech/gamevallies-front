@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GameVallies</string>
+    <string name="title_activity_main">GameVallies</string>
+    <string name="package_name">com.gamevallies.app</string>
+    <string name="custom_url_scheme">com.gamevallies.app</string>
+</resources>

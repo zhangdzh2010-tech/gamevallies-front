@@ -1,0 +1,199 @@
+.task-signal-panel {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(110, 86, 255, 0.16);
+  background:
+    radial-gradient(circle at 14% 16%, rgba(110, 86, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 82% 20%, rgba(45, 212, 168, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(18, 19, 31, 0.98) 0%, rgba(12, 13, 23, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 18px 36px rgba(5, 7, 18, 0.34);
+}
+
+.task-signal-panel__grid,
+.task-signal-panel__scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.task-signal-panel__grid {
+  opacity: 0.26;
+  background-image:
+    linear-gradient(rgba(108, 112, 153, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108, 112, 153, 0.09) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.task-signal-panel__scan {
+  inset: auto -18% 22px;
+  height: 80px;
+  background: linear-gradient(90deg, transparent 0%, rgba(110, 86, 255, 0.04) 26%, rgba(45, 212, 168, 0.08) 50%, rgba(110, 86, 255, 0.04) 74%, transparent 100%);
+  filter: blur(16px);
+}
+
+.task-signal-panel__header,
+.task-signal-panel__dots,
+.task-signal-panel__items {
+  position: relative;
+  z-index: 1;
+}
+
+.task-signal-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.task-signal-panel__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-signal-panel__eyebrow {
+  font-size: 18px;
+  letter-spacing: 1.8px;
+  color: #7d90ff;
+}
+
+.task-signal-panel__title {
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #f4f2ff;
+}
+
+.task-signal-panel__desc {
+  font-size: 20px;
+  line-height: 1.55;
+  color: #9d98bc;
+}
+
+.task-signal-panel__status {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 238, 214, 0.18);
+  background: rgba(20, 27, 44, 0.72);
+  box-shadow: inset 0 0 14px rgba(45, 212, 168, 0.08);
+}
+
+.task-signal-panel__status-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #8ff8d9;
+}
+
+.task-signal-panel__dots {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 16px;
+}
+
+.task-signal-panel__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7d90ff;
+  box-shadow: 0 0 10px rgba(125, 144, 255, 0.3);
+}
+
+.task-signal-panel__items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.task-signal-panel__item {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.task-signal-panel__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 18px;
+  color: #84809d;
+}
+
+.task-signal-panel__value {
+  display: block;
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #f4f2ff;
+  word-break: break-word;
+}
+
+@media screen and (max-width: 480px) {
+  .task-signal-panel {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .task-signal-panel__header {
+    gap: 12px;
+  }
+
+  .task-signal-panel__copy {
+    gap: 6px;
+  }
+
+  .task-signal-panel__eyebrow {
+    font-size: 12px;
+    letter-spacing: 1.2px;
+  }
+
+  .task-signal-panel__title {
+    font-size: 20px;
+  }
+
+  .task-signal-panel__desc {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .task-signal-panel__status {
+    padding: 8px 12px;
+  }
+
+  .task-signal-panel__status-text {
+    font-size: 13px;
+  }
+
+  .task-signal-panel__dots {
+    margin: 14px 0 12px;
+  }
+
+  .task-signal-panel__items {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .task-signal-panel__item {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .task-signal-panel__label {
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .task-signal-panel__value {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+}

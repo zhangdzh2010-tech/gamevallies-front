@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameVallies 三页面预览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif; color: #e0dff0; display: flex; justify-content: center; gap: 32px; padding: 40px 20px; flex-wrap: wrap; }
+  .phone { width: 375px; min-height: 720px; background: #16132b; border-radius: 32px; overflow: hidden; border: 2px solid #2a2745; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .phone-label { text-align: center; color: #9d99b8; font-size: 13px; margin-bottom: 12px; letter-spacing: 1px; }
+
+  /* Top Bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #1e1b36; border-bottom: 1px solid #2a2745; }
+  .topbar-back { font-size: 18px; color: #a09cb8; cursor: pointer; }
+  .topbar-right { font-size: 13px; color: #a09cb8; }
+
+  /* Scroll area */
+  .scroll { padding: 16px; overflow-y: auto; max-height: 660px; }
+
+  /* ── Create Page ── */
+  .form-label { font-size: 13px; color: #9d99b8; margin-bottom: 6px; display: block; }
+  .form-name-row { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .form-input { flex: 1; background: #221f3a; border: 1px solid #3a3660; border-radius: 10px; padding: 10px 12px; color: #e0dff0; font-size: 14px; outline: none; }
+  .form-input::placeholder { color: #55516e; }
+  .orientation-switch { display: flex; gap: 4px; }
+  .ori-btn { padding: 8px 14px; border-radius: 8px; font-size: 13px; background: #221f3a; color: #9d99b8; border: 1px solid #3a3660; cursor: pointer; transition: all 0.2s; }
+  .ori-btn.active { background: #6c5ce7; color: #fff; border-color: #6c5ce7; }
+  .form-textarea { width: 100%; background: #221f3a; border: 1px solid #3a3660; border-radius: 10px; padding: 10px 12px; color: #e0dff0; font-size: 14px; min-height: 80px; resize: none; outline: none; font-family: inherit; }
+  .form-textarea::placeholder { color: #55516e; }
+  .input-count { font-size: 11px; color: #55516e; text-align: right; display: block; margin-top: 4px; }
+
+  /* Buttons */
+  .btn-primary { width: 100%; padding: 12px; border-radius: 12px; background: linear-gradient(135deg, #6c5ce7, #a855f7); color: #fff; text-align: center; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+  .btn-secondary { width: 100%; padding: 10px; border-radius: 10px; background: #2a2745; color: #c4c0e0; text-align: center; font-size: 14px; cursor: pointer; margin-bottom: 8px; border: 1px solid #3a3660; }
+  .btn-accent { width: 100%; padding: 10px; border-radius: 10px; background: rgba(108,92,231,0.15); color: #a78bfa; text-align: center; font-size: 14px; cursor: pointer; margin-bottom: 8px; border: 1px solid rgba(108,92,231,0.3); }
+  .btn-small { display: inline-block; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .btn-small.primary { background: #6c5ce7; color: #fff; }
+  .btn-small.ghost { background: transparent; color: #9d99b8; border: 1px solid #3a3660; }
+
+  /* Examples */
+  .section-title { font-size: 14px; color: #c4c0e0; margin: 20px 0 10px; }
+  .section-hint { font-size: 11px; color: #6c5ce7; }
+  .example-card { display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: #221f3a; border-radius: 10px; margin-bottom: 8px; cursor: pointer; border: 1px solid #2a2745; transition: border-color 0.2s; }
+  .example-card:hover { border-color: #6c5ce7; }
+  .example-emoji { font-size: 20px; flex-shrink: 0; }
+  .example-text { font-size: 13px; color: #c4c0e0; line-height: 1.5; }
+
+  /* ── Source Card (Fork) ── */
+  .source-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: #221f3a; border-radius: 12px; margin-bottom: 16px; border: 1px solid #2a2745; }
+  .source-emoji { font-size: 32px; background: #2a2745; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; }
+  .source-title { font-size: 15px; font-weight: 600; color: #e0dff0; margin-bottom: 2px; }
+  .source-meta { font-size: 12px; color: #9d99b8; }
+
+  /* ── Reference Card (Iterate) ── */
+  .ref-card { padding: 14px; background: #221f3a; border-radius: 12px; margin-bottom: 16px; border: 1px solid #2a2745; }
+  .ref-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .ref-title { font-size: 15px; font-weight: 600; color: #e0dff0; margin-bottom: 4px; }
+  .ref-meta { font-size: 12px; color: #9d99b8; }
+  .ref-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* Composer */
+  .composer { background: #221f3a; border: 1px solid #3a3660; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .composer textarea { width: 100%; background: transparent; border: none; color: #e0dff0; font-size: 14px; min-height: 60px; resize: none; outline: none; font-family: inherit; }
+  .composer textarea::placeholder { color: #55516e; }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .suggestion { padding: 6px 10px; background: #2a2745; border-radius: 16px; font-size: 12px; color: #a09cb8; cursor: pointer; border: 1px solid #3a3660; transition: all 0.2s; }
+  .suggestion:hover { border-color: #6c5ce7; color: #c4c0e0; }
+
+  /* Warning */
+  .warning { padding: 12px; background: rgba(255,92,138,0.1); border: 1px solid rgba(255,92,138,0.2); border-radius: 10px; margin-bottom: 12px; }
+  .warning-text { font-size: 13px; color: #ff5c8a; }
+
+  /* Tab bar */
+  .tabbar { display: flex; justify-content: space-around; padding: 10px 0 20px; background: #1e1b36; border-top: 1px solid #2a2745; position: absolute; bottom: 0; left: 0; right: 0; }
+  .tab-item { text-align: center; font-size: 11px; color: #55516e; }
+  .tab-item.active { color: #6c5ce7; }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* Divider label */
+  .state-label { font-size: 11px; color: #6c5ce7; text-align: center; padding: 6px; background: rgba(108,92,231,0.08); border-radius: 6px; margin-bottom: 12px; letter-spacing: 1px; }
+
+  /* Session conversation */
+  .session-msg { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+  .session-role { font-size: 11px; font-weight: 700; color: #6c5ce7; background: rgba(108,92,231,0.15); padding: 2px 8px; border-radius: 6px; flex-shrink: 0; }
+  .session-role.user { color: #a78bfa; background: rgba(167,139,250,0.12); }
+  .session-content { font-size: 13px; color: #c4c0e0; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ CREATE PAGE ═══════════ -->
+<div>
+  <div class="phone-label">创建页 · 初始状态</div>
+  <div class="phone">
+    <div class="topbar">
+      <span class="topbar-back">← 返回</span>
+      <span class="topbar-right">任务</span>
+    </div>
+    <div class="scroll" style="padding-bottom: 80px;">
+      <div style="margin-bottom: 16px;">
+        <span class="form-label">游戏名称</span>
+        <div class="form-name-row">
+          <input class="form-input" placeholder="给你的游戏起个名字（可选）">
+          <div class="orientation-switch">
+            <span class="ori-btn active">竖屏</span>
+            <span class="ori-btn">横屏</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <span class="form-label">描述你的游戏创意</span>
+        <textarea class="form-textarea" placeholder="先说一句核心想法，系统会帮你拆成可生成方案..."></textarea>
+        <span class="input-count">0/2000</span>
+      </div>
+      <div class="btn-primary">开始创作会话</div>
+      <div class="section-title">创意样例 <span class="section-hint">点击即可直接使用</span></div>
+      <div class="example-card"><span class="example-emoji">🐍</span><span class="example-text">像素贪吃蛇：经典贪吃蛇操作 + 随机道具掉落</span></div>
+      <div class="example-card"><span class="example-emoji">🏃</span><span class="example-text">跑酷闯关：左右滑动躲避障碍物</span></div>
+      <div class="example-card"><span class="example-emoji">🧩</span><span class="example-text">方块消除：三消 + 连击奖励</span></div>
+    </div>
+    <div class="tabbar">
+      <div class="tab-item"><span class="tab-icon">🏠</span>首页</div>
+      <div class="tab-item"><span class="tab-icon">🔍</span>发现</div>
+      <div class="tab-item active"><span class="tab-icon">✨</span>创作</div>
+      <div class="tab-item"><span class="tab-icon">👤</span>我的</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CREATE PAGE (SESSION) ═══════════ -->
+<div>
+  <div class="phone-label">创建页 · 会话中</div>
+  <div class="phone">
+    <div class="topbar">
+      <span class="topbar-back">← 返回</span>
+      <span class="topbar-right">任务</span>
+    </div>
+    <div class="scroll" style="padding-bottom: 80px;">
+      <div style="margin-bottom: 12px;">
+        <div class="state-label">Creation Session · 信息完整度 45%</div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <span class="form-label">当前对话</span>
+        <div class="session-msg"><span class="session-role user">你</span><span class="session-content">做一个贪吃蛇游戏，像素风格</span></div>
+        <div class="session-msg"><span class="session-role">AI</span><span class="session-content">好的！你想用什么操作方式？虚拟方向键还是滑动？</span></div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <span class="form-label">当前问题</span>
+        <div style="padding: 10px; background: rgba(108,92,231,0.1); border-radius: 10px; border: 1px solid rgba(108,92,231,0.2); margin-bottom: 12px;">
+          <span style="font-size: 13px; color: #c4c0e0;">你希望用哪种操作方式控制蛇的方向？</span>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <span class="form-label">你的补充回答</span>
+        <textarea class="form-textarea" placeholder="你希望用哪种操作方式控制蛇的方向？" style="min-height: 50px;"></textarea>
+      </div>
+      <div class="btn-primary">提交回答</div>
+      <div class="btn-secondary">跳过此题</div>
+      <div class="btn-accent">直接生成游戏</div>
+      <div class="btn-secondary">重新开始</div>
+    </div>
+    <div class="tabbar">
+      <div class="tab-item"><span class="tab-icon">🏠</span>首页</div>
+      <div class="tab-item"><span class="tab-icon">🔍</span>发现</div>
+      <div class="tab-item active"><span class="tab-icon">✨</span>创作</div>
+      <div class="tab-item"><span class="tab-icon">👤</span>我的</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ FORK PAGE ═══════════ -->
+<div>
+  <div class="phone-label">Fork 页 · 初始状态</div>
+  <div class="phone">
+    <div class="topbar">
+      <span class="topbar-back">← 返回</span>
+      <span></span>
+    </div>
+    <div class="scroll">
+      <div class="source-card">
+        <div class="source-emoji">🐍</div>
+        <div>
+          <div class="source-title">像素贪吃蛇</div>
+          <div class="source-meta">小明 · 试玩 2.3k · 点赞 156 · 复刻 23</div>
+        </div>
+      </div>
+      <div class="composer">
+        <textarea placeholder="说说你想保留什么、改变什么，例如：保留核心玩法，换成赛博风，节奏更快。"></textarea>
+        <div class="suggestions">
+          <span class="suggestion">保留核心玩法，但把题材换成赛博风。</span>
+          <span class="suggestion">想保留简单上手的节奏，但把视觉做得更有冲击力。</span>
+          <span class="suggestion">角色和场景都重新设计，和原作拉开差异。</span>
+        </div>
+      </div>
+      <div class="btn-primary">开始复刻对话</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ FORK PAGE (SESSION) ═══════════ -->
+<div>
+  <div class="phone-label">Fork 页 · 会话中</div>
+  <div class="phone">
+    <div class="topbar">
+      <span class="topbar-back">← 返回</span>
+      <span></span>
+    </div>
+    <div class="scroll">
+      <div class="source-card">
+        <div class="source-emoji">🐍</div>
+        <div>
+          <div class="source-title">像素贪吃蛇</div>
+          <div class="source-meta">小明 · 试玩 2.3k · 点赞 156 · 复刻 23</div>
+        </div>
+      </div>
+      <div class="state-label">复刻会话进行中</div>
+      <div style="margin-bottom: 12px;">
+        <div class="session-msg"><span class="session-role user">你</span><span class="session-content">保留核心玩法，但把题材换成赛博风</span></div>
+        <div class="session-msg"><span class="session-role">AI</span><span class="session-content">赛博风格不错！你想保留原来的配色还是全新设计？蛇的外观要变成什么样？</span></div>
+      </div>
+      <div class="composer">
+        <textarea placeholder="继续补充你的想法..."></textarea>
+      </div>
+      <div class="btn-primary">提交回答</div>
+      <div class="btn-secondary">跳过此题</div>
+      <div class="btn-accent">直接开始复刻</div>
+      <div class="btn-secondary">重新开始</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ITERATE PAGE ═══════════ -->
+<div>
+  <div class="phone-label">迭代页 · 初始状态</div>
+  <div class="phone">
+    <div class="topbar">
+      <span class="topbar-back">← 返回</span>
+      <span class="topbar-right">任务</span>
+    </div>
+    <div class="scroll">
+      <div class="ref-card">
+        <div class="ref-header">
+          <div>
+            <div class="ref-title">像素贪吃蛇</div>
+            <div class="ref-meta">v3 · 已发布 · 质量分 7.2</div>
+          </div>
+        </div>
+        <div class="ref-actions">
+          <span class="btn-small primary">试玩</span>
+          <span class="btn-small ghost">详情</span>
+        </div>
+      </div>
+      <div class="composer">
+        <textarea placeholder="说说这次最想优化的部分，例如：节奏更快，吃到食物时的反馈更爽。"></textarea>
+        <div class="suggestions">
+          <span class="suggestion">保留核心玩法，但把节奏做得更快一点。</span>
+          <span class="suggestion">重点优化视觉表现和反馈效果。</span>
+          <span class="suggestion">难度爬升更平滑，前期轻松，后期刺激。</span>
+        </div>
+      </div>
+      <div class="btn-primary">开始优化对话</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ITERATE PAGE (SESSION) ═══════════ -->
+<div>
+  <div class="phone-label">迭代页 · 会话中</div>
+  <div class="phone">
+    <div class="topbar">
+      <span class="topbar-back">← 返回</span>
+      <span class="topbar-right">任务</span>
+    </div>
+    <div class="scroll">
+      <div class="ref-card">
+        <div class="ref-header">
+          <div>
+            <div class="ref-title">像素贪吃蛇</div>
+            <div class="ref-meta">v3 · 已发布 · 质量分 7.2</div>
+          </div>
+        </div>
+        <div class="ref-actions">
+          <span class="btn-small primary">试玩</span>
+          <span class="btn-small ghost">详情</span>
+        </div>
+      </div>
+      <div class="state-label">优化会话进行中</div>
+      <div style="margin-bottom: 12px;">
+        <div class="session-msg"><span class="session-role user">你</span><span class="session-content">节奏更快一点，吃到食物时的反馈更爽</span></div>
+        <div class="session-msg"><span class="session-role">AI</span><span class="session-content">明白！你说的"更爽的反馈"是指屏幕抖动、粒子特效，还是音效方面的强化？</span></div>
+      </div>
+      <div class="composer">
+        <textarea placeholder="继续补充你的想法..."></textarea>
+      </div>
+      <div class="btn-primary">提交回答</div>
+      <div class="btn-secondary">跳过此题</div>
+      <div class="btn-accent">直接开始优化</div>
+      <div class="btn-secondary">重新开始</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
