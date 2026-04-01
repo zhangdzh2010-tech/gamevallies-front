@@ -437,27 +437,6 @@ export default function Create() {
         }
       }
 
-      if (mode === 'fork' && sourceGameId) {
-        setIsRestoringEntry(true);
-        try {
-          const forkedGameId = await gameService.forkGame(sourceGameId);
-          const forkedGame = await gameService.getGame(forkedGameId);
-          if (!cancelled) {
-            setCurrentGame(forkedGame);
-            Taro.showToast({ title: '已加入我的创作', icon: 'success' });
-          }
-        } catch (error) {
-          if (!cancelled) {
-            Taro.showToast({ title: error?.message || '复刻失败，请重试', icon: 'none' });
-            resetCreateSession({ clearPersistedTask: false });
-          }
-        } finally {
-          if (!cancelled) {
-            setIsRestoringEntry(false);
-          }
-        }
-      }
-
       if (!cancelled) {
         consumeCreateEntryIntent();
         consumePersistedCreateEntryIntent();

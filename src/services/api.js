@@ -83,7 +83,7 @@ function shouldRecoverUnauthorized(url) {
 
   return guardedUrls.some((path) => {
     if (path === '/api/v1/games/') {
-      return /\/api\/v1\/games\/(creation-sessions(?:\/|$)|generate|[^/]+\/(unlock|iterate|publish|settings|fork|cancel))/.test(url);
+      return /\/api\/v1\/games\/(creation-sessions(?:\/|$)|[^/]+\/(unlock|publish|settings))/.test(url);
     }
 
     return url.includes(path);
@@ -105,7 +105,7 @@ function resolveBaseUrl(url) {
   const s = API_CONFIG.SERVICE_URLS;
   const fallbackBaseUrl = API_CONFIG.BASE_URL;
   if (!s) return fallbackBaseUrl;
-  // /games/* (including /generate, /iterate) all go to GAME service
+  // /games/* all go to GAME service
   // game-service proxies to ai-engine internally
   if (url.startsWith('/api/v1/auth') || url.startsWith('/api/v1/users')) return s.AUTH || fallbackBaseUrl;
   if (url.startsWith('/api/v1/games')) return s.GAME || fallbackBaseUrl;

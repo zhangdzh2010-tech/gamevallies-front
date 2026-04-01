@@ -115,34 +115,6 @@ function normalizeTaskEventsResponse(response) {
   };
 }
 
-function normalizeGenerateResponse(response, fallbackGameId = '') {
-  if (typeof response === 'string') {
-    return {
-      gameId: response,
-      title: '',
-      description: '',
-      status: 'generating',
-      canPlay: true,
-      quotaRemaining: null,
-      requireSubscription: false,
-      generationTask: null,
-    };
-  }
-
-  const taskPayload = mergeTaskPayload(response);
-
-  return {
-    gameId: response?.gameId || response?.id || fallbackGameId || '',
-    title: response?.title || '',
-    description: response?.description || response?.prompt || '',
-    status: response?.status || 'generating',
-    canPlay: response?.canPlay !== false,
-    quotaRemaining: response?.quotaRemaining ?? null,
-    requireSubscription: response?.requireSubscription === true,
-    generationTask: normalizeGenerationTask(taskPayload),
-  };
-}
-
 function normalizeCreationSessionMessage(message, index = 0) {
   if (!message || typeof message !== 'object') {
     return null;
@@ -228,25 +200,6 @@ export function normalizeCreationSessionSnapshot(raw) {
     expiresAt: raw.expiresAt || raw.expiredAt || null,
     completedAt: raw.completedAt || null,
   };
-}
-
-/**
- * Generate a new game from a prompt
- */
-export async function generateGame(prompt, title, options) {
-  const normalizedOptions = typeof options === 'string'
-    ? { type: options }
-    : (options && typeof options === 'object' ? options : {});
-  const orientation = normalizeGameOrientation(normalizedOptions.orientation);
-
-  const response = await post('/api/v1/games/generate', {
-    description: prompt,
-    prompt,
-    ...(title ? { title } : {}),
-    ...(normalizedOptions.type ? { type: normalizedOptions.type } : {}),
-    orientation,
-  }, { timeout: 60000 });
-  return normalizeGenerateResponse(response);
 }
 
 export async function createCreationSession(prompt, title, options = {}) {
@@ -402,18 +355,6 @@ export async function cancelGenerationTask(taskId) {
 }
 
 /**
- * Fork (copy) a game
- */
-export async function forkGame(gameId) {
-  const response = await post(
-    `/api/v1/games/${gameId}/fork`,
-    {},
-    { timeout: 30000 }
-  );
-  return response.gameId;
-}
-
-/**
  * Publish a game
  */
 export async function publishGame(gameId, data) {
@@ -444,7 +385,6 @@ export async function updateGameSettings(gameId, settings) {
 }
 
 export default {
-  generateGame,
   normalizeCreationSessionSnapshot,
   createCreationSession,
   getActiveCreationSession,
@@ -459,7 +399,6 @@ export default {
   getGenerationTask,
   getGenerationTaskEvents,
   cancelGenerationTask,
-  forkGame,
   publishGame,
   getMyGames,
   deleteGame,
