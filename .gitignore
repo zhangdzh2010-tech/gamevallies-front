@@ -1,0 +1,63 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+dist
+lib
+build
+release
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.deploy
+
+# Taro specific
+.taro
+.tarorc.js
+
+# WeChat DevTools private config
+project.private.config.json
+
+# Temporary files
+*.tmp
+.cache
+.parcel-cache
+.swc
+.gradle
+.tmp-*
+.tmp-*/
+tmp-*.html
+
+# Local test artifacts
+tmp/skill-staging/
+tmp/test-artifacts/*
+!tmp/test-artifacts/.gitkeep
+!tmp/test-artifacts/README.md
+android/local.properties
+ios/App/Pods
+ios/App/Podfile.lock
+ios/App/App.xcworkspace/xcuserdata
+
+# Environment (development)
+.env.development
+
+# OS
+Thumbs.db
+desktop.ini
