@@ -16,6 +16,7 @@ import {
 import useGamePlayerStore from '../../../stores/gamePlayer';
 import useQuotaStore from '../../../stores/quotaStore';
 import {
+  getPersistedIterateEntryGame,
   LOGIN_PAGE_URL,
   buildIteratePageUrl,
   isLoggedIn,
@@ -134,6 +135,7 @@ export default function GameIteratePage() {
   const [resumeCandidate, setResumeCandidate] = useState(null);
   const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const iterateSessionBootstrappedGameIdRef = useRef('');
+  const iterateEntryGameRef = useRef(getPersistedIterateEntryGame());
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
@@ -174,11 +176,16 @@ export default function GameIteratePage() {
       setIsBootstrapping(true);
 
       try {
+        const persistedIterateGame = iterateEntryGameRef.current;
+        const targetGameId = gameId || currentGame?.id || '';
+        const canUsePersistedIterateGame =
+          gameId && String(persistedIterateGame?.id || '') === String(gameId);
+
         if (taskId) {
           const restored = await restorePersistedTask({
             taskId,
             taskType: 'pipeline_iterate',
-            gameId: gameId || currentGame?.id || '',
+            gameId: targetGameId,
             status: currentTask?.status || 'running',
           });
 
@@ -188,24 +195,40 @@ export default function GameIteratePage() {
           return;
         }
 
-        if (!gameId) {
+        if (!targetGameId) {
           if (!cancelled) {
             setPageError('缺少作品信息，无法继续优化');
           }
           return;
         }
 
-        if (String(currentGame?.id || '') === String(gameId)) {
+        if (String(currentGame?.id || '') === String(targetGameId)) {
           return;
         }
 
-        const game = await gameService.getGame(gameId);
+        if (canUsePersistedIterateGame) {
+          setCurrentGame(persistedIterateGame);
+        }
+
+        const game = await gameService.getGame(targetGameId);
         if (!cancelled) {
           setCurrentGame(game);
+          iterateEntryGameRef.current = game;
         }
       } catch (_error) {
         if (!cancelled) {
-          setPageError('加载要优化的作品失败，请从“我的作品”重新进入');
+          const persistedIterateGame = iterateEntryGameRef.current;
+          const targetGameId = gameId || currentGame?.id || '';
+          const canUsePersistedGame =
+            persistedIterateGame
+            && gameId
+            && String(persistedIterateGame.id || '') === String(targetGameId);
+
+          if (canUsePersistedGame) {
+            setCurrentGame(persistedIterateGame);
+          } else {
+            setPageError('加载要优化的作品失败，请从“我的作品”重新进入');
+          }
         }
       } finally {
         if (!cancelled) {

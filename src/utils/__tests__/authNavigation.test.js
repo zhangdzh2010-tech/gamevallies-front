@@ -53,6 +53,7 @@ jest.mock('../../store/gameStore', () => ({
 
 const POST_LOGIN_REDIRECT_KEY = 'gamevallies_post_login_redirect';
 const CREATE_ENTRY_INTENT_KEY = 'gamevallies_create_entry_intent';
+const ITERATE_ENTRY_GAME_KEY = 'gamevallies_iterate_entry_game';
 
 describe('authNavigation user journey', () => {
   beforeEach(() => {
@@ -98,6 +99,9 @@ describe('authNavigation user journey', () => {
     const result = openIteratePageWithAuth({ id: 'game-1' }, null, { taskId: 'task-7' });
 
     expect(result).toBe(false);
+    expect(JSON.parse(mockStorageState[ITERATE_ENTRY_GAME_KEY])).toEqual(expect.objectContaining({
+      id: 'game-1',
+    }));
     expect(mockStorageState[POST_LOGIN_REDIRECT_KEY]).toBe(
       '/pages/game/iterate/index?gameId=game-1&taskId=task-7'
     );
@@ -108,6 +112,27 @@ describe('authNavigation user journey', () => {
     jest.advanceTimersByTime(300);
 
     expect(mockTaro.navigateTo).toHaveBeenCalledWith({ url: LOGIN_PAGE_URL });
+  });
+
+  test('logged-in iterate entry persists the selected game snapshot before navigation', () => {
+    mockGetToken.mockReturnValue('token');
+    const { openIteratePageWithAuth } = require('../authNavigation');
+
+    const result = openIteratePageWithAuth({
+      id: 'game-2',
+      title: '节奏跑酷',
+      status: 'published',
+    });
+
+    expect(result).toBe(true);
+    expect(JSON.parse(mockStorageState[ITERATE_ENTRY_GAME_KEY])).toEqual(expect.objectContaining({
+      id: 'game-2',
+      title: '节奏跑酷',
+      status: 'published',
+    }));
+    expect(mockTaro.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/game/iterate/index?gameId=game-2',
+    });
   });
 
   test('iterate task entry persists task snapshot before redirecting to login', () => {
