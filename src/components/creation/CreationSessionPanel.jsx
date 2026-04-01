@@ -35,9 +35,10 @@ export function CreationSessionPanel({
   }
 
   const sessionStatus = session?.status || '';
+  const isInitializing = sessionStatus === 'initializing';
   const allowQuestionAnswer = isCreationSessionQuestioning(sessionStatus);
   const allowDirectGenerate = canGenerateCreationSession(sessionStatus);
-  const sessionNotice = getCreationSessionNotice(sessionStatus, entryMode);
+  const sessionNotice = getCreationSessionNotice(sessionStatus, entryMode, session);
   const decoratedActions = actions.map((action) => {
     if (action.key === 'submit') {
       return {
@@ -70,20 +71,46 @@ export function CreationSessionPanel({
       {headerTitle ? <Text className="creation-session-panel__title">{headerTitle}</Text> : null}
       {headerHint ? <Text className="creation-session-panel__hint">{headerHint}</Text> : null}
 
-      <CreationPlanDraftCard
-        draft={session?.planDraft}
-        hint={planHint}
-      />
-      <CreationConfidenceCard
-        confidenceSummary={session?.confidenceSummary}
-        questionStrategy={session?.questionStrategy}
-      />
+      {isInitializing ? (
+        <View className="creation-session-card creation-session-loading-card">
+          <View className="creation-session-card__header">
+            <View>
+              <Text className="creation-session-card__title">正在整理第一轮问题</Text>
+              <Text className="creation-session-card__hint">会先提炼你的意图，再决定是继续追问还是可以直接生成。</Text>
+            </View>
+          </View>
+
+          <View className="creation-session-card__body">
+            {session?.prompt ? (
+              <Text className="creation-session-card__text">“{session.prompt}”</Text>
+            ) : null}
+            <View className="creation-session-loading-card__dots">
+              <View className="creation-session-loading-card__dot" />
+              <View className="creation-session-loading-card__dot" />
+              <View className="creation-session-loading-card__dot" />
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {!isInitializing ? (
+        <CreationPlanDraftCard
+          draft={session?.planDraft}
+          hint={planHint}
+        />
+      ) : null}
+      {!isInitializing ? (
+        <CreationConfidenceCard
+          confidenceSummary={session?.confidenceSummary}
+          questionStrategy={session?.questionStrategy}
+        />
+      ) : null}
       <CreationSessionStatusNotice
         status={sessionStatus}
         entryMode={entryMode}
         notice={sessionNotice}
       />
-      <CreationConversationList messages={session?.messages || []} />
+      {!isInitializing ? <CreationConversationList messages={session?.messages || []} /> : null}
       {allowQuestionAnswer ? (
         <>
           <CreationQuestionCard question={session?.currentQuestion} />

@@ -701,7 +701,7 @@ export default function GameIteratePage() {
             </View>
           ) : null}
 
-          {creationSession?.entryMode === 'iterate' && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage) ? (
+          {creationSession?.entryMode === 'iterate' && ['initializing', 'collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage) ? (
             <CreationSessionScene
               {...buildCreationSessionSceneProps({
                 entryMode: 'iterate',

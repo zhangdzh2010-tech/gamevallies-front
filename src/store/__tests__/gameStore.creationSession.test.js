@@ -2,8 +2,18 @@
 
 const mockStorage = {};
 const mockCreateCreationSession = jest.fn();
+const mockGetCreationSession = jest.fn();
 const mockGetActiveCreationSession = jest.fn();
 const mockGenerateFromCreationSession = jest.fn();
+const mockSessionMessageHandlers = {};
+const mockOnMessage = jest.fn((type, callback) => {
+  mockSessionMessageHandlers[type] = callback;
+});
+const mockOffMessage = jest.fn((type, callback) => {
+  if (mockSessionMessageHandlers[type] === callback) {
+    delete mockSessionMessageHandlers[type];
+  }
+});
 
 jest.mock('@tarojs/taro', () => {
   const api = {
@@ -36,13 +46,14 @@ jest.mock('@tarojs/taro', () => {
 });
 
 jest.mock('../../services/game', () => ({
+  normalizeCreationSessionSnapshot: jest.fn((value) => value),
   createCreationSession: (...args) => mockCreateCreationSession(...args),
+  getCreationSession: (...args) => mockGetCreationSession(...args),
   getActiveCreationSession: (...args) => mockGetActiveCreationSession(...args),
   generateFromCreationSession: (...args) => mockGenerateFromCreationSession(...args),
   getGame: jest.fn(),
   generateGame: jest.fn(),
   getGameTypes: jest.fn(),
-  getCreationSession: jest.fn(),
   appendCreationSessionMessage: jest.fn(),
   skipCreationSessionQuestion: jest.fn(),
   abandonCreationSession: jest.fn(),
@@ -62,8 +73,8 @@ jest.mock('../../services/websocket', () => ({
   getWebSocketManager: jest.fn(() => ({
     getIsConnected: jest.fn(() => true),
     connect: jest.fn(() => Promise.resolve()),
-    onMessage: jest.fn(),
-    offMessage: jest.fn(),
+    onMessage: mockOnMessage,
+    offMessage: mockOffMessage,
   })),
 }));
 
@@ -94,6 +105,9 @@ describe('gameStore creation session actions', () => {
     jest.clearAllMocks();
     Object.keys(mockStorage).forEach((key) => {
       delete mockStorage[key];
+    });
+    Object.keys(mockSessionMessageHandlers).forEach((key) => {
+      delete mockSessionMessageHandlers[key];
     });
 
     useGameStore.setState({
@@ -149,6 +163,47 @@ describe('gameStore creation session actions', () => {
       generationTier: 'showcase',
       entryMode: 'create',
     }));
+  });
+
+  test('startCreationSession keeps initializing sessions active and applies websocket updates', async () => {
+    mockCreateCreationSession.mockResolvedValue({
+      sessionId: 'session-init',
+      status: 'initializing',
+      prompt: '做一个平台跳跃游戏',
+      title: 'Sky Hop',
+      entryMode: 'create',
+    });
+
+    await useGameStore.getState().startCreationSession('做一个平台跳跃游戏', 'Sky Hop', {
+      entryMode: 'create',
+    });
+
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      sessionId: 'session-init',
+      status: 'initializing',
+    }));
+    expect(useGameStore.getState().getCreationFlowStage()).toBe('initializing');
+    expect(mockOnMessage).toHaveBeenCalledWith('session:updated', expect.any(Function));
+
+    mockSessionMessageHandlers['session:updated']({
+      sessionId: 'session-init',
+      session: {
+        sessionId: 'session-init',
+        status: 'collecting',
+        prompt: '做一个平台跳跃游戏',
+        title: 'Sky Hop',
+        entryMode: 'create',
+        currentQuestion: {
+          content: '主角更偏向什么风格？',
+        },
+      },
+    });
+
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      sessionId: 'session-init',
+      status: 'collecting',
+    }));
+    expect(useGameStore.getState().getCreationFlowStage()).toBe('collecting');
   });
 
   test('getCreationFlowStage reflects session and task state priority', () => {
