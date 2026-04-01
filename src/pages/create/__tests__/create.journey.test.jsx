@@ -17,6 +17,45 @@ const mockOpenProfilePageWithTab = jest.fn();
 const mockOpenPaywall = jest.fn();
 const mockOpenGame = jest.fn();
 const mockEnsureCreateAccess = jest.fn();
+const mockNormalizeCreationSessionSnapshot = jest.fn((snapshot) => {
+  if (!snapshot) {
+    return null;
+  }
+
+  const messages = Array.isArray(snapshot.messages)
+    ? snapshot.messages
+    : Array.isArray(snapshot.conversation)
+      ? snapshot.conversation
+      : [];
+  const currentQuestion = snapshot.currentQuestion
+    ? {
+        id: snapshot.currentQuestion.id || '',
+        key: snapshot.currentQuestion.key || snapshot.currentQuestion.slotKey || snapshot.currentQuestion.id || '',
+        title: snapshot.currentQuestion.title || snapshot.currentQuestion.label || '',
+        content: snapshot.currentQuestion.content || snapshot.currentQuestion.prompt || '',
+        placeholder: snapshot.currentQuestion.placeholder || '',
+        required: snapshot.currentQuestion.required !== false,
+      }
+    : null;
+
+  return {
+    ...snapshot,
+    sessionId: snapshot.sessionId || snapshot.id || '',
+    title: snapshot.title || snapshot.titleDraft || '',
+    prompt: snapshot.prompt || snapshot.initialPrompt || '',
+    messages,
+    currentQuestion,
+    orientation: snapshot.orientation || 'portrait',
+    status: snapshot.status || 'collecting',
+    gameId: snapshot.gameId || snapshot.generatedGameId || '',
+    generationTask: snapshot.generationTask || (snapshot.generationTaskId
+      ? {
+          taskId: snapshot.generationTaskId,
+          gameId: snapshot.generatedGameId || snapshot.gameId || '',
+        }
+      : null),
+  };
+});
 const mockGameService = {
   getGame: jest.fn(),
   forkGame: jest.fn(),
@@ -24,6 +63,7 @@ const mockGameService = {
   appendCreationSessionMessage: jest.fn(() => Promise.resolve(null)),
   getActiveCreationSession: jest.fn(() => Promise.resolve(null)),
   abandonCreationSession: jest.fn(() => Promise.resolve(null)),
+  normalizeCreationSessionSnapshot: mockNormalizeCreationSessionSnapshot,
 };
 
 let mockGameStoreState;
@@ -338,6 +378,68 @@ describe('Create page journey coverage', () => {
         expect.objectContaining({
           revision: 2,
         }),
+      );
+    });
+  });
+
+  test('supports normalized creation session snapshots without falling into a blank session page', async () => {
+    mockGameService.createCreationSession.mockResolvedValueOnce({
+      sessionId: 'session-normalized',
+      status: 'collecting',
+      revision: 1,
+      orientation: 'portrait',
+      title: '牛了个牛',
+      prompt: '设计一款类似于羊了个羊的游戏',
+      messages: [
+        { role: 'user', content: '设计一款类似于羊了个羊的游戏' },
+        { role: 'assistant', content: '先确认一下，它更偏消除还是闯关？' },
+      ],
+      currentQuestion: {
+        id: 'question-theme',
+        key: 'theme',
+        title: '主题场景',
+        content: '你希望它发生在什么场景里？',
+        placeholder: '比如办公室、农场、校园...',
+      },
+    });
+    mockGameService.appendCreationSessionMessage.mockResolvedValueOnce({
+      sessionId: 'session-normalized',
+      status: 'ready',
+      revision: 2,
+      orientation: 'portrait',
+      title: '牛了个牛',
+      prompt: '设计一款类似于羊了个羊的游戏',
+      messages: [
+        { role: 'user', content: '设计一款类似于羊了个羊的游戏' },
+        { role: 'assistant', content: '先确认一下，它更偏消除还是闯关？' },
+        { role: 'user', content: '农场闯关，三消为主' },
+      ],
+      currentQuestion: null,
+    });
+
+    render(<CreatePage />);
+
+    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+      target: { value: '设计一款类似于羊了个羊的游戏' },
+    });
+    fireEvent.click(screen.getByText(SESSION_START_TEXT));
+
+    await waitFor(() => {
+      expect(screen.getByText(/当前问题/)).toBeTruthy();
+    });
+
+    expect(screen.getByText(/你希望它发生在什么场景里/)).toBeTruthy();
+
+    fireEvent.change(screen.getByPlaceholderText(/你希望它发生在什么场景里/), {
+      target: { value: '农场闯关，三消为主' },
+    });
+    fireEvent.click(screen.getByText(ANSWER_TEXT));
+
+    await waitFor(() => {
+      expect(mockGameService.appendCreationSessionMessage).toHaveBeenCalledWith(
+        'session-normalized',
+        '农场闯关，三消为主',
+        1,
       );
     });
   });

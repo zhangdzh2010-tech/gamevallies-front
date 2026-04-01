@@ -133,6 +133,40 @@ export default function Create() {
   const confidenceSummary = creationSession?.confidenceSummary || null;
   const questionStrategy = creationSession?.questionStrategy || null;
   const planDraft = creationSession?.planDraft || null;
+  const creationSessionId = creationSession?.sessionId || creationSession?.id || '';
+
+  const normalizeCreatePageSession = (snapshot) => {
+    const normalized = gameService.normalizeCreationSessionSnapshot(snapshot);
+    if (!normalized) {
+      return null;
+    }
+
+    const rawSlotFillPct = Number(snapshot?.slotFillPct ?? snapshot?.slotCompletionPct ?? 0);
+    const slotFillPct = Number.isFinite(rawSlotFillPct) ? rawSlotFillPct : 0;
+    const currentQuestion = normalized.currentQuestion
+      ? {
+          ...normalized.currentQuestion,
+          label: normalized.currentQuestion.title || formatSlotLabel(normalized.currentQuestion.key),
+          prompt: normalized.currentQuestion.content || normalized.currentQuestion.title || '',
+          skippable: snapshot?.currentQuestion?.skippable !== false && normalized.currentQuestion.required !== true,
+        }
+      : null;
+
+    return {
+      ...normalized,
+      id: normalized.sessionId,
+      titleDraft: normalized.title,
+      initialPrompt: normalized.prompt,
+      conversation: normalized.messages,
+      currentQuestion,
+      readyToGenerate: typeof snapshot?.readyToGenerate === 'boolean'
+        ? snapshot.readyToGenerate
+        : ['ready', 'ready_to_generate'].includes(normalized.status),
+      generationTaskId: normalized.generationTask?.taskId || '',
+      generatedGameId: normalized.gameId || normalized.generationTask?.gameId || '',
+      slotFillPct,
+    };
+  };
 
   const openTaskCenter = () => {
     openProfilePageWithTab('tasks');
@@ -146,12 +180,12 @@ export default function Create() {
   // Fast path: listen for the `session:updated` Socket.IO push.
   // Fallback:  poll GET /creation-sessions/:id every 2 s (up to 30 s).
   useEffect(() => {
-    if (!creationSession?.id || creationSession.status !== 'initializing') {
+    if (!creationSessionId || creationSession?.status !== 'initializing') {
       stopSessionPolling();
       return undefined;
     }
 
-    const sessionId = creationSession.id;
+    const sessionId = creationSessionId;
     let cancelled = false;
 
     const ws = getWebSocketManager();
@@ -203,7 +237,7 @@ export default function Create() {
       ws.offMessage('session:error', wsErrorHandler);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creationSession?.id, creationSession?.status]);
+  }, [creationSession?.status, creationSessionId]);
   // ─────────────────────────────────────────────────────────────────────────
 
   useDidShow(() => {
@@ -280,12 +314,12 @@ export default function Create() {
           return;
         }
 
-        if (snapshot.status === 'generating' && snapshot.generationTaskId) {
+        if (snapshot.status === 'generating' && (snapshot.generationTaskId || snapshot.generationTask?.taskId)) {
           setIsRestoringEntry(true);
           try {
             await restorePersistedTask({
-              taskId: snapshot.generationTaskId,
-              gameId: snapshot.generatedGameId || '',
+              taskId: snapshot.generationTaskId || snapshot.generationTask?.taskId,
+              gameId: snapshot.generatedGameId || snapshot.gameId || snapshot.generationTask?.gameId || '',
             });
           } finally {
             setIsRestoringEntry(false);
@@ -307,16 +341,17 @@ export default function Create() {
   };
 
   const applyCreationSessionSnapshot = (snapshot) => {
-    setCreationSession(snapshot);
-    if (!snapshot) {
+    const normalizedSnapshot = normalizeCreatePageSession(snapshot);
+    setCreationSession(normalizedSnapshot);
+    if (!normalizedSnapshot) {
       return;
     }
 
-    if (snapshot.titleDraft) {
-      setGameName(snapshot.titleDraft);
+    if (normalizedSnapshot.titleDraft) {
+      setGameName(normalizedSnapshot.titleDraft);
     }
-    if (snapshot.orientation) {
-      setOrientation(snapshot.orientation);
+    if (normalizedSnapshot.orientation) {
+      setOrientation(normalizedSnapshot.orientation);
     }
   };
 
@@ -491,7 +526,7 @@ export default function Create() {
     setSessionBusy(true);
     try {
       const snapshot = await gameService.appendCreationSessionMessage(
-        creationSession.id,
+        creationSessionId,
         sessionAnswer.trim(),
         creationSession.revision,
       );
@@ -512,10 +547,10 @@ export default function Create() {
     clearError();
     setSessionBusy(true);
     try {
-      await generateFromCreationSession(creationSession.id, {
+      await generateFromCreationSession(creationSessionId, {
         revision: creationSession.revision,
-        title: creationSession.titleDraft || gameName,
-        promptPreview: creationSession.initialPrompt,
+        title: creationSession.title || creationSession.titleDraft || gameName,
+        promptPreview: creationSession.prompt || creationSession.initialPrompt,
       });
       applyCreationSessionSnapshot(null);
       setSessionAnswer('');
@@ -535,7 +570,7 @@ export default function Create() {
     setSessionBusy(true);
     try {
       const snapshot = await gameService.skipCreationSessionQuestion(
-        creationSession.id,
+        creationSessionId,
         creationSession.revision,
       );
       applyCreationSessionSnapshot(snapshot);
@@ -556,7 +591,7 @@ export default function Create() {
 
     setSessionBusy(true);
     try {
-      await gameService.abandonCreationSession(creationSession.id);
+      await gameService.abandonCreationSession(creationSessionId);
     } catch (_error) {
       // Ignore abandon failures and let the next session replace the old one.
     } finally {
@@ -932,7 +967,7 @@ export default function Create() {
               <View className="form-group">
                 <Text className="form-label">当前对话</Text>
                 <View className="example-list">
-                  {creationSession.conversation.slice(-6).map((message, index) => (
+                  {(creationSession.conversation || creationSession.messages || []).slice(-6).map((message, index) => (
                     <View key={`${message.role}-${index}`} className="example-card">
                       <Text className="example-emoji">{message.role === 'assistant' ? 'AI' : '你'}</Text>
                       <Text className="example-text">{message.content}</Text>
@@ -945,8 +980,12 @@ export default function Create() {
                 <View className="form-group">
                   <Text className="form-label">当前问题</Text>
                   <View className="create-intro-card">
-                    <Text className="create-intro-card__eyebrow">{creationSession.currentQuestion.label}</Text>
-                    <Text className="create-intro-card__title">{creationSession.currentQuestion.prompt}</Text>
+                    <Text className="create-intro-card__eyebrow">
+                      {creationSession.currentQuestion.label || creationSession.currentQuestion.title}
+                    </Text>
+                    <Text className="create-intro-card__title">
+                      {creationSession.currentQuestion.prompt || creationSession.currentQuestion.content}
+                    </Text>
                   </View>
                 </View>
               ) : null}
@@ -956,7 +995,7 @@ export default function Create() {
                 <View className="form-input-wrap form-input-wrap--textarea">
                   <Textarea
                     className="form-textarea"
-                    placeholder={creationSession.currentQuestion?.prompt || '如果你想补充更多细节，可以继续输入...'}
+                    placeholder={creationSession.currentQuestion?.prompt || creationSession.currentQuestion?.placeholder || '如果你想补充更多细节，可以继续输入...'}
                     placeholderStyle="color: #55516e"
                     value={sessionAnswer}
                     onInput={(e) => setSessionAnswer(e.detail.value)}
@@ -1019,7 +1058,3 @@ export default function Create() {
     </View>
   );
 }
-
-
-
-
