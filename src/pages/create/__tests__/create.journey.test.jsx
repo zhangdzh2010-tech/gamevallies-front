@@ -438,6 +438,27 @@ describe('Create page journey coverage', () => {
     });
   });
 
+  test('generating view keeps the useful progress content without the extra AI hero card', () => {
+    mockGameStoreState = buildGameStoreState({
+      isGenerating: true,
+      generationProgress: {
+        stageIndex: 1,
+        pct: 60,
+        stageLabel: '生成游戏逻辑',
+      },
+      currentTask: {
+        taskId: 'task-1',
+        status: 'running',
+      },
+    });
+
+    render(<CreatePage />);
+
+    expect(screen.getByText('当前焦点')).toBeTruthy();
+    expect(screen.getAllByText('生成游戏逻辑').length).toBeGreaterThan(0);
+    expect(screen.queryByText('AI 创作中')).toBeNull();
+  });
+
   test('completed journey offers continue optimization and locked play actions', () => {
     const currentGame = {
       id: 'game-88',

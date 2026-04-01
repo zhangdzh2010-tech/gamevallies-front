@@ -625,20 +625,8 @@ export default function Create() {
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header create-header--progress">
-          <View className="create-header__copy">
-            <Text className="create-header__eyebrow">正在生成</Text>
-            <Text className="header-title">AI 创作中</Text>
-            <Text className="header-subtitle">AI 正在为你生成游戏，请稍候</Text>
-          </View>
-          <View className="create-header__meta">
-            <Text className="create-header__meta-label">{taskStatusLabel}</Text>
-            <Text className="create-header__meta-value">{`${progress.pct}%`}</Text>
-          </View>
-        </View>
-
         <PageScrollContainer
-          className="create-scroll"
+          className="create-scroll create-scroll--progress"
           style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
         >
           <View className="progress-panel">
