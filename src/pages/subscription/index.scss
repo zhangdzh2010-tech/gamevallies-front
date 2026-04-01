@@ -1,0 +1,834 @@
+.subscription-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #08080d;
+  overflow: hidden;
+}
+
+.subscription-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 32rpx;
+}
+
+/* Quota Card */
+.quota-card {
+  background: #1a1a2e;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  margin-top: 32rpx;
+}
+
+.quota-card-title {
+  font-size: 28rpx;
+  color: #8b87a3;
+  margin-bottom: 28rpx;
+}
+
+.quota-progress-wrap {
+  margin-bottom: 32rpx;
+}
+
+.quota-progress-bg {
+  height: 16rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin-bottom: 12rpx;
+}
+
+.quota-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6e56ff, #2dd4a8);
+  border-radius: 8rpx;
+  transition: width 0.3s ease;
+}
+
+.quota-progress-text {
+  font-size: 24rpx;
+  color: #55516e;
+}
+
+.quota-remaining {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+
+.quota-remaining-num {
+  font-size: 64rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.quota-remaining-label {
+  font-size: 28rpx;
+  color: #8b87a3;
+}
+
+/* Subscription Status Card */
+.sub-status-card {
+  background: #1a1a2e;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  margin-top: 24rpx;
+}
+
+.sub-status-title {
+  font-size: 28rpx;
+  color: #8b87a3;
+  margin-bottom: 24rpx;
+}
+
+.sub-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.sub-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-info-label {
+  font-size: 28rpx;
+  color: #c4c1d4;
+}
+
+.sub-info-value {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* Plans Section */
+.plans-section {
+  margin-top: 48rpx;
+}
+
+.plans-section-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 28rpx;
+}
+
+.plans-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.plan-card {
+  background: #1a1a2e;
+  border-radius: 32rpx;
+  padding: 40rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.06);
+  position: relative;
+
+  &.recommended {
+    border-color: rgba(110, 86, 255, 0.4);
+    background: linear-gradient(135deg, rgba(110, 86, 255, 0.08) 0%, rgba(110, 86, 255, 0.02) 100%);
+  }
+}
+
+.plan-card-badge {
+  position: absolute;
+  top: -2rpx;
+  right: 32rpx;
+  background: linear-gradient(135deg, #6e56ff, #2dd4a8);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 6rpx 20rpx;
+  border-radius: 0 0 16rpx 16rpx;
+}
+
+.plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16rpx;
+}
+
+.plan-card-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.plan-card-price {
+  display: flex;
+  align-items: baseline;
+}
+
+.plan-card-currency {
+  font-size: 28rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.plan-card-amount {
+  font-size: 52rpx;
+  color: #ffffff;
+  font-weight: 700;
+  margin: 0 2rpx;
+}
+
+.plan-card-period {
+  font-size: 26rpx;
+  color: #8b87a3;
+}
+
+.plan-card-quota {
+  font-size: 26rpx;
+  color: #2dd4a8;
+  font-weight: 500;
+  margin-bottom: 28rpx;
+}
+
+.plan-card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.plan-card-feature {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.feature-dot {
+  font-size: 28rpx;
+  color: #2dd4a8;
+}
+
+.feature-text {
+  font-size: 26rpx;
+  color: #c4c1d4;
+}
+
+.plan-card-subscribe-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28rpx 0;
+  border-radius: 24rpx;
+  text-align: center;
+  font-size: 32rpx;
+  line-height: 1;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+  box-shadow: 0 8rpx 24rpx rgba(110, 86, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  text {
+    display: block;
+    line-height: 1;
+  }
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  &.subscribing {
+    background: #55516e;
+    box-shadow: none;
+    cursor: not-allowed;
+    
+    &:active {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    cursor: not-allowed;
+
+    &:active {
+      opacity: 0.55;
+      transform: none;
+    }
+  }
+}
+
+/* Subscriber Bar */
+.subscriber-bar {
+  text-align: center;
+  padding: 32rpx 0 16rpx;
+}
+
+.subscriber-bar text {
+  font-size: 24rpx;
+  color: #55516e;
+}
+
+.bottom-spacer {
+  height: 200rpx;
+}
+
+.subscription-container.subscription-container--h5 {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+
+  .subscription-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+    padding: 0 12px calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .quota-card,
+  .sub-status-card,
+  .plan-card {
+    border-radius: 20px;
+  }
+
+  .quota-card {
+    margin-top: 14px;
+    padding: 18px 16px;
+  }
+
+  .quota-card-title,
+  .sub-status-title {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .quota-progress-wrap {
+    margin-bottom: 14px;
+  }
+
+  .quota-progress-bg {
+    height: 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .quota-progress-text {
+    font-size: 13px;
+  }
+
+  .quota-remaining {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .quota-remaining-num {
+    font-size: 32px;
+    line-height: 1;
+  }
+
+  .quota-remaining-label {
+    font-size: 14px;
+  }
+
+  .sub-status-card {
+    margin-top: 12px;
+    padding: 18px 16px;
+  }
+
+  .sub-status-info {
+    gap: 12px;
+  }
+
+  .sub-info-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .sub-info-label,
+  .sub-info-value {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .sub-info-value {
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .plans-section {
+    margin-top: 20px;
+  }
+
+  .plans-section-title {
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+
+  .plans-list {
+    gap: 12px;
+  }
+
+  .plan-card {
+    padding: 18px 14px 14px;
+  }
+
+  .plan-card-badge {
+    right: 14px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 0 0 10px 10px;
+  }
+
+  .plan-card-header {
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .plan-card-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 17px;
+    line-height: 1.25;
+  }
+
+  .plan-card-price {
+    flex-shrink: 0;
+  }
+
+  .plan-card-currency {
+    font-size: 13px;
+  }
+
+  .plan-card-amount {
+    font-size: 28px;
+  }
+
+  .plan-card-period,
+  .plan-card-quota,
+  .feature-dot,
+  .feature-text {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .plan-card-quota {
+    margin-bottom: 12px;
+  }
+
+  .plan-card-features {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .plan-card-subscribe-btn {
+    min-height: 52px;
+    padding: 0 12px;
+    border-radius: 16px;
+    font-size: 16px;
+    line-height: 1;
+    box-shadow: 0 6px 18px rgba(110, 86, 255, 0.3);
+  }
+
+  .subscriber-bar {
+    padding: 18px 0 8px;
+  }
+
+  .subscriber-bar text {
+    font-size: 13px;
+  }
+
+  .bottom-spacer {
+    height: 0;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .subscription-container.subscription-container--h5 {
+    .plan-card-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .plan-card-price {
+      width: 100%;
+    }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .subscription-container.subscription-container--h5 {
+    .subscription-scroll {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .quota-card,
+    .sub-status-card,
+    .plan-card {
+      border-radius: 18px;
+    }
+
+    .sub-info-row {
+      grid-template-columns: 1fr;
+    }
+
+    .sub-info-value {
+      text-align: left;
+    }
+
+    .plan-card-amount {
+      font-size: 24px;
+    }
+  }
+}
+
+// 2026 visual refresh
+.subscription-container {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(72, 126, 255, 0.16), transparent 20%),
+    radial-gradient(circle at 84% 14%, rgba(197, 89, 255, 0.12), transparent 22%),
+    linear-gradient(180deg, #070810 0%, #05060c 100%);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(circle at 24% 58%, rgba(53, 219, 190, 0.06), transparent 18%),
+      radial-gradient(circle at 74% 42%, rgba(112, 87, 255, 0.08), transparent 18%);
+  }
+
+  .subscription-scroll {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.subscription-stage {
+  margin-top: 14px;
+  padding: 18px 16px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(105, 117, 168, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(103, 120, 255, 0.16), transparent 30%),
+    linear-gradient(135deg, rgba(14, 16, 28, 0.96) 0%, rgba(9, 10, 18, 0.98) 100%);
+  box-shadow: 0 24px 40px rgba(2, 5, 16, 0.24);
+
+  &__copy {
+    margin-bottom: 14px;
+  }
+
+  &__eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    color: rgba(136, 147, 204, 0.84);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+
+  &__title {
+    display: block;
+    margin-bottom: 10px;
+    color: #f5f7ff;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.16;
+    letter-spacing: -0.4px;
+  }
+
+  &__desc {
+    display: block;
+    color: rgba(201, 208, 233, 0.76);
+    font-size: 24rpx;
+    line-height: 1.6;
+  }
+
+  &__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  &__metric {
+    min-width: 0;
+    padding: 14px 12px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(10, 12, 22, 0.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  &__metric-label {
+    display: block;
+    margin-bottom: 8px;
+    color: rgba(139, 145, 175, 0.76);
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  &__metric-value {
+    display: block;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+}
+
+.quota-card,
+.sub-status-card,
+.plan-card {
+  border: 1px solid rgba(94, 103, 145, 0.14);
+  background: linear-gradient(180deg, rgba(15, 16, 28, 0.94) 0%, rgba(8, 9, 16, 0.98) 100%);
+  box-shadow: 0 20px 34px rgba(2, 5, 16, 0.18);
+}
+
+.quota-card {
+  margin-top: 16px;
+}
+
+.quota-card-eyebrow,
+.sub-status-eyebrow,
+.plans-section-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(132, 144, 194, 0.82);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.quota-card-title,
+.sub-status-title {
+  color: #f5f7ff;
+  font-weight: 800;
+}
+
+.quota-progress-text,
+.quota-remaining-label,
+.sub-info-label,
+.subscriber-bar text {
+  color: rgba(160, 166, 194, 0.82);
+}
+
+.quota-progress-bg {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.quota-progress-fill {
+  box-shadow: 0 10px 18px rgba(88, 102, 255, 0.18);
+}
+
+.quota-remaining-num {
+  color: #ffffff;
+}
+
+.sub-status-info {
+  gap: 14px;
+}
+
+.sub-info-row {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.sub-info-value {
+  font-weight: 700;
+}
+
+.plans-section {
+  margin-top: 22px;
+}
+
+.plans-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+
+  &__copy {
+    min-width: 0;
+  }
+}
+
+.plans-section-title {
+  margin-bottom: 0;
+}
+
+.plans-section-meta {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(12, 14, 24, 0.84);
+  border: 1px solid rgba(102, 112, 155, 0.14);
+  color: #eef4ff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.plans-list {
+  gap: 14px;
+}
+
+.plan-card {
+  overflow: hidden;
+
+  &.recommended {
+    border-color: rgba(120, 131, 255, 0.24);
+    background:
+      radial-gradient(circle at top right, rgba(79, 119, 255, 0.18), transparent 26%),
+      linear-gradient(180deg, rgba(17, 18, 33, 0.98) 0%, rgba(9, 10, 18, 0.98) 100%);
+  }
+}
+
+.plan-card-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: rgba(145, 155, 204, 0.84);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.plan-card-badge {
+  right: 24rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 0 0 18rpx 18rpx;
+  box-shadow: 0 14px 22px rgba(78, 102, 255, 0.22);
+}
+
+.plan-card-header {
+  gap: 14px;
+}
+
+.plan-card-name {
+  line-height: 1.2;
+}
+
+.plan-card-price {
+  flex-shrink: 0;
+}
+
+.plan-card-amount {
+  text-shadow: 0 10px 18px rgba(76, 94, 255, 0.18);
+}
+
+.plan-card-quota {
+  color: #7ce7cf;
+  font-weight: 700;
+}
+
+.plan-card-features {
+  gap: 12rpx;
+}
+
+.plan-card-feature {
+  align-items: flex-start;
+}
+
+.feature-dot {
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.plan-card-subscribe-btn {
+  min-height: 54px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #5d7fff 0%, #7c5fff 52%, #39dec4 100%);
+  box-shadow: 0 20px 32px rgba(85, 102, 255, 0.24);
+
+  text {
+    font-weight: 800;
+  }
+}
+
+.subscriber-bar {
+  padding: 20px 0 8px;
+}
+
+.subscription-container.subscription-container--h5 {
+  .subscription-scroll {
+    padding: 0 14px calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .subscription-stage {
+    padding: 16px;
+    border-radius: 24px;
+
+    &__title {
+      font-size: 24px;
+    }
+
+    &__desc {
+      font-size: 14px;
+    }
+
+    &__metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    &__metric {
+      min-height: 74px;
+      padding: 12px 10px 14px;
+    }
+
+    &__metric-label {
+      margin-bottom: 6px;
+      font-size: 10px;
+    }
+
+    &__metric-value {
+      font-size: 16px;
+    }
+  }
+
+  .quota-card,
+  .sub-status-card,
+  .plan-card {
+    border-radius: 24px;
+  }
+
+  .quota-card-title,
+  .sub-status-title,
+  .plans-section-title {
+    font-size: 20px;
+  }
+
+  .plans-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .plans-section-meta {
+    padding: 9px 12px;
+  }
+
+  .plan-card {
+    padding-top: 20px;
+  }
+}

@@ -1,0 +1,336 @@
+.paywall-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  &.locked {
+    .paywall-close {
+      opacity: 0.45;
+    }
+  }
+}
+
+.paywall-panel {
+  width: 100%;
+  max-height: 80vh;
+  background: #1a1a2e;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.paywall-header {
+  flex-shrink: 0;
+  padding: 20px 20px 12px;
+  text-align: center;
+  position: relative;
+}
+
+.paywall-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+
+  &.disabled {
+    pointer-events: none;
+  }
+}
+
+.paywall-close-text {
+  font-size: 14px;
+  color: #8b87a3;
+}
+
+.paywall-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.paywall-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.paywall-subtitle {
+  font-size: 14px;
+  color: #8b87a3;
+  display: block;
+}
+
+.paywall-plans-scroll {
+  flex: 1;
+  padding: 0 16px 12px;
+}
+
+.paywall-plans-scroll--h5 {
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.paywall-plans {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.paywall-plan-card {
+  background: #12121f;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+
+  &.recommended {
+    border-color: rgba(110, 86, 255, 0.4);
+    background: linear-gradient(135deg, rgba(110, 86, 255, 0.08) 0%, rgba(110, 86, 255, 0.02) 100%);
+  }
+}
+
+.plan-badge {
+  position: absolute;
+  top: -1px;
+  right: 16px;
+  background: linear-gradient(135deg, #6e56ff, #2dd4a8);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 0 0 8px 8px;
+}
+
+.plan-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.plan-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.plan-price-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.plan-currency {
+  font-size: 14px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.plan-price {
+  font-size: 24px;
+  color: #ffffff;
+  font-weight: 700;
+  margin: 0 1px;
+}
+
+.plan-period {
+  font-size: 13px;
+  color: #8b87a3;
+}
+
+.plan-quota {
+  margin-bottom: 14px;
+}
+
+.plan-quota-text {
+  font-size: 13px;
+  color: #2dd4a8;
+  font-weight: 500;
+}
+
+.plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.plan-feature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-feature-check {
+  font-size: 12px;
+  color: #2dd4a8;
+  flex-shrink: 0;
+}
+
+.plan-feature-text {
+  font-size: 13px;
+  color: #c4c1d4;
+}
+
+.plan-subscribe-btn {
+  width: 100%;
+  padding: 18px 24px;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(110, 86, 255, 0.15);
+  border: 1px solid rgba(110, 86, 255, 0.3);
+  box-sizing: border-box;
+  white-space: nowrap;
+  letter-spacing: 1px;
+
+  &.btn-primary {
+    background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+    border: none;
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(110, 86, 255, 0.35);
+  }
+
+  &.btn-secondary {
+    color: #c4c1d4;
+  }
+
+  &.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  &.loading {
+    background: #55516e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    box-shadow: none;
+  }
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+.paywall-footer-hint {
+  text-align: center;
+  padding: 10px 0 6px;
+}
+
+.subscriber-count {
+  font-size: 12px;
+  color: #55516e;
+}
+
+@media screen and (max-width: 480px) {
+  .paywall-overlay {
+    align-items: flex-end;
+  }
+
+  .paywall-panel {
+    max-height: 84vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .paywall-header {
+    padding: 16px 16px 10px;
+  }
+
+  .paywall-close {
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .paywall-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  .paywall-title {
+    font-size: 18px;
+  }
+
+  .paywall-subtitle {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .paywall-plans-scroll {
+    padding: 0 12px 10px;
+  }
+
+  .paywall-plans {
+    gap: 10px;
+  }
+
+  .paywall-plan-card {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .plan-top {
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .plan-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+  }
+
+  .plan-price {
+    font-size: 21px;
+  }
+
+  .plan-period,
+  .plan-quota-text,
+  .plan-feature-text {
+    font-size: 12px;
+  }
+
+  .plan-features {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .plan-subscribe-btn {
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 15px;
+    letter-spacing: 0;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .paywall-panel {
+    max-height: 88vh;
+  }
+
+  .plan-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
