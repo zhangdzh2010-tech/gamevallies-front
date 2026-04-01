@@ -109,7 +109,7 @@ jest.mock('../../../store/gameStore', () => ({
 
 const CreatePage = require('../index').default;
 
-const SESSION_START_TEXT = /开始创作会话/;
+const SESSION_START_TEXT = /开始创作/;
 const PORTRAIT_TEXT = /竖屏/;
 const LANDSCAPE_TEXT = /横屏/;
 const ANSWER_TEXT = /提交回答/;

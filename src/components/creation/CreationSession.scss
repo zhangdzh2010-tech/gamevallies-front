@@ -399,18 +399,34 @@
 }
 
 .creation-session-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.creation-session-actions--count-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.creation-session-actions--count-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.creation-session-actions--count-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .creation-session-actions__button {
-  min-width: 168px;
-  padding: 16px 22px;
-  border-radius: 18px;
+  min-width: 0;
+  padding: 12px 10px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(94, 98, 126, 0.38);
   transition: transform 0.15s ease, opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .creation-session-actions__button--primary {
@@ -431,7 +447,8 @@
 }
 
 .creation-session-actions__button-text {
-  font-size: 22px;
+  font-size: 16px;
+  line-height: 1.25;
   font-weight: 600;
   color: #f5f2ff;
 }
@@ -607,17 +624,16 @@
   }
 
   .creation-session-actions {
-    gap: 10px;
+    gap: 6px;
   }
 
   .creation-session-actions__button {
-    min-width: calc(50% - 5px);
-    padding: 12px 14px;
-    border-radius: 14px;
+    padding: 10px 6px;
+    border-radius: 12px;
   }
 
   .creation-session-actions__button-text {
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
@@ -634,9 +650,12 @@
       min-width: 0;
     }
 
-    .creation-session-actions__button {
-      width: 100%;
-      min-width: 0;
+    .creation-session-actions {
+      gap: 5px;
+    }
+
+    .creation-session-actions__button-text {
+      font-size: 11px;
     }
   }
 }

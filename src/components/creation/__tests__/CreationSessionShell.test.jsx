@@ -108,7 +108,7 @@ describe('CreationSession components', () => {
     const actions = buildCreationSessionActions({
       submitting: false,
       answerValue: '想做像素风',
-      generateLabel: '直接开始优化',
+      generateLabel: '开始优化',
       onSubmit: jest.fn(),
       onSkip: jest.fn(),
       onGenerate: jest.fn(),
@@ -123,7 +123,7 @@ describe('CreationSession components', () => {
     }));
     expect(actions[2]).toEqual(expect.objectContaining({
       key: 'generate',
-      label: '直接开始优化',
+      label: '开始优化',
       disabled: false,
     }));
   });

@@ -979,10 +979,10 @@ export default function Create() {
           <View className="form-actions">
             {!creationSession ? (
               <View className="submit-btn" onClick={handleSubmit}>
-                <Text>{sessionBusy ? '分析中...' : '开始创作会话'}</Text>
+                <Text>{sessionBusy ? '分析中...' : '开始创作'}</Text>
               </View>
             ) : (
-              <>
+              <View className="form-actions form-actions--session">
                 <View className="submit-btn" onClick={handleSubmit}>
                   <Text>{sessionBusy ? '处理中...' : '提交回答'}</Text>
                 </View>
@@ -995,7 +995,7 @@ export default function Create() {
                 <View className="action-btn new-btn" onClick={handleRestartSession}>
                   <Text>重新开始</Text>
                 </View>
-              </>
+              </View>
             )}
           </View>
         </View>
@@ -1019,7 +1019,6 @@ export default function Create() {
     </View>
   );
 }
-
 
 
 
