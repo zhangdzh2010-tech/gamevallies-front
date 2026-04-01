@@ -318,6 +318,47 @@ describe('gameStore creation session actions', () => {
     }));
   });
 
+  test('generateFromCreationSession supports the legacy create-page signature with explicit sessionId', async () => {
+    const beginTaskTracking = jest.fn(() => Promise.resolve());
+
+    useGameStore.setState({
+      creationSession: null,
+      trackedTasks: [],
+      _beginTaskTracking: beginTaskTracking,
+    });
+
+    mockGenerateFromCreationSession.mockResolvedValue({
+      gameId: 'game-legacy',
+      title: 'Legacy Create',
+      status: 'generating',
+      canPlay: true,
+      generationTask: {
+        taskId: 'task-legacy',
+        taskType: 'pipeline_run',
+        status: 'queued',
+        gameId: 'game-legacy',
+        progressPct: 5,
+      },
+    });
+
+    await useGameStore.getState().generateFromCreationSession('session-legacy', {
+      revision: 7,
+      title: 'Legacy Create',
+      promptPreview: '做一个解谜游戏',
+    });
+
+    expect(mockGenerateFromCreationSession).toHaveBeenCalledWith('session-legacy', {
+      revision: 7,
+      title: 'Legacy Create',
+      promptPreview: '做一个解谜游戏',
+    });
+    expect(beginTaskTracking).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: 'task-legacy',
+    }), expect.objectContaining({
+      gameId: 'game-legacy',
+    }));
+  });
+
   test('restoreActiveCreationSession can ignore missing active session silently', async () => {
     const missingError = new Error('session not found');
     missingError.statusCode = 404;
