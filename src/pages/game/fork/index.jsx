@@ -310,6 +310,7 @@ export default function GameForkPage() {
   const handleGenerateFork = async () => {
     try {
       await generateFromCreationSession({
+        revision: creationSession?.revision,
         orientation: sourceGame?.orientation || 'portrait',
         generationTier: creationSession?.generationTier || 'standard',
       });

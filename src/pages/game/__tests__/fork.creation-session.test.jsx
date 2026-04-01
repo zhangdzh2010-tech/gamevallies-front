@@ -321,6 +321,7 @@ describe('Fork page creation session flow', () => {
         sessionId: 'session-1',
         entryMode: 'fork',
         status: 'collecting',
+        revision: 8,
         sourceGameId: 'source-1',
         generationTier: 'standard',
         planDraft: '系统建议保留跑酷核心，重点改角色和视觉包装',
@@ -342,6 +343,7 @@ describe('Fork page creation session flow', () => {
 
     await waitFor(() => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
+        revision: 8,
         orientation: 'portrait',
         generationTier: 'standard',
       });
