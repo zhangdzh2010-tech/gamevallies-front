@@ -2,7 +2,7 @@ export function buildCreationSessionActions({
   submitting = false,
   answerValue = '',
   submitLabel = '提交回答',
-  generateLabel = '直接开始创作',
+  generateLabel = '开始创作',
   restartLabel = '重新开始',
   onSubmit,
   onSkip,

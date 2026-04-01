@@ -6,19 +6,138 @@ import {
   getCreationSessionNotice,
   isCreationSessionQuestioning,
 } from './sessionState';
-import { CreationPlanDraftCard } from './CreationPlanDraftCard';
-import { CreationConfidenceCard } from './CreationConfidenceCard';
 import { CreationSessionStatusNotice } from './CreationSessionStatusNotice';
-import { CreationConversationList } from './CreationConversationList';
-import { CreationQuestionCard } from './CreationQuestionCard';
 import { CreationAnswerComposer } from './CreationAnswerComposer';
 import { CreationSessionActions } from './CreationSessionActions';
 import './CreationSession.scss';
 
+const DRAFT_LABELS = {
+  title: '方向',
+  summary: '理解',
+  concept: '玩法',
+  coreMechanic: '玩法',
+  core_mechanic: '玩法',
+  interaction: '交互',
+  objective: '目标',
+  winCondition: '目标',
+  win_condition: '目标',
+  pacing: '节奏',
+  difficulty: '难度',
+  theme: '主题',
+  visualDirection: '风格',
+  signatureMoment: '亮点',
+};
+
+function toReadableLines(value) {
+  if (!value) {
+    return [];
+  }
+
+  if (typeof value === 'string') {
+    return [value.trim()].filter(Boolean);
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .map(([key, item]) => {
+        if (item == null || item === '') {
+          return '';
+        }
+
+        if (typeof item === 'object') {
+          return '';
+        }
+
+        const label = DRAFT_LABELS[key] || key;
+        return `${label}：${String(item).trim()}`;
+      })
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function getSummaryLines(session) {
+  const planLines = toReadableLines(session?.planDraft);
+  const promptLine = typeof session?.prompt === 'string' ? session.prompt.trim() : '';
+
+  return [...planLines, promptLine]
+    .filter(Boolean)
+    .filter((line, index, arr) => arr.indexOf(line) === index)
+    .slice(0, 3);
+}
+
+function buildThreadItems(session) {
+  const messages = Array.isArray(session?.messages) ? session.messages.slice(-6) : [];
+  const items = messages
+    .filter((message) => message?.content)
+    .map((message) => ({
+      key: message.id || `${message.role}-${message.createdAt || message.content}`,
+      role: message.role === 'user' ? 'user' : 'assistant',
+      content: message.content,
+      description: '',
+      current: false,
+    }));
+
+  const questionContent = session?.currentQuestion?.content || '';
+  const hasSameAssistantMessage = items.some(
+    (item) => item.role !== 'user' && item.content === questionContent,
+  );
+
+  if (questionContent && !hasSameAssistantMessage) {
+    items.push({
+      key: `question-${session?.currentQuestion?.id || questionContent}`,
+      role: 'assistant',
+      content: questionContent,
+      description: session?.currentQuestion?.description || '',
+      current: true,
+    });
+  }
+
+  return items;
+}
+
+function decorateActions(actions, { allowQuestionAnswer, allowDirectGenerate, submitting, hasQuestion }) {
+  return actions.map((action) => {
+    if (action.key === 'submit') {
+      return {
+        ...action,
+        tone: allowDirectGenerate ? 'ghost' : 'primary',
+        disabled: Boolean(action.disabled) || submitting || !allowQuestionAnswer,
+      };
+    }
+
+    if (action.key === 'skip') {
+      return {
+        ...action,
+        disabled: Boolean(action.disabled) || submitting || !allowQuestionAnswer || !hasQuestion,
+      };
+    }
+
+    if (action.key === 'generate') {
+      return {
+        ...action,
+        tone: allowDirectGenerate ? 'primary' : 'ghost',
+        disabled: Boolean(action.disabled) || submitting || !allowDirectGenerate,
+      };
+    }
+
+    return {
+      ...action,
+      disabled: Boolean(action.disabled) || submitting,
+    };
+  });
+}
+
 export function CreationSessionPanel({
   session = null,
   entryMode = 'create',
-  planHint = '',
   answerValue = '',
   onAnswerChange,
   answerPlaceholder = '',
@@ -27,8 +146,6 @@ export function CreationSessionPanel({
   actions = [],
   errorMessage = '',
   errorClassName = '',
-  headerTitle = '',
-  headerHint = '',
 }) {
   if (!session) {
     return null;
@@ -39,97 +156,89 @@ export function CreationSessionPanel({
   const allowQuestionAnswer = isCreationSessionQuestioning(sessionStatus);
   const allowDirectGenerate = canGenerateCreationSession(sessionStatus);
   const sessionNotice = getCreationSessionNotice(sessionStatus, entryMode, session);
-  const decoratedActions = actions.map((action) => {
-    if (action.key === 'submit') {
-      return {
-        ...action,
-        tone: allowDirectGenerate ? 'ghost' : action.tone,
-        disabled: Boolean(action.disabled) || !allowQuestionAnswer,
-      };
-    }
-
-    if (action.key === 'skip') {
-      return {
-        ...action,
-        disabled: Boolean(action.disabled) || !allowQuestionAnswer || !session?.currentQuestion,
-      };
-    }
-
-    if (action.key === 'generate') {
-      return {
-        ...action,
-        tone: allowDirectGenerate ? 'primary' : action.tone,
-        disabled: Boolean(action.disabled) || !allowDirectGenerate,
-      };
-    }
-
-    return action;
+  const summaryLines = getSummaryLines(session);
+  const threadItems = buildThreadItems(session);
+  const resolvedErrorClassName = errorClassName || 'creation-session-error';
+  const decoratedActions = decorateActions(actions, {
+    allowQuestionAnswer,
+    allowDirectGenerate,
+    submitting,
+    hasQuestion: Boolean(session?.currentQuestion),
   });
 
+  if (isInitializing) {
+    return (
+      <View className="creation-session-flow">
+        <CreationSessionStatusNotice
+          status={sessionStatus}
+          notice={sessionNotice}
+        />
+
+        <View className="creation-session-loading">
+          <View className="creation-session-loading__dots">
+            <View className="creation-session-loading__dot" />
+            <View className="creation-session-loading__dot" />
+            <View className="creation-session-loading__dot" />
+          </View>
+          <Text className="creation-session-loading__title">正在整理这一轮方向</Text>
+          {session?.prompt ? (
+            <Text className="creation-session-loading__text">“{session.prompt}”</Text>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <>
-      {headerTitle ? <Text className="creation-session-panel__title">{headerTitle}</Text> : null}
-      {headerHint ? <Text className="creation-session-panel__hint">{headerHint}</Text> : null}
-
-      {isInitializing ? (
-        <View className="creation-session-card creation-session-loading-card">
-          <View className="creation-session-card__header">
-            <View>
-              <Text className="creation-session-card__title">正在整理第一轮问题</Text>
-              <Text className="creation-session-card__hint">会先提炼你的意图，再决定是继续追问还是可以直接生成。</Text>
-            </View>
-          </View>
-
-          <View className="creation-session-card__body">
-            {session?.prompt ? (
-              <Text className="creation-session-card__text">“{session.prompt}”</Text>
-            ) : null}
-            <View className="creation-session-loading-card__dots">
-              <View className="creation-session-loading-card__dot" />
-              <View className="creation-session-loading-card__dot" />
-              <View className="creation-session-loading-card__dot" />
-            </View>
-          </View>
+    <View className="creation-session-flow">
+      {summaryLines.length ? (
+        <View className="creation-session-summary">
+          <Text className="creation-session-summary__label">当前理解</Text>
+          {summaryLines.map((line) => (
+            <Text key={line} className="creation-session-summary__line">{line}</Text>
+          ))}
         </View>
       ) : null}
 
-      {!isInitializing ? (
-        <CreationPlanDraftCard
-          draft={session?.planDraft}
-          hint={planHint}
-        />
-      ) : null}
-      {!isInitializing ? (
-        <CreationConfidenceCard
-          confidenceSummary={session?.confidenceSummary}
-          questionStrategy={session?.questionStrategy}
-        />
-      ) : null}
       <CreationSessionStatusNotice
         status={sessionStatus}
-        entryMode={entryMode}
         notice={sessionNotice}
       />
-      {!isInitializing ? <CreationConversationList messages={session?.messages || []} /> : null}
-      {allowQuestionAnswer ? (
-        <>
-          <CreationQuestionCard question={session?.currentQuestion} />
-          <CreationAnswerComposer
-            value={answerValue}
-            onChange={onAnswerChange}
-            placeholder={answerPlaceholder}
-            suggestions={answerSuggestions}
-            disabled={submitting}
-          />
-        </>
-      ) : null}
-      <CreationSessionActions actions={decoratedActions} />
-      {errorMessage ? (
-        <View className={errorClassName}>
-          <Text className={`${errorClassName}__text`}>{errorMessage}</Text>
+
+      {threadItems.length ? (
+        <View className="creation-session-thread">
+          {threadItems.map((item) => (
+            <View
+              key={item.key}
+              className={`creation-session-message creation-session-message--${item.role}${item.current ? ' creation-session-message--current' : ''}`}
+            >
+              <Text className="creation-session-message__content">{item.content}</Text>
+              {item.description ? (
+                <Text className="creation-session-message__description">{item.description}</Text>
+              ) : null}
+            </View>
+          ))}
         </View>
       ) : null}
-    </>
+
+      {allowQuestionAnswer ? (
+        <CreationAnswerComposer
+          value={answerValue}
+          onChange={onAnswerChange}
+          placeholder={answerPlaceholder}
+          suggestions={answerSuggestions}
+          disabled={submitting}
+        />
+      ) : null}
+
+      <CreationSessionActions actions={decoratedActions} />
+
+      {errorMessage ? (
+        <View className={resolvedErrorClassName}>
+          <Text className={`${resolvedErrorClassName}__text`}>{errorMessage}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 

@@ -264,7 +264,8 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
+      expect(screen.getByText('开始复刻')).toBeTruthy();
     });
 
     expect(mockStartCreationSession).not.toHaveBeenCalled();
@@ -274,13 +275,13 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
     });
 
     fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
       target: { value: '保留贪吃蛇核心玩法，但换成赛博风，节奏更快一些。' },
     });
-    fireEvent.click(screen.getByText('开始这轮新版本对话'));
+    fireEvent.click(screen.getByText('开始复刻'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -317,7 +318,7 @@ describe('Fork page creation session flow', () => {
       expect(screen.getByText('系统建议保留跑酷核心，重点改角色和视觉包装')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('直接开始复刻'));
+    fireEvent.click(screen.getByText('开始复刻'));
 
     await waitFor(() => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
@@ -348,7 +349,7 @@ describe('Fork page creation session flow', () => {
       expect(screen.getByText('本轮复刻会话已结束，如需继续请重新开始新的会话。')).toBeTruthy();
     });
     expect(screen.queryByText('这个问题不该继续出现')).toBeNull();
-    expect(screen.getByText('直接开始复刻').disabled).toBe(true);
+    expect(screen.getByText('开始复刻').disabled).toBe(true);
     expect(screen.getByText('跳过此题').disabled).toBe(true);
   });
 
@@ -400,7 +401,7 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
     });
     expect(mockStartCreationSession).not.toHaveBeenCalled();
     expect(screen.queryByText('AI 正在生成复刻作品')).toBeNull();
@@ -415,13 +416,13 @@ describe('Fork page creation session flow', () => {
     render(<ForkPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('先说你想保留什么、改变什么')).toBeTruthy();
+      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
     });
 
     fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
       target: { value: '保留核心玩法，但改成美食主题，节奏更轻快。' },
     });
-    fireEvent.click(screen.getByText('重新提交这段方向'));
+    fireEvent.click(screen.getByText('开始复刻'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(

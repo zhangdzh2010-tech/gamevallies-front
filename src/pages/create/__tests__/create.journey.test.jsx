@@ -229,7 +229,7 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    const textarea = screen.getByPlaceholderText(/先说一句核心想法/);
+    const textarea = screen.getByPlaceholderText(/先说一句你想做什么游戏/);
     const longPrompt = 'creative'.repeat(180);
 
     expect(textarea.getAttribute('data-maxlength')).toBe('2000');
@@ -246,19 +246,15 @@ describe('Create page journey coverage', () => {
       });
     });
 
-    expect(screen.getByText(/方案草案/)).toBeTruthy();
-    expect(screen.getByText(/办公室摸鱼计划/)).toBeTruthy();
-    expect(screen.getByText(/理解与追问/)).toBeTruthy();
+    expect(screen.getByText(/当前理解/)).toBeTruthy();
+    expect(screen.getByText(/方向：办公室摸鱼计划/)).toBeTruthy();
+    expect(screen.getByText(/你希望它发生在什么场景里/)).toBeTruthy();
   });
 
-  test('example prompt click fills the textarea and short prompts are blocked', async () => {
+  test('short prompts are blocked before a session starts', async () => {
     render(<CreatePage />);
 
-    fireEvent.click(screen.getByText('🐍'));
-
-    expect(screen.getByPlaceholderText(/先说一句核心想法/).value).toContain('贪吃蛇');
-
-    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+    fireEvent.change(screen.getByPlaceholderText(/先说一句你想做什么游戏/), {
       target: { value: '太短' },
     });
     fireEvent.click(screen.getByText(SESSION_START_TEXT));
@@ -290,7 +286,7 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+    fireEvent.change(screen.getByPlaceholderText(/先说一句你想做什么游戏/), {
       target: { value: 'build a horizontal shooter game with a spaceship and enemies' },
     });
     fireEvent.click(screen.getByText(LANDSCAPE_TEXT));
@@ -348,7 +344,7 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+    fireEvent.change(screen.getByPlaceholderText(/先说一句你想做什么游戏/), {
       target: { value: '做一个办公室摸鱼游戏' },
     });
     fireEvent.click(screen.getByText(SESSION_START_TEXT));
@@ -419,16 +415,14 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+    fireEvent.change(screen.getByPlaceholderText(/先说一句你想做什么游戏/), {
       target: { value: '设计一款类似于羊了个羊的游戏' },
     });
     fireEvent.click(screen.getByText(SESSION_START_TEXT));
 
     await waitFor(() => {
-      expect(screen.getByText(/当前问题/)).toBeTruthy();
+      expect(screen.getByText(/你希望它发生在什么场景里/)).toBeTruthy();
     });
-
-    expect(screen.getByText(/你希望它发生在什么场景里/)).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText(/比如办公室、农场、校园/), {
       target: { value: '农场闯关，三消为主' },
