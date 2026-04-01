@@ -40,7 +40,7 @@ function normalizeGenerationTask(task) {
     cancelRequested: task.cancelRequested === true,
     currentStage: task.currentStage || task.progressStage || task.stage || null,
     currentStepKey: task.currentStepKey || task.stepKey || null,
-    progressMessage: task.progressMessage || '',
+    progressMessage: task.progressMessage || task.message || '',
     displayStageKey: task.displayStageKey || null,
     displayStageLabel: task.displayStageLabel || null,
     displayStageIndex: task.displayStageIndex ?? null,
@@ -93,7 +93,7 @@ function normalizeTaskEvent(event, index = 0) {
     status: event.status || event.eventType || 'info',
     message: event.message || event.progressMessage || '',
     detail: event.detail || event.details || null,
-    createdAt: event.createdAt || null,
+    createdAt: event.createdAt || event.timestamp || null,
   };
 }
 
@@ -267,7 +267,7 @@ export async function generateGame(prompt, title, options) {
     ...(title ? { title } : {}),
     ...(normalizedOptions.type ? { type: normalizedOptions.type } : {}),
     orientation,
-  });
+  }, { timeout: 60000 });
   return normalizeGenerateResponse(response);
 }
 
@@ -333,17 +333,38 @@ export async function skipCreationSessionQuestion(sessionId, revision) {
 }
 
 export async function generateFromCreationSession(sessionId, options = {}) {
-  void options;
-
   const response = await post(
     `/api/v1/games/creation-sessions/${sessionId}/generate`,
-    {},
+    {
+      ...(options.revision ? { revision: options.revision } : {}),
+      ...(options.timeoutS ? { timeoutS: options.timeoutS } : {}),
+    },
     {
       timeout: 90000,
     }
   );
 
-  return normalizeGenerateResponse(response);
+  // Response is a CreationSessionSnapshot — NOT a game-task response.
+  // The relevant IDs live in dedicated fields:
+  //   generatedGameId  → the newly created game's ID
+  //   generationTaskId → the background task ID to track
+  const gameId = response?.generatedGameId || response?.gameId || '';
+  const taskId = response?.generationTaskId || response?.taskId || '';
+
+  const generationTask = taskId
+    ? normalizeGenerationTask({ taskId, gameId, status: 'queued', taskType: 'pipeline_run' })
+    : null;
+
+  return {
+    gameId,
+    title: response?.titleDraft || response?.title || '',
+    description: response?.initialPrompt || response?.prompt || '',
+    status: response?.status || 'generating',
+    canPlay: true,
+    quotaRemaining: null,
+    requireSubscription: false,
+    generationTask,
+  };
 }
 
 export async function abandonCreationSession(sessionId) {
@@ -371,7 +392,8 @@ export async function getGame(id) {
 export async function iterateGame(gameId, feedback) {
   const response = await post(
     `/api/v1/games/${gameId}/iterate`,
-    { feedback }
+    { feedback },
+    { timeout: 60000 }
   );
   return normalizeIterateResponse(response, gameId);
 }
@@ -419,7 +441,8 @@ export async function cancelGenerationTask(taskId) {
 export async function forkGame(gameId) {
   const response = await post(
     `/api/v1/games/${gameId}/fork`,
-    {}
+    {},
+    { timeout: 30000 }
   );
   return response.gameId;
 }

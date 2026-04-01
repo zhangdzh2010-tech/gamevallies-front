@@ -1,15 +1,110 @@
 import Taro from '@tarojs/taro';
 import { API_CONFIG } from '../types';
 
+/**
+ * Parse the WS_URL (Socket.IO client format: "http://host/namespace")
+ * into the engine.io HTTP base URL and the Socket.IO namespace.
+ *
+ * Examples:
+ *   "http://localhost:3002/ws"  → { engineBase: "http://localhost:3002", namespace: "/ws" }
+ *   "https://api.example.com"  → { engineBase: "https://api.example.com", namespace: "/" }
+ */
+function parseWsUrl(wsUrl) {
+  if (!wsUrl) return { engineBase: '', namespace: '/' };
+
+  try {
+    // Accept ws:// / wss:// as well as http:// / https://
+    const normalized = String(wsUrl).replace(/^wss?:\/\//, (m) =>
+      m === 'wss://' ? 'https://' : 'http://'
+    );
+    const url = new URL(normalized);
+    const namespace =
+      url.pathname && url.pathname !== '/' ? url.pathname : '/';
+    return { engineBase: url.origin, namespace };
+  } catch (_e) {
+    return { engineBase: wsUrl, namespace: '/' };
+  }
+}
+
+/**
+ * Build the engine.io WebSocket URL for a direct-WebSocket connection to
+ * a Socket.IO v4 server (bypasses the HTTP-polling handshake).
+ *
+ * Result: wss://host/socket.io/?EIO=4&transport=websocket&token=…
+ */
+function buildEngineIoWsUrl(engineBase, token) {
+  // /socket.io/ is the default Socket.IO server path
+  const base = String(engineBase)
+    .replace(/^https?:\/\//, (m) => (m === 'https://' ? 'wss://' : 'ws://'))
+    .replace(/\/$/, '');
+  const tokenPart = token ? `&token=${encodeURIComponent(token)}` : '';
+  return `${base}/socket.io/?EIO=4&transport=websocket${tokenPart}`;
+}
+
+/**
+ * Parse a raw engine.io + Socket.IO v4 message frame.
+ *
+ * Engine.io packet types (first character):
+ *   0 = OPEN   1 = CLOSE   2 = PING   3 = PONG   4 = MESSAGE
+ *
+ * Socket.IO packet types (second character, only inside type-4 frames):
+ *   0 = CONNECT   1 = DISCONNECT   2 = EVENT   3 = ACK   4 = CONNECT_ERROR
+ *
+ * Full event example:  42/ws,["gen:progress", { … }]
+ *                      ^^--- engine.io MESSAGE + Socket.IO EVENT
+ *                        ^^^--- namespace prefix (absent for default "/")
+ */
+function parseFrame(raw) {
+  if (typeof raw !== 'string' || !raw.length) return null;
+
+  const eioType = raw[0];
+
+  // Server-sent PING → caller must reply with PONG ("3")
+  if (eioType === '2') return { kind: 'ping' };
+
+  // Socket.IO MESSAGE frame
+  if (eioType === '4' && raw.length > 1) {
+    const sioType = raw[1];
+
+    // Namespace CONNECT acknowledgement
+    if (sioType === '0') return { kind: 'connect' };
+
+    // EVENT packet
+    if (sioType === '2') {
+      let rest = raw.slice(2);
+      // Strip optional namespace prefix: "/ws," or "/other-ns,"
+      if (rest.startsWith('/')) {
+        const commaIdx = rest.indexOf(',');
+        if (commaIdx !== -1) rest = rest.slice(commaIdx + 1);
+      }
+      try {
+        const arr = JSON.parse(rest);
+        if (Array.isArray(arr) && arr.length >= 1) {
+          return {
+            kind: 'event',
+            name: String(arr[0]),
+            data: arr.length > 1 ? arr[1] : null,
+          };
+        }
+      } catch (_e) {
+        // malformed JSON — ignore
+      }
+    }
+  }
+
+  return null;
+}
+
 class WebSocketManager {
-  socketUrl = API_CONFIG.WS_URL;
   isConnected = false;
   isConnecting = false;
   listenersBound = false;
   reconnectCount = 0;
   reconnectDelay = 1000;
   maxReconnectDelay = 30000;
-  heartbeatInterval = null;
+  _intentionalClose = false;
+  _token = '';
+  _namespace = '/';
 
   messageHandlers = new Map();
   progressHandlers = new Map();
@@ -17,7 +112,11 @@ class WebSocketManager {
   globalNotificationHandlers = [];
 
   /**
-   * Connect to WebSocket
+   * Connect to the Socket.IO server.
+   * Builds the engine.io WebSocket URL and handles the full handshake:
+   *   1. Open connection
+   *   2. Send Socket.IO namespace-connect frame ("40" or "40/ns,")
+   *   3. Respond to server pings with pongs
    */
   connect(token) {
     return new Promise((resolve, reject) => {
@@ -27,69 +126,48 @@ class WebSocketManager {
       }
 
       this.isConnecting = true;
+      this._intentionalClose = false;
+      this._token = token || '';
+
+      const { engineBase, namespace } = parseWsUrl(API_CONFIG.WS_URL);
+      this._namespace = namespace;
+
+      const url = buildEngineIoWsUrl(engineBase, token);
 
       try {
-        const url = `${this.socketUrl}?token=${token}`;
-
         Taro.connectSocket({
           url,
-          header: {
-            'Content-Type': 'application/json'
-          },
+          header: { 'Content-Type': 'application/json' },
           success: () => {
             this.isConnecting = false;
             resolve();
           },
           fail: (error) => {
             this.isConnecting = false;
-            console.error('[WebSocket] Connection failed:', error);
             reject(error);
-          }
+          },
         });
 
-        this.bindSocketListeners(token);
+        this._bindListeners();
       } catch (error) {
         this.isConnecting = false;
-        console.error('[WebSocket] Connection error:', error);
         reject(error);
       }
     });
   }
 
-  /**
-   * Disconnect from WebSocket
-   */
+  /** Intentionally close the connection (no reconnect). */
   disconnect() {
-    this.stopHeartbeat();
+    this._intentionalClose = true;
     this.isConnected = false;
-
     try {
       Taro.closeSocket({});
-    } catch (error) {
-      console.error('[WebSocket] Disconnect error:', error);
-    }
+    } catch (_e) {}
   }
 
   /**
-   * Send message to server
-   */
-  send(message) {
-    if (!this.isConnected) {
-      console.warn('[WebSocket] Not connected, cannot send message');
-      return;
-    }
-
-    try {
-      Taro.sendSocketMessage({
-        data: JSON.stringify(message)
-      });
-    } catch (error) {
-      console.error('[WebSocket] Send error:', error);
-    }
-  }
-
-  /**
-   * Register general message handler
+   * Register a handler for a named Socket.IO event type.
+   * The handler receives the event payload (second element of the event array).
    */
   onMessage(type, callback) {
     if (!this.messageHandlers.has(type)) {
@@ -98,22 +176,15 @@ class WebSocketManager {
     this.messageHandlers.get(type).push(callback);
   }
 
-  /**
-   * Unregister message handler
-   */
   offMessage(type, callback) {
     const handlers = this.messageHandlers.get(type);
     if (handlers) {
-      const index = handlers.indexOf(callback);
-      if (index > -1) {
-        handlers.splice(index, 1);
-      }
+      const idx = handlers.indexOf(callback);
+      if (idx > -1) handlers.splice(idx, 1);
     }
   }
 
-  /**
-   * Listen for generation progress
-   */
+  /** Legacy per-gameId progress/complete handlers (kept for compatibility). */
   onProgress(gameId, callback) {
     if (!this.progressHandlers.has(gameId)) {
       this.progressHandlers.set(gameId, []);
@@ -121,22 +192,14 @@ class WebSocketManager {
     this.progressHandlers.get(gameId).push(callback);
   }
 
-  /**
-   * Unlisten for generation progress
-   */
   offProgress(gameId, callback) {
     const handlers = this.progressHandlers.get(gameId);
     if (handlers) {
-      const index = handlers.indexOf(callback);
-      if (index > -1) {
-        handlers.splice(index, 1);
-      }
+      const idx = handlers.indexOf(callback);
+      if (idx > -1) handlers.splice(idx, 1);
     }
   }
 
-  /**
-   * Listen for generation complete
-   */
   onComplete(gameId, callback) {
     if (!this.completeHandlers.has(gameId)) {
       this.completeHandlers.set(gameId, []);
@@ -144,144 +207,107 @@ class WebSocketManager {
     this.completeHandlers.get(gameId).push(callback);
   }
 
-  /**
-   * Unlisten for generation complete
-   */
   offComplete(gameId, callback) {
     const handlers = this.completeHandlers.get(gameId);
     if (handlers) {
-      const index = handlers.indexOf(callback);
-      if (index > -1) {
-        handlers.splice(index, 1);
-      }
+      const idx = handlers.indexOf(callback);
+      if (idx > -1) handlers.splice(idx, 1);
     }
   }
 
-  /**
-   * Listen for notifications
-   */
   onNotification(callback) {
     this.globalNotificationHandlers.push(callback);
   }
 
-  /**
-   * Unlisten for notifications
-   */
   offNotification(callback) {
-    const index = this.globalNotificationHandlers.indexOf(callback);
-    if (index > -1) {
-      this.globalNotificationHandlers.splice(index, 1);
-    }
+    const idx = this.globalNotificationHandlers.indexOf(callback);
+    if (idx > -1) this.globalNotificationHandlers.splice(idx, 1);
   }
 
-  /**
-   * Check if connected
-   */
   getIsConnected() {
     return this.isConnected;
   }
 
-  bindSocketListeners(token) {
-    if (this.listenersBound) {
-      return;
-    }
+  // ─── Internal ──────────────────────────────────────────────────────────────
 
+  _bindListeners() {
+    // Taro registers these globally; only bind once per process lifetime.
+    if (this.listenersBound) return;
     this.listenersBound = true;
 
     Taro.onSocketMessage((message) => {
-      this.handleMessage(message);
+      this._handleMessage(message);
     });
 
     Taro.onSocketOpen(() => {
       this.isConnected = true;
       this.reconnectCount = 0;
-      this.startHeartbeat();
+      // Socket.IO CONNECT frame for the configured namespace
+      const ns = this._namespace !== '/' ? `${this._namespace},` : '';
+      this._sendRaw(`40${ns}`);
     });
 
     Taro.onSocketError((error) => {
-      console.error('[WebSocket] Error:', error);
+      console.error('[WebSocket] Socket error:', error);
     });
 
     Taro.onSocketClose(() => {
       this.isConnected = false;
-      this.stopHeartbeat();
-      this.attemptReconnect(token);
+      if (!this._intentionalClose) {
+        this._scheduleReconnect();
+      }
     });
   }
 
-  /**
-   * Handle incoming message
-   */
-  handleMessage(message) {
+  /** Send a raw engine.io frame string (pong, namespace-connect, etc.). */
+  _sendRaw(frame) {
+    if (!this.isConnected) return;
     try {
-      let data;
+      Taro.sendSocketMessage({ data: frame });
+    } catch (_e) {}
+  }
 
-      if (typeof message.data === 'string') {
-        data = JSON.parse(message.data);
-      } else {
-        data = message.data;
+  _handleMessage(message) {
+    try {
+      const raw = typeof message.data === 'string' ? message.data : null;
+      if (!raw) return;
+
+      const parsed = parseFrame(raw);
+      if (!parsed) return;
+
+      // Respond to engine.io server-pings to keep the connection alive
+      if (parsed.kind === 'ping') {
+        this._sendRaw('3'); // engine.io PONG
+        return;
       }
 
-      const type = data?.type;
-      const payload = data?.data || data?.payload || data;
-      const gameId = data?.gameId || payload?.gameId || null;
+      // Namespace connect acknowledgement — nothing to do
+      if (parsed.kind === 'connect') return;
 
-      // Handle game generation progress
-      if (type === 'gen:progress' && gameId) {
-        const callbacks = this.progressHandlers.get(gameId) || [];
-        callbacks.forEach((cb) => cb(payload));
+      if (parsed.kind === 'event') {
+        const { name: type, data } = parsed;
+        const gameId = data?.gameId || null;
+
+        // Legacy per-gameId handlers
+        if (type === 'gen:progress' && gameId) {
+          (this.progressHandlers.get(gameId) || []).forEach((cb) => cb(data));
+        }
+        if (type === 'gen:complete' && gameId) {
+          (this.completeHandlers.get(gameId) || []).forEach((cb) => cb(data));
+        }
+        if (type === 'notification') {
+          this.globalNotificationHandlers.forEach((cb) => cb(data));
+        }
+
+        // General named-event handlers — all callers receive the full payload
+        (this.messageHandlers.get(type) || []).forEach((cb) => cb(data));
       }
-
-      // Handle game generation complete
-      if (type === 'gen:complete' && gameId) {
-        const callbacks = this.completeHandlers.get(gameId) || [];
-        callbacks.forEach((cb) => cb(payload));
-      }
-
-      // Handle notifications
-      if (type === 'notification') {
-        this.globalNotificationHandlers.forEach((cb) => cb(payload));
-      }
-
-      // Handle general messages
-      const generalCallbacks = this.messageHandlers.get(type) || [];
-      generalCallbacks.forEach((cb) => cb(payload));
-    } catch (error) {
-      console.error('[WebSocket] Message parsing error:', error);
+    } catch (_e) {
+      // Silently discard malformed frames
     }
   }
 
-  /**
-   * Start heartbeat ping
-   */
-  startHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-
-    this.heartbeatInterval = setInterval(() => {
-      if (this.isConnected) {
-        this.send({
-          type: 'ping'
-        });
-      }
-    }, 30000); // 30 seconds
-  }
-
-  /**
-   * Stop heartbeat
-   */
-  stopHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-  }
-
-  /**
-   * Attempt to reconnect with exponential backoff
-   */
-  attemptReconnect(token) {
+  _scheduleReconnect() {
     if (this.reconnectCount >= 5) {
       console.warn('[WebSocket] Max reconnect attempts reached');
       return;
@@ -289,25 +315,18 @@ class WebSocketManager {
 
     const delay = Math.min(
       this.reconnectDelay * Math.pow(2, this.reconnectCount),
-      this.maxReconnectDelay
+      this.maxReconnectDelay,
     );
-
-    this.reconnectCount++;
+    this.reconnectCount += 1;
 
     setTimeout(() => {
-      this.connect(token).catch((error) => {
-        console.error('[WebSocket] Reconnection failed:', error);
-      });
+      this.connect(this._token).catch(() => {});
     }, delay);
   }
 }
 
-// Singleton instance
 let wsManager = null;
 
-/**
- * Get or create WebSocket manager instance
- */
 export function getWebSocketManager() {
   if (!wsManager) {
     wsManager = new WebSocketManager();

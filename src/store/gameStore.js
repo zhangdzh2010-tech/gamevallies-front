@@ -7,7 +7,16 @@ import { Storage } from '../utils/storage';
 import { subscribeGameUnlocked } from '../utils/gameUnlock';
 
 const COMPLETED_GAME_STATUSES = ['ready', 'draft', 'published', 'review'];
-const TERMINAL_TASK_STATUSES = new Set(['succeeded', 'failed', 'canceled', 'timed_out']);
+// Include both frontend vocabulary and schema vocabulary so tasks are recognised
+// as terminal regardless of which variant the backend returns.
+//   Schema uses: "completed" (≈ succeeded), "cancelled" (UK spelling)
+//   Frontend uses: "succeeded", "canceled" (US spelling), "timed_out"
+const TERMINAL_TASK_STATUSES = new Set([
+  'succeeded', 'completed',          // task finished successfully
+  'failed',                          // task failed
+  'canceled', 'cancelled',           // task was cancelled (both spellings)
+  'timed_out',                       // client-side timeout sentinel
+]);
 const ACTIVE_GENERATION_TASK_KEY = 'gamevallies_active_generation_task';
 const TRACKED_GENERATION_TASKS_KEY = 'gamevallies_tracked_generation_tasks';
 const ACTIVE_GENERATION_TASK_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -209,14 +218,14 @@ function buildProgressFromTask(task, events = []) {
   const fallbackPct = task?.status === 'succeeded'
     ? 100
     : clampProgress(task?.displayStagePct, stage.pct);
-  const fallbackLabel = task?.status === 'canceled'
+  const fallbackLabel = task?.status === 'canceled' || task?.status === 'cancelled'
     ? '已取消创作任务'
     : task?.status === 'timed_out'
       ? '任务超时'
       : task?.status === 'failed'
         ? '创作失败'
         : stage.label;
-  const stageLabel = task?.status === 'canceled'
+  const stageLabel = task?.status === 'canceled' || task?.status === 'cancelled'
     ? '已取消创作任务'
     : task?.status === 'timed_out'
       ? '任务超时'
@@ -273,7 +282,7 @@ function deriveTaskErrorMessage(task) {
     return '创作失败，请稍后重试';
   }
 
-  if (task.status === 'canceled') {
+  if (task.status === 'canceled' || task.status === 'cancelled') {
     return '已取消创作任务';
   }
 
@@ -884,6 +893,87 @@ export const useGameStore = create((set, get) => {
       const gameId = result.gameId;
       const gameTitle = result.title || title || '';
       const promptPreview = description ? String(description).slice(0, 80) : '';
+
+      set({
+        generatingGameId: gameId,
+        isLoading: false,
+        canPlay: result.canPlay !== false,
+      });
+
+      if (result.generationTask?.taskId) {
+        set((state) => ({
+          trackedTasks: mergeTrackedTaskItems(
+            state.trackedTasks,
+            buildTrackedTaskItem(result.generationTask, {
+              gameId,
+              gameTitle,
+              promptPreview,
+              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
+            })
+          ),
+        }));
+      }
+
+      if (result.generationTask?.taskId) {
+        await get()._beginTaskTracking(result.generationTask, {
+          gameId,
+          resetEvents: true,
+          preloadGame: false,
+          taskMeta: {
+            gameTitle,
+            promptPreview,
+          },
+        });
+      } else {
+        throw new Error('创建响应缺少 generationTask');
+      }
+
+      return result;
+    } catch (error) {
+      const message = error?.message || '游戏创建失败，请稍后重试';
+      clearPersistedGenerationTaskSnapshot();
+      set({
+        isLoading: false,
+        isGenerating: false,
+        generationProgress: null,
+        generatingGameId: null,
+        currentTask: null,
+        error: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  generateFromCreationSession: async (sessionId, options = {}) => {
+    clearActiveTaskRuntime();
+
+    set({
+      currentGame: null,
+      currentTask: null,
+      currentTaskEvents: [],
+      currentTaskCursor: 0,
+      isLoading: true,
+      isGenerating: true,
+      error: null,
+      terminalError: null,
+      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
+      canPlay: true,
+      generationProgress: {
+        stageIndex: 0,
+        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
+        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
+        pct: DISPLAY_PIPELINE_STAGES[0].pct,
+      },
+    });
+
+    try {
+      const result = await gameService.generateFromCreationSession(sessionId, {
+        revision: options.revision,
+        timeoutS: options.timeoutS,
+      });
+      const gameId = result.gameId;
+      const gameTitle = options.title || result.title || '';
+      const promptPreview = options.promptPreview ? String(options.promptPreview).slice(0, 80) : '';
 
       set({
         generatingGameId: gameId,
@@ -1563,7 +1653,8 @@ export const useGameStore = create((set, get) => {
   _handleTaskTerminal: async (task) => {
     clearActiveTaskRuntime();
 
-    if (task?.status === 'succeeded') {
+    // Treat both "succeeded" (frontend) and "completed" (schema) as success.
+    if (task?.status === 'succeeded' || task?.status === 'completed') {
       const doneProgress = buildProgressFromTask(
         { ...task, status: 'succeeded', progressPct: 100 },
         get().currentTaskEvents

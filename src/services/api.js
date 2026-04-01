@@ -75,6 +75,7 @@ function shouldRecoverUnauthorized(url) {
     '/api/v1/feed/following',
     '/api/v1/games/my',
     '/api/v1/games/tasks',
+    '/api/v1/games/creation-sessions',
     '/api/v1/games/',
   ];
 
