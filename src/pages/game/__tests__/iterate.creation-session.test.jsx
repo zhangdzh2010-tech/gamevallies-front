@@ -408,6 +408,28 @@ describe('Iterate page creation session flow', () => {
     });
   });
 
+  test('keeps the session view visible when the flow stage becomes ready_to_generate', async () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSession: {
+        sessionId: 'session-ready',
+        entryMode: 'iterate',
+        status: 'ready',
+        sourceGameId: 'game-1',
+        generationTier: 'standard',
+        currentQuestion: {
+          content: '这一轮里玩家怎样算赢？',
+        },
+      },
+      getCreationFlowStage: jest.fn(() => 'ready_to_generate'),
+    });
+
+    render(<IteratePage />);
+
+    expect(screen.getByText('动态优化会话')).toBeTruthy();
+    expect(screen.queryByLabelText('iterate-initial-answer')).toBeNull();
+    expect(screen.getByText('开始优化')).toBeTruthy();
+  });
+
   test('failed iterate session shows notice and keeps stale actions disabled', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: {
