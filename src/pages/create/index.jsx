@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text, Input, Textarea } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
@@ -30,23 +30,13 @@ import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import {
-  CreationAnswerComposer,
-  CreationEntryErrorCard,
-  CreationQuestionCard,
   CreationResumeScene,
-  CreationSessionActions,
-  CreationSessionShell,
-  CreationSessionScene,
-  buildCreationSessionActions,
-  buildCreationSessionSceneProps,
+  canGenerateCreationSession,
+  getCreationSessionNotice,
+  isCreationSessionQuestioning,
 } from '../../components/creation';
+import ChatInterface from './components/ChatInterface';
 import './index.scss';
-
-const EXAMPLE_PROMPTS = [
-  { emoji: '🐍', text: '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。' },
-  { emoji: '🐹', text: '做一个打地鼠小游戏，九宫格随机出现地鼠，点击得分，30 秒倒计时挑战。' },
-  { emoji: '🔢', text: '做一个 2048 益智游戏，上下左右滑动合并相同数字，目标达到 2048。' },
-];
 
 const TASK_STATUS_LABELS = {
   queued: '排队中',
@@ -69,16 +59,6 @@ const GENERATION_TIER_OPTIONS = [
   { value: 'showcase', label: '精品生成', description: '更有层次和风格，耗时更长' },
 ];
 
-const CREATION_SESSION_STATUS_LABELS = {
-  collecting: '继续补充',
-  ready: '可以生成',
-  generating: '生成中',
-  completed: '已完成',
-  abandoned: '已结束',
-  expired: '已过期',
-  failed: '会话异常',
-};
-
 function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
   if (!source) {
@@ -98,6 +78,18 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
   }
 
   return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
+}
+
+function getFieldValue(event) {
+  if (typeof event?.detail?.value === 'string') {
+    return event.detail.value;
+  }
+
+  if (typeof event?.target?.value === 'string') {
+    return event.target.value;
+  }
+
+  return '';
 }
 
 export default function Create() {
@@ -373,7 +365,7 @@ export default function Create() {
 
 
   const handleSessionAnswerInput = (event) => {
-    setSessionAnswer(event?.detail?.value || '');
+    setSessionAnswer(getFieldValue(event));
   };
 
   const handleSubmitSessionAnswer = async () => {
@@ -412,7 +404,7 @@ export default function Create() {
 
   const handleSubmit = async () => {
     if (!prompt.trim() || prompt.trim().length < 5) {
-      Taro.showToast({ title: '请输入游戏描述', icon: 'none' });
+      Taro.showToast({ title: '先写一句游戏想法', icon: 'none' });
       return;
     }
 
@@ -464,25 +456,6 @@ export default function Create() {
     }
   };
 
-  const initialCreateActions = [
-    {
-      key: 'start-session',
-      label: creationSessionSubmitting ? 'AI 正在整理你的想法...' : '先看 AI 怎么理解',
-      tone: 'primary',
-      disabled: creationSessionSubmitting || !prompt.trim() || prompt.trim().length < 5,
-      onClick: handleSubmit,
-    },
-    ...(creationSessionError
-      ? [{
-          key: 'retry-session',
-          label: creationSessionSubmitting ? '重试中...' : '重新提交这段想法',
-          tone: 'ghost',
-          disabled: creationSessionSubmitting || !prompt.trim() || prompt.trim().length < 5,
-          onClick: handleSubmit,
-        }]
-      : []),
-  ];
-
   const handlePlayGame = () => {
     if (currentGame?.gameUrl) {
       openGame(currentGame.gameUrl, currentGame.title || gameName, getGameCoverUrl(currentGame), {
@@ -510,6 +483,53 @@ export default function Create() {
     resetCreationSessionState();
     resetLocalCreateState();
   };
+
+  const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
+  const isCreateSessionActive = creationSession?.entryMode === 'create'
+    && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage);
+  const sessionStatus = creationSession?.status || '';
+  const allowDirectGenerate = canGenerateCreationSession(sessionStatus);
+  const allowSessionReply = isCreateSessionActive
+    && (isCreationSessionQuestioning(sessionStatus) || Boolean(creationSession?.currentQuestion));
+  const sessionNotice = creationSession ? getCreationSessionNotice(sessionStatus, 'create') : '';
+  const composerValue = isCreateSessionActive ? sessionAnswer : prompt;
+  const composerPlaceholder = isCreateSessionActive
+    ? (creationSession?.currentQuestion?.placeholder || '继续补充你的想法')
+    : '例如：做一个像 Temple Run 那样的跑酷游戏，滑动切换路线，跳跃躲障碍。';
+  const composerMinLength = isCreateSessionActive ? 1 : 5;
+  const createThreadMessages = (() => {
+    if (!isCreateSessionActive) {
+      return [];
+    }
+
+    const messages = Array.isArray(creationSession?.messages) ? [...creationSession.messages] : [];
+    const questionContent = creationSession?.currentQuestion?.content;
+    const lastAssistantMessage = [...messages].reverse().find((message) => message?.role === 'assistant');
+
+    if (
+      questionContent
+      && (!lastAssistantMessage?.content || !lastAssistantMessage.content.includes(questionContent))
+    ) {
+      messages.push({
+        id: `question-${creationSession?.currentQuestion?.key || messages.length}`,
+        role: 'assistant',
+        content: questionContent,
+      });
+    }
+
+    if (!questionContent && sessionNotice) {
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage?.content || !lastMessage.content.includes(sessionNotice)) {
+        messages.push({
+          id: `notice-${creationSession?.sessionId || 'create'}`,
+          role: 'assistant',
+          content: sessionNotice,
+        });
+      }
+    }
+
+    return messages;
+  })();
 
   // Chat clarification view
   if (isRestoringEntry) {
@@ -682,50 +702,6 @@ export default function Create() {
       </View>
     );
   }
-
-  const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
-
-  if (
-    creationSession?.entryMode === 'create'
-    && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage)
-  ) {
-    const statusValue = CREATION_SESSION_STATUS_LABELS[creationSession?.status] || '创作会话';
-    const sessionActions = buildCreationSessionActions({
-      submitting: creationSessionSubmitting,
-      answerValue: sessionAnswer,
-      generateLabel: '直接开始创作',
-      onSubmit: handleSubmitSessionAnswer,
-      onSkip: handleSkipSessionQuestion,
-      onGenerate: handleGenerateFromSession,
-      onRestart: handleNewGame,
-    });
-
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <PageScrollContainer className="create-scroll">
-          <CreationSessionScene
-            {...buildCreationSessionSceneProps({
-              entryMode: 'create',
-              session: creationSession,
-              statusValue,
-              answerValue: sessionAnswer,
-              onAnswerChange: handleSessionAnswerInput,
-              answerPlaceholder: creationSession?.currentQuestion?.placeholder,
-              answerSuggestions: creationSession?.currentQuestion?.options || [],
-              submitting: creationSessionSubmitting,
-              actions: sessionActions,
-              errorMessage: creationSessionError,
-            })}
-          />
-          <View className="bottom-spacer" />
-        </PageScrollContainer>
-
-        <CustomTabBar activeIndex={2} />
-      </View>
-    );
-  }
-
   if (resumeCandidate?.entryMode === 'create') {
     return (
       <View className={containerClassName}>
@@ -750,118 +726,124 @@ export default function Create() {
   return (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-      <PageScrollContainer className="create-scroll">
-        <CreationSessionShell
-          eyebrow="开始新创作"
-          title="先把脑海里的想法说出来"
-          subtitle="不用一开始就想得特别完整。先告诉 AI 你想做什么，它会帮你把方向慢慢整理清楚。"
-          statusLabel="进行到"
-          statusValue="等待你的想法"
-          sections={[
-            {
-              key: 'create-setup',
-              node: (
-                <View className="creation-session-card">
-                  <View className="creation-session-card__header">
-                    <View>
-                      <Text className="creation-session-card__title">创作偏好</Text>
-                      <Text className="creation-session-card__hint">这些设置会帮助 AI 更快贴近你想要的节奏和呈现方式。</Text>
-                    </View>
-                  </View>
-                  <View className="form-section">
-                    <View className="form-group">
-                      <Text className="form-label">游戏名称</Text>
-                      <View className="form-input-wrap">
-                        <Input
-                          className="form-input"
-                          placeholder="给你的游戏起个名字（可选）"
-                          placeholderStyle="color: #55516e"
-                          value={gameName}
-                          onInput={(e) => setGameName(e.detail.value)}
-                          maxlength={30}
-                        />
-                      </View>
-                    </View>
+      <View className="create-chat-toolbar">
+        <View className="create-chat-toolbar__name">
+          <Input
+            className="create-chat-toolbar__name-input"
+            placeholder="游戏名（可选）"
+            placeholderStyle="color: #67627d"
+            value={gameName}
+            onInput={(e) => setGameName(getFieldValue(e))}
+            onChange={(e) => setGameName(getFieldValue(e))}
+            maxlength={30}
+          />
+        </View>
+        <View className="create-chat-toolbar__orientation">
+          {ORIENTATION_OPTIONS.map((option) => {
+            const isActive = orientation === option.value;
+            return (
+              <View
+                key={option.value}
+                className={`create-chat-toolbar__orientation-option${isActive ? ' is-active' : ''}`}
+                onClick={() => setOrientation(option.value)}
+              >
+                <Text className="create-chat-toolbar__orientation-text">{option.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
 
-                    <View className="form-group">
-                      <Text className="form-label">屏幕方向</Text>
-                      <View className="orientation-switch">
-                        {ORIENTATION_OPTIONS.map((option) => {
-                          const isActive = orientation === option.value;
-                          return (
-                            <View
-                              key={option.value}
-                              className={`orientation-option${isActive ? ' is-active' : ''}`}
-                              onClick={() => setOrientation(option.value)}
-                            >
-                              <Text className="orientation-option__text">{option.label}</Text>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </View>
-
-                    <View className="form-group">
-                      <Text className="form-label">生成档位</Text>
-                      <View className="tier-grid">
-                        {GENERATION_TIER_OPTIONS.map((option) => {
-                          const isActive = generationTier === option.value;
-                          return (
-                            <View
-                              key={option.value}
-                              className={`tier-card${isActive ? ' is-active' : ''}`}
-                              onClick={() => setGenerationTier(option.value)}
-                            >
-                              <Text className="tier-card__title">{option.label}</Text>
-                              <Text className="tier-card__desc">{option.description}</Text>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              ),
-            },
-            {
-              key: 'create-first-prompt',
-              node: (
-                <>
-                  <CreationQuestionCard
-                    title="先说说你的灵感"
-                    hint="把玩法、氛围、节奏，或者你脑海里的一个瞬间说出来都可以。AI 会先整理出一版理解，再继续追问。"
-                    question={{
-                      content: '你这次最想做一个什么样的游戏？',
-                      description: '写得越具体，AI 越容易整理出贴近你预期的方案。',
-                    }}
-                  />
-                  <CreationAnswerComposer
-                    value={prompt}
-                    onChange={(e) => setPrompt(e?.detail?.value || '')}
-                    placeholder="例如：做一个像素风横版闯关游戏，主角能二段跳，节奏偏爽快，Boss 战要有阶段变化。"
-                    suggestions={EXAMPLE_PROMPTS.map((item) => item.text)}
-                    disabled={creationSessionSubmitting}
-                  />
-                  <Text className="input-count">{prompt.length}/2000</Text>
-
-                  {error ? (
-                    <View className="error-banner">
-                      <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
-                      <Text className="error-dismiss" onClick={clearError}>×</Text>
-                    </View>
-                  ) : null}
-
-                  {creationSessionError ? <CreationEntryErrorCard entryMode="create" error={creationSessionError} /> : null}
-
-                  <CreationSessionActions actions={initialCreateActions} />
-                </>
-              ),
-            },
-          ]}
-        />
-
-        <View className="bottom-spacer" />
+      <PageScrollContainer className="create-chat-scroll">
+        <View className="create-chat-thread">
+          <ChatInterface
+            messages={createThreadMessages}
+            isGenerating={creationSessionSubmitting}
+            emptyTitle="开始新创作"
+            emptyHint="先发一句想法，AI 会接着问。"
+          />
+        </View>
       </PageScrollContainer>
+
+      <View className="create-chat-footer">
+        {(error || creationSessionError) ? (
+          <View className="create-chat-footer__error">
+            <Text className="create-chat-footer__error-text">
+              {creationSessionError || getUserFacingCreateError(terminalError?.message || error, '创建游戏')}
+            </Text>
+          </View>
+        ) : null}
+
+        <View className="create-chat-footer__composer">
+          <Textarea
+            aria-label="create-initial-answer"
+            className="create-chat-footer__textarea"
+            placeholder={composerPlaceholder}
+            placeholderStyle="color: #67627d"
+            value={composerValue}
+            onInput={isCreateSessionActive ? handleSessionAnswerInput : (e) => setPrompt(getFieldValue(e))}
+            onChange={isCreateSessionActive ? handleSessionAnswerInput : (e) => setPrompt(getFieldValue(e))}
+            maxlength={2000}
+            autoHeight
+          />
+        </View>
+
+        <View className="create-chat-footer__meta">
+          <Text className="create-chat-footer__count">{composerValue.length}/2000</Text>
+          {sessionNotice && isCreateSessionActive ? (
+            <Text className="create-chat-footer__hint">{sessionNotice}</Text>
+          ) : null}
+        </View>
+
+        <View className="create-chat-footer__actions">
+          {isCreateSessionActive && creationSession?.currentQuestion?.skippable !== false ? (
+            <View
+              className={`create-chat-footer__action-btn create-chat-footer__action-btn--secondary${creationSessionSubmitting || !creationSession?.currentQuestion ? ' is-disabled' : ''}`}
+              onClick={creationSessionSubmitting || !creationSession?.currentQuestion ? undefined : handleSkipSessionQuestion}
+            >
+              <Text className="create-chat-footer__action-btn-text">确认跳过</Text>
+            </View>
+          ) : null}
+
+          {isCreateSessionActive && allowDirectGenerate ? (
+            <View
+              className={`create-chat-footer__action-btn create-chat-footer__action-btn--ghost${creationSessionSubmitting ? ' is-disabled' : ''}`}
+              onClick={creationSessionSubmitting ? undefined : handleGenerateFromSession}
+            >
+              <Text className="create-chat-footer__action-btn-text">生成</Text>
+            </View>
+          ) : null}
+
+          <View
+            className={[
+              'create-chat-footer__action-btn',
+              'create-chat-footer__action-btn--primary',
+              (
+                creationSessionSubmitting
+                || composerValue.trim().length < composerMinLength
+                || (isCreateSessionActive && !allowSessionReply && !allowDirectGenerate)
+              ) ? 'is-disabled' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={
+              creationSessionSubmitting
+              || composerValue.trim().length < composerMinLength
+              || (isCreateSessionActive && !allowSessionReply && !allowDirectGenerate)
+                ? undefined
+                : (isCreateSessionActive
+                  ? (allowSessionReply ? handleSubmitSessionAnswer : handleGenerateFromSession)
+                  : handleSubmit)
+            }
+          >
+            <Text className="create-chat-footer__action-btn-text create-chat-footer__action-btn-text--primary">
+              {creationSessionSubmitting
+                ? '发送中...'
+                : isCreateSessionActive
+                  ? (allowSessionReply ? '发送' : '开始生成')
+                  : '发送'}
+            </Text>
+          </View>
+        </View>
+      </View>
 
       <CustomTabBar activeIndex={2} />
     </View>

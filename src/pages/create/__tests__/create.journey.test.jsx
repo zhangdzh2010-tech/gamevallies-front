@@ -86,47 +86,6 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 }));
 
 jest.mock('../../../components/creation', () => ({
-  CreationSessionShell: ({ title, sections }) => (
-    <div>
-      <div>{title}</div>
-      {sections?.map((section) => (
-        <div key={section.key}>{section.node}</div>
-      ))}
-    </div>
-  ),
-  CreationQuestionCard: ({ question }) => <div>{question?.content || 'question-card'}</div>,
-  CreationAnswerComposer: ({ value, onChange, placeholder, suggestions }) => (
-    <div>
-      <textarea
-        aria-label="create-initial-answer"
-        value={value}
-        onChange={(e) => onChange({ detail: { value: e.target.value } })}
-        placeholder={placeholder}
-      />
-      {(suggestions || []).map((item) => (
-        <button key={item} type="button" onClick={() => onChange({ detail: { value: item } })}>
-          {item}
-        </button>
-      ))}
-    </div>
-  ),
-  CreationSessionActions: ({ actions }) => (
-    <div>
-      {(actions || []).map((action) => (
-        <button key={action.key} type="button" onClick={action.onClick} disabled={action.disabled}>
-          {action.label}
-        </button>
-      ))}
-    </div>
-  ),
-  CreationResumePrompt: ({ title, prompt, continueLabel, restartLabel, onContinue, onRestart }) => (
-    <div>
-      <div>{title}</div>
-      <div>{prompt}</div>
-      <button type="button" onClick={onContinue}>{continueLabel}</button>
-      <button type="button" onClick={onRestart}>{restartLabel}</button>
-    </div>
-  ),
   CreationResumeScene: ({ subjectTitle, session }) => (
     <div>
       <div>resume-scene</div>
@@ -134,81 +93,15 @@ jest.mock('../../../components/creation', () => ({
       <div>{session?.prompt}</div>
     </div>
   ),
-  CreationEntryErrorCard: ({ error }) => <div>{error}</div>,
-  buildCreationSessionActions: jest.fn((config) => ([
-    {
-      key: 'submit',
-      label: config.submitting ? '提交中...' : '提交回答',
-      disabled: config.submitting || !String(config.answerValue || '').trim(),
-      onClick: config.onSubmit,
-    },
-    {
-      key: 'skip',
-      label: '跳过此题',
-      disabled: config.submitting,
-      onClick: config.onSkip,
-    },
-    {
-      key: 'generate',
-      label: config.generateLabel,
-      disabled: config.submitting,
-      onClick: config.onGenerate,
-    },
-    {
-      key: 'restart',
-      label: '重新开始',
-      disabled: config.submitting,
-      onClick: config.onRestart,
-    },
-  ])),
-  buildCreationSessionSceneProps: jest.fn((config) => ({
-    layout: 'shell',
-    shell: {
-      title: '先确认创作理解，再交给 AI 开始生成',
-      statusValue: config.statusValue,
-    },
-    panel: {
-      session: config.session,
-      answerValue: config.answerValue,
-      onAnswerChange: config.onAnswerChange,
-      answerPlaceholder: config.answerPlaceholder || '如果系统理解偏了，也可以直接写“你理解偏了，我想要……”',
-      actions: config.actions,
-      errorMessage: config.errorMessage,
-    },
-  })),
-  CreationSessionScene: ({ shell, panel }) => (
-    <div>
-      <div>{shell?.title}</div>
-      <div>{typeof panel?.session?.planDraft === 'string' ? panel.session.planDraft : 'plan-card'}</div>
-      <div>{panel?.session?.confidenceSummary || panel?.session?.questionStrategy || 'confidence-card'}</div>
-      <div>{panel?.session?.messages?.map((message) => message.content).join(' ') || 'conversation-card'}</div>
-      {panel?.session?.status === 'collecting' ? (
-        <>
-          <div>{panel?.session?.currentQuestion?.content || 'question-card'}</div>
-          <textarea aria-label="session-answer" value={panel?.answerValue} onChange={(e) => panel?.onAnswerChange({ detail: { value: e.target.value } })} placeholder={panel?.answerPlaceholder} />
-        </>
-      ) : null}
-      <div>
-        {panel?.session?.status === 'expired' ? '本轮创作会话已过期，请重新开始，系统会基于最新信息重新整理方案。' : ''}
-      </div>
-      <div>
-        {(panel?.actions || []).map((action) => (
-          <button
-            key={action.key}
-            type="button"
-            onClick={action.onClick}
-            disabled={Boolean(action.disabled)
-              || (action.key === 'submit' && panel?.session?.status !== 'collecting')
-              || (action.key === 'skip' && panel?.session?.status !== 'collecting')
-              || (action.key === 'generate' && !['collecting', 'ready'].includes(panel?.session?.status))}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
-      {panel?.errorMessage ? <div>{panel.errorMessage}</div> : null}
-    </div>
-  ),
+  canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
+  getCreationSessionNotice: jest.fn((status) => (
+    status === 'expired'
+      ? '本轮创作会话已过期，请重新开始，系统会基于最新信息重新整理方案。'
+      : status === 'ready'
+        ? '当前信息已经足够，确认后就可以直接开始创作。'
+        : ''
+  )),
+  isCreationSessionQuestioning: jest.fn((status) => status === 'collecting'),
 }));
 
 jest.mock('../../../services/game', () => mockGameService);
@@ -307,12 +200,13 @@ describe('Create page journey coverage', () => {
     const textarea = screen.getByLabelText('create-initial-answer');
     const longPrompt = 'creative'.repeat(180);
 
+    expect(screen.getByPlaceholderText('游戏名（可选）')).toBeTruthy();
     expect(screen.getByText(PORTRAIT_TEXT)).toBeTruthy();
 
     fireEvent.change(textarea, { target: { value: longPrompt } });
     expect(screen.getByText(`${longPrompt.length}/2000`)).toBeTruthy();
 
-    fireEvent.click(screen.getByText('先看 AI 怎么理解'));
+    fireEvent.click(screen.getByText('发送'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(longPrompt, '', {
@@ -323,17 +217,15 @@ describe('Create page journey coverage', () => {
     });
   });
 
-  test('example prompt click fills the textarea and short prompts are blocked', async () => {
+  test('short prompts are blocked before starting the session', async () => {
     render(<CreatePage />);
-
-    fireEvent.click(screen.getByText('做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。'));
-
-    expect(screen.getByLabelText('create-initial-answer').value).toContain('\u8d2a\u5403\u86c7');
 
     fireEvent.change(screen.getByLabelText('create-initial-answer'), {
       target: { value: '\u592a\u77ed' },
     });
-    expect(screen.getByText('先看 AI 怎么理解').disabled).toBe(true);
+    expect(
+      screen.getByText('发送').parentElement.className.includes('is-disabled')
+    ).toBe(true);
     expect(mockStartCreationSession).not.toHaveBeenCalled();
   });
 
@@ -344,7 +236,7 @@ describe('Create page journey coverage', () => {
       target: { value: 'build a horizontal shooter game with a spaceship and enemies' },
     });
     fireEvent.click(screen.getByText(LANDSCAPE_TEXT));
-    fireEvent.click(screen.getByText('先看 AI 怎么理解'));
+    fireEvent.click(screen.getByText('发送'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -377,9 +269,11 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    expect(screen.getByText('先确认创作理解，再交给 AI 开始生成')).toBeTruthy();
-    expect(screen.getByText('这是系统整理出的第一版方案')).toBeTruthy();
-    fireEvent.click(screen.getByText('直接开始创作'));
+    expect(screen.getByText('做一个像素风跑酷游戏')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('你更偏向什么视觉风格？')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('生成'));
 
     await waitFor(() => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
@@ -408,8 +302,9 @@ describe('Create page journey coverage', () => {
 
     expect(screen.getByText('本轮创作会话已过期，请重新开始，系统会基于最新信息重新整理方案。')).toBeTruthy();
     expect(screen.queryByText('这个问题不该再让用户回答')).toBeNull();
-    expect(screen.getByText('直接开始创作').disabled).toBe(true);
-    expect(screen.getByText('跳过此题').disabled).toBe(true);
+    fireEvent.click(screen.getByText('发送'));
+    expect(mockAnswerCreationSessionQuestion).not.toHaveBeenCalled();
+    expect(mockGenerateFromCreationSession).not.toHaveBeenCalled();
   });
 
   test('completed journey offers continue optimization and locked play actions', () => {
@@ -440,7 +335,7 @@ describe('Create page journey coverage', () => {
     expect(mockResetCreationSessionState).toHaveBeenCalledTimes(1);
   });
 
-  test('active create session is shown even when a stale completed game exists', () => {
+  test('active create session is shown even when a stale completed game exists', async () => {
     mockGameStoreState = buildGameStoreState({
       currentGame: {
         id: 'game-old',
@@ -462,8 +357,9 @@ describe('Create page journey coverage', () => {
 
     render(<CreatePage />);
 
-    expect(screen.getByText('先确认创作理解，再交给 AI 开始生成')).toBeTruthy();
-    expect(screen.getByText('新的创作方案')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('新的补充问题')).toBeTruthy();
+    });
     expect(screen.queryByText('创作完成！')).toBeNull();
   });
 
@@ -509,7 +405,7 @@ describe('Create page journey coverage', () => {
       target: { value: '做一个节奏更快的像素风闯关游戏' },
     });
 
-    fireEvent.click(screen.getByText('重新提交这段想法'));
+    fireEvent.click(screen.getByText('发送'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
