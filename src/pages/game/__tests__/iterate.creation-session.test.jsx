@@ -285,10 +285,11 @@ describe('Iterate page creation session flow', () => {
     render(<IteratePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('先说说这次最想优化哪里')).toBeTruthy();
+      expect(screen.getByText('开始优化')).toBeTruthy();
     });
 
     expect(mockStartCreationSession).not.toHaveBeenCalled();
+    expect(screen.queryByText('保留核心玩法，但把节奏做得更快一点。')).toBeNull();
   });
 
   test('starts an iterate session from the first user instruction', async () => {
@@ -297,7 +298,7 @@ describe('Iterate page creation session flow', () => {
     fireEvent.change(screen.getByLabelText('iterate-initial-answer'), {
       target: { value: '我想先把节奏提快一点，并强化吃到食物时的反馈。' },
     });
-    fireEvent.click(screen.getByText('开始这轮优化对话'));
+    fireEvent.click(screen.getByText('开始优化'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -379,7 +380,7 @@ describe('Iterate page creation session flow', () => {
     fireEvent.change(screen.getByLabelText('iterate-initial-answer'), {
       target: { value: '保留核心玩法，把角色反馈和速度都再提一档。' },
     });
-    fireEvent.click(screen.getByText('重新提交这段方向'));
+    fireEvent.click(screen.getByText('开始优化'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Textarea } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
@@ -28,10 +28,8 @@ import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath } from '../../../utils/share';
 import {
-  CreationAnswerComposer,
   CreationEntryErrorCard,
   CreationResumeScene,
-  CreationSessionActions,
   CreationSessionScene,
   buildCreationSessionActions,
   buildCreationSessionSceneProps,
@@ -690,37 +688,24 @@ export default function GameIteratePage() {
                 <CreationEntryErrorCard entryMode="iterate" error={creationSessionError || pageError} />
               ) : null}
               <View className="iterate-form-section">
-                <CreationAnswerComposer
+                <Textarea
+                  aria-label="iterate-initial-answer"
+                  className="iterate-textarea"
+                  placeholder="说说这次最想优化的部分"
+                  placeholderStyle="color: #67627d"
                   value={iterateFeedback}
-                  onChange={(e) => setIterateFeedback(e?.detail?.value || '')}
-                  placeholder="说说这次最想优化的部分，例如：节奏更快，吃到食物时的反馈更爽。"
-                  suggestions={[
-                    '保留核心玩法，但把节奏做得更快一点。',
-                    '重点优化视觉表现和反馈效果。',
-                    '难度爬升更平滑，前期轻松，后期刺激。',
-                  ]}
+                  onInput={(e) => setIterateFeedback(e?.detail?.value || '')}
+                  maxlength={1000}
+                  autoHeight
                   disabled={creationSessionSubmitting}
                 />
-                <CreationSessionActions
-                  actions={[
-                    {
-                      key: 'start-iterate-session',
-                      label: creationSessionSubmitting ? 'AI 正在整理方向...' : '开始优化',
-                      tone: 'primary',
-                      disabled: creationSessionSubmitting || !iterateFeedback.trim(),
-                      onClick: handleStartIterateSession,
-                    },
-                    ...(creationSessionError
-                      ? [{
-                          key: 'retry-iterate-session',
-                          label: creationSessionSubmitting ? '重试中...' : '重新提交',
-                          tone: 'ghost',
-                          disabled: creationSessionSubmitting || !iterateFeedback.trim(),
-                          onClick: handleStartIterateSession,
-                        }]
-                      : []),
-                  ]}
-                />
+                <Text className="iterate-count">{iterateFeedback.length}/1000</Text>
+                <View
+                  className={`iterate-submit-btn${creationSessionSubmitting || !iterateFeedback.trim() ? ' disabled' : ''}`}
+                  onClick={handleStartIterateSession}
+                >
+                  <Text>{creationSessionSubmitting ? '处理中...' : '开始优化'}</Text>
+                </View>
               </View>
             </>
           )}
