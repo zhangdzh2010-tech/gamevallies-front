@@ -11,91 +11,60 @@ import { CreationAnswerComposer } from './CreationAnswerComposer';
 import { CreationSessionActions } from './CreationSessionActions';
 import './CreationSession.scss';
 
-const DRAFT_LABELS = {
-  title: '方向',
-  summary: '理解',
-  concept: '玩法',
-  coreMechanic: '玩法',
-  core_mechanic: '玩法',
-  interaction: '交互',
-  objective: '目标',
-  winCondition: '目标',
-  win_condition: '目标',
-  pacing: '节奏',
-  difficulty: '难度',
-  theme: '主题',
-  visualDirection: '风格',
-  signatureMoment: '亮点',
-};
-
-function toReadableLines(value) {
-  if (!value) {
-    return [];
+function extractActionableQuestion(content) {
+  if (typeof content !== 'string') {
+    return '';
   }
 
-  if (typeof value === 'string') {
-    return [value.trim()].filter(Boolean);
+  const normalized = content
+    .replace(/\s+/g, ' ')
+    .replace(/。(?=[A-Za-z])/g, '。 ')
+    .trim();
+
+  if (!normalized) {
+    return '';
   }
 
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => (typeof item === 'string' ? item.trim() : ''))
-      .filter(Boolean);
+  const explicitQuestion = normalized.match(
+    /(?:确认一个点|还想确认(?:一下|一个点)?|想确认(?:一下|一个点)?|请确认(?:一下)?)[：:]\s*(.+)$/u
+  );
+
+  if (explicitQuestion?.[1]) {
+    return explicitQuestion[1].trim();
   }
 
-  if (typeof value === 'object') {
-    return Object.entries(value)
-      .map(([key, item]) => {
-        if (item == null || item === '') {
-          return '';
-        }
+  const sentences = normalized
+    .split(/(?<=[。！？?])/u)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
 
-        if (typeof item === 'object') {
-          return '';
-        }
+  const questionSentence = [...sentences].reverse().find((segment) => (
+    /[？?]/.test(segment)
+    || /(什么|怎么|怎样|如何|是否|哪|哪个|多少|优先|还是|保留什么|改变什么)/.test(segment)
+  ));
 
-        const label = DRAFT_LABELS[key] || key;
-        return `${label}：${String(item).trim()}`;
-      })
-      .filter(Boolean);
-  }
-
-  return [];
-}
-
-function getSummaryLines(session) {
-  const planLines = toReadableLines(session?.planDraft);
-  const promptLine = typeof session?.prompt === 'string' ? session.prompt.trim() : '';
-
-  return [...planLines, promptLine]
-    .filter(Boolean)
-    .filter((line, index, arr) => arr.indexOf(line) === index)
-    .slice(0, 3);
+  return questionSentence || normalized;
 }
 
 function buildThreadItems(session) {
   const messages = Array.isArray(session?.messages) ? session.messages.slice(-6) : [];
   const items = messages
-    .filter((message) => message?.content)
+    .filter((message) => message?.role === 'user' && message?.content)
     .map((message) => ({
       key: message.id || `${message.role}-${message.createdAt || message.content}`,
-      role: message.role === 'user' ? 'user' : 'assistant',
+      role: 'user',
       content: message.content,
       description: '',
       current: false,
     }));
 
-  const questionContent = session?.currentQuestion?.content || '';
-  const hasSameAssistantMessage = items.some(
-    (item) => item.role !== 'user' && item.content === questionContent,
-  );
-
-  if (questionContent && !hasSameAssistantMessage) {
+  const questionContent = extractActionableQuestion(session?.currentQuestion?.content || '');
+  if (questionContent) {
     items.push({
       key: `question-${session?.currentQuestion?.id || questionContent}`,
       role: 'assistant',
       content: questionContent,
-      description: session?.currentQuestion?.description || '',
+      description: '',
       current: true,
     });
   }
@@ -156,7 +125,6 @@ export function CreationSessionPanel({
   const allowQuestionAnswer = isCreationSessionQuestioning(sessionStatus);
   const allowDirectGenerate = canGenerateCreationSession(sessionStatus);
   const sessionNotice = getCreationSessionNotice(sessionStatus, entryMode, session);
-  const summaryLines = getSummaryLines(session);
   const threadItems = buildThreadItems(session);
   const resolvedErrorClassName = errorClassName || 'creation-session-error';
   const decoratedActions = decorateActions(actions, {
@@ -191,15 +159,6 @@ export function CreationSessionPanel({
 
   return (
     <View className="creation-session-flow">
-      {summaryLines.length ? (
-        <View className="creation-session-summary">
-          <Text className="creation-session-summary__label">当前理解</Text>
-          {summaryLines.map((line) => (
-            <Text key={line} className="creation-session-summary__line">{line}</Text>
-          ))}
-        </View>
-      ) : null}
-
       <CreationSessionStatusNotice
         status={sessionStatus}
         notice={sessionNotice}
