@@ -95,7 +95,9 @@ jest.mock('../../../components/creation', () => ({
   ),
   canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
   getCreationSessionNotice: jest.fn((status) => (
-    status === 'expired'
+    status === 'initializing'
+      ? 'AI 正在整理这轮创作的第一版理解，通常几秒内会回来。'
+      : status === 'expired'
       ? '本轮创作会话已过期，请重新开始，系统会基于最新信息重新整理方案。'
       : status === 'ready'
         ? '当前信息已经足够，确认后就可以直接开始创作。'
@@ -281,6 +283,25 @@ describe('Create page journey coverage', () => {
         generationTier: 'standard',
       });
     });
+  });
+
+  test('initializing create session keeps the first prompt visible and disables sending', async () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSession: {
+        sessionId: 'session-init',
+        entryMode: 'create',
+        status: 'initializing',
+        prompt: '做一个像素风跑酷游戏',
+        messages: [],
+      },
+      getCreationFlowStage: jest.fn(() => 'initializing'),
+    });
+
+    render(<CreatePage />);
+
+    expect(screen.getByText('做一个像素风跑酷游戏')).toBeTruthy();
+    expect(screen.getByText('AI 正在整理这轮创作的第一版理解，通常几秒内会回来。')).toBeTruthy();
+    expect(screen.getByText('整理中...').parentElement.className.includes('is-disabled')).toBe(true);
   });
 
   test('expired create session shows notice and disables stale question actions', () => {

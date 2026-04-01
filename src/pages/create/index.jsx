@@ -484,15 +484,18 @@ export default function Create() {
 
   const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
   const isCreateSessionActive = creationSession?.entryMode === 'create'
-    && ['collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage);
+    && ['initializing', 'collecting', 'ready', 'failed', 'expired', 'abandoned'].includes(creationFlowStage);
   const sessionStatus = creationSession?.status || '';
   const allowDirectGenerate = canGenerateCreationSession(sessionStatus);
   const allowSessionReply = isCreateSessionActive
     && (isCreationSessionQuestioning(sessionStatus) || Boolean(creationSession?.currentQuestion));
-  const sessionNotice = creationSession ? getCreationSessionNotice(sessionStatus, 'create') : '';
+  const isSessionInitializing = sessionStatus === 'initializing';
+  const sessionNotice = creationSession ? getCreationSessionNotice(sessionStatus, 'create', creationSession) : '';
   const composerValue = isCreateSessionActive ? sessionAnswer : prompt;
   const composerPlaceholder = isCreateSessionActive
-    ? (creationSession?.currentQuestion?.placeholder || '继续补充你的想法')
+    ? (isSessionInitializing
+      ? 'AI 正在整理第一轮问题...'
+      : (creationSession?.currentQuestion?.placeholder || '继续补充你的想法'))
     : '例如：做一个像 Temple Run 那样的跑酷游戏，滑动切换路线，跳跃躲障碍。';
   const composerMinLength = isCreateSessionActive ? 1 : 5;
   const createThreadMessages = (() => {
@@ -501,8 +504,17 @@ export default function Create() {
     }
 
     const messages = Array.isArray(creationSession?.messages) ? [...creationSession.messages] : [];
+    const hasUserMessage = messages.some((message) => message?.role === 'user');
     const questionContent = creationSession?.currentQuestion?.content;
     const lastAssistantMessage = [...messages].reverse().find((message) => message?.role === 'assistant');
+
+    if (!hasUserMessage && creationSession?.prompt) {
+      messages.unshift({
+        id: `initial-user-${creationSession?.sessionId || 'create'}`,
+        role: 'user',
+        content: creationSession.prompt,
+      });
+    }
 
     if (
       questionContent
@@ -515,7 +527,7 @@ export default function Create() {
       });
     }
 
-    if (!questionContent && sessionNotice) {
+    if (!questionContent && sessionNotice && !isSessionInitializing) {
       const lastMessage = messages[messages.length - 1];
       if (!lastMessage?.content || !lastMessage.content.includes(sessionNotice)) {
         messages.push({
@@ -756,7 +768,7 @@ export default function Create() {
         <View className="create-chat-thread">
           <ChatInterface
             messages={createThreadMessages}
-            isGenerating={creationSessionSubmitting}
+            isGenerating={creationSessionSubmitting || isSessionInitializing}
             emptyTitle="开始新创作"
             emptyHint="先发一句想法，AI 会接着问。"
           />
@@ -785,6 +797,7 @@ export default function Create() {
             onChange={isCreateSessionActive ? handleSessionAnswerInput : (e) => setPrompt(getFieldValue(e))}
             maxlength={2000}
             autoHeight
+            disabled={creationSessionSubmitting || isSessionInitializing}
           />
         </View>
 
@@ -838,7 +851,7 @@ export default function Create() {
               {creationSessionSubmitting
                 ? '发送中...'
                 : isCreateSessionActive
-                  ? (allowSessionReply ? '发送' : '开始生成')
+                  ? (isSessionInitializing ? '整理中...' : (allowSessionReply ? '发送' : '开始生成'))
                   : '发送'}
             </Text>
           </View>
