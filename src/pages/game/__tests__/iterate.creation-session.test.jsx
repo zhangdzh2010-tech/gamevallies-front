@@ -18,6 +18,7 @@ const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockOpenGame = jest.fn();
 const mockOpenPaywall = jest.fn();
 const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockGetPersistedIterateEntryGame = jest.fn(() => null);
 
 let mockGameStoreState;
 
@@ -224,6 +225,7 @@ jest.mock('../../../stores/quotaStore', () => ({
 }));
 
 jest.mock('../../../utils/authNavigation', () => ({
+  getPersistedIterateEntryGame: mockGetPersistedIterateEntryGame,
   LOGIN_PAGE_URL: '/pages/login/index',
   buildIteratePageUrl: jest.fn(() => '/pages/game/iterate/index?gameId=game-1'),
   isLoggedIn: jest.fn(() => true),
@@ -443,5 +445,39 @@ describe('Iterate page creation session flow', () => {
       expect(screen.getByText('resume-scene')).toBeTruthy();
       expect(screen.getByText('继续这轮优化')).toBeTruthy();
     });
+  });
+
+  test('falls back to the persisted iterate entry game when refetching the target game fails', async () => {
+    const { getGame } = require('../../../services/game');
+    getGame.mockRejectedValueOnce(new Error('fetch failed'));
+    mockSetCurrentGame.mockImplementation((game) => {
+      mockGameStoreState = buildGameStoreState({
+        currentGame: game,
+      });
+    });
+    mockGameStoreState = buildGameStoreState({
+      currentGame: null,
+    });
+    mockGetPersistedIterateEntryGame.mockReturnValueOnce({
+      id: 'game-1',
+      title: '像素跑酷',
+      status: 'published',
+      description: '一款节奏很快的像素跑酷游戏',
+      orientation: 'portrait',
+      canPlay: true,
+      qualityScore: 9.7,
+    });
+
+    render(<IteratePage />);
+
+    await waitFor(() => {
+      expect(mockSetCurrentGame).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'game-1',
+        title: '像素跑酷',
+      }));
+      expect(screen.getByText('开始优化')).toBeTruthy();
+    });
+
+    expect(screen.queryByText('加载要优化的作品失败，请从“我的作品”重新进入')).toBeNull();
   });
 });

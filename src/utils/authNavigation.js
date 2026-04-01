@@ -26,9 +26,12 @@ const POST_LOGIN_REDIRECT_KEY =
   ENV.STORAGE_KEYS.POST_LOGIN_REDIRECT || 'gamevallies_post_login_redirect';
 const CREATE_ENTRY_INTENT_KEY =
   ENV.STORAGE_KEYS.CREATE_ENTRY_INTENT || 'gamevallies_create_entry_intent';
+const ITERATE_ENTRY_GAME_KEY =
+  ENV.STORAGE_KEYS.ITERATE_ENTRY_GAME || 'gamevallies_iterate_entry_game';
 const PROFILE_ACTIVE_TAB_KEY =
   ENV.STORAGE_KEYS.PROFILE_ACTIVE_TAB || 'gamevallies_profile_active_tab';
 const CREATE_ENTRY_INTENT_MAX_AGE_MS = 30 * 60 * 1000;
+const ITERATE_ENTRY_GAME_MAX_AGE_MS = 30 * 60 * 1000;
 const PROFILE_SUB_TABS = new Set(['works', 'drafts', 'liked', 'bookmarks', 'tasks']);
 
 function normalizeProfileActiveTab(tab) {
@@ -71,11 +74,73 @@ function normalizeCreateEntryIntent(intent) {
   return normalized;
 }
 
+function normalizeIterateEntryGame(game) {
+  if (!game?.id) {
+    return null;
+  }
+
+  return {
+    ...game,
+    id: game.id,
+    createdAt: game.createdAt || Date.now(),
+  };
+}
+
 export function clearPersistedCreateEntryIntent() {
   try {
     Taro.removeStorageSync(CREATE_ENTRY_INTENT_KEY);
   } catch (error) {
     console.warn('Failed to clear create entry intent:', error);
+  }
+}
+
+export function clearPersistedIterateEntryGame() {
+  try {
+    Taro.removeStorageSync(ITERATE_ENTRY_GAME_KEY);
+  } catch (error) {
+    console.warn('Failed to clear iterate entry game:', error);
+  }
+}
+
+export function setPersistedIterateEntryGame(game) {
+  const normalizedGame = normalizeIterateEntryGame(game);
+  if (!normalizedGame) {
+    clearPersistedIterateEntryGame();
+    return;
+  }
+
+  try {
+    Taro.setStorageSync(ITERATE_ENTRY_GAME_KEY, JSON.stringify({
+      ...normalizedGame,
+      createdAt: Date.now(),
+    }));
+  } catch (error) {
+    console.warn('Failed to persist iterate entry game:', error);
+  }
+}
+
+export function getPersistedIterateEntryGame() {
+  try {
+    const raw = Taro.getStorageSync(ITERATE_ENTRY_GAME_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = normalizeIterateEntryGame(JSON.parse(raw));
+    if (!parsed) {
+      clearPersistedIterateEntryGame();
+      return null;
+    }
+
+    if (Date.now() - (parsed.createdAt || 0) > ITERATE_ENTRY_GAME_MAX_AGE_MS) {
+      clearPersistedIterateEntryGame();
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn('Failed to read iterate entry game:', error);
+    return null;
   }
 }
 
@@ -374,6 +439,7 @@ export function openIteratePageWithAuth(game, gameId = null, options = {}) {
   const gameStore = useGameStore.getState();
   if (game) {
     gameStore.setCurrentGame(game);
+    setPersistedIterateEntryGame(game);
   }
 
   const targetUrl = buildIteratePageUrl(targetGameId, taskId);
