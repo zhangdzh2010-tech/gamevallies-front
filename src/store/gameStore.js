@@ -907,96 +907,6 @@ export const useGameStore = create((set, get) => {
   creationSessionSubmitting: false,
   creationSessionRestoring: false,
   creationSessionContext: null,
-
-  createGame: async (description, title, options) => {
-    // #4 双击防护：如果正在生成或提交中，拒绝重复请求
-    if (get().isGenerating || get().isLoading) {
-      throw new Error('正在处理中，请稍候');
-    }
-
-    clearActiveTaskRuntime();
-    clearActiveSessionRuntime();
-
-    set({
-      currentGame: null,
-      currentTask: null,
-      currentTaskEvents: [],
-      currentTaskCursor: 0,
-      isLoading: true,
-      isGenerating: true,
-      error: null,
-      terminalError: null,
-      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
-      canPlay: true,
-      creationSession: null,
-      creationSessionError: null,
-      creationSessionSubmitting: false,
-      creationSessionRestoring: false,
-      creationSessionContext: null,
-      generationProgress: {
-        stageIndex: 0,
-        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
-        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
-        pct: DISPLAY_PIPELINE_STAGES[0].pct,
-      },
-    });
-
-    try {
-      const result = await gameService.generateGame(description, title, options);
-      const gameId = result.gameId;
-      const gameTitle = result.title || title || '';
-      const promptPreview = description ? String(description).slice(0, 80) : '';
-
-      set({
-        generatingGameId: gameId,
-        isLoading: false,
-        canPlay: result.canPlay !== false,
-      });
-
-      if (result.generationTask?.taskId) {
-        set((state) => ({
-          trackedTasks: mergeTrackedTaskItems(
-            state.trackedTasks,
-            buildTrackedTaskItem(result.generationTask, {
-              gameId,
-              gameTitle,
-              promptPreview,
-              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
-            })
-          ),
-        }));
-      }
-
-      if (result.generationTask?.taskId) {
-        await get()._beginTaskTracking(result.generationTask, {
-          gameId,
-          resetEvents: true,
-          preloadGame: false,
-          taskMeta: {
-            gameTitle,
-            promptPreview,
-          },
-        });
-      } else {
-        throw new Error('创建响应缺少 generationTask');
-      }
-
-      return result;
-    } catch (error) {
-      const message = error?.message || '游戏创建失败，请稍后重试';
-      clearPersistedGenerationTaskSnapshot();
-      set({
-        isLoading: false,
-        isGenerating: false,
-        generationProgress: null,
-        generatingGameId: null,
-        currentTask: null,
-        error: message,
-      });
-      throw new Error(message);
-    }
-  },
-
   startCreationSession: async (prompt, title, options = {}) => {
     if (countPromptCharacters(prompt) < 5) {
       throw new Error('至少输入 5 个字，再开始这一轮');
@@ -2045,19 +1955,6 @@ export const useGameStore = create((set, get) => {
     }));
   },
 
-  forkGame: async (gameId) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      const newGameId = await gameService.forkGame(gameId);
-      const game = await gameService.getGame(newGameId);
-      set({ currentGame: game, isLoading: false });
-      return newGameId;
-    } catch (error) {
-      set({ isLoading: false, error: error?.message || '复制失败' });
-      throw error;
-    }
-  },
 
   publishGame: async (gameId, data) => {
     set({ isLoading: true, error: null });
