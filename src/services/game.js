@@ -143,28 +143,6 @@ function normalizeGenerateResponse(response, fallbackGameId = '') {
   };
 }
 
-function normalizeIterateResponse(response, fallbackGameId = '') {
-  if (!response || typeof response !== 'object') {
-    return {
-      gameId: fallbackGameId,
-      version: null,
-      status: 'iterating',
-      iterationId: null,
-      generationTask: null,
-    };
-  }
-
-  const taskPayload = mergeTaskPayload(response);
-
-  return {
-    gameId: response.gameId || fallbackGameId,
-    version: response.version ?? null,
-    status: response.status || 'iterating',
-    iterationId: response.iterationId || null,
-    generationTask: normalizeGenerationTask(taskPayload),
-  };
-}
-
 function normalizeCreationSessionMessage(message, index = 0) {
   if (!message || typeof message !== 'object') {
     return null;
@@ -387,18 +365,6 @@ export async function getGame(id) {
 }
 
 /**
- * Iterate (improve) an existing game with feedback
- */
-export async function iterateGame(gameId, feedback) {
-  const response = await post(
-    `/api/v1/games/${gameId}/iterate`,
-    { feedback },
-    { timeout: 60000 }
-  );
-  return normalizeIterateResponse(response, gameId);
-}
-
-/**
  * Get author-visible generation status for a game
  */
 export async function getGenerationStatus(gameId) {
@@ -490,7 +456,6 @@ export default {
   getGameTypes,
   getGame,
   getGenerationStatus,
-  iterateGame,
   getGenerationTask,
   getGenerationTaskEvents,
   cancelGenerationTask,

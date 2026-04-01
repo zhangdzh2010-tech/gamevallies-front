@@ -106,6 +106,7 @@ export default function Create() {
     canPlay,
     createEntryIntent,
     consumeCreateEntryIntent,
+    getMatchingActiveCreationSession,
     resetCreateSession,
     setCurrentGame,
   } = useGameStore();
@@ -280,7 +281,9 @@ export default function Create() {
       return;
     }
 
-    gameService.getActiveCreationSession()
+    getMatchingActiveCreationSession({
+      entryMode: 'create',
+    })
       .then(async (snapshot) => {
         if (!snapshot) {
           applyCreationSessionSnapshot(null);

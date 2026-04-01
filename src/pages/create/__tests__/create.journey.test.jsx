@@ -172,6 +172,7 @@ function buildGameStoreState(overrides = {}) {
     canPlay: true,
     createEntryIntent: null,
     consumeCreateEntryIntent: mockConsumeCreateEntryIntent,
+    getMatchingActiveCreationSession: jest.fn(() => Promise.resolve(null)),
     resetCreateSession: mockResetCreateSession,
     setCreateEntryIntent: mockSetCreateEntryIntent,
     setCurrentGame: mockSetCurrentGame,

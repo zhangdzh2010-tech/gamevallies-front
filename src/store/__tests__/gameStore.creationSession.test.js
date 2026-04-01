@@ -58,7 +58,6 @@ jest.mock('../../services/game', () => ({
   skipCreationSessionQuestion: jest.fn(),
   abandonCreationSession: jest.fn(),
   getGenerationStatus: jest.fn(),
-  iterateGame: jest.fn(),
   getGenerationTask: jest.fn(),
   getGenerationTaskEvents: jest.fn(() => Promise.resolve({ items: [], nextCursor: 0, hasMore: false })),
   cancelGenerationTask: jest.fn(),
@@ -417,5 +416,62 @@ describe('gameStore creation session actions', () => {
     expect(result).toBe(null);
     expect(useGameStore.getState().creationSession).toBe(null);
     expect(useGameStore.getState().creationSessionError).toBe(null);
+  });
+
+  test('getMatchingActiveCreationSession returns only the matching iterate session and clears stale session state', async () => {
+    useGameStore.setState({
+      creationSession: {
+        sessionId: 'session-stale',
+        entryMode: 'create',
+        status: 'collecting',
+      },
+      creationSessionContext: {
+        entryMode: 'create',
+      },
+    });
+
+    mockGetActiveCreationSession.mockResolvedValue({
+      sessionId: 'session-iterate',
+      entryMode: 'iterate',
+      sourceGameId: 'game-iterate',
+      status: 'collecting',
+    });
+
+    const result = await useGameStore.getState().getMatchingActiveCreationSession({
+      entryMode: 'iterate',
+      sourceGameId: 'game-iterate',
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      sessionId: 'session-iterate',
+      entryMode: 'iterate',
+    }));
+    expect(useGameStore.getState().creationSession).toBe(null);
+    expect(useGameStore.getState().creationSessionContext).toBe(null);
+  });
+
+  test('getMatchingActiveCreationSession returns null when the active session does not match', async () => {
+    useGameStore.setState({
+      creationSession: {
+        sessionId: 'session-stale',
+        entryMode: 'create',
+        status: 'collecting',
+      },
+    });
+
+    mockGetActiveCreationSession.mockResolvedValue({
+      sessionId: 'session-fork',
+      entryMode: 'fork',
+      sourceGameId: 'source-1',
+      status: 'collecting',
+    });
+
+    const result = await useGameStore.getState().getMatchingActiveCreationSession({
+      entryMode: 'iterate',
+      sourceGameId: 'game-iterate',
+    });
+
+    expect(result).toBe(null);
+    expect(useGameStore.getState().creationSession).toBe(null);
   });
 });

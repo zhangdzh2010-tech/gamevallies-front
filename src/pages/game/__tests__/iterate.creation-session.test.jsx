@@ -6,7 +6,7 @@ const mockStartCreationSession = jest.fn(() => Promise.resolve());
 const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
 const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockRestoreActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockGetMatchingActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
 const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockRestorePersistedTask = jest.fn(() => Promise.resolve(true));
@@ -17,7 +17,6 @@ const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockOpenGame = jest.fn();
 const mockOpenPaywall = jest.fn();
-const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockGetPersistedIterateEntryGame = jest.fn(() => null);
 
 let mockGameStoreState;
@@ -211,7 +210,6 @@ jest.mock('../../../services/game', () => ({
     canPlay: true,
   })),
   getGenerationStatus: jest.fn(() => Promise.resolve(null)),
-  getActiveCreationSession: mockGetActiveCreationSession,
 }));
 
 jest.mock('../../../stores/gamePlayer', () => ({
@@ -243,7 +241,6 @@ const IteratePage = require('../iterate/index').default;
 
 function buildGameStoreState(overrides = {}) {
   return {
-    iterateGame: jest.fn(),
     restorePersistedTask: mockRestorePersistedTask,
     cancelCurrentTask: mockCancelCurrentTask,
     isGenerating: false,
@@ -265,6 +262,7 @@ function buildGameStoreState(overrides = {}) {
     creationSessionError: null,
     creationSessionSubmitting: false,
     getCreationFlowStage: jest.fn(() => 'idle'),
+    getMatchingActiveCreationSession: mockGetMatchingActiveCreationSession,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
@@ -489,19 +487,22 @@ describe('Iterate page creation session flow', () => {
         creationSessionError: null,
       };
     });
+    mockGetMatchingActiveCreationSession.mockImplementationOnce(async () => {
+      mockResetCreationSessionState();
+      return {
+        sessionId: 'session-iterate',
+        entryMode: 'iterate',
+        sourceGameId: 'game-1',
+        title: '像素跑酷',
+        prompt: '继续这轮优化',
+      };
+    });
     mockGameStoreState = buildGameStoreState({
       creationSession: {
         sessionId: 'session-other',
         entryMode: 'create',
         status: 'collecting',
       },
-    });
-    mockGetActiveCreationSession.mockResolvedValueOnce({
-      sessionId: 'session-iterate',
-      entryMode: 'iterate',
-      sourceGameId: 'game-1',
-      title: '像素跑酷',
-      prompt: '继续这轮优化',
     });
 
     render(<IteratePage />);

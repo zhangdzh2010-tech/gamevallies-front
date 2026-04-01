@@ -122,6 +122,7 @@ export default function GameIteratePage() {
     creationSessionError,
     creationSessionSubmitting,
     getCreationFlowStage,
+    getMatchingActiveCreationSession,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -311,19 +312,16 @@ export default function GameIteratePage() {
 
     iterateSessionBootstrappedGameIdRef.current = currentCompletedGameId;
 
-    gameService.getActiveCreationSession()
+    getMatchingActiveCreationSession({
+      entryMode: 'iterate',
+      sourceGameId: currentCompletedGameId,
+    })
       .then((restoredSession) => {
-        const restoredMatches = restoredSession
-          && restoredSession.entryMode === 'iterate'
-          && String(restoredSession.sourceGameId || '') === currentCompletedGameId;
-
-        if (restoredMatches) {
-          resetCreationSessionState();
+        if (restoredSession) {
           setResumeCandidate(restoredSession);
           return restoredSession;
         }
 
-        resetCreationSessionState();
         setResumeCandidate(null);
         return null;
       })
@@ -338,9 +336,9 @@ export default function GameIteratePage() {
   }, [
     creationSession,
     currentGame,
+    getMatchingActiveCreationSession,
     isBootstrapping,
     isIterateTaskActive,
-    resetCreationSessionState,
     taskId,
   ]);
 
