@@ -39,7 +39,7 @@ describe('gameService.generateGame', () => {
       description: '做一个双人竞速小游戏',
       prompt: '做一个双人竞速小游戏',
       orientation: 'landscape',
-    }));
+    }), expect.objectContaining({ timeout: 60000 }));
   });
 
   test('defaults orientation to portrait when no option is provided', async () => {
@@ -50,7 +50,7 @@ describe('gameService.generateGame', () => {
       description: '做一个平台跳跃游戏',
       prompt: '做一个平台跳跃游戏',
       orientation: 'portrait',
-    }));
+    }), expect.objectContaining({ timeout: 60000 }));
   });
 });
 

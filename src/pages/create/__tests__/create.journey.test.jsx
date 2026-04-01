@@ -1,22 +1,15 @@
 /* eslint-env jest */
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockShowToast = jest.fn();
 const mockGetSystemInfoSync = jest.fn(() => ({ windowHeight: 720 }));
-const mockStartCreationSession = jest.fn(() => Promise.resolve());
-const mockRestoreActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
 const mockRestorePersistedTask = jest.fn(() => Promise.resolve(true));
 const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
-const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
-const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
-const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockClearError = jest.fn();
 const mockConsumeCreateEntryIntent = jest.fn();
 const mockResetCreateSession = jest.fn();
-const mockResetCreationSessionState = jest.fn();
 const mockSetCreateEntryIntent = jest.fn();
 const mockSetCurrentGame = jest.fn();
 const mockOpenIteratePageWithAuth = jest.fn();
@@ -24,11 +17,13 @@ const mockOpenProfilePageWithTab = jest.fn();
 const mockOpenPaywall = jest.fn();
 const mockOpenGame = jest.fn();
 const mockEnsureCreateAccess = jest.fn();
-const didShowCallbacks = [];
 const mockGameService = {
   getGame: jest.fn(),
   forkGame: jest.fn(),
+  createCreationSession: jest.fn(() => Promise.resolve(null)),
+  appendCreationSessionMessage: jest.fn(() => Promise.resolve(null)),
   getActiveCreationSession: jest.fn(() => Promise.resolve(null)),
+  abandonCreationSession: jest.fn(() => Promise.resolve(null)),
 };
 
 let mockGameStoreState;
@@ -54,9 +49,7 @@ jest.mock('@tarojs/taro', () => {
     __esModule: true,
     default: api,
     ...api,
-    useDidShow: jest.fn((callback) => {
-      didShowCallbacks.push(callback);
-    }),
+    useDidShow: jest.fn(),
     useDidHide: jest.fn(),
   };
 });
@@ -83,27 +76,6 @@ jest.mock('../../../components/common/PipelineOrbit', () => ({
 
 jest.mock('../../../components/common/PaywallPopup', () => ({
   PaywallPopup: () => <div>paywall</div>,
-}));
-
-jest.mock('../../../components/creation', () => ({
-  CreationResumeScene: ({ subjectTitle, session }) => (
-    <div>
-      <div>resume-scene</div>
-      <div>{subjectTitle}</div>
-      <div>{session?.prompt}</div>
-    </div>
-  ),
-  canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
-  getCreationSessionNotice: jest.fn((status) => (
-    status === 'initializing'
-      ? 'AI 正在整理这轮创作的第一版理解，通常几秒内会回来。'
-      : status === 'expired'
-      ? '本轮创作会话已过期，请重新开始，系统会基于最新信息重新整理方案。'
-      : status === 'ready'
-        ? '当前信息已经足够，确认后就可以直接开始创作。'
-        : ''
-  )),
-  isCreationSessionQuestioning: jest.fn((status) => status === 'collecting'),
 }));
 
 jest.mock('../../../services/game', () => mockGameService);
@@ -137,14 +109,17 @@ jest.mock('../../../store/gameStore', () => ({
 
 const CreatePage = require('../index').default;
 
-const PORTRAIT_TEXT = /\u7ad6\u5c4f/;
-const LANDSCAPE_TEXT = /\u6a2a\u5c4f/;
-const OPTIMIZE_TEXT = /\u7ee7\u7eed\u4f18\u5316/;
-const SUBSCRIBE_PLAY_TEXT = /\u8ba2\u9605\u540e\u8bd5\u73a9/;
-const CREATE_AGAIN_TEXT = /\u518d\u521b\u4e00\u4e2a/;
+const SESSION_START_TEXT = /开始创作会话/;
+const PORTRAIT_TEXT = /竖屏/;
+const LANDSCAPE_TEXT = /横屏/;
+const ANSWER_TEXT = /提交回答/;
+const OPTIMIZE_TEXT = /继续优化/;
+const SUBSCRIBE_PLAY_TEXT = /订阅后试玩/;
+const CREATE_AGAIN_TEXT = /再创一个/;
 
 function buildGameStoreState(overrides = {}) {
   return {
+    generateFromCreationSession: mockGenerateFromCreationSession,
     restorePersistedTask: mockRestorePersistedTask,
     cancelCurrentTask: mockCancelCurrentTask,
     isGenerating: false,
@@ -155,17 +130,6 @@ function buildGameStoreState(overrides = {}) {
     terminalError: null,
     clearError: mockClearError,
     canPlay: true,
-    creationSession: null,
-    creationSessionError: null,
-    creationSessionSubmitting: false,
-    getCreationFlowStage: jest.fn(() => 'idle'),
-    refreshCreationSession: mockRefreshCreationSession,
-    startCreationSession: mockStartCreationSession,
-    answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
-    skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
-    generateFromCreationSession: mockGenerateFromCreationSession,
-    abandonCreationSession: mockAbandonCreationSession,
-    resetCreationSessionState: mockResetCreationSessionState,
     createEntryIntent: null,
     consumeCreateEntryIntent: mockConsumeCreateEntryIntent,
     resetCreateSession: mockResetCreateSession,
@@ -178,160 +142,210 @@ function buildGameStoreState(overrides = {}) {
 describe('Create page journey coverage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    didShowCallbacks.length = 0;
     mockGameStoreState = buildGameStoreState();
   });
 
-  async function flushDidShowCallbacks() {
-    for (const callback of didShowCallbacks) {
-      // Taro calls these after page show, so run them after render inside act.
-      await act(async () => {
-        await callback();
-      });
-    }
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
+  test('creative textarea keeps the intended 2000-char limit and starts a creation session', async () => {
+    mockGameService.createCreationSession.mockResolvedValue({
+      id: 'session-1',
+      status: 'collecting',
+      revision: 1,
+      orientation: 'portrait',
+      slotFillPct: 0.33,
+      readyToGenerate: false,
+      planDraft: {
+        title: '办公室摸鱼计划',
+        summary: '一款围绕办公室摸鱼展开的搞笑小游戏。',
+        concept: '在办公室场景里快速做出摸鱼选择。',
+        interaction: '点击不同摸鱼动作并及时躲避老板巡查。',
+        objective: '撑到下班并积累足够摸鱼值。',
+        pacing: '短局快节奏，每一轮都很快进入状态。',
+        visualDirection: '霓虹办公室喜剧风格。',
+        signatureMoment: '老板突然巡查时触发夸张反转。',
+      },
+      confidenceSummary: {
+        overallConfidence: 0.61,
+        strongestSlots: ['game_type'],
+        weakestSlots: ['win_condition'],
+        ambiguityFlags: ['win_condition:missing'],
+        missingCriticalSlots: ['win_condition'],
+      },
+      questionStrategy: {
+        mode: 'missing_required',
+        slotKey: 'win_condition',
+        reason: '因为“Win Condition”会直接决定玩法能否成型，而当前还没有明确答案。',
+        impact: 0.95,
+        confidence: 0.21,
+        ambiguityWeight: 0,
+      },
+      conversation: [],
+      currentQuestion: {
+        slotKey: 'theme',
+        label: 'Theme',
+        prompt: '你希望它发生在什么场景里？',
+        skippable: true,
+      },
     });
-  }
 
-  test('creative textarea keeps the intended 2000-char limit and submits long input', async () => {
     render(<CreatePage />);
 
-    const textarea = screen.getByLabelText('create-initial-answer');
+    const textarea = screen.getByPlaceholderText(/先说一句核心想法/);
     const longPrompt = 'creative'.repeat(180);
 
-    expect(screen.getByPlaceholderText('游戏名（可选）')).toBeTruthy();
+    expect(textarea.getAttribute('data-maxlength')).toBe('2000');
     expect(screen.getByText(PORTRAIT_TEXT)).toBeTruthy();
 
     fireEvent.change(textarea, { target: { value: longPrompt } });
     expect(screen.getByText(`${longPrompt.length}/2000`)).toBeTruthy();
 
-    fireEvent.click(screen.getByText('发送'));
+    fireEvent.click(screen.getByText(SESSION_START_TEXT));
 
     await waitFor(() => {
-      expect(mockStartCreationSession).toHaveBeenCalledWith(longPrompt, '', {
-        entryMode: 'create',
+      expect(mockGameService.createCreationSession).toHaveBeenCalledWith(longPrompt, '', {
         orientation: 'portrait',
-        generationTier: 'standard',
       });
     });
+
+    expect(screen.getByText(/系统整理出的方案草案/)).toBeTruthy();
+    expect(screen.getByText(/办公室摸鱼计划/)).toBeTruthy();
+    expect(screen.getByText(/本轮追问策略/)).toBeTruthy();
   });
 
-  test('short prompts are blocked before starting the session', async () => {
+  test('example prompt click fills the textarea and short prompts are blocked', async () => {
     render(<CreatePage />);
 
-    fireEvent.change(screen.getByLabelText('create-initial-answer'), {
-      target: { value: '\u592a\u77ed' },
+    fireEvent.click(screen.getByText('🐍'));
+
+    expect(screen.getByPlaceholderText(/先说一句核心想法/).value).toContain('贪吃蛇');
+
+    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+      target: { value: '太短' },
     });
-    expect(
-      screen.getByText('发送').parentElement.className.includes('is-disabled')
-    ).toBe(true);
-    expect(mockStartCreationSession).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText(SESSION_START_TEXT));
+
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: '请输入游戏描述', icon: 'none' }),
+      );
+    });
+    expect(mockGameService.createCreationSession).not.toHaveBeenCalled();
   });
 
-  test('orientation defaults to portrait and can switch to landscape before submit', async () => {
+  test('orientation defaults to portrait and can switch to landscape before starting a session', async () => {
+    mockGameService.createCreationSession.mockResolvedValue({
+      id: 'session-landscape',
+      status: 'collecting',
+      revision: 1,
+      orientation: 'landscape',
+      slotFillPct: 0.33,
+      readyToGenerate: false,
+      conversation: [],
+      currentQuestion: {
+        slotKey: 'theme',
+        label: 'Theme',
+        prompt: 'What theme should it use?',
+        skippable: true,
+      },
+    });
+
     render(<CreatePage />);
 
-    fireEvent.change(screen.getByLabelText('create-initial-answer'), {
+    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
       target: { value: 'build a horizontal shooter game with a spaceship and enemies' },
     });
     fireEvent.click(screen.getByText(LANDSCAPE_TEXT));
-    fireEvent.click(screen.getByText('发送'));
+    fireEvent.click(screen.getByText(SESSION_START_TEXT));
 
     await waitFor(() => {
-      expect(mockStartCreationSession).toHaveBeenCalledWith(
+      expect(mockGameService.createCreationSession).toHaveBeenCalledWith(
         'build a horizontal shooter game with a spaceship and enemies',
         '',
-        {
-          entryMode: 'create',
-          orientation: 'landscape',
-          generationTier: 'standard',
-        }
+        { orientation: 'landscape' },
       );
     });
   });
 
-  test('session view renders after a creation session exists and can trigger direct generation', async () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-1',
-        entryMode: 'create',
-        status: 'collecting',
-        planDraft: '这是系统整理出的第一版方案',
-        confidenceSummary: '已经理解核心玩法',
-        currentQuestion: {
-          content: '你更偏向什么视觉风格？',
-        },
-        messages: [{ id: 'm1', role: 'user', content: '做一个像素风跑酷游戏' }],
+  test('session flow can append an answer and then trigger generation from the session', async () => {
+    mockGameService.createCreationSession.mockResolvedValueOnce({
+      id: 'session-2',
+      status: 'collecting',
+      revision: 1,
+      orientation: 'portrait',
+      slotFillPct: 0.4,
+      readyToGenerate: false,
+      conversation: [
+        { role: 'user', content: '做一个办公室摸鱼游戏' },
+        { role: 'assistant', content: '我先补一个最关键的信息：它发生在什么场景里？' },
+      ],
+      currentQuestion: {
+        slotKey: 'theme',
+        label: 'Theme',
+        prompt: '它发生在什么场景里？',
+        skippable: true,
       },
-      getCreationFlowStage: jest.fn(() => 'collecting'),
+    });
+    mockGameService.appendCreationSessionMessage.mockResolvedValueOnce({
+      id: 'session-2',
+      status: 'ready',
+      revision: 2,
+      orientation: 'portrait',
+      slotFillPct: 0.8,
+      readyToGenerate: true,
+      conversation: [
+        { role: 'user', content: '做一个办公室摸鱼游戏' },
+        { role: 'assistant', content: '我先补一个最关键的信息：它发生在什么场景里？' },
+        { role: 'user', content: '现代办公室，老板会突然巡查' },
+        { role: 'assistant', content: '我已经整理出一版可生成方案了。' },
+      ],
+      currentQuestion: null,
+    });
+    mockGenerateFromCreationSession.mockResolvedValueOnce({
+      gameId: 'game-creation',
+      generationTask: {
+        taskId: 'task-creation',
+      },
     });
 
     render(<CreatePage />);
 
-    expect(screen.getByText('做一个像素风跑酷游戏')).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText(/先说一句核心想法/), {
+      target: { value: '做一个办公室摸鱼游戏' },
+    });
+    fireEvent.click(screen.getByText(SESSION_START_TEXT));
+
     await waitFor(() => {
-      expect(screen.getByText('你更偏向什么视觉风格？')).toBeTruthy();
+      expect(screen.getByText(ANSWER_TEXT)).toBeTruthy();
     });
-    fireEvent.click(screen.getByText('生成'));
+
+    fireEvent.change(screen.getByPlaceholderText(/它发生在什么场景里/), {
+      target: { value: '现代办公室，老板会突然巡查' },
+    });
+    fireEvent.click(screen.getByText(ANSWER_TEXT));
 
     await waitFor(() => {
-      expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
-        orientation: 'portrait',
-        generationTier: 'standard',
-      });
-    });
-  });
-
-  test('initializing create session keeps the first prompt visible and disables sending', async () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-init',
-        entryMode: 'create',
-        status: 'initializing',
-        prompt: '做一个像素风跑酷游戏',
-        messages: [],
-      },
-      getCreationFlowStage: jest.fn(() => 'initializing'),
+      expect(mockGameService.appendCreationSessionMessage).toHaveBeenCalledWith(
+        'session-2',
+        '现代办公室，老板会突然巡查',
+        1,
+      );
     });
 
-    render(<CreatePage />);
+    fireEvent.click(screen.getAllByText('开始创作').slice(-1)[0]);
 
-    expect(screen.getByText('做一个像素风跑酷游戏')).toBeTruthy();
-    expect(screen.getByText('AI 正在整理这轮创作的第一版理解，通常几秒内会回来。')).toBeTruthy();
-    expect(screen.getByText('整理中...').parentElement.className.includes('is-disabled')).toBe(true);
-  });
-
-  test('expired create session shows notice and disables stale question actions', () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-2',
-        entryMode: 'create',
-        status: 'expired',
-        planDraft: '旧方案',
-        confidenceSummary: '旧理解',
-        currentQuestion: {
-          content: '这个问题不该再让用户回答',
-        },
-      },
-      getCreationFlowStage: jest.fn(() => 'expired'),
+    await waitFor(() => {
+      expect(mockGenerateFromCreationSession).toHaveBeenCalledWith(
+        'session-2',
+        expect.objectContaining({
+          revision: 2,
+        }),
+      );
     });
-
-    render(<CreatePage />);
-
-    expect(screen.getByText('本轮创作会话已过期，请重新开始，系统会基于最新信息重新整理方案。')).toBeTruthy();
-    expect(screen.queryByText('这个问题不该再让用户回答')).toBeNull();
-    fireEvent.click(screen.getByText('发送'));
-    expect(mockAnswerCreationSessionQuestion).not.toHaveBeenCalled();
-    expect(mockGenerateFromCreationSession).not.toHaveBeenCalled();
   });
 
   test('completed journey offers continue optimization and locked play actions', () => {
     const currentGame = {
       id: 'game-88',
-      title: '\u50cf\u7d20\u8dd1\u9177',
+      title: '像素跑酷',
       status: 'ready',
       gameUrl: 'https://game.example/play',
     };
@@ -353,127 +367,5 @@ describe('Create page journey coverage', () => {
       resumePlay: true,
     }));
     expect(mockResetCreateSession).toHaveBeenCalledTimes(1);
-    expect(mockResetCreationSessionState).toHaveBeenCalledTimes(1);
-  });
-
-  test('active create session is shown even when a stale completed game exists', async () => {
-    mockGameStoreState = buildGameStoreState({
-      currentGame: {
-        id: 'game-old',
-        title: '旧作品',
-        status: 'ready',
-      },
-      creationSession: {
-        sessionId: 'session-active',
-        entryMode: 'create',
-        status: 'collecting',
-        planDraft: '新的创作方案',
-        confidenceSummary: '新的创作理解',
-        currentQuestion: {
-          content: '新的补充问题',
-        },
-      },
-      getCreationFlowStage: jest.fn(() => 'collecting'),
-    });
-
-    render(<CreatePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('新的补充问题')).toBeTruthy();
-    });
-    expect(screen.queryByText('创作完成！')).toBeNull();
-  });
-
-  test('create page still probes active create sessions when store keeps a stale session from another entry mode', async () => {
-    mockResetCreationSessionState.mockImplementation(() => {
-      mockGameStoreState = {
-        ...mockGameStoreState,
-        creationSession: null,
-        creationSessionError: null,
-      };
-    });
-    mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-other',
-        entryMode: 'iterate',
-        status: 'collecting',
-      },
-    });
-    mockGameService.getActiveCreationSession.mockResolvedValueOnce({
-      sessionId: 'session-create',
-      entryMode: 'create',
-      title: '旧创作',
-      prompt: '继续这轮创作',
-    });
-
-    render(<CreatePage />);
-    await flushDidShowCallbacks();
-
-    await waitFor(() => {
-      expect(mockResetCreationSessionState).toHaveBeenCalled();
-      expect(mockGameService.getActiveCreationSession).toHaveBeenCalled();
-    });
-  });
-
-  test('opening create clears stale generation task state instead of auto-restoring the old task', async () => {
-    mockGameStoreState = buildGameStoreState({
-      currentTask: {
-        taskId: 'task-old',
-        status: 'running',
-      },
-      currentGame: {
-        id: 'game-old',
-        title: '旧作品',
-        status: 'draft',
-      },
-    });
-
-    render(<CreatePage />);
-    await flushDidShowCallbacks();
-
-    await waitFor(() => {
-      expect(mockResetCreateSession).toHaveBeenCalledWith({ clearPersistedTask: false });
-      expect(mockGameService.getActiveCreationSession).toHaveBeenCalled();
-    });
-
-    expect(mockRestorePersistedTask).not.toHaveBeenCalled();
-  });
-
-  test('initial create retry keeps the first prompt and offers a retry action', async () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSessionError: '创建失败，请重试',
-    });
-
-    render(<CreatePage />);
-
-    fireEvent.change(screen.getByLabelText('create-initial-answer'), {
-      target: { value: '做一个节奏更快的像素风闯关游戏' },
-    });
-
-    fireEvent.click(screen.getByText('发送'));
-
-    await waitFor(() => {
-      expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '做一个节奏更快的像素风闯关游戏',
-        '',
-        {
-          entryMode: 'create',
-          orientation: 'portrait',
-          generationTier: 'standard',
-        }
-      );
-    });
-
-    expect(screen.getByLabelText('create-initial-answer').value).toBe('做一个节奏更快的像素风闯关游戏');
-  });
-
-  test('raw creation session abort errors are rendered as a friendly chinese message', () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSessionError: 'The user aborted a request.',
-    });
-
-    render(<CreatePage />);
-
-    expect(screen.getByText('创建游戏请求被中断了，请再试一次')).toBeTruthy();
   });
 });
