@@ -430,6 +430,37 @@ describe('Iterate page creation session flow', () => {
     expect(screen.getByText('开始优化')).toBeTruthy();
   });
 
+  test('keeps iterate progress visible while the generation task belongs to the current iterate session', async () => {
+    mockGameStoreState = buildGameStoreState({
+      isGenerating: true,
+      currentTask: {
+        taskId: 'task-iterate-1',
+        taskType: 'pipeline_run',
+        gameId: 'iterated-game-1',
+        status: 'running',
+      },
+      generationProgress: {
+        stageIndex: 2,
+        pct: 35,
+        stageLabel: '生成游戏逻辑',
+      },
+      creationSession: {
+        sessionId: 'session-generating',
+        entryMode: 'iterate',
+        status: 'generating',
+        sourceGameId: 'game-1',
+        gameId: 'iterated-game-1',
+      },
+      getCreationFlowStage: jest.fn(() => 'generating'),
+    });
+
+    render(<IteratePage />);
+
+    expect(screen.getByText('生成游戏逻辑')).toBeTruthy();
+    expect(screen.getByText('取消任务')).toBeTruthy();
+    expect(screen.queryByLabelText('iterate-initial-answer')).toBeNull();
+  });
+
   test('failed iterate session shows notice and keeps stale actions disabled', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: {
