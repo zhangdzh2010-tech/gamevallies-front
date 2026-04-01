@@ -14,26 +14,21 @@ function getButtonClassName(action) {
 }
 
 export function CreationSessionActions({ actions = [] }) {
-  return (
-    <View className="creation-session-card">
-      <View className="creation-session-card__header">
-        <View>
-          <Text className="creation-session-card__title">会话操作</Text>
-          <Text className="creation-session-card__hint">统一承载回答、跳过、直接生成、重新开始等动作。</Text>
-        </View>
-      </View>
+  if (!actions.length) {
+    return null;
+  }
 
-      <View className={`creation-session-actions creation-session-actions--count-${actions.length || 0}`}>
-        {actions.map((action) => (
-          <View
-            key={action.key}
-            className={getButtonClassName(action)}
-            onClick={action.disabled ? undefined : action.onClick}
-          >
-            <Text className="creation-session-actions__button-text">{action.label}</Text>
-          </View>
-        ))}
-      </View>
+  return (
+    <View className={`creation-session-actions creation-session-actions--count-${actions.length || 0}`}>
+      {actions.map((action) => (
+        <View
+          key={action.key}
+          className={getButtonClassName(action)}
+          onClick={action.disabled ? undefined : action.onClick}
+        >
+          <Text className="creation-session-actions__button-text">{action.label}</Text>
+        </View>
+      ))}
     </View>
   );
 }

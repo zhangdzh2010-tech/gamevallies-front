@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Textarea } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
@@ -24,10 +24,8 @@ import { Storage } from '../../../utils/storage';
 import { isH5Runtime } from '../../../utils/runtime';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import {
-  CreationAnswerComposer,
   CreationEntryErrorCard,
   CreationResumeScene,
-  CreationSessionActions,
   CreationSessionScene,
   buildCreationSessionActions,
   buildCreationSessionSceneProps,
@@ -169,6 +167,11 @@ export default function GameForkPage() {
     && String(creationSession?.gameId || currentGame?.id || '') === String(currentGame?.id || '')
     && isCompletedGameStatus(currentGame?.status)
   );
+  const forkStatusValue = creationSession?.status === 'ready'
+    ? '可直接生成'
+    : creationSession?.status === 'initializing'
+      ? '整理中'
+      : '继续补充';
 
   useEffect(() => {
     if (!sourceGameId || !sourceGame || isLoading || !canForkGame) {
@@ -497,6 +500,7 @@ export default function GameForkPage() {
               {...buildCreationSessionSceneProps({
                 entryMode: 'fork',
                 session: creationSession,
+                statusValue: forkStatusValue,
                 answerValue: forkAnswer,
                 onAnswerChange: (e) => setForkAnswer(e?.detail?.value || ''),
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder,
@@ -505,7 +509,7 @@ export default function GameForkPage() {
                 actions: buildCreationSessionActions({
                   submitting: creationSessionSubmitting,
                   answerValue: forkAnswer,
-                  generateLabel: '直接开始复刻',
+                  generateLabel: '开始复刻',
                   onSubmit: handleSubmitForkAnswer,
                   onSkip: handleSkipForkQuestion,
                   onGenerate: handleGenerateFork,
@@ -521,38 +525,25 @@ export default function GameForkPage() {
               ) : null}
               {canForkGame ? (
                 <View className="fork-form-section">
-                <CreationAnswerComposer
-                  value={forkAnswer}
-                  onChange={(e) => setForkAnswer(e?.detail?.value || '')}
-                  placeholder="说说你想保留什么、改变什么，例如：保留核心玩法，换成赛博风，节奏更快。"
-                  suggestions={[
-                    '保留核心玩法，但把题材换成赛博风。',
-                    '想保留简单上手的节奏，但把视觉做得更有冲击力。',
-                    '角色和场景都重新设计，和原作拉开差异。',
-                  ]}
-                  disabled={creationSessionSubmitting}
-                />
-                <CreationSessionActions
-                  actions={[
-                    {
-                      key: 'start-fork-session',
-                      label: creationSessionSubmitting ? 'AI 正在整理方向...' : '开始复刻',
-                      tone: 'primary',
-                      disabled: creationSessionSubmitting || !forkAnswer.trim(),
-                      onClick: handleStartForkSession,
-                    },
-                    ...(creationSessionError
-                      ? [{
-                          key: 'retry-fork-session',
-                          label: creationSessionSubmitting ? '重试中...' : '重新提交',
-                          tone: 'ghost',
-                          disabled: creationSessionSubmitting || !forkAnswer.trim(),
-                          onClick: handleStartForkSession,
-                        }]
-                      : []),
-                  ]}
-                />
-              </View>
+                  <Textarea
+                    aria-label="fork-initial-answer"
+                    className="fork-textarea"
+                    placeholder="说说你想保留什么、改变什么"
+                    placeholderStyle="color: #67627d"
+                    value={forkAnswer}
+                    onInput={(e) => setForkAnswer(e?.detail?.value || '')}
+                    maxlength={1000}
+                    autoHeight
+                    disabled={creationSessionSubmitting}
+                  />
+                  <Text className="fork-count">{forkAnswer.length}/1000</Text>
+                  <View
+                    className={`fork-submit-btn${creationSessionSubmitting || !forkAnswer.trim() ? ' disabled' : ''}`}
+                    onClick={handleStartForkSession}
+                  >
+                    <Text>{creationSessionSubmitting ? '处理中...' : '开始复刻'}</Text>
+                  </View>
+                </View>
               ) : null}
             </>
           )}

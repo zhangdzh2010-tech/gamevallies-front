@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Textarea, Input } from '@tarojs/components';
+import { View, Text, Textarea, Input } from '@tarojs/components';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
@@ -9,7 +9,6 @@ import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import * as gameService from '../../services/game';
 import { getWebSocketManager } from '../../services/websocket';
 import {
-  getPersistedGenerationTaskSnapshot,
   isCompletedGameStatus,
   useGameStore,
   PIPELINE_STAGES,
@@ -20,7 +19,6 @@ import { PaywallPopup } from '../../components/common/PaywallPopup';
 import {
   consumePersistedCreateEntryIntent,
   ensureCreateAccess,
-  getPersistedCreateEntryIntent,
   isLoggedIn,
   openForkPageWithAuth,
   openIteratePageWithAuth,
@@ -36,12 +34,6 @@ import {
   buildCreationSessionSceneProps,
 } from '../../components/creation';
 import './index.scss';
-
-const EXAMPLE_PROMPTS = [
-  { emoji: '🐍', text: '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。' },
-  { emoji: '🐹', text: '做一个打地鼠小游戏，九宫格随机出现地鼠，点击得分，30 秒倒计时挑战。' },
-  { emoji: '🔢', text: '做一个 2048 益智游戏，上下左右滑动合并相同数字，目标达到 2048。' },
-];
 
 const TASK_STATUS_LABELS = {
   queued: '排队中',
@@ -110,7 +102,6 @@ export default function Create() {
     createEntryIntent,
     consumeCreateEntryIntent,
     resetCreateSession,
-    setCreateEntryIntent,
     setCurrentGame,
   } = useGameStore();
   const openGame = useGamePlayerStore((s) => s.openGame);
@@ -275,34 +266,6 @@ export default function Create() {
     currentTask?.taskType,
     isGenerating,
   ]);
-
-  useDidShow(() => {
-    if (!isLoggedIn() || createEntryIntent || isGenerating || currentTask?.taskId || isRestoringEntry) {
-      return;
-    }
-
-    const persistedCreateEntryIntent = getPersistedCreateEntryIntent();
-    if (persistedCreateEntryIntent) {
-      setCreateEntryIntent(persistedCreateEntryIntent);
-      return;
-    }
-
-    const activeTaskSnapshot = getPersistedGenerationTaskSnapshot();
-    if (!activeTaskSnapshot?.taskId || activeTaskSnapshot?.taskType === 'pipeline_iterate') {
-      return;
-    }
-
-    setIsRestoringEntry(true);
-    restorePersistedTask(activeTaskSnapshot)
-      .then((restored) => {
-        if (!restored) {
-          Taro.showToast({ title: '恢复创作任务失败', icon: 'none' });
-        }
-      })
-      .finally(() => {
-        setIsRestoringEntry(false);
-      });
-  });
 
   useDidShow(() => {
     if (!isLoggedIn() || createEntryIntent || isGenerating || currentTask?.taskId || isRestoringEntry) {
@@ -486,12 +449,6 @@ export default function Create() {
       },
     });
   };
-
-
-  const handleExampleClick = (text) => {
-    setPrompt(text);
-  };
-
   const handleSubmit = async () => {
     if (sessionBusy) {
       return;
@@ -630,45 +587,24 @@ export default function Create() {
     resetLocalCreateState();
   };
 
-  // Session initializing view (C4) — shown while backend AI analysis runs (2–5 s)
-  // The useEffect above polls / listens for WS until status reaches `collecting`.
-  if (creationSession?.status === 'initializing') {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header create-header--restoring">
-          <View className="create-header__copy">
-            <Text className="create-header__eyebrow">AI Creation Pipeline</Text>
-            <Text className="header-title">AI 正在分析</Text>
-            <Text className="header-subtitle">正在解析你的游戏想法，即将开始对话</Text>
-          </View>
-          <View className="create-header__meta">
-            <Text className="create-header__meta-label">Session</Text>
-            <Text className="create-header__meta-value">初始化中</Text>
-          </View>
-        </View>
-        <View className="expanding-panel">
-          <View className="expanding-spinner" />
-          <Text className="expanding-text">AI 正在拆解你的想法，马上就好...</Text>
-        </View>
-        <CustomTabBar activeIndex={2} />
-      </View>
-    );
-  }
+  const creationStatusValue = creationSession?.status === 'ready'
+    ? '可直接生成'
+    : creationSession?.status === 'initializing'
+      ? '整理中'
+      : '继续补充';
 
-  // Chat clarification view
   if (isRestoringEntry) {
     return (
       <View className={containerClassName}>
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
         <View className="create-header create-header--restoring">
           <View className="create-header__copy">
-            <Text className="create-header__eyebrow">AI Creation Pipeline</Text>
+            <Text className="create-header__eyebrow">正在恢复</Text>
             <Text className="header-title">正在恢复创作</Text>
             <Text className="header-subtitle">马上回到当前作品或进行中的创作任务</Text>
           </View>
           <View className="create-header__meta">
-            <Text className="create-header__meta-label">Session</Text>
+            <Text className="create-header__meta-label">状态</Text>
             <Text className="create-header__meta-value">恢复中</Text>
           </View>
         </View>
@@ -691,7 +627,7 @@ export default function Create() {
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
         <View className="create-header create-header--progress">
           <View className="create-header__copy">
-            <Text className="create-header__eyebrow">AI Creation Pipeline</Text>
+            <Text className="create-header__eyebrow">正在生成</Text>
             <Text className="header-title">AI 创作中</Text>
             <Text className="header-subtitle">AI 正在为你生成游戏，请稍候</Text>
           </View>
@@ -762,7 +698,7 @@ export default function Create() {
         <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
         <View className="create-header create-header--completion">
           <View className="create-header__copy">
-            <Text className="create-header__eyebrow">Creation Completed</Text>
+            <Text className="create-header__eyebrow">创作完成</Text>
             <Text className="header-title">创作完成！</Text>
             <Text className="header-subtitle">{currentGame.title || gameName || '你的游戏'}已经准备好了</Text>
           </View>
@@ -829,53 +765,55 @@ export default function Create() {
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
 
       <PageScrollContainer className="create-scroll">
-        <View className="form-section">
+        <View className="create-entry">
           {!creationSession ? (
             <>
-              <View className="form-group">
-                <Text className="form-label">游戏名称</Text>
-                <View className="form-name-row">
-                  <View className="form-input-wrap form-input-wrap--name">
-                    <Input
-                      className="form-input"
-                      placeholder="给你的游戏起个名字（可选）"
-                      placeholderStyle="color: #55516e"
-                      value={gameName}
-                      onInput={(e) => setGameName(e.detail.value)}
-                      maxlength={30}
-                    />
-                  </View>
-                  <View className="orientation-switch">
-                    {ORIENTATION_OPTIONS.map((option) => {
-                      const isActive = orientation === option.value;
-                      return (
-                        <View
-                          key={option.value}
-                          className={`orientation-option${isActive ? ' is-active' : ''}`}
-                          onClick={() => setOrientation(option.value)}
-                        >
-                          <Text className="orientation-option__text">{option.label}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
+              <View className="create-entry__topbar">
+                <View className="create-entry__name">
+                  <Input
+                    className="create-entry__name-input"
+                    placeholder="游戏名称（可选）"
+                    placeholderStyle="color: #67627d"
+                    value={gameName}
+                    onInput={(e) => setGameName(e?.detail?.value || '')}
+                    maxlength={30}
+                  />
+                </View>
+                <View className="create-entry__orientation">
+                  {ORIENTATION_OPTIONS.map((option) => {
+                    const isActive = orientation === option.value;
+                    return (
+                      <View
+                        key={option.value}
+                        className={`create-entry__orientation-option${isActive ? ' is-active' : ''}`}
+                        onClick={() => setOrientation(option.value)}
+                      >
+                        <Text className="create-entry__orientation-text">{option.label}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
               </View>
 
-              <View className="form-group">
-                <Text className="form-label">描述你的游戏创意</Text>
-                <View className="form-input-wrap form-input-wrap--textarea">
-                  <Textarea
-                    className="form-textarea"
-                    placeholder="先说一句核心想法，系统会帮你拆成可生成方案..."
-                    placeholderStyle="color: #55516e"
-                    value={prompt}
-                    onInput={(e) => setPrompt(e.detail.value)}
-                    maxlength={2000}
-                    autoHeight
-                  />
+              <View className="create-entry__composer">
+                <Textarea
+                  className="create-entry__textarea"
+                  placeholder="先说一句你想做什么游戏"
+                  placeholderStyle="color: #67627d"
+                  value={prompt}
+                  onInput={(e) => setPrompt(e?.detail?.value || '')}
+                  maxlength={2000}
+                  autoHeight
+                />
+                <View className="create-entry__footer">
+                  <Text className="create-entry__count">{prompt.length}/2000</Text>
+                  <View
+                    className={`create-entry__submit${sessionBusy || !prompt.trim() ? ' is-disabled' : ''}`}
+                    onClick={handleSubmit}
+                  >
+                    <Text>{sessionBusy ? '分析中...' : '开始创作'}</Text>
+                  </View>
                 </View>
-                <Text className="input-count">{prompt.length}/2000</Text>
               </View>
             </>
           ) : (
@@ -883,15 +821,16 @@ export default function Create() {
               {...buildCreationSessionSceneProps({
                 entryMode: 'create',
                 session: creationSession,
+                statusValue: creationStatusValue,
                 answerValue: sessionAnswer,
                 onAnswerChange: (e) => setSessionAnswer(e?.detail?.value || ''),
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,
-                answerSuggestions: [],
+                answerSuggestions: creationSession?.currentQuestion?.options || [],
                 submitting: sessionBusy,
                 actions: buildCreationSessionActions({
                   submitting: sessionBusy,
                   answerValue: sessionAnswer,
-                  generateLabel: creationSession.readyToGenerate ? '开始创作' : '直接开始创作',
+                  generateLabel: '开始创作',
                   onSubmit: handleSubmit,
                   onSkip: handleSkipQuestion,
                   onGenerate: handleGenerateFromSession,
@@ -908,29 +847,7 @@ export default function Create() {
               <Text className="error-dismiss" onClick={clearError}>×</Text>
             </View>
           )}
-
-          {!creationSession ? (
-            <View className="form-actions">
-              <View className="submit-btn" onClick={handleSubmit}>
-                <Text>{sessionBusy ? '分析中...' : '开始创作'}</Text>
-              </View>
-            </View>
-          ) : null}
         </View>
-
-        {!creationSession ? (
-          <View className="examples-section">
-            <Text className="section-title">创意样例 <Text className="section-hint">点击即可直接使用</Text></Text>
-            <View className="example-list">
-              {EXAMPLE_PROMPTS.map((ex, idx) => (
-                <View key={idx} className="example-card" onClick={() => handleExampleClick(ex.text)}>
-                  <Text className="example-emoji">{ex.emoji}</Text>
-                  <Text className="example-text">{ex.text}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
 
         <View className="bottom-spacer" />
       </PageScrollContainer>

@@ -146,6 +146,11 @@ export default function GameIteratePage() {
     && (!gameId || !activeIterateTask.gameId || String(activeIterateTask.gameId) === String(gameId))
   );
   const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
+  const iterateStatusValue = creationSession?.status === 'ready'
+    ? '可直接生成'
+    : creationSession?.status === 'initializing'
+      ? '整理中'
+      : '继续补充';
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -665,6 +670,7 @@ export default function GameIteratePage() {
               {...buildCreationSessionSceneProps({
                 entryMode: 'iterate',
                 session: creationSession,
+                statusValue: iterateStatusValue,
                 answerValue: iterateFeedback,
                 onAnswerChange: (e) => setIterateFeedback(e?.detail?.value || ''),
                 answerPlaceholder: creationSession?.currentQuestion?.placeholder,
@@ -673,7 +679,7 @@ export default function GameIteratePage() {
                 actions: buildCreationSessionActions({
                   submitting: creationSessionSubmitting,
                   answerValue: iterateFeedback,
-                  generateLabel: '直接开始优化',
+                  generateLabel: '开始优化',
                   onSubmit: handleSubmitSessionAnswer,
                   onSkip: handleSkipSessionQuestion,
                   onGenerate: handleGenerateFromSession,

@@ -335,7 +335,7 @@ describe('Iterate page creation session flow', () => {
     expect(screen.getByText('动态优化会话')).toBeTruthy();
     expect(screen.getByText('系统建议保留跑酷核心，重点优化节奏和反馈')).toBeTruthy();
 
-    fireEvent.click(screen.getByText('直接开始优化'));
+    fireEvent.click(screen.getByText('开始优化'));
 
     await waitFor(() => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
@@ -365,7 +365,7 @@ describe('Iterate page creation session flow', () => {
 
     expect(screen.getByText('本轮优化会话遇到异常，建议重新开始，避免沿用不完整上下文。')).toBeTruthy();
     expect(screen.queryByText('这个问题不该继续出现')).toBeNull();
-    expect(screen.getByText('直接开始优化').disabled).toBe(true);
+    expect(screen.getByText('开始优化').disabled).toBe(true);
     expect(screen.getByText('跳过此题').disabled).toBe(true);
   });
 
