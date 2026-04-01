@@ -295,6 +295,27 @@ describe('Fork page creation session flow', () => {
     });
   });
 
+  test('shows the store validation message when the first fork instruction is too short', async () => {
+    mockStartCreationSession.mockRejectedValueOnce(new Error('至少输入 5 个字，再开始这一轮'));
+
+    render(<ForkPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
+      target: { value: '美化页面' },
+    });
+    fireEvent.click(screen.getByText('开始复刻'));
+
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({
+        title: '至少输入 5 个字，再开始这一轮',
+      }));
+    });
+  });
+
   test('renders fork creation session and can trigger generation', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: {
