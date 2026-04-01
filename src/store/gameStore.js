@@ -952,86 +952,6 @@ export const useGameStore = create((set, get) => {
     }
   },
 
-  iterateGame: async (gameId, feedback) => {
-    clearActiveTaskRuntime();
-    clearActiveSessionRuntime();
-
-    set({
-      currentTask: null,
-      currentTaskEvents: [],
-      currentTaskCursor: 0,
-      isLoading: true,
-      isGenerating: true,
-      error: null,
-      terminalError: null,
-      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
-      creationSession: null,
-      creationSessionError: null,
-      creationSessionSubmitting: false,
-      creationSessionRestoring: false,
-      creationSessionContext: null,
-      generationProgress: {
-        stageIndex: 0,
-        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
-        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
-        pct: DISPLAY_PIPELINE_STAGES[0].pct,
-      },
-    });
-
-    try {
-      const result = await gameService.iterateGame(gameId, feedback);
-      const currentGame = get().currentGame;
-      const gameTitle = currentGame?.title || '';
-      const promptPreview = feedback ? String(feedback).slice(0, 80) : '';
-
-      set({
-        generatingGameId: result.gameId || gameId,
-        isLoading: false,
-      });
-
-      if (result.generationTask?.taskId) {
-        set((state) => ({
-          trackedTasks: mergeTrackedTaskItems(
-            state.trackedTasks,
-            buildTrackedTaskItem(result.generationTask, {
-              gameId: result.gameId || gameId,
-              gameTitle,
-              promptPreview,
-              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
-            })
-          ),
-        }));
-      }
-
-      if (result.generationTask?.taskId) {
-        await get()._beginTaskTracking(result.generationTask, {
-          gameId: result.gameId || gameId,
-          resetEvents: true,
-          preloadGame: true,
-          taskMeta: {
-            gameTitle,
-            promptPreview,
-          },
-        });
-      } else {
-        throw new Error('优化响应缺少 generationTask');
-      }
-
-      return result;
-    } catch (error) {
-      const message = error?.message || '优化失败，请重试';
-      clearPersistedGenerationTaskSnapshot();
-      set({
-        isLoading: false,
-        isGenerating: false,
-        generationProgress: null,
-        currentTask: null,
-        error: message,
-      });
-      throw error;
-    }
-  },
-
   startCreationSession: async (prompt, title, options = {}) => {
     if (countPromptCharacters(prompt) < 5) {
       throw new Error('至少输入 5 个字，再开始这一轮');
@@ -1126,6 +1046,41 @@ export const useGameStore = create((set, get) => {
       const message = deriveCreationSessionErrorMessage(error, '恢复创作会话失败，请手动重新开始');
       set({
         creationSessionRestoring: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+  },
+
+  getMatchingActiveCreationSession: async (options = {}) => {
+    const {
+      entryMode = '',
+      sourceGameId = '',
+      silentIfMissing = true,
+    } = options;
+
+    try {
+      const session = await gameService.getActiveCreationSession();
+      const matchesEntryMode = !entryMode || session?.entryMode === entryMode;
+      const expectedSourceGameId = String(sourceGameId || '');
+      const matchesSourceGameId = !expectedSourceGameId
+        || String(session?.sourceGameId || '') === expectedSourceGameId;
+
+      get().resetCreationSessionState();
+
+      if (matchesEntryMode && matchesSourceGameId) {
+        return session;
+      }
+
+      return null;
+    } catch (error) {
+      if (silentIfMissing && (error?.statusCode === 404 || /not found|不存在|没有/i.test(error?.message || ''))) {
+        get().resetCreationSessionState();
+        return null;
+      }
+
+      const message = deriveCreationSessionErrorMessage(error, '恢复创作会话失败，请手动重新开始');
+      set({
         creationSessionError: message,
       });
       throw new Error(message);

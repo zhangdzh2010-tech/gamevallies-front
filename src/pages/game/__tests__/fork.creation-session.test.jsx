@@ -6,14 +6,13 @@ const mockStartCreationSession = jest.fn(() => Promise.resolve());
 const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
 const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockRestoreActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockGetMatchingActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
 const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
 const mockResetCreationSessionState = jest.fn();
 const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockOpenIteratePageWithAuth = jest.fn();
-const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
 
 let mockGameStoreState;
 
@@ -206,7 +205,6 @@ jest.mock('../../../services/game', () => ({
       displayName: '作者A',
     },
   })),
-  getActiveCreationSession: mockGetActiveCreationSession,
 }));
 
 jest.mock('../../../store/gameStore', () => ({
@@ -243,6 +241,7 @@ function buildGameStoreState(overrides = {}) {
     creationSession: null,
     creationSessionError: null,
     creationSessionSubmitting: false,
+    getMatchingActiveCreationSession: mockGetMatchingActiveCreationSession,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
@@ -467,19 +466,22 @@ describe('Fork page creation session flow', () => {
         creationSessionError: null,
       };
     });
+    mockGetMatchingActiveCreationSession.mockImplementationOnce(async () => {
+      mockResetCreationSessionState();
+      return {
+        sessionId: 'session-fork',
+        entryMode: 'fork',
+        sourceGameId: 'source-1',
+        title: '原始跑酷',
+        prompt: '继续这轮新版本对话',
+      };
+    });
     mockGameStoreState = buildGameStoreState({
       creationSession: {
         sessionId: 'session-other',
         entryMode: 'create',
         status: 'collecting',
       },
-    });
-    mockGetActiveCreationSession.mockResolvedValueOnce({
-      sessionId: 'session-fork',
-      entryMode: 'fork',
-      sourceGameId: 'source-1',
-      title: '原始跑酷',
-      prompt: '继续这轮新版本对话',
     });
 
     render(<ForkPage />);

@@ -70,7 +70,6 @@ jest.mock('../../services/game', () => ({
   getGame: (...args) => mockGetGame(...args),
   getMyGames: jest.fn(),
   generateGame: jest.fn(),
-  iterateGame: jest.fn(),
   getGenerationStatus: jest.fn(),
   getGenerationTask: jest.fn(),
   getGenerationTaskEvents: jest.fn(),

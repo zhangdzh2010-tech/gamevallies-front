@@ -78,6 +78,7 @@ export default function GameForkPage() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
+    getMatchingActiveCreationSession,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -189,19 +190,16 @@ export default function GameForkPage() {
 
     forkSessionBootstrappedSourceIdRef.current = sourceGameId;
 
-    gameService.getActiveCreationSession()
+    getMatchingActiveCreationSession({
+      entryMode: 'fork',
+      sourceGameId,
+    })
       .then((restoredSession) => {
-        const restoredMatches = restoredSession
-          && restoredSession.entryMode === 'fork'
-          && String(restoredSession.sourceGameId || '') === String(sourceGameId);
-
-        if (restoredMatches) {
-          resetCreationSessionState();
+        if (restoredSession) {
           setResumeCandidate(restoredSession);
           return restoredSession;
         }
 
-        resetCreationSessionState();
         setResumeCandidate(null);
         return null;
       })
@@ -215,9 +213,9 @@ export default function GameForkPage() {
       });
   }, [
     canForkGame,
+    getMatchingActiveCreationSession,
     isCurrentForkSession,
     isLoading,
-    resetCreationSessionState,
     sourceGame,
     sourceGameId,
   ]);
