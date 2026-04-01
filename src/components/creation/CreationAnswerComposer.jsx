@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
 import { View, Text, Textarea } from '@tarojs/components';
+import { getInputEventValue } from '../../utils/inputValue';
 import './CreationSession.scss';
 
 function emitValue(onChange, nextValue) {
@@ -21,6 +22,16 @@ export function CreationAnswerComposer({
   suggestions = [],
   disabled = false,
 }) {
+  const handleChange = (event) => {
+    const nextValue = getInputEventValue(event);
+    onChange?.({
+      ...event,
+      detail: { ...event?.detail, value: nextValue },
+      target: { ...event?.target, value: nextValue },
+      currentTarget: { ...event?.currentTarget, value: nextValue },
+    });
+  };
+
   return (
     <View className="creation-answer-composer">
       <Textarea
@@ -28,7 +39,8 @@ export function CreationAnswerComposer({
         placeholder={placeholder}
         placeholderStyle="color: #67627d"
         value={value}
-        onInput={onChange}
+        onInput={handleChange}
+        onChange={handleChange}
         autoHeight
         disabled={disabled}
         maxlength={1000}

@@ -67,6 +67,7 @@ export const Input = React.forwardRef(function Input(
   {
     value = '',
     onInput,
+    onChange,
     maxlength,
     placeholder,
     className,
@@ -81,7 +82,15 @@ export const Input = React.forwardRef(function Input(
       placeholder={placeholder}
       data-maxlength={maxlength}
       value={value}
-      onChange={(event) => onInput?.({ detail: { value: event.target.value } })}
+      onChange={(event) => {
+        const payload = {
+          detail: { value: event.target.value },
+          target: { value: event.target.value },
+          currentTarget: { value: event.target.value },
+        };
+        onInput?.(payload);
+        onChange?.(payload);
+      }}
       {...omitUnsupportedDomProps(props)}
     />
   );
@@ -91,6 +100,7 @@ export const Textarea = React.forwardRef(function Textarea(
   {
     value = '',
     onInput,
+    onChange,
     maxlength,
     placeholder,
     className,
@@ -105,7 +115,15 @@ export const Textarea = React.forwardRef(function Textarea(
       placeholder={placeholder}
       data-maxlength={maxlength}
       value={value}
-      onChange={(event) => onInput?.({ detail: { value: event.target.value } })}
+      onChange={(event) => {
+        const payload = {
+          detail: { value: event.target.value },
+          target: { value: event.target.value },
+          currentTarget: { value: event.target.value },
+        };
+        onInput?.(payload);
+        onChange?.(payload);
+      }}
       {...omitUnsupportedDomProps(props)}
     />
   );
