@@ -409,6 +409,63 @@ describe('gameStore creation session actions', () => {
     }));
   });
 
+  test('generateFromCreationSession preserves iterate task routing metadata for tracked tasks', async () => {
+    const beginTaskTracking = jest.fn(() => Promise.resolve());
+
+    useGameStore.setState({
+      creationSession: {
+        sessionId: 'session-iterate',
+        status: 'ready',
+        revision: 6,
+        prompt: '把节奏做得更快一点',
+        title: '贪吃蛇',
+        entryMode: 'iterate',
+        sourceGameId: 'source-game-1',
+      },
+      trackedTasks: [],
+      _beginTaskTracking: beginTaskTracking,
+    });
+
+    mockGenerateFromCreationSession.mockResolvedValue({
+      gameId: 'new-game-1',
+      title: '贪吃蛇 Plus',
+      status: 'generating',
+      canPlay: true,
+      generationTask: {
+        taskId: 'task-iterate-1',
+        taskType: 'pipeline_run',
+        status: 'queued',
+        gameId: 'new-game-1',
+        progressPct: 5,
+      },
+    });
+
+    await useGameStore.getState().generateFromCreationSession({
+      generationTier: 'standard',
+    });
+
+    expect(mockGenerateFromCreationSession).toHaveBeenCalledWith('session-iterate', {
+      revision: 6,
+      generationTier: 'standard',
+    });
+
+    expect(useGameStore.getState().trackedTasks[0]).toEqual(expect.objectContaining({
+      taskId: 'task-iterate-1',
+      taskType: 'pipeline_iterate',
+      gameId: 'source-game-1',
+    }));
+
+    expect(beginTaskTracking).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: 'task-iterate-1',
+    }), expect.objectContaining({
+      gameId: 'new-game-1',
+      taskMeta: expect.objectContaining({
+        taskType: 'pipeline_iterate',
+        routeGameId: 'source-game-1',
+      }),
+    }));
+  });
+
   test('generateFromCreationSession supports the legacy create-page signature with explicit sessionId', async () => {
     const beginTaskTracking = jest.fn(() => Promise.resolve());
 

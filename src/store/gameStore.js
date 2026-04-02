@@ -514,10 +514,18 @@ function buildTrackedTaskItem(task, options = {}) {
     return null;
   }
 
+  const taskType = (() => {
+    const explicitTaskType = options.taskType || '';
+    if (explicitTaskType && explicitTaskType !== 'pipeline_run') {
+      return explicitTaskType;
+    }
+    return task.taskType || explicitTaskType || 'pipeline_run';
+  })();
+
   return normalizeTrackedTaskItem({
     taskId: task.taskId,
-    taskType: task.taskType,
-    gameId: task.gameId || options.gameId || '',
+    taskType,
+    gameId: options.gameId || task.gameId || '',
     gameTitle: options.gameTitle || '',
     promptPreview: options.promptPreview || '',
     status: task.status,
@@ -530,7 +538,7 @@ function buildTrackedTaskItem(task, options = {}) {
   });
 }
 
-function persistActiveGenerationTask(task) {
+function persistActiveGenerationTask(task, options = {}) {
   if (!task?.taskId || isTerminalTaskStatus(task.status)) {
     clearPersistedGenerationTaskSnapshot();
     return;
@@ -541,8 +549,8 @@ function persistActiveGenerationTask(task) {
       ACTIVE_GENERATION_TASK_KEY,
       JSON.stringify({
         taskId: task.taskId,
-        taskType: task.taskType || '',
-        gameId: task.gameId || '',
+        taskType: options.taskType || task.taskType || '',
+        gameId: options.gameId || task.gameId || '',
         status: task.status || 'queued',
         version: task.version ?? null,
         updatedAt: Date.now(),
@@ -1239,6 +1247,12 @@ export const useGameStore = create((set, get) => {
         : resolvedSession?.prompt
           ? String(resolvedSession.prompt).slice(0, 80)
           : '';
+      const trackedTaskType = resolvedSession?.entryMode === 'iterate'
+        ? 'pipeline_iterate'
+        : (result.generationTask?.taskType || 'pipeline_run');
+      const trackedTaskGameId = resolvedSession?.entryMode === 'iterate'
+        ? (resolvedSession?.sourceGameId || gameId)
+        : gameId;
 
       set({
         generatingGameId: gameId,
@@ -1259,7 +1273,8 @@ export const useGameStore = create((set, get) => {
           trackedTasks: mergeTrackedTaskItems(
             state.trackedTasks,
             buildTrackedTaskItem(result.generationTask, {
-              gameId,
+              gameId: trackedTaskGameId,
+              taskType: trackedTaskType,
               gameTitle,
               promptPreview,
               latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
@@ -1272,6 +1287,8 @@ export const useGameStore = create((set, get) => {
           resetEvents: true,
           preloadGame: false,
           taskMeta: {
+            taskType: trackedTaskType,
+            routeGameId: trackedTaskGameId,
             gameTitle,
             promptPreview,
           },
@@ -1345,10 +1362,15 @@ export const useGameStore = create((set, get) => {
 
     const gameId = options.gameId || task?.gameId || '';
     const taskMeta = options.taskMeta || {};
+    const trackedTaskType = taskMeta.taskType || task?.taskType || 'pipeline_run';
+    const trackedTaskGameId = taskMeta.routeGameId || gameId;
     const progress = buildProgressFromTask(task, []);
 
     set((state) => ({
-      currentTask: task,
+      currentTask: {
+        ...task,
+        taskType: trackedTaskType,
+      },
       currentTaskEvents: options.resetEvents ? [] : state.currentTaskEvents,
       currentTaskCursor: options.resetEvents ? 0 : state.currentTaskCursor,
       generatingGameId: gameId,
@@ -1361,7 +1383,8 @@ export const useGameStore = create((set, get) => {
       trackedTasks: mergeTrackedTaskItems(
         state.trackedTasks,
         buildTrackedTaskItem(task, {
-          gameId,
+          gameId: trackedTaskGameId,
+          taskType: trackedTaskType,
           gameTitle: taskMeta.gameTitle || state.currentGame?.title || '',
           promptPreview: taskMeta.promptPreview || '',
           latestMessage: progress.message,
@@ -1369,7 +1392,10 @@ export const useGameStore = create((set, get) => {
       ),
     }));
 
-    persistActiveGenerationTask(task);
+    persistActiveGenerationTask(task, {
+      taskType: trackedTaskType,
+      gameId: trackedTaskGameId,
+    });
 
     if (options.preloadGame !== false && gameId && String(get().currentGame?.id || '') !== String(gameId)) {
       gameService.getGame(gameId).then((game) => {
@@ -1465,9 +1491,10 @@ export const useGameStore = create((set, get) => {
         generationProgress: progress || state.generationProgress,
         trackedTasks: latestTask?.taskId
           ? mergeTrackedTaskItems(
-              state.trackedTasks,
-              buildTrackedTaskItem(latestTask, {
-                gameId: latestTask.gameId,
+            state.trackedTasks,
+            buildTrackedTaskItem(latestTask, {
+                gameId: existingTrackedTask?.gameId || latestTask.gameId,
+                taskType: existingTrackedTask?.taskType || latestTask.taskType,
                 gameTitle: existingTrackedTask?.gameTitle || state.currentGame?.title || '',
                 promptPreview: existingTrackedTask?.promptPreview || '',
                 latestMessage: progress?.message || getLatestTaskMessage(mergedEvents, ''),
@@ -1484,9 +1511,14 @@ export const useGameStore = create((set, get) => {
     const events = get().currentTaskEvents;
     const progress = buildProgressFromTask(task, events);
     const existingTrackedTask = get().trackedTasks.find((item) => item.taskId === task.taskId);
+    const trackedTaskType = existingTrackedTask?.taskType || task.taskType || 'pipeline_run';
+    const trackedTaskGameId = existingTrackedTask?.gameId || task.gameId || get().generatingGameId;
 
     set((state) => ({
-      currentTask: task,
+      currentTask: {
+        ...task,
+        taskType: trackedTaskType,
+      },
       generatingGameId: task.gameId || state.generatingGameId,
       generationProgress: progress,
       latestTaskMessage: progress.message,
@@ -1495,7 +1527,8 @@ export const useGameStore = create((set, get) => {
       trackedTasks: mergeTrackedTaskItems(
         state.trackedTasks,
         buildTrackedTaskItem(task, {
-          gameId: task.gameId || state.generatingGameId,
+          gameId: trackedTaskGameId,
+          taskType: trackedTaskType,
           gameTitle: existingTrackedTask?.gameTitle || state.currentGame?.title || '',
           promptPreview: existingTrackedTask?.promptPreview || '',
           latestMessage: progress.message,
@@ -1504,7 +1537,10 @@ export const useGameStore = create((set, get) => {
       ),
     }));
 
-    persistActiveGenerationTask(task);
+    persistActiveGenerationTask(task, {
+      taskType: trackedTaskType,
+      gameId: trackedTaskGameId,
+    });
 
     if (isTerminalTaskStatus(task.status)) {
       await get()._handleTaskTerminal(task);
@@ -1561,6 +1597,9 @@ export const useGameStore = create((set, get) => {
 
   _handleTaskTerminal: async (task) => {
     clearActiveTaskRuntime();
+    const existingTrackedTask = get().trackedTasks.find((item) => item.taskId === task?.taskId);
+    const trackedTaskType = existingTrackedTask?.taskType || task?.taskType || 'pipeline_run';
+    const trackedTaskGameId = existingTrackedTask?.gameId || task?.gameId || get().generatingGameId;
 
     // Treat both "succeeded" (frontend) and "completed" (schema) as success.
     if (task?.status === 'succeeded' || task?.status === 'completed') {
@@ -1574,7 +1613,10 @@ export const useGameStore = create((set, get) => {
         const canPlayGame = game?.canPlay !== false;
 
         set((state) => ({
-          currentTask: task,
+          currentTask: {
+            ...task,
+            taskType: trackedTaskType,
+          },
           currentGame: game,
           canPlay: canPlayGame,
           generationProgress: doneProgress,
@@ -1586,7 +1628,8 @@ export const useGameStore = create((set, get) => {
             buildTrackedTaskItem(
               { ...task, progressPct: 100, completedAt: task.completedAt || new Date().toISOString() },
               {
-                gameId: task.gameId || state.generatingGameId,
+                gameId: trackedTaskGameId,
+                taskType: trackedTaskType,
                 gameTitle: game?.title || state.currentGame?.title || '',
                 promptPreview: state.trackedTasks.find((item) => item.taskId === task.taskId)?.promptPreview || '',
                 latestMessage: doneProgress.message,
@@ -1615,7 +1658,10 @@ export const useGameStore = create((set, get) => {
           const canPlayGame = fallbackGame?.canPlay !== false;
 
           set((state) => ({
-            currentTask: task,
+            currentTask: {
+              ...task,
+              taskType: trackedTaskType,
+            },
             currentGame: fallbackGame,
             canPlay: canPlayGame,
             generationProgress: doneProgress,
@@ -1627,7 +1673,8 @@ export const useGameStore = create((set, get) => {
               buildTrackedTaskItem(
                 { ...task, progressPct: 100, completedAt: task.completedAt || new Date().toISOString() },
                 {
-                  gameId: task.gameId || state.generatingGameId,
+                  gameId: trackedTaskGameId,
+                  taskType: trackedTaskType,
                   gameTitle: fallbackGame?.title || state.currentGame?.title || '',
                   promptPreview: state.trackedTasks.find((item) => item.taskId === task.taskId)?.promptPreview || '',
                   latestMessage: doneProgress.message,
@@ -1664,7 +1711,10 @@ export const useGameStore = create((set, get) => {
 
     clearPersistedGenerationTaskSnapshot();
     set((state) => ({
-      currentTask: task,
+      currentTask: {
+        ...task,
+        taskType: trackedTaskType,
+      },
       isGenerating: false,
       isLoading: false,
       generationProgress: null,
@@ -1676,7 +1726,8 @@ export const useGameStore = create((set, get) => {
         buildTrackedTaskItem(
           { ...task, completedAt: task.completedAt || new Date().toISOString() },
           {
-            gameId: task.gameId || state.generatingGameId,
+            gameId: trackedTaskGameId,
+            taskType: trackedTaskType,
             gameTitle: state.trackedTasks.find((item) => item.taskId === task.taskId)?.gameTitle || state.currentGame?.title || '',
             promptPreview: state.trackedTasks.find((item) => item.taskId === task.taskId)?.promptPreview || '',
             latestMessage: deriveTaskErrorMessage(task),
@@ -1744,11 +1795,15 @@ export const useGameStore = create((set, get) => {
         throw new Error('任务不存在');
       }
 
-      await get()._beginTaskTracking(task, {
-        gameId: persistedTask.gameId || task.gameId,
-        resetEvents: true,
-        preloadGame: false,
-      });
+        await get()._beginTaskTracking(task, {
+          gameId: persistedTask.gameId || task.gameId,
+          resetEvents: true,
+          preloadGame: false,
+          taskMeta: {
+            taskType: persistedTask.taskType || task.taskType || 'pipeline_run',
+            routeGameId: persistedTask.gameId || task.gameId || '',
+          },
+        });
 
       return true;
     } catch (_error) {
@@ -1839,7 +1894,8 @@ export const useGameStore = create((set, get) => {
           trackedTasks: mergeTrackedTaskItems(
             state.trackedTasks,
             buildTrackedTaskItem(task, {
-              gameId: task.gameId,
+              gameId: existingTrackedTask?.gameId || task.gameId,
+              taskType: existingTrackedTask?.taskType || task.taskType,
               gameTitle,
               promptPreview: currentTrackedTask?.promptPreview || existingTrackedTask?.promptPreview || '',
               latestMessage: currentTrackedTask?.latestMessage || existingTrackedTask?.latestMessage || '',

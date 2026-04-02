@@ -1,66 +1,181 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { chromium } from 'playwright';
 
-const BASE_URL = 'http://127.0.0.1:4173';
+const args = new Map(
+  process.argv.slice(2).map((entry) => {
+    const [key, value = 'true'] = entry.replace(/^--/, '').split('=');
+    return [key, value];
+  })
+);
 
-function json(body, status = 200) {
-  return {
-    status,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      code: status >= 400 ? status : 0,
-      message: status >= 400 ? 'error' : 'success',
-      data: body,
-    }),
-  };
+const BASE_URL = args.get('baseUrl') || process.env.GV_E2E_BASE_URL || 'https://gamevallies.com';
+const API_BASE_URL = args.get('apiBaseUrl') || process.env.GV_E2E_API_BASE_URL || `${BASE_URL}/api/v1`;
+const TOKEN_PATH = process.env.GV_E2E_TOKEN_PATH || '/tmp/gv_token.txt';
+const ARTIFACT_DIR = process.env.GV_E2E_ARTIFACT_DIR || path.resolve('tmp/playwright-artifacts');
+const ITERATE_GAME_ID = process.env.GV_E2E_ITERATE_GAME_ID || '4f0e467a-d8b0-4420-8ac9-33604189017c';
+const FORK_SOURCE_GAME_ID = process.env.GV_E2E_FORK_SOURCE_GAME_ID || '37a543b4-ed14-4591-9af3-ff43864486e4';
+
+const ROUNDS = Number(args.get('rounds') || process.env.GV_E2E_ROUNDS || 10);
+const CONCURRENT_ROUNDS = Number(args.get('concurrentRounds') || process.env.GV_E2E_CONCURRENT_ROUNDS || 3);
+const HEADLESS = (args.get('headed') || '').toLowerCase() !== 'true';
+
+async function readToken() {
+  const token = (await fs.readFile(TOKEN_PATH, 'utf8')).trim();
+  assert(token, `Missing token at ${TOKEN_PATH}`);
+  return token;
 }
 
-function errorJson(message, status = 400) {
-  return {
-    status,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      code: status,
-      message,
-      data: null,
-    }),
-  };
-}
-
-function buildAuthStorage() {
-  return {
-    token: 'playwright-token',
-    user: {
-      id: 'user-1',
-      username: 'playwright_user',
-      displayName: 'Playwright User',
+async function apiRequest(token, method, routePath, body) {
+  const response = await fetch(`${API_BASE_URL}${routePath}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+  let payload = null;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    payload = null;
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    text,
+    payload,
+    data: payload?.data ?? null,
   };
 }
 
-async function createContext(browser, extraStorage = {}) {
-  const context = await browser.newContext();
-  const storage = {
-    ...buildAuthStorage(),
-    ...extraStorage,
-  };
+async function apiGet(token, routePath, acceptedStatuses = [200]) {
+  const result = await apiRequest(token, 'GET', routePath);
+  if (!acceptedStatuses.includes(result.status)) {
+    throw new Error(`GET ${routePath} failed: ${result.status} ${result.text}`);
+  }
+  return result;
+}
+
+async function apiPost(token, routePath, body = {}, acceptedStatuses = [200, 201]) {
+  const result = await apiRequest(token, 'POST', routePath, body);
+  if (!acceptedStatuses.includes(result.status)) {
+    throw new Error(`POST ${routePath} failed: ${result.status} ${result.text}`);
+  }
+  return result;
+}
+
+async function getCurrentUser(token) {
+  const result = await apiGet(token, '/users/me');
+  return result.data;
+}
+
+async function getMyGames(token) {
+  const result = await apiGet(token, '/games/my?page=1&limit=20');
+  return result.data?.items || [];
+}
+
+async function getGame(token, gameId) {
+  const result = await apiGet(token, `/games/${gameId}`);
+  return result.data;
+}
+
+async function getActiveSession(token) {
+  const result = await apiGet(token, '/games/creation-sessions/active', [200, 404]);
+  return result.status === 404 ? null : result.data;
+}
+
+async function getTask(token, taskId) {
+  const result = await apiGet(token, `/games/tasks/${taskId}`, [200, 404]);
+  return result.status === 404 ? null : result.data;
+}
+
+async function abandonSession(token, sessionId) {
+  return apiPost(token, `/games/creation-sessions/${sessionId}/abandon`, {}, [200, 201, 409]);
+}
+
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function clearActiveSession(token, label = 'cleanup') {
+  for (let attempt = 1; attempt <= 20; attempt += 1) {
+    const active = await getActiveSession(token);
+    if (!active) {
+      return null;
+    }
+
+    if (active.status === 'generating') {
+      if (active.generationTaskId) {
+        const task = await getTask(token, active.generationTaskId);
+        if (task && ['succeeded', 'failed', 'canceled', 'timed_out'].includes(task.status)) {
+          await sleep(1500);
+          continue;
+        }
+      }
+      await sleep(3000);
+      continue;
+    }
+
+    const abandonResult = await abandonSession(token, active.id || active.sessionId);
+    if (abandonResult.status === 409) {
+      await sleep(1500);
+      continue;
+    }
+
+    await sleep(1000);
+  }
+
+  const active = await getActiveSession(token);
+  throw new Error(`[${label}] active session could not be cleared: ${JSON.stringify(active)}`);
+}
+
+function wrapStorageValue(value) {
+  return JSON.stringify({
+    data: value,
+    timestamp: Date.now(),
+  });
+}
+
+async function createContext(browser, { token, user, iterateEntryGame = null }) {
+  const context = await browser.newContext({
+    viewport: { width: 430, height: 932 },
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+  });
 
   await context.addInitScript((payload) => {
-    const wrap = (value) => JSON.stringify({
-      data: value,
-      timestamp: Date.now(),
-    });
+    [
+      'gamevallies_create_entry_intent',
+      'gamevallies_active_generation_task',
+      'gamevallies_tracked_generation_tasks',
+      'gamevallies_post_login_redirect',
+      'gamevallies_profile_active_tab',
+    ].forEach((key) => localStorage.removeItem(key));
 
-    localStorage.setItem('gamevallies_access_token', wrap(payload.token));
-    localStorage.setItem('gamevallies_user', wrap(payload.user));
+    localStorage.setItem('gamevallies_access_token', payload.token);
+    localStorage.setItem('gamevallies_user', payload.user);
 
     if (payload.iterateEntryGame) {
-      localStorage.setItem('gamevallies_iterate_entry_game', JSON.stringify({
-        ...payload.iterateEntryGame,
-        createdAt: Date.now(),
-      }));
+      localStorage.setItem(
+        'gamevallies_iterate_entry_game',
+        JSON.stringify({
+          ...payload.iterateEntryGame,
+          createdAt: Date.now(),
+        })
+      );
+    } else {
+      localStorage.removeItem('gamevallies_iterate_entry_game');
     }
-  }, storage);
+  }, {
+    token: wrapStorageValue(token),
+    user: wrapStorageValue(user),
+    iterateEntryGame,
+  });
 
   return context;
 }
@@ -70,7 +185,7 @@ function attachDiagnostics(page, label) {
   const consoleErrors = [];
   const requestFailures = [];
   const ignoredConsolePatterns = [
-    /creation-sessions\/active: not found/i,
+    /creation-sessions\/active.*404/i,
     /Failed to load resource: the server responded with a status of 404/i,
   ];
 
@@ -79,395 +194,38 @@ function attachDiagnostics(page, label) {
   });
 
   page.on('console', (msg) => {
-    if (msg.type() === 'error') {
-      const text = msg.text();
-      if (ignoredConsolePatterns.some((pattern) => pattern.test(text))) {
-        return;
-      }
-      consoleErrors.push(text);
+    if (msg.type() !== 'error') {
+      return;
     }
+    const text = msg.text();
+    if (ignoredConsolePatterns.some((pattern) => pattern.test(text))) {
+      return;
+    }
+    consoleErrors.push(text);
   });
 
   page.on('requestfailed', (request) => {
     requestFailures.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`);
   });
 
-  return () => {
-    if (pageErrors.length || consoleErrors.length || requestFailures.length) {
-      const detail = [
-        pageErrors.length ? `pageerror:\n${pageErrors.join('\n')}` : '',
-        consoleErrors.length ? `console:\n${consoleErrors.join('\n')}` : '',
-        requestFailures.length ? `requestfailed:\n${requestFailures.join('\n')}` : '',
-      ].filter(Boolean).join('\n\n');
-
-      throw new Error(`[${label}] 页面诊断失败\n${detail}`);
+  return async (artifactName = label) => {
+    if (!pageErrors.length && !consoleErrors.length && !requestFailures.length) {
+      return;
     }
+
+    await fs.mkdir(ARTIFACT_DIR, { recursive: true });
+    const screenshotPath = path.join(ARTIFACT_DIR, `${artifactName}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+
+    const detail = [
+      pageErrors.length ? `pageerror:\n${pageErrors.join('\n')}` : '',
+      consoleErrors.length ? `console:\n${consoleErrors.join('\n')}` : '',
+      requestFailures.length ? `requestfailed:\n${requestFailures.join('\n')}` : '',
+      `screenshot: ${screenshotPath}`,
+    ].filter(Boolean).join('\n\n');
+
+    throw new Error(`[${label}] 页面诊断失败\n${detail}`);
   };
-}
-
-async function installRoutes(page, scenario) {
-  const requestLog = [];
-
-  await page.route('**/api/v1/**', async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    const path = url.pathname;
-    const method = request.method();
-    const postData = request.postData() || '';
-    const body = postData ? JSON.parse(postData) : null;
-    requestLog.push({ method, path, body });
-
-    if (path === '/api/v1/games/creation-sessions/active' && method === 'GET') {
-      await route.fulfill(errorJson('not found', 404));
-      return;
-    }
-
-    if (path === '/api/v1/games/game-1' && method === 'GET') {
-      await route.fulfill(json({
-        id: 'game-1',
-        title: '贪吃蛇',
-        status: 'ready',
-        description: '一款节奏很快的贪吃蛇小游戏',
-        orientation: 'portrait',
-        canPlay: true,
-        qualityScore: 9.7,
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/game-1/generation-status' && method === 'GET') {
-      await route.fulfill(json(null));
-      return;
-    }
-
-    if (path === '/api/v1/games/source-1' && method === 'GET') {
-      await route.fulfill(json({
-        id: 'source-1',
-        title: '节奏达人',
-        status: 'published',
-        description: '一款节奏点击游戏',
-        orientation: 'portrait',
-        allowFork: true,
-        plays: 6600,
-        likes: 891,
-        forks: 190,
-        author: { id: 'author-1', displayName: 'seed_creator' },
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/creation-sessions' && method === 'POST') {
-      if (!body?.entryMode || body?.entryMode === 'create') {
-        await route.fulfill(json({
-          id: 'create-session-1',
-          status: 'collecting',
-          revision: 1,
-          entryMode: 'create',
-          titleDraft: body.title || '2048',
-          initialPrompt: body.prompt,
-          orientation: body.orientation || 'portrait',
-          conversation: [
-            { id: 'msg-user-create-1', role: 'user', content: body.prompt },
-          ],
-          currentQuestion: {
-            id: 'question-create-1',
-            slotKey: 'win_condition',
-            prompt: '这局里玩家怎样算赢？',
-            placeholder: '例如：合成到 2048',
-            required: true,
-            options: ['合成到 2048', '达到指定分数'],
-          },
-        }));
-        return;
-      }
-
-      if (body?.entryMode === 'iterate') {
-        await route.fulfill(json({
-          id: 'iterate-session-1',
-          status: 'ready',
-          revision: 5,
-          entryMode: 'iterate',
-          titleDraft: '贪吃蛇',
-          initialPrompt: body.prompt,
-          sourceGameId: 'game-1',
-          orientation: 'portrait',
-          conversation: [
-            { id: 'msg-user-iterate-1', role: 'user', content: body.prompt },
-          ],
-        }));
-        return;
-      }
-
-      if (body?.entryMode === 'fork') {
-        await route.fulfill(json({
-          id: 'fork-session-1',
-          status: 'ready',
-          revision: 7,
-          entryMode: 'fork',
-          titleDraft: '节奏达人',
-          initialPrompt: body.prompt,
-          sourceGameId: 'source-1',
-          orientation: 'portrait',
-          conversation: [
-            { id: 'msg-user-fork-1', role: 'user', content: body.prompt },
-          ],
-        }));
-        return;
-      }
-    }
-
-    if (path === '/api/v1/games/creation-sessions/create-session-1/messages' && method === 'POST') {
-      await route.fulfill(json({
-        id: 'create-session-1',
-        status: 'ready',
-        revision: 2,
-        entryMode: 'create',
-        titleDraft: '2048',
-        initialPrompt: '做一个 2048 游戏',
-        orientation: 'portrait',
-        conversation: [
-          { id: 'msg-user-create-1', role: 'user', content: '做一个 2048 游戏' },
-          { id: 'msg-user-create-2', role: 'user', content: body.content },
-        ],
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/creation-sessions/create-session-1/generate' && method === 'POST') {
-      scenario.createGenerateBody = body;
-      await route.fulfill(json({
-        id: 'create-session-1',
-        status: 'generating',
-        revision: 3,
-        entryMode: 'create',
-        generatedGameId: 'created-game-1',
-        generationTaskId: 'task-create-1',
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/creation-sessions/iterate-session-1/generate' && method === 'POST') {
-      scenario.iterateGenerateBody = body;
-      await route.fulfill(json({
-        id: 'iterate-session-1',
-        status: 'generating',
-        revision: 6,
-        entryMode: 'iterate',
-        sourceGameId: 'game-1',
-        generatedGameId: 'iterated-game-1',
-        generationTaskId: 'task-iterate-1',
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/creation-sessions/fork-session-1/generate' && method === 'POST') {
-      scenario.forkGenerateBody = body;
-      await route.fulfill(json({
-        id: 'fork-session-1',
-        status: 'generating',
-        revision: 8,
-        entryMode: 'fork',
-        sourceGameId: 'source-1',
-        generatedGameId: 'forked-game-1',
-        generationTaskId: 'task-fork-1',
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/tasks/task-create-1' && method === 'GET') {
-      await route.fulfill(json({
-        taskId: 'task-create-1',
-        taskType: 'pipeline_run',
-        status: 'running',
-        gameId: 'created-game-1',
-        progressPct: 40,
-        displayStageLabel: '生成游戏逻辑',
-        displayStageIndex: 2,
-        displayStagePct: 40,
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/tasks/task-iterate-1' && method === 'GET') {
-      await route.fulfill(json({
-        taskId: 'task-iterate-1',
-        taskType: 'pipeline_iterate',
-        status: 'running',
-        gameId: 'iterated-game-1',
-        progressPct: 35,
-        displayStageLabel: '生成游戏逻辑',
-        displayStageIndex: 2,
-        displayStagePct: 35,
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/tasks/task-fork-1' && method === 'GET') {
-      await route.fulfill(json({
-        taskId: 'task-fork-1',
-        taskType: 'pipeline_run',
-        status: 'running',
-        gameId: 'forked-game-1',
-        progressPct: 45,
-        displayStageLabel: '生成游戏逻辑',
-        displayStageIndex: 2,
-        displayStagePct: 45,
-      }));
-      return;
-    }
-
-    if (/^\/api\/v1\/games\/tasks\/task-(create|iterate|fork)-1\/events$/.test(path) && method === 'GET') {
-      await route.fulfill(json([]));
-      return;
-    }
-
-    if (path === '/api/v1/games/created-game-1' && method === 'GET') {
-      await route.fulfill(json({
-        id: 'created-game-1',
-        title: '2048',
-        status: 'ready',
-        orientation: 'portrait',
-        canPlay: true,
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/iterated-game-1' && method === 'GET') {
-      await route.fulfill(json({
-        id: 'iterated-game-1',
-        title: '贪吃蛇强化版',
-        status: 'ready',
-        orientation: 'portrait',
-        canPlay: true,
-        qualityScore: 9.9,
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/games/forked-game-1' && method === 'GET') {
-      await route.fulfill(json({
-        id: 'forked-game-1',
-        title: '节奏达人新版本',
-        status: 'ready',
-        orientation: 'portrait',
-        canPlay: true,
-      }));
-      return;
-    }
-
-    if (path === '/api/v1/users/quota' && method === 'GET') {
-      await route.fulfill(json({
-        remainingCreateCount: 99,
-        dailyQuota: 99,
-        usedCount: 0,
-        canCreate: true,
-        subscriptionActive: true,
-      }));
-      return;
-    }
-
-    console.log(`UNHANDLED ${method} ${path}`);
-    await route.fulfill(errorJson(`Unhandled route: ${method} ${path}`, 500));
-  });
-
-  return requestLog;
-}
-
-async function runCreateFlow(browser) {
-  const scenario = {};
-  const context = await createContext(browser);
-  const page = await context.newPage();
-  const verifyDiagnostics = attachDiagnostics(page, 'create');
-  const requestLog = await installRoutes(page, scenario);
-
-  await page.goto(`${BASE_URL}/#/pages/create/index`, { waitUntil: 'networkidle' });
-  await setTaroFieldByPlaceholder(page, '先说一句你想做什么游戏', '做一个 2048 游戏');
-  await page.getByText('开始创作').click();
-
-  await page.waitForTimeout(200);
-  await expectText(page, '这局里玩家怎样算赢？');
-  await setTaroFieldByPlaceholder(page, '例如：合成到 2048', '合成到 2048');
-  await page.getByText('提交回答').click();
-  await page.waitForTimeout(200);
-  await page.getByText('开始创作').click();
-  await page.waitForTimeout(500);
-
-  assert.deepEqual(scenario.createGenerateBody, { revision: 2 }, 'create generate 请求没有带 revision');
-  verifyDiagnostics();
-  await context.close();
-  return requestLog;
-}
-
-async function runIterateFlow(browser) {
-  const scenario = {};
-  const context = await createContext(browser, {
-    iterateEntryGame: {
-      id: 'game-1',
-      title: '贪吃蛇',
-      status: 'ready',
-      description: '一款节奏很快的贪吃蛇小游戏',
-      orientation: 'portrait',
-      canPlay: true,
-      qualityScore: 9.7,
-    },
-  });
-  const page = await context.newPage();
-  const verifyDiagnostics = attachDiagnostics(page, 'iterate');
-  const requestLog = await installRoutes(page, scenario);
-
-  await page.goto(`${BASE_URL}/#/pages/game/iterate/index?gameId=game-1`, { waitUntil: 'networkidle' });
-  await setTaroFieldByPlaceholder(page, '说说这次最想优化的部分', '把节奏做得更快，吃到食物时反馈更爽');
-  await page.getByText('开始优化').click();
-  await page.waitForTimeout(300);
-
-  await expectText(page, '开始优化');
-  const sessionButtons = page.getByText('开始优化');
-  await sessionButtons.last().click();
-  await page.waitForTimeout(500);
-
-  assert.deepEqual(scenario.iterateGenerateBody, { revision: 5 }, 'iterate generate 请求没有带 revision');
-
-  const pageText = await page.locator('body').innerText();
-  assert(
-    pageText.includes('优化进度') || pageText.includes('进行中...') || pageText.includes('生成游戏逻辑'),
-    `iterate 生成后没有进入进度态，当前页面文本:\n${pageText}`
-  );
-
-  verifyDiagnostics();
-  await context.close();
-  return requestLog;
-}
-
-async function runForkFlow(browser) {
-  const scenario = {};
-  const context = await createContext(browser);
-  const page = await context.newPage();
-  const verifyDiagnostics = attachDiagnostics(page, 'fork');
-  const requestLog = await installRoutes(page, scenario);
-
-  await page.goto(`${BASE_URL}/#/pages/game/fork/index?sourceGameId=source-1`, { waitUntil: 'networkidle' });
-  await setTaroFieldByPlaceholder(page, '说说你想保留什么、改变什么', '保留核心玩法，把节奏和美术都做得更爽');
-  await page.getByText('开始复刻').click();
-  await page.waitForTimeout(300);
-  const sessionButtons = page.getByText('开始复刻');
-  await sessionButtons.last().click();
-  await page.waitForTimeout(500);
-
-  assert.deepEqual(scenario.forkGenerateBody, { revision: 7 }, 'fork generate 请求没有带 revision');
-
-  const pageText = await page.locator('body').innerText();
-  assert(
-    pageText.includes('复刻进度') || pageText.includes('进行中...') || pageText.includes('生成游戏逻辑'),
-    `fork 生成后没有进入进度态，当前页面文本:\n${pageText}`
-  );
-
-  verifyDiagnostics();
-  await context.close();
-  return requestLog;
-}
-
-async function expectText(page, text) {
-  await page.getByText(text).waitFor({ state: 'visible', timeout: 5000 });
 }
 
 async function setTaroFieldByPlaceholder(page, placeholder, value) {
@@ -477,7 +235,7 @@ async function setTaroFieldByPlaceholder(page, placeholder, value) {
       || document.querySelector(`input[placeholder="${expectedPlaceholder}"]`)
       || document.querySelector(`[placeholder="${expectedPlaceholder}"]`)
     );
-  }, placeholder);
+  }, placeholder, { timeout: 15000 });
 
   await page.evaluate(({ expectedPlaceholder, nextValue }) => {
     const host = document.querySelector(`textarea[placeholder="${expectedPlaceholder}"]`)
@@ -510,21 +268,308 @@ async function setTaroFieldByPlaceholder(page, placeholder, value) {
   }, { expectedPlaceholder: placeholder, nextValue: value });
 }
 
-async function main() {
-  const browser = await chromium.launch({ headless: true });
+async function clickByText(page, text) {
+  await page.getByText(text, { exact: true }).last().click();
+}
+
+async function waitForNoBlockingError(page, label) {
+  const blockingTexts = [
+    '创建创作会话失败',
+    '加载要优化的作品失败',
+    '刚才没把这一轮优化准备好',
+    '刚才没把这一轮复刻准备好',
+    '请从“我的作品”重新进入',
+    '请从"我的作品"重新进入',
+    '创作阶段遇到问题',
+    '优化阶段遇到问题',
+    '复刻阶段遇到问题',
+  ];
+
+  const bodyText = await page.locator('body').innerText();
+  const hit = blockingTexts.find((text) => bodyText.includes(text));
+  if (hit) {
+    throw new Error(`[${label}] hit blocking page error: ${hit}\n${bodyText}`);
+  }
+}
+
+async function waitForSessionScreen(page, label) {
+  const deadline = Date.now() + 45000;
+
+  while (Date.now() < deadline) {
+    await waitForNoBlockingError(page, label);
+    const bodyText = await page.locator('body').innerText();
+    if (bodyText.includes('重新开始')) {
+      return bodyText;
+    }
+    if (bodyText.includes('继续上次创作') || bodyText.includes('继续上次优化') || bodyText.includes('继续上次复刻')) {
+      throw new Error(`[${label}] unexpectedly landed on resume screen\n${bodyText}`);
+    }
+    await sleep(1000);
+  }
+
+  throw new Error(`[${label}] did not reach session screen within timeout`);
+}
+
+async function waitForProgressScreen(page, label) {
+  const deadline = Date.now() + 45000;
+  while (Date.now() < deadline) {
+    await waitForNoBlockingError(page, label);
+    const bodyText = await page.locator('body').innerText();
+    if (bodyText.includes('生成进度') || bodyText.includes('优化进度') || bodyText.includes('复刻进度')) {
+      return bodyText;
+    }
+    await sleep(1000);
+  }
+  throw new Error(`[${label}] did not reach progress screen within timeout`);
+}
+
+async function verifyIterateTaskCenterResume(page, label) {
+  await page.evaluate(() => {
+    localStorage.setItem('gamevallies_profile_active_tab', JSON.stringify({
+      data: 'tasks',
+      timestamp: Date.now(),
+    }));
+  });
+  await page.goto(`${BASE_URL}/#/pages/profile/index`, { waitUntil: 'domcontentloaded' });
+
+  const firstTaskCard = page.locator('.profile-task-card').first();
+  await firstTaskCard.waitFor({ state: 'visible', timeout: 15000 });
+
+  const cardText = await firstTaskCard.innerText();
+  if (!cardText.includes('优化作品')) {
+    throw new Error(`[${label}] task center did not classify iterate task as 优化作品\n${cardText}`);
+  }
+  if (cardText.includes('新建作品')) {
+    throw new Error(`[${label}] iterate task card regressed to 新建作品\n${cardText}`);
+  }
+
+  await firstTaskCard.getByText('继续查看', { exact: true }).click();
+  await page.waitForURL(/#\/pages\/game\/iterate\/index/, { timeout: 15000 });
+  await waitForProgressScreen(page, `${label}-resume`);
+}
+
+async function waitForTaskTerminalAndClear(token, label) {
+  const deadline = Date.now() + 180000;
+  while (Date.now() < deadline) {
+    const active = await getActiveSession(token);
+    if (!active) {
+      return null;
+    }
+
+    if (active.generationTaskId) {
+      const task = await getTask(token, active.generationTaskId);
+      if (task && ['succeeded', 'failed', 'canceled', 'timed_out'].includes(task.status)) {
+        await sleep(2000);
+        const maybeActive = await getActiveSession(token);
+        if (!maybeActive) {
+          return task;
+        }
+        if (maybeActive.status !== 'generating') {
+          await abandonSession(token, maybeActive.id || maybeActive.sessionId).catch(() => null);
+        }
+      }
+    }
+
+    await sleep(3000);
+  }
+
+  throw new Error(`[${label}] task did not settle before timeout`);
+}
+
+async function runCreateFlow(browser, env, round, { triggerGenerate = false } = {}) {
+  await clearActiveSession(env.token, `create-pre-${round}`);
+  const context = await createContext(browser, env);
+  const page = await context.newPage();
+  const verifyDiagnostics = attachDiagnostics(page, `create-round-${round}`);
+  const prompt = `做一个第${round}轮测试的接金币小游戏，左右滑动接金币，漏接会扣分`;
+
   try {
-    const createLog = await runCreateFlow(browser);
-    const iterateLog = await runIterateFlow(browser);
-    const forkLog = await runForkFlow(browser);
+    await page.goto(`${BASE_URL}/#/pages/create/index`, { waitUntil: 'domcontentloaded' });
+    await setTaroFieldByPlaceholder(page, '先说一句你想做什么游戏', prompt);
+    await clickByText(page, '开始创作');
+    await waitForSessionScreen(page, `create-round-${round}`);
+
+    if (triggerGenerate) {
+      await clickByText(page, '开始创作');
+      await waitForProgressScreen(page, `create-generate-round-${round}`);
+      await verifyDiagnostics(`create-round-${round}`);
+      await context.close();
+      await waitForTaskTerminalAndClear(env.token, `create-generate-round-${round}`);
+      return { flow: 'create', round, generated: true, prompt };
+    }
+
+    await verifyDiagnostics(`create-round-${round}`);
+    await context.close();
+    await clearActiveSession(env.token, `create-post-${round}`);
+    return { flow: 'create', round, generated: false, prompt };
+  } catch (error) {
+    await verifyDiagnostics(`create-round-${round}`).catch((diagnosticError) => {
+      throw diagnosticError;
+    });
+    throw error;
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
+async function runIterateFlow(browser, env, round, { triggerGenerate = false } = {}) {
+  await clearActiveSession(env.token, `iterate-pre-${round}`);
+  const context = await createContext(browser, {
+    ...env,
+    iterateEntryGame: env.iterateGame,
+  });
+  const page = await context.newPage();
+  const verifyDiagnostics = attachDiagnostics(page, `iterate-round-${round}`);
+  const prompt = `把节奏做得更快一点，第${round}轮测试里重点优化反馈和关卡耐玩性`;
+
+  try {
+    await page.goto(`${BASE_URL}/#/pages/game/iterate/index?gameId=${env.iterateGame.id}`, { waitUntil: 'domcontentloaded' });
+    await setTaroFieldByPlaceholder(page, '说说这次最想优化的部分', prompt);
+    await clickByText(page, '开始优化');
+    await waitForSessionScreen(page, `iterate-round-${round}`);
+
+    if (triggerGenerate) {
+      await clickByText(page, '开始优化');
+      await waitForProgressScreen(page, `iterate-generate-round-${round}`);
+      await verifyIterateTaskCenterResume(page, `iterate-generate-round-${round}`);
+      await verifyDiagnostics(`iterate-round-${round}`);
+      await context.close();
+      await waitForTaskTerminalAndClear(env.token, `iterate-generate-round-${round}`);
+      return { flow: 'iterate', round, generated: true, prompt };
+    }
+
+    await verifyDiagnostics(`iterate-round-${round}`);
+    await context.close();
+    await clearActiveSession(env.token, `iterate-post-${round}`);
+    return { flow: 'iterate', round, generated: false, prompt };
+  } catch (error) {
+    await verifyDiagnostics(`iterate-round-${round}`).catch((diagnosticError) => {
+      throw diagnosticError;
+    });
+    throw error;
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
+async function runForkFlow(browser, env, round, { triggerGenerate = false } = {}) {
+  await clearActiveSession(env.token, `fork-pre-${round}`);
+  const context = await createContext(browser, env);
+  const page = await context.newPage();
+  const verifyDiagnostics = attachDiagnostics(page, `fork-round-${round}`);
+  const prompt = `保留核心玩法，第${round}轮测试里把上手引导更清楚，整体节奏更流畅`;
+
+  try {
+    await page.goto(`${BASE_URL}/#/pages/game/fork/index?sourceGameId=${env.forkSourceId}`, { waitUntil: 'domcontentloaded' });
+    await setTaroFieldByPlaceholder(page, '说说你想保留什么、改变什么', prompt);
+    await clickByText(page, '开始复刻');
+    await waitForSessionScreen(page, `fork-round-${round}`);
+
+    if (triggerGenerate) {
+      await clickByText(page, '开始复刻');
+      await waitForProgressScreen(page, `fork-generate-round-${round}`);
+      await verifyDiagnostics(`fork-round-${round}`);
+      await context.close();
+      await waitForTaskTerminalAndClear(env.token, `fork-generate-round-${round}`);
+      return { flow: 'fork', round, generated: true, prompt };
+    }
+
+    await verifyDiagnostics(`fork-round-${round}`);
+    await context.close();
+    await clearActiveSession(env.token, `fork-post-${round}`);
+    return { flow: 'fork', round, generated: false, prompt };
+  } catch (error) {
+    await verifyDiagnostics(`fork-round-${round}`).catch((diagnosticError) => {
+      throw diagnosticError;
+    });
+    throw error;
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
+async function runConcurrentProbe(browser, env, round) {
+  await clearActiveSession(env.token, `concurrent-pre-${round}`);
+
+  const flows = [
+    () => runCreateFlow(browser, env, `concurrent-${round}-create`),
+    () => runIterateFlow(browser, env, `concurrent-${round}-iterate`),
+    () => runForkFlow(browser, env, `concurrent-${round}-fork`),
+  ];
+
+  const results = await Promise.allSettled(flows.map((runner) => runner()));
+  await clearActiveSession(env.token, `concurrent-post-${round}`).catch(() => null);
+  return results.map((result, index) => ({
+    flow: ['create', 'iterate', 'fork'][index],
+    status: result.status,
+    reason: result.status === 'rejected' ? String(result.reason?.message || result.reason) : '',
+  }));
+}
+
+async function buildEnvironment(token) {
+  const user = await getCurrentUser(token);
+  const games = await getMyGames(token);
+  const exactIterateGame = await getGame(token, ITERATE_GAME_ID).catch(() => null);
+  const iterateGame = exactIterateGame
+    || games.find((game) => String(game.id) === ITERATE_GAME_ID)
+    || games.find((game) => game.canPlay !== false && ['published', 'ready'].includes(game.status))
+    || games[0];
+
+  assert(iterateGame?.id, 'No valid iterate game found for live E2E');
+
+  const forkSource = await getGame(token, FORK_SOURCE_GAME_ID);
+  assert(forkSource?.id, `Fork source ${FORK_SOURCE_GAME_ID} is unavailable`);
+
+  return {
+    token,
+    user,
+    iterateGame,
+    forkSourceId: forkSource.id,
+  };
+}
+
+async function main() {
+  await fs.mkdir(ARTIFACT_DIR, { recursive: true });
+  const token = await readToken();
+  const env = await buildEnvironment(token);
+  const browser = await chromium.launch({ headless: HEADLESS });
+  const sequentialResults = [];
+  const concurrentResults = [];
+
+  try {
+    for (let round = 1; round <= ROUNDS; round += 1) {
+      sequentialResults.push(await runCreateFlow(browser, env, round));
+      sequentialResults.push(await runIterateFlow(browser, env, round));
+      sequentialResults.push(await runForkFlow(browser, env, round));
+    }
+
+    for (let round = 1; round <= CONCURRENT_ROUNDS; round += 1) {
+      concurrentResults.push({
+        round,
+        results: await runConcurrentProbe(browser, env, round),
+      });
+    }
+
+    // Full generation handoff smoke once per flow after the stability loops.
+    const generationSmoke = [];
+    generationSmoke.push(await runCreateFlow(browser, env, 'smoke', { triggerGenerate: true }));
+    generationSmoke.push(await runIterateFlow(browser, env, 'smoke', { triggerGenerate: true }));
+    generationSmoke.push(await runForkFlow(browser, env, 'smoke', { triggerGenerate: true }));
 
     console.log(JSON.stringify({
       ok: true,
-      createCalls: createLog.map((item) => `${item.method} ${item.path}`),
-      iterateCalls: iterateLog.map((item) => `${item.method} ${item.path}`),
-      forkCalls: forkLog.map((item) => `${item.method} ${item.path}`),
+      baseUrl: BASE_URL,
+      rounds: ROUNDS,
+      concurrentRounds: CONCURRENT_ROUNDS,
+      iterateGameId: env.iterateGame.id,
+      forkSourceId: env.forkSourceId,
+      sequentialResults,
+      concurrentResults,
+      generationSmoke,
     }, null, 2));
   } finally {
     await browser.close();
+    await clearActiveSession(token, 'final-cleanup').catch(() => null);
   }
 }
 
