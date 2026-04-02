@@ -1294,40 +1294,6 @@ export default function Profile() {
         </View>
       </View>
 
-      {/* 增强版身份与数据区 */}
-      <View className="creator-identity">
-        <View className="identity-main">
-          <View className="identity-copy">
-            <View className="identity-badges">
-              <Text className="badge creator-badge">创作者</Text>
-              <Text className="badge level-badge">Lv.5</Text>
-              <Text className="badge verified-badge">已认证</Text>
-            </View>
-            <Text className="identity-title">专注休闲益智小游戏</Text>
-            <Text className="identity-desc">持续创作有趣又轻巧的互动体验。</Text>
-          </View>
-          <View className="identity-orb">
-            <Text className="identity-orb-value">{formatNumber(allGames.length)}</Text>
-            <Text className="identity-orb-label">作品</Text>
-          </View>
-        </View>
-      </View>
-
-      <View className="creator-links">
-          <View className="link-item link-item--disabled">
-          <View className="link-main">
-            <View className="link-icon-badge">
-              <View className="link-icon" />
-            </View>
-            <View className="link-copy">
-              <Text className="link-label">个人主页</Text>
-              <Text className="link-desc">展示作品、创作标签和个人介绍</Text>
-            </View>
-          </View>
-          <Text className="link-status">开发中</Text>
-        </View>
-      </View>
-
       {/* Tab 切换区 */}
       <PageScrollContainer className="profile-scroll">
         <View className="tabs-container">

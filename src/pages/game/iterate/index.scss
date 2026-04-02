@@ -116,35 +116,6 @@
     white-space: normal;
   }
 
-  .iterate-reference-card__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .iterate-action-btn {
-    min-height: 42px;
-    border-radius: 12px;
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .iterate-action-btn--primary {
-    background: $brand-gradient;
-    color: #fff;
-  }
-
-  .iterate-action-btn--secondary,
-  .iterate-action-btn--ghost {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid $border;
-    color: #d7d3ea;
-  }
 
   .iterate-error-banner {
     margin-top: 12px;
