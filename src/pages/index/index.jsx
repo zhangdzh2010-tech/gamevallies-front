@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text, ScrollView } from '@tarojs/components';
-import { useNavigation } from '@tarojs/hooks';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -78,7 +77,6 @@ function formatMetric(value) {
 export default function Home() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
-  const navigation = useNavigation();
   const homeRef = useRef(null);
   const openGame = useGamePlayerStore((s) => s.openGame);
   const [refreshing, setRefreshing] = useState(false);
@@ -286,6 +284,14 @@ export default function Home() {
     setActiveType(typeKey);
     setPage(1);
     setHasMore(true);
+
+    // #1 切换类型时滚回顶部
+    if (isH5) {
+      resetH5PageScrollTop();
+    } else {
+      Taro.pageScrollTo({ scrollTop: 0, duration: 200 }).catch(() => {});
+    }
+
     await fetchGames(1, false, typeKey);
   };
 
@@ -298,15 +304,15 @@ export default function Home() {
       return;
     }
 
-    navigation.push({ url: `/pages/game/detail/index?id=${game.id}` });
+    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
   };
 
   const handleComment = (game) => {
-    navigation.push({ url: buildGameDetailPath(game.id, { openComment: 1 }) });
+    Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) });
   };
 
   const handleOpenDetail = (game) => {
-    navigation.push({ url: buildGameDetailPath(game.id) });
+    Taro.navigateTo({ url: buildGameDetailPath(game.id) });
   };
 
   const handleToggleLike = async (targetGame) => {

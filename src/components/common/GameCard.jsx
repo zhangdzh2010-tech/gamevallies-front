@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import Taro from '@tarojs/taro';
 import { View, Text, Image } from '@tarojs/components';
-import { useNavigation } from '@tarojs/hooks';
 import { getSafeGameImage } from '../../utils/media';
 import './GameCard.scss';
 
@@ -47,7 +47,6 @@ export const GameCard = ({
   const [bookmarkCount, setBookmarkCount] = useState(getBookmarkCount(game));
   const [likeLoading, setLikeLoading] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
-  const navigation = useNavigation();
   const isPlayOnlyVariant = variant === 'play-only';
   const isHomeShowcaseVariant = variant === 'home-showcase';
   const isCompactStatsVariant = isPlayOnlyVariant || isHomeShowcaseVariant;
@@ -76,9 +75,7 @@ export const GameCard = ({
       return;
     }
 
-    navigation.push({
-      url: `/pages/game/detail/index?id=${game.id}`,
-    });
+    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
   };
 
   const handleLike = async (e) => {
@@ -148,9 +145,7 @@ export const GameCard = ({
       return;
     }
 
-    navigation.push({
-      url: `/pages/game/detail/index?id=${game.id}&openComment=1`,
-    });
+    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}&openComment=1` });
   };
 
   const handleOpenDetail = (e) => {
@@ -161,9 +156,7 @@ export const GameCard = ({
       return;
     }
 
-    navigation.push({
-      url: `/pages/game/detail/index?id=${game.id}`,
-    });
+    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
   };
 
   return (

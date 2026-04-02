@@ -137,6 +137,23 @@
     color: #ffd980;
   }
 
+  // #13 own-game 跳转到优化的按钮
+  .fork-warning-card__action {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 10px;
+    padding: 6px 16px;
+    background: rgba(110, 86, 255, 0.15);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .fork-warning-card__action-text {
+    font-size: 13px;
+    color: #a78bfa;
+    font-weight: 500;
+  }
+
   .fork-actions {
     padding-top: 4px;
   }

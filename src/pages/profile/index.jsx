@@ -789,7 +789,14 @@ export default function Profile() {
 
   const redirectToLogin = () => {
     Taro.showToast({ title: '请先登录', icon: 'none', duration: 1500 });
-    setTimeout(() => Taro.navigateTo({ url: '/pages/login/index' }), 500);
+    // #18 先跳到首页再跳登录，避免用户取消登录后被困在Profile循环跳转
+    setTimeout(() => {
+      Taro.switchTab({ url: '/pages/index/index' }).then(() => {
+        Taro.navigateTo({ url: '/pages/login/index' });
+      }).catch(() => {
+        Taro.navigateTo({ url: '/pages/login/index' }).catch(() => {});
+      });
+    }, 500);
   };
 
   const refreshProfilePage = ({ redirectOnMissingToken = false } = {}) => {

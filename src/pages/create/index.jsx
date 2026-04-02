@@ -126,6 +126,9 @@ export default function Create() {
   // Tracks the polling interval used while a creation session is initializing.
   const sessionPollingRef = useRef(null);
 
+  const DRAFT_PROMPT_KEY = 'gamevallies_create_draft_prompt';
+  const DRAFT_NAME_KEY = 'gamevallies_create_draft_name';
+
   const stopSessionPolling = () => {
     if (sessionPollingRef.current) {
       clearInterval(sessionPollingRef.current);
@@ -245,6 +248,25 @@ export default function Create() {
   useDidShow(() => {
     if (isLoggedIn()) {
       authRedirectingRef.current = false;
+
+      // #5 恢复离开前保存的输入草稿
+      if (!prompt && !creationSession && !isGenerating && !createEntryIntent) {
+        try {
+          const savedPrompt = Taro.getStorageSync(DRAFT_PROMPT_KEY);
+          const savedName = Taro.getStorageSync(DRAFT_NAME_KEY);
+          if (savedPrompt) {
+            setPrompt(savedPrompt);
+            Taro.removeStorageSync(DRAFT_PROMPT_KEY);
+          }
+          if (savedName) {
+            setGameName(savedName);
+            Taro.removeStorageSync(DRAFT_NAME_KEY);
+          }
+        } catch (_e) {
+          // 忽略读取失败
+        }
+      }
+
       return;
     }
 
@@ -258,6 +280,18 @@ export default function Create() {
 
   useDidHide(() => {
     authRedirectingRef.current = false;
+
+    // #5 离开页面时保存未提交的输入草稿
+    if (prompt.trim() && !creationSession && !isGenerating) {
+      try {
+        Taro.setStorageSync(DRAFT_PROMPT_KEY, prompt);
+        if (gameName) {
+          Taro.setStorageSync(DRAFT_NAME_KEY, gameName);
+        }
+      } catch (_e) {
+        // 忽略存储失败
+      }
+    }
   });
 
   useEffect(() => {
@@ -314,6 +348,14 @@ export default function Create() {
     setCreationSession(null);
     setGameName('');
     setOrientation('portrait');
+
+    // #5 清除本地草稿
+    try {
+      Taro.removeStorageSync(DRAFT_PROMPT_KEY);
+      Taro.removeStorageSync(DRAFT_NAME_KEY);
+    } catch (_e) {
+      // 忽略
+    }
   };
 
   const applyCreationSessionSnapshot = (snapshot) => {
