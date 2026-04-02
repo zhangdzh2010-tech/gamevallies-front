@@ -670,20 +670,6 @@ export default function GameIteratePage() {
                 {formatVersionLabel(taskMetadata?.version)} · {GAME_STATUS_LABELS[currentGame?.status] || currentGame?.status || '-'} · 质量分 {formatQualityScore(currentGame?.qualityScore)}
               </Text>
             </View>
-            <View className="iterate-reference-card__actions">
-              {canPlay ? (
-                <View className="iterate-action-btn iterate-action-btn--primary" onClick={handlePlayGame}>
-                  <Text>试玩</Text>
-                </View>
-              ) : (
-                <View className="iterate-action-btn iterate-action-btn--secondary" onClick={handleLockedPlay}>
-                  <Text>订阅试玩</Text>
-                </View>
-              )}
-              <View className="iterate-action-btn iterate-action-btn--ghost" onClick={handleOpenDetail}>
-                <Text>详情</Text>
-              </View>
-            </View>
           </View>
 
           {(error || pageError) ? (
