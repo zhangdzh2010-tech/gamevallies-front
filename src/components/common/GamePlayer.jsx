@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import { getSafeStatusBarHeight } from '../../utils/systemInfo';
+import { isH5Runtime } from '../../utils/runtime';
 import './GamePlayer.scss';
 
 function requestElementFullscreen(element) {
@@ -85,6 +86,7 @@ function unlockScreenOrientation() {
 }
 
 export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', onClose }) {
+  const isH5 = isH5Runtime();
   const statusBarHeight = process.env.TARO_ENV === 'weapp' ? getSafeStatusBarHeight() : 0;
   const [fullscreen, setFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -175,7 +177,7 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', o
   if (!displayUrl) return null;
 
   return (
-    <View className={`game-player-overlay${visible ? ' visible' : ''}`}>
+    <View className={`game-player-overlay${isH5 ? ' game-player-overlay--h5' : ''}${visible ? ' visible' : ''}`}>
       <View className="game-player-backdrop" onClick={onClose} />
       <View
         ref={panelRef}

@@ -1,7 +1,7 @@
 @import '../../../styles/game-ui.scss';
 
 .game-detail {
-  background: #08080d;
+  background: $bg;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -105,7 +105,7 @@
           display: block;
           font-size: 50px;
           font-weight: 800;
-          color: #eae8f4;
+          color: $text;
           margin-bottom: 16px;
           line-height: 1.15;
           letter-spacing: 0.4px;
@@ -170,7 +170,7 @@
             flex-direction: column;
             min-width: 0;
             gap: 6px;
-            .author-name { font-size: 30px; font-weight: 700; color: #eae8f4; }
+            .author-name { font-size: 30px; font-weight: 700; color: $text; }
             .author-desc { font-size: 23px; color: #9f9ab5; line-height: 1.45; }
           }
         }
@@ -229,7 +229,7 @@
             }
           }
           .stat-value { display: block; font-size: 30px; font-weight: 800; color: #f8f6ff; margin-bottom: 8px; }
-          .stat-text { display: block; font-size: 21px; color: #8b87a3; }
+          .stat-text { display: block; font-size: 21px; color: $sub; }
         }
       }
 
@@ -289,7 +289,7 @@
           &.locked {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #8b87a3;
+            color: $sub;
 
             &:active {
               background: rgba(255, 255, 255, 0.1);
@@ -306,7 +306,7 @@
         .icon-btn {
           @include game-surface-card();
           padding: 18px 18px 16px;
-          color: #8b87a3;
+          color: $sub;
           font-size: 26px;
           font-weight: 600;
           text-align: left;
@@ -362,15 +362,15 @@
           .icon-label {
             font-size: 18px;
             line-height: 1.35;
-            color: #8b87a3;
+            color: $sub;
           }
 
           &.bookmark-btn.bookmarked {
-            color: #fbbf24;
+            color: $amber;
             border-color: rgba(251, 191, 36, 0.3);
 
             .icon-value {
-              color: #fbbf24;
+              color: $amber;
             }
 
             .icon-symbol--bookmark {
@@ -378,7 +378,7 @@
             }
           }
           &.disabled {
-            color: #55516e;
+            color: $dim;
             border-color: #1d1d28;
             background: rgba(17, 17, 24, 0.72);
 
@@ -399,7 +399,7 @@
           padding: 14px 26px;
           background: rgba(110, 86, 255, 0.15);
           border-radius: 999px;
-          color: #6e56ff;
+          color: $primary;
           font-size: 24px;
           font-weight: 700;
         }
@@ -430,7 +430,7 @@
           .comments-title-text {
             font-size: 34px;
             font-weight: 700;
-            color: #eae8f4;
+            color: $text;
           }
 
           .comments-compose-btn {
@@ -517,7 +517,7 @@
               .comment-name {
                 font-size: 26px;
                 font-weight: 600;
-                color: #eae8f4;
+                color: $text;
               }
               .comment-time {
                 font-size: 21px;
@@ -544,7 +544,7 @@
                 align-items: center;
                 gap: 8px;
                 cursor: pointer;
-                color: #55516e;
+                color: $dim;
                 font-size: 23px;
 
                 .comment-action-icon {
@@ -567,7 +567,7 @@
                 .comment-action-label { font-size: 22px; }
 
                 &.liked {
-                  color: #ff5c8a;
+                  color: $rose;
 
                   .comment-action-icon--like {
                     background-image: url('../../../images/detail-icons/heart-active.svg');
@@ -575,7 +575,7 @@
                 }
                 &.danger {
                   color: #ff5c8a55;
-                  &:active { color: #ff5c8a; }
+                  &:active { color: $rose; }
                 }
                 &:active { opacity: 0.7; }
               }
@@ -592,7 +592,7 @@
 
           .expand-replies {
             padding: 10px 0;
-            color: #6e56ff;
+            color: $primary;
             font-size: 22px;
             cursor: pointer;
             &:active { opacity: 0.7; }
@@ -600,17 +600,17 @@
 
           .reply-shortcut {
             padding: 8px 0;
-            color: #55516e;
+            color: $dim;
             font-size: 22px;
             cursor: pointer;
-            &:active { color: #6e56ff; }
+            &:active { color: $primary; }
           }
         }
 
         .load-more {
           text-align: center;
           padding: 28px;
-          color: #6e56ff;
+          color: $primary;
           font-size: 24px;
           cursor: pointer;
           background: rgba(110, 86, 255, 0.06);
@@ -633,8 +633,8 @@
     z-index: 30;
     box-sizing: border-box;
     flex-shrink: 0;
-    background: #111118;
-    border-top: 1px solid #252535;
+    background: $surface;
+    border-top: 1px solid $border;
     padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
 
     .reply-hint {
@@ -647,7 +647,7 @@
 
       .reply-hint-text {
         font-size: 24px;
-        color: #6e56ff;
+        color: $primary;
       }
 
       .reply-cancel {
@@ -656,10 +656,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #8b87a3;
+        color: $sub;
         font-size: 28px;
         cursor: pointer;
-        &:active { color: #ff5c8a; }
+        &:active { color: $rose; }
       }
     }
 
@@ -672,17 +672,17 @@
       .comment-input {
         flex: 1;
         background: #15151e;
-        border: 1px solid #252535;
+        border: 1px solid $border;
         border-radius: 36px;
         padding: 18px 24px;
         font-size: 26px;
-        color: #eae8f4;
+        color: $text;
         &:focus { border-color: rgba(110, 86, 255, 0.5); }
       }
 
       .comment-send {
         padding: 17px 32px;
-        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+        background: $brand-gradient;
         border-radius: 36px;
         color: white;
         font-size: 25px;
@@ -692,7 +692,7 @@
         &:active { opacity: 0.85; }
         &.disabled {
           background: rgba(110, 86, 255, 0.15);
-          color: #55516e;
+          color: $dim;
         }
       }
     }

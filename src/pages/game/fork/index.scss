@@ -1,7 +1,8 @@
+@import '../../../styles/variables.scss';
 .fork-page {
   min-height: 100vh;
-  background: #08080d;
-  color: #eae8f4;
+  background: $bg;
+  color: $text;
 
   &--weapp {
     min-height: 100vh;
@@ -22,8 +23,8 @@
   .fork-source-card,
   .fork-warning-card,
   .fork-form-section {
-    background: #111118;
-    border: 1px solid #252535;
+    background: $surface;
+    border: 1px solid $border;
     border-radius: 18px;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   }
@@ -42,7 +43,7 @@
     margin: 0 auto 16px;
     border-radius: 50%;
     border: 4px solid rgba(110, 86, 255, 0.16);
-    border-top-color: #6e56ff;
+    border-top-color: $primary;
     animation: fork-spin 1s linear infinite;
   }
 
@@ -50,20 +51,20 @@
   .fork-empty-card__text {
     font-size: 14px;
     line-height: 1.6;
-    color: #8b87a3;
+    color: $sub;
   }
 
   .fork-empty-card__icon {
     display: block;
-    font-size: 32px;
+    font-size: $font-size-lg;
     margin-bottom: 12px;
   }
 
   .fork-empty-card__title {
     display: block;
-    font-size: 18px;
+    font-size: $font-size-2xs;
     font-weight: 700;
-    color: #f4f2ff;
+    color: $text-bright;
     margin-bottom: 8px;
   }
 
@@ -103,10 +104,10 @@
 
   .fork-source-card__title {
     display: block;
-    font-size: 18px;
+    font-size: $font-size-2xs;
     font-weight: 700;
     line-height: 1.35;
-    color: #f4f2ff;
+    color: $text-bright;
   }
 
   .fork-source-card__meta {
@@ -170,7 +171,7 @@
     background: transparent !important;
     font-size: 15px;
     line-height: 1.7;
-    color: #f3f1ff;
+    color: $text-bright;
     box-sizing: border-box;
   }
 
@@ -179,7 +180,7 @@
   .fork-textarea .taro-textarea,
   .fork-textarea .weui-textarea {
     background: transparent !important;
-    color: #f3f1ff;
+    color: $text-bright;
     box-shadow: none !important;
   }
 
@@ -194,7 +195,7 @@
     font: inherit;
     line-height: inherit;
     box-sizing: border-box;
-    -webkit-text-fill-color: #f3f1ff;
+    -webkit-text-fill-color: $text-bright;
   }
 
   .fork-count {
@@ -209,7 +210,7 @@
   .fork-submit-btn {
     min-height: 48px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+    background: $brand-gradient;
     display: flex;
     align-items: center;
     justify-content: center;

@@ -5,8 +5,8 @@
   flex-direction: column;
   height: 100vh;
   max-width: 100vw;
-  background: #08080d;
-  color: #eae8f4;
+  background: $bg;
+  color: $text;
   overflow: hidden;
 
   // Header with inline tabs
@@ -24,7 +24,7 @@
     .header-title {
       font-size: 36px;
       font-weight: 700;
-      color: #eae8f4;
+      color: $text;
     }
 
     .header-tabs {
@@ -63,7 +63,7 @@
       .section-title {
         font-size: 30px;
         font-weight: 700;
-        color: #eae8f4;
+        color: $text;
       }
     }
   }
@@ -120,9 +120,9 @@
       }
 
       .creator-name {
-        font-size: 22px;
+        font-size: $font-size-xs;
         font-weight: 600;
-        color: #eae8f4;
+        color: $text;
         margin-bottom: 4px;
         max-width: 120px;
         overflow: hidden;
@@ -131,7 +131,7 @@
       }
 
       .creator-meta {
-        font-size: 18px;
+        font-size: $font-size-2xs;
         color: #6b6882;
         margin-bottom: 12px;
       }
@@ -192,14 +192,14 @@
     }
 
     .empty-title {
-      font-size: 28px;
+      font-size: $font-size-base;
       font-weight: 600;
-      color: #eae8f4;
+      color: $text;
       margin-bottom: 10px;
     }
 
     .empty-text {
-      font-size: 22px;
+      font-size: $font-size-xs;
       color: #6b6882;
       text-align: center;
     }
@@ -213,7 +213,7 @@
       }
 
       text {
-        font-size: 18px;
+        font-size: $font-size-2xs;
         color: #fff;
         font-weight: 700;
       }
@@ -226,13 +226,13 @@
     padding: 28px;
 
     .load-more-text {
-      font-size: 22px;
-      color: #8b87a3;
+      font-size: $font-size-xs;
+      color: $sub;
     }
 
     .load-more-end {
-      font-size: 22px;
-      color: #55516e;
+      font-size: $font-size-xs;
+      color: $dim;
     }
   }
 
@@ -258,7 +258,7 @@
       gap: 8px;
 
       .header-tab {
-        font-size: 14px;
+        font-size: $font-size-sm-h5;
         padding: 9px 12px;
       }
     }
@@ -315,7 +315,7 @@
       }
 
       .creator-meta {
-        font-size: 13px;
+        font-size: $font-size-xs-h5;
         margin-bottom: 10px;
       }
 
@@ -324,7 +324,7 @@
         padding: 0 14px;
 
         .follow-btn-text {
-          font-size: 13px;
+          font-size: $font-size-xs-h5;
         }
       }
     }
@@ -349,7 +349,7 @@
     }
 
     .empty-title {
-      font-size: 20px;
+      font-size: $font-size-lg-h5;
       margin-bottom: 8px;
     }
 
@@ -546,7 +546,7 @@
       display: block;
       margin-bottom: 10px;
       color: #f5f7ff;
-      font-size: 28px;
+      font-size: $font-size-base;
       font-weight: 800;
       line-height: 1.14;
       letter-spacing: -0.3px;
@@ -599,7 +599,7 @@
     &__metric-value {
       display: block;
       color: #ffffff;
-      font-size: 18px;
+      font-size: $font-size-2xs;
       font-weight: 800;
       line-height: 1;
     }
@@ -629,7 +629,7 @@
     }
 
     .header-title {
-      font-size: 24px;
+      font-size: $font-size-sm;
       letter-spacing: -0.2px;
     }
 
@@ -685,7 +685,7 @@
     }
 
     .section-title {
-      font-size: 24px;
+      font-size: $font-size-sm;
     }
 
     .section-meta {
@@ -753,14 +753,14 @@
       }
 
       .avatar-text {
-        font-size: 24px;
+        font-size: $font-size-sm;
       }
     }
 
     .creator-name {
       max-width: 100%;
       margin-bottom: 8px;
-      font-size: 18px;
+      font-size: $font-size-2xs;
     }
 
     .creator-meta-row {
@@ -840,7 +840,7 @@
     padding: 16px;
 
     &__title {
-      font-size: 24px;
+      font-size: $font-size-xl-h5;
     }
 
     &__metrics {
@@ -858,7 +858,7 @@
     }
 
     &__metric-value {
-      font-size: 16px;
+      font-size: $font-size-base-h5;
     }
   }
 
@@ -869,7 +869,7 @@
     gap: 12px;
 
     .header-title {
-      font-size: 20px;
+      font-size: $font-size-lg-h5;
     }
 
     .header-tabs {

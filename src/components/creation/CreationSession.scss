@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 .creation-session-scene {
   display: flex;
   flex-direction: column;
@@ -32,7 +33,7 @@
   font-size: 18px;
   font-weight: 700;
   line-height: 1.35;
-  color: #f3f1ff;
+  color: $text-bright;
 }
 
 .creation-session-scene__subtitle {
@@ -54,8 +55,8 @@
 .creation-entry-error-card {
   padding: 14px;
   border-radius: 18px;
-  background: #111118;
-  border: 1px solid #252535;
+  background: $surface;
+  border: 1px solid $border;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
@@ -118,7 +119,7 @@
   display: block;
   font-size: 15px;
   font-weight: 700;
-  color: #f3f1ff;
+  color: $text-bright;
 }
 
 .creation-session-loading__text {
@@ -176,7 +177,7 @@
   display: block;
   font-size: 14px;
   line-height: 1.65;
-  color: #f5f2ff;
+  color: $text-bright;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -192,8 +193,8 @@
 .creation-answer-composer {
   padding: 14px;
   border-radius: 18px;
-  background: #111118;
-  border: 1px solid #252535;
+  background: $surface;
+  border: 1px solid $border;
 }
 
 .creation-answer-composer__textarea {
@@ -204,7 +205,7 @@
   background: transparent !important;
   font-size: 15px;
   line-height: 1.7;
-  color: #f3f1ff;
+  color: $text-bright;
   box-sizing: border-box;
 }
 
@@ -213,7 +214,7 @@
 .creation-answer-composer__textarea .taro-textarea,
 .creation-answer-composer__textarea .weui-textarea {
   background: transparent !important;
-  color: #f3f1ff;
+  color: $text-bright;
   box-shadow: none !important;
 }
 
@@ -306,7 +307,7 @@
   font-size: 12px;
   line-height: 1.25;
   font-weight: 600;
-  color: #f5f2ff;
+  color: $text-bright;
 }
 
 .creation-resume-scene__header {
@@ -320,7 +321,7 @@
   display: block;
   font-size: 18px;
   font-weight: 700;
-  color: #f3f1ff;
+  color: $text-bright;
 }
 
 .creation-resume-scene__subtitle {
@@ -342,7 +343,7 @@
   display: block;
   font-size: 15px;
   font-weight: 600;
-  color: #f3f1ff;
+  color: $text-bright;
 }
 
 .creation-resume-scene__meta {

@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 .task-signal-panel {
   position: relative;
   overflow: hidden;
@@ -58,16 +59,16 @@
 }
 
 .task-signal-panel__eyebrow {
-  font-size: 18px;
+  font-size: $font-size-2xs;
   letter-spacing: 1.8px;
   color: #7d90ff;
 }
 
 .task-signal-panel__title {
-  font-size: 28px;
+  font-size: $font-size-base;
   line-height: 1.3;
   font-weight: 700;
-  color: #f4f2ff;
+  color: $text-bright;
 }
 
 .task-signal-panel__desc {
@@ -123,16 +124,16 @@
 .task-signal-panel__label {
   display: block;
   margin-bottom: 8px;
-  font-size: 18px;
+  font-size: $font-size-2xs;
   color: #84809d;
 }
 
 .task-signal-panel__value {
   display: block;
-  font-size: 22px;
+  font-size: $font-size-xs;
   line-height: 1.4;
   font-weight: 700;
-  color: #f4f2ff;
+  color: $text-bright;
   word-break: break-word;
 }
 
@@ -157,11 +158,11 @@
   }
 
   .task-signal-panel__title {
-    font-size: 20px;
+    font-size: $font-size-lg-h5;
   }
 
   .task-signal-panel__desc {
-    font-size: 14px;
+    font-size: $font-size-sm-h5;
     line-height: 1.5;
   }
 
@@ -170,7 +171,7 @@
   }
 
   .task-signal-panel__status-text {
-    font-size: 13px;
+    font-size: $font-size-xs-h5;
   }
 
   .task-signal-panel__dots {

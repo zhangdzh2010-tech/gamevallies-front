@@ -1,3 +1,4 @@
+@import '../../../styles/variables.scss';
 .game-play-page {
   position: fixed;
   top: 0;
@@ -21,11 +22,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #08080d;
+    background: $bg;
   }
 
   .game-loading-text {
-    color: #eae8f4;
+    color: $text;
     font-size: 28px;
   }
 }

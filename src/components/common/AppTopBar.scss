@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 .app-top-bar {
   --gv-h5-topbar-width: min(100vw, 500px);
   --gv-h5-topbar-min-height: clamp(50px, calc(var(--gv-h5-topbar-width) * 108 / 750), 58px);
@@ -53,7 +54,7 @@
   }
 
   &__title {
-    background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+    background: $brand-gradient;
     background-clip: text;
     color: #f3f1fb;
     display: block;
