@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 .game-player-overlay {
   position: fixed;
   top: 0;
@@ -73,24 +74,24 @@
         background: linear-gradient(180deg, rgba(17, 17, 28, 0.96), rgba(17, 17, 28, 0.84));
 
         .player-title {
-          font-size: 22px;
+          font-size: $font-size-lg;
         }
 
         .player-btn {
           padding: 6px 10px;
 
           &.back-btn .back-text {
-            font-size: 14px;
+            font-size: $font-size-sm;
           }
 
           &.fullscreen-btn .fs-icon {
-            font-size: 13px;
+            font-size: $font-size-xs;
           }
         }
       }
 
       .player-loading .loading-text {
-        font-size: 22px;
+        font-size: $font-size-lg;
       }
     }
 
@@ -118,9 +119,9 @@
       .player-title {
         flex: 1;
         text-align: center;
-        font-size: 26px;
+        font-size: $font-size-xl;
         font-weight: 600;
-        color: #eae8f4;
+        color: $text;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -132,7 +133,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 12px;
-        color: #8b87a3;
+        color: $sub;
         cursor: pointer;
         transition: all 0.2s ease;
         flex-shrink: 0;
@@ -141,7 +142,7 @@
 
         &:active {
           background: rgba(110, 86, 255, 0.15);
-          color: #6e56ff;
+          color: $primary;
         }
 
         &.back-btn {
@@ -156,7 +157,7 @@
             background: center / contain no-repeat url('../../images/ui-icons/close.svg');
           }
           .back-text {
-            font-size: 16px;
+            font-size: $font-size-base;
             font-weight: 500;
           }
 
@@ -170,8 +171,8 @@
           padding: 6px 14px;
 
           .fs-icon {
-            font-size: 14px;
-            color: #8b87a3;
+            font-size: $font-size-sm;
+            color: $sub;
           }
         }
       }
@@ -190,8 +191,8 @@
       z-index: 5;
 
       .loading-text {
-        font-size: 26px;
-        color: #8b87a3;
+        font-size: $font-size-xl;
+        color: $sub;
       }
     }
 
@@ -207,6 +208,52 @@
         background: #000;
         display: block;
       }
+    }
+  }
+}
+
+.game-player-overlay.game-player-overlay--h5 {
+  .game-player-panel {
+    .player-header {
+      .player-title {
+        font-size: $font-size-xl-h5;
+      }
+
+      .player-btn {
+        &.back-btn .back-text {
+          font-size: $font-size-base-h5;
+        }
+
+        &.fullscreen-btn .fs-icon {
+          font-size: $font-size-sm-h5;
+        }
+      }
+    }
+
+    &.landscape {
+      .player-header {
+        .player-title {
+          font-size: $font-size-lg-h5;
+        }
+
+        .player-btn {
+          &.back-btn .back-text {
+            font-size: $font-size-sm-h5;
+          }
+
+          &.fullscreen-btn .fs-icon {
+            font-size: $font-size-xs-h5;
+          }
+        }
+      }
+
+      .player-loading .loading-text {
+        font-size: $font-size-lg-h5;
+      }
+    }
+
+    .player-loading .loading-text {
+      font-size: $font-size-xl-h5;
     }
   }
 }

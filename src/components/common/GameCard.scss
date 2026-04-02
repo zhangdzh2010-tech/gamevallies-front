@@ -147,7 +147,7 @@
 
         .author-name {
           color: rgba(234, 232, 244, 0.86);
-          font-size: 22px;
+          font-size: $font-size-xs;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -187,7 +187,7 @@
           align-items: center;
           color: rgba(255, 255, 255, 0.8);
           display: inline-flex;
-          font-size: 24px;
+          font-size: $font-size-sm;
           gap: 6px;
           white-space: nowrap;
 
@@ -225,7 +225,7 @@
           }
 
           .stat-value {
-            font-size: 22px;
+            font-size: $font-size-xs;
             line-height: 1;
           }
 
@@ -246,11 +246,11 @@
           }
 
           &.liked {
-            color: #ff5c8a;
+            color: $rose;
           }
 
           &.bookmarked {
-            color: #fbbf24;
+            color: $amber;
           }
 
           &.bookmark-text {
@@ -266,9 +266,9 @@
     padding: 12px 14px 14px;
 
     .game-title {
-      color: #eae8f4;
+      color: $text;
       display: block;
-      font-size: 28px;
+      font-size: $font-size-base;
       font-weight: 700;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -320,7 +320,7 @@
       border-radius: 999px;
       box-shadow: 0 10px 24px rgba(255, 186, 68, 0.2);
       color: #422b00;
-      font-size: 11px;
+      font-size: $font-size-2xs-h5;
       left: 12px;
       letter-spacing: 0.2px;
       padding: 7px 11px;
@@ -361,7 +361,7 @@
         .stat-text {
           align-items: center;
           color: rgba(247, 243, 255, 0.76);
-          font-size: 13px;
+          font-size: $font-size-xs-h5;
           font-weight: 600;
           gap: 6px;
           text-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
@@ -431,7 +431,7 @@
 
       .hot-badge {
         border-radius: 6px;
-        font-size: 11px;
+        font-size: $font-size-2xs-h5;
         left: 6px;
         padding: 4px 7px;
         top: 6px;
@@ -454,7 +454,7 @@
 
         .author-row {
           .author-name {
-            font-size: 13px;
+            font-size: $font-size-xs-h5;
           }
         }
 
@@ -479,7 +479,7 @@
           }
 
           .stat-text {
-            font-size: 14px;
+            font-size: $font-size-sm-h5;
             gap: 4px;
 
             &.play-text {
@@ -492,7 +492,7 @@
             }
 
             .stat-value {
-              font-size: 14px;
+              font-size: $font-size-sm-h5;
             }
 
             &.bookmark-text {

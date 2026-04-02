@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 // components/common/ComingSoon.scss
 .coming-soon-placeholder {
   display: flex;
@@ -73,7 +74,7 @@
 
   .placeholder-desc {
     font-size: 28rpx;
-    color: #8b87a3;
+    color: $sub;
     margin-bottom: 24rpx;
     line-height: 1.5;
     position: relative;
@@ -95,12 +96,12 @@
 
     .date-label {
       font-size: 24rpx;
-      color: #8b87a3;
+      color: $sub;
     }
 
     .date-value {
       font-size: 24rpx;
-      color: #6e56ff;
+      color: $primary;
       font-weight: 600;
     }
   }
@@ -114,7 +115,7 @@
 
     .notice-text {
       font-size: 24rpx;
-      color: #55516e;
+      color: $dim;
       line-height: 1.4;
     }
   }
@@ -147,7 +148,7 @@
 
 // ====== 增强界面行内/区块级 Coming Soon 样式 ======
 .coming-soon {
-  color: #8b87a3;
+  color: $sub;
   font-style: italic;
   display: inline-flex;
   align-items: center;
@@ -161,19 +162,19 @@
 
 .stat-card.coming-soon {
   .stat-number {
-    color: #8b87a3;
+    color: $sub;
     font-size: 48rpx;
     font-weight: 600;
   }
   .stat-label {
-    color: #8b87a3;
+    color: $sub;
     opacity: 0.8;
   }
 }
 
 .info-row.coming-soon {
   .info-value {
-    color: #8b87a3;
+    color: $sub;
     font-style: italic;
   }
 }
@@ -182,7 +183,7 @@
   opacity: 0.6;
   pointer-events: none;
   .info-value {
-    color: #8b87a3;
+    color: $sub;
   }
 }
 

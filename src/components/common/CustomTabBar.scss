@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 .custom-tab-bar {
   --gv-h5-tabbar-width: min(100vw, 500px);
   --gv-h5-tabbar-height: clamp(72px, calc(var(--gv-h5-tabbar-width) * 149 / 750), 86px);
@@ -32,7 +33,7 @@
 
       .tab-label {
         font-size: var(--gv-h5-tabbar-label-size);
-        color: #55516e;
+        color: $dim;
         font-weight: 600;
         letter-spacing: 0.2px;
       }
@@ -53,7 +54,7 @@
         .create-btn {
           width: var(--gv-h5-create-btn-size);
           height: var(--gv-h5-create-btn-size);
-          background: linear-gradient(145deg, #7c3aed 0%, #6e56ff 50%, #a78bfa 100%);
+          background: linear-gradient(145deg, #7c3aed 0%, $primary 50%, #a78bfa 100%);
           border-radius: var(--gv-h5-create-btn-radius);
           display: flex;
           align-items: center;

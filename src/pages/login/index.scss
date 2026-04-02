@@ -1,5 +1,6 @@
+@import '../../styles/variables.scss';
 .login-container {
-  background: #08080d;
+  background: $bg;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -13,7 +14,7 @@
     cursor: pointer;
 
     .back-arrow {
-      font-size: 40px;
+      font-size: $font-size-xl;
       color: #a78bfa;
       line-height: 1;
     }
@@ -44,7 +45,7 @@
         display: block;
         font-size: 57px;
         font-weight: 700;
-        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+        background: $brand-gradient;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -53,27 +54,27 @@
 
       .tagline {
         display: block;
-        font-size: 24px;
-        color: #8b87a3;
+        font-size: $font-size-sm;
+        color: $sub;
       }
     }
 
     .login-tabs {
       display: flex;
       margin-bottom: 32px;
-      border-bottom: 1px solid #252535;
+      border-bottom: 1px solid $border;
 
       .login-tab {
         flex: 1;
         text-align: center;
         padding: 18px 0;
         font-size: 26px;
-        color: #55516e;
+        color: $dim;
         position: relative;
         cursor: pointer;
 
         &.active {
-          color: #eae8f4;
+          color: $text;
           font-weight: 600;
 
           &::after {
@@ -97,8 +98,8 @@
       margin-bottom: 0;
 
       .input-field {
-        background: #111118;
-        border: 1px solid #252535;
+        background: $surface;
+        border: 1px solid $border;
         border-radius: 24px;
         padding: 24px 30px;
         overflow: hidden;
@@ -108,17 +109,17 @@
 
         .field-prefix {
           font-size: 26px;
-          color: #8b87a3;
+          color: $sub;
           white-space: nowrap;
           padding-right: 16px;
-          border-right: 1px solid #252535;
+          border-right: 1px solid $border;
         }
 
         .input {
           flex: 1;
           font-size: 26px;
-          color: #eae8f4;
-          &::placeholder { color: #55516e; }
+          color: $text;
+          &::placeholder { color: $dim; }
         }
 
         &.code-field {
@@ -127,8 +128,8 @@
             padding: 8px 20px;
             border-radius: 16px;
             background: rgba(110, 86, 255, 0.15);
-            color: #6e56ff;
-            font-size: 22px;
+            color: $primary;
+            font-size: $font-size-xs;
             font-weight: 600;
             cursor: pointer;
             &:active { background: rgba(110, 86, 255, 0.25); }
@@ -138,7 +139,7 @@
       }
 
       .login-btn {
-        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+        background: $brand-gradient;
         border-radius: 24px;
         padding: 24px 30px;
         text-align: center;
@@ -166,11 +167,11 @@
       .register-link {
         text-align: center;
         font-size: 23px;
-        color: #8b87a3;
+        color: $sub;
         margin-top: 4px;
 
         .link {
-          color: #6e56ff;
+          color: $primary;
           margin-left: 8px;
           cursor: pointer;
           font-weight: 600;
@@ -191,18 +192,18 @@
       .divider-line {
         flex: 1;
         height: 1px;
-        background: #252535;
+        background: $border;
       }
 
       .divider-text {
-        color: #8b87a3;
-        font-size: 18px;
+        color: $sub;
+        font-size: $font-size-2xs;
       }
     }
 
     .wechat-profile-card {
       background: rgba(17, 17, 24, 0.92);
-      border: 1px solid #252535;
+      border: 1px solid $border;
       border-radius: 28px;
       padding: 24px;
       margin-bottom: 18px;
@@ -215,14 +216,14 @@
       }
 
       &__title {
-        font-size: 24px;
+        font-size: $font-size-sm;
         font-weight: 600;
-        color: #f4f2ff;
+        color: $text-bright;
       }
 
       &__desc {
         font-size: 20px;
-        color: #8b87a3;
+        color: $sub;
       }
 
       &__row {
@@ -235,7 +236,7 @@
         margin-top: 16px;
         font-size: 20px;
         line-height: 1.6;
-        color: #8b87a3;
+        color: $sub;
       }
     }
 
@@ -262,7 +263,7 @@
       }
 
       &__placeholder {
-        font-size: 22px;
+        font-size: $font-size-xs;
         font-weight: 600;
         color: #d7d2f7;
       }
@@ -270,8 +271,8 @@
 
     .wechat-nickname-field {
       flex: 1;
-      background: #111118;
-      border: 1px solid #252535;
+      background: $surface;
+      border: 1px solid $border;
       border-radius: 24px;
       padding: 24px 30px;
       overflow: hidden;
@@ -458,7 +459,7 @@
 
       .login-tab {
         padding: 14px 0;
-        font-size: 16px;
+        font-size: $font-size-base-h5;
 
         &.active {
           &::after {
@@ -477,19 +478,19 @@
         padding: 16px 18px;
 
         .field-prefix {
-          font-size: 16px;
+          font-size: $font-size-base-h5;
           padding-right: 12px;
         }
 
         .input {
-          font-size: 16px;
+          font-size: $font-size-base-h5;
         }
 
         &.code-field {
           .send-code-btn {
             padding: 8px 14px;
             border-radius: 12px;
-            font-size: 13px;
+            font-size: $font-size-xs-h5;
           }
         }
       }
@@ -498,11 +499,11 @@
         margin-top: 10px;
         border-radius: 18px;
         padding: 16px 20px;
-        font-size: 16px;
+        font-size: $font-size-base-h5;
       }
 
       .register-link {
-        font-size: 14px;
+        font-size: $font-size-sm-h5;
         margin-top: 0;
       }
     }
@@ -511,7 +512,7 @@
       margin: 14px 0;
 
       .divider-text {
-        font-size: 13px;
+        font-size: $font-size-xs-h5;
       }
     }
 
@@ -526,12 +527,12 @@
       }
 
       &__title {
-        font-size: 16px;
+        font-size: $font-size-base-h5;
       }
 
       &__desc,
       &__tip {
-        font-size: 13px;
+        font-size: $font-size-xs-h5;
         line-height: 1.6;
       }
 
@@ -547,7 +548,7 @@
       border-radius: 20px;
 
       &__placeholder {
-        font-size: 14px;
+        font-size: $font-size-sm-h5;
       }
     }
 
@@ -557,14 +558,14 @@
       padding: 16px 18px;
 
       .input {
-        font-size: 16px;
+        font-size: $font-size-base-h5;
       }
     }
 
     .wechat-btn {
       border-radius: 18px;
       padding: 16px 20px;
-      font-size: 16px;
+      font-size: $font-size-base-h5;
     }
   }
 }

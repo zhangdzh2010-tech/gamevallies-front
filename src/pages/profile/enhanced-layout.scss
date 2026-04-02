@@ -1,3 +1,4 @@
+@import '../../styles/variables.scss';
 // ====== 增强界面布局样式 ======
 .creator-identity {
   padding: 28rpx 32rpx;
@@ -20,7 +21,7 @@
   }
   .identity-desc {
     font-size: 24rpx;
-    color: #8b87a3;
+    color: $sub;
     line-height: 1.5;
   }
 }
@@ -42,12 +43,12 @@
       display: block;
       font-size: 36rpx;
       font-weight: 700;
-      color: #6e56ff;
+      color: $primary;
       margin-bottom: 8rpx;
     }
     .stat-label {
       font-size: 22rpx;
-      color: #8b87a3;
+      color: $sub;
     }
   }
 }
@@ -67,8 +68,8 @@
     align-items: center;
     gap: 12rpx;
     .link-icon { font-size: 36rpx; }
-    .link-label { font-size: 24rpx; color: #eae8f4; }
-    .link-status { font-size: 20rpx; color: #8b87a3; }
+    .link-label { font-size: 24rpx; color: $text; }
+    .link-status { font-size: 20rpx; color: $sub; }
   }
 }
 
@@ -83,7 +84,7 @@
     .section-header {
       font-size: 28rpx;
       font-weight: 700;
-      color: #eae8f4;
+      color: $text;
       margin-bottom: 16rpx;
     }
     .info-row {
@@ -92,8 +93,8 @@
       align-items: center;
       padding: 18rpx 0;
       font-size: 26rpx;
-      .info-label { color: #eae8f4; }
-      .info-value { color: #8b87a3; }
+      .info-label { color: $text; }
+      .info-value { color: $sub; }
       &.link { cursor: pointer; }
     }
   }

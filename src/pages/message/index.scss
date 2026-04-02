@@ -1,10 +1,11 @@
+@import '../../styles/variables.scss';
 .messages-page {
   display: flex;
   flex-direction: column;
   height: 100vh;
   max-width: 100vw;
-  background: #08080d;
-  color: #eae8f4;
+  background: $bg;
+  color: $text;
   overflow-x: hidden;
 
   .messages-header {
@@ -13,8 +14,8 @@
     justify-content: center;
     padding: 21px 30px;
     height: 96px;
-    background: #111118;
-    border-bottom: 1px solid #252535;
+    background: $surface;
+    border-bottom: 1px solid $border;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -51,8 +52,8 @@
       right: 30px;
 
       .mark-all-read-text {
-        font-size: 22px;
-        color: #6e56ff;
+        font-size: $font-size-xs;
+        color: $primary;
       }
 
       &:active .mark-all-read-text {
@@ -83,13 +84,13 @@
 
       .empty-text {
         font-size: 26px;
-        color: #8b87a3;
+        color: $sub;
         margin-bottom: 12px;
       }
 
       .empty-desc {
-        font-size: 22px;
-        color: #55516e;
+        font-size: $font-size-xs;
+        color: $dim;
       }
     }
 
@@ -103,7 +104,7 @@
         padding: 24px;
         margin-bottom: 15px;
         background: #15151e;
-        border: 1px solid #252535;
+        border: 1px solid $border;
         border-radius: 21px;
         cursor: pointer;
         transition: all 0.3s ease;
@@ -115,7 +116,7 @@
 
         &:active {
           background: #1a1a24;
-          border-color: #6e56ff;
+          border-color: $primary;
         }
 
         .notification-left {
@@ -188,20 +189,20 @@
             justify-content: space-between;
 
             .actor-name {
-              font-size: 24px;
+              font-size: $font-size-sm;
               font-weight: 600;
-              color: #eae8f4;
+              color: $text;
             }
 
             .notification-time {
               font-size: 20px;
-              color: #8b87a3;
+              color: $sub;
             }
           }
 
           .notification-action {
             font-size: 23px;
-            color: #8b87a3;
+            color: $sub;
           }
         }
 
@@ -222,16 +223,16 @@
         .load-more-btn {
           padding: 18px 36px;
           background: transparent;
-          border: 1px solid #252535;
+          border: 1px solid $border;
           border-radius: 18px;
-          font-size: 24px;
-          color: #8b87a3;
+          font-size: $font-size-sm;
+          color: $sub;
           cursor: pointer;
           transition: all 0.3s ease;
 
           &:active {
-            border-color: #6e56ff;
-            color: #6e56ff;
+            border-color: $primary;
+            color: $primary;
           }
         }
       }
@@ -253,7 +254,7 @@
       gap: 10px;
 
       .header-title {
-        font-size: 24px;
+        font-size: $font-size-xl-h5;
       }
 
       .unread-badge {
@@ -268,7 +269,7 @@
       right: 18px;
 
       .mark-all-read-text {
-        font-size: 14px;
+        font-size: $font-size-sm-h5;
       }
     }
   }
@@ -296,11 +297,11 @@
       }
 
       .empty-text {
-        font-size: 16px;
+        font-size: $font-size-base-h5;
       }
 
       .empty-desc {
-        font-size: 13px;
+        font-size: $font-size-xs-h5;
         line-height: 1.55;
       }
     }
@@ -334,11 +335,11 @@
             gap: 12px;
 
             .actor-name {
-              font-size: 16px;
+              font-size: $font-size-base-h5;
             }
 
             .notification-time {
-              font-size: 13px;
+              font-size: $font-size-xs-h5;
             }
           }
 
@@ -502,7 +503,7 @@
       display: block;
       margin-bottom: 10px;
       color: #f5f7ff;
-      font-size: 28px;
+      font-size: $font-size-base;
       font-weight: 800;
       line-height: 1.16;
       letter-spacing: -0.3px;
@@ -554,7 +555,7 @@
     &__metric-value {
       display: block;
       color: #ffffff;
-      font-size: 18px;
+      font-size: $font-size-2xs;
       font-weight: 800;
       line-height: 1;
     }
@@ -594,7 +595,7 @@
     }
 
     .header-title {
-      font-size: 22px;
+      font-size: $font-size-xs;
       font-weight: 800;
       letter-spacing: -0.2px;
     }
@@ -647,7 +648,7 @@
       }
 
       .empty-text {
-        font-size: 18px;
+        font-size: $font-size-2xs;
         font-weight: 700;
         color: #eef4ff;
         margin-bottom: 8px;
@@ -813,7 +814,7 @@
     padding: 16px;
 
     &__title {
-      font-size: 24px;
+      font-size: $font-size-xl-h5;
     }
 
     &__metrics {
@@ -831,7 +832,7 @@
     }
 
     &__metric-value {
-      font-size: 16px;
+      font-size: $font-size-base-h5;
     }
   }
 
@@ -841,7 +842,7 @@
     gap: 10px;
 
     .header-title {
-      font-size: 20px;
+      font-size: $font-size-lg-h5;
     }
 
     .mark-all-read {

@@ -1,8 +1,9 @@
+@import '../../styles/variables.scss';
 .subscription-container {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #08080d;
+  background: $bg;
   overflow: hidden;
 }
 
@@ -28,7 +29,7 @@
 
 .quota-card-title {
   font-size: 28rpx;
-  color: #8b87a3;
+  color: $sub;
   margin-bottom: 28rpx;
 }
 
@@ -53,7 +54,7 @@
 
 .quota-progress-text {
   font-size: 24rpx;
-  color: #55516e;
+  color: $dim;
 }
 
 .quota-remaining {
@@ -70,7 +71,7 @@
 
 .quota-remaining-label {
   font-size: 28rpx;
-  color: #8b87a3;
+  color: $sub;
 }
 
 /* Subscription Status Card */
@@ -83,7 +84,7 @@
 
 .sub-status-title {
   font-size: 28rpx;
-  color: #8b87a3;
+  color: $sub;
   margin-bottom: 24rpx;
 }
 
@@ -186,12 +187,12 @@
 
 .plan-card-period {
   font-size: 26rpx;
-  color: #8b87a3;
+  color: $sub;
 }
 
 .plan-card-quota {
   font-size: 26rpx;
-  color: #2dd4a8;
+  color: $mint;
   font-weight: 500;
   margin-bottom: 28rpx;
 }
@@ -211,7 +212,7 @@
 
 .feature-dot {
   font-size: 28rpx;
-  color: #2dd4a8;
+  color: $mint;
 }
 
 .feature-text {
@@ -231,7 +232,7 @@
   line-height: 1;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+  background: $brand-gradient;
   box-shadow: 0 8rpx 24rpx rgba(110, 86, 255, 0.3);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -247,7 +248,7 @@
   }
 
   &.subscribing {
-    background: #55516e;
+    background: $dim;
     box-shadow: none;
     cursor: not-allowed;
     
@@ -277,7 +278,7 @@
 
 .subscriber-bar text {
   font-size: 24rpx;
-  color: #55516e;
+  color: $dim;
 }
 
 .bottom-spacer {
@@ -311,7 +312,7 @@
 
   .quota-card-title,
   .sub-status-title {
-    font-size: 13px;
+    font-size: $font-size-xs-h5;
     margin-bottom: 12px;
   }
 
@@ -326,7 +327,7 @@
   }
 
   .quota-progress-text {
-    font-size: 13px;
+    font-size: $font-size-xs-h5;
   }
 
   .quota-remaining {
@@ -335,12 +336,12 @@
   }
 
   .quota-remaining-num {
-    font-size: 32px;
+    font-size: $font-size-2xl-h5;
     line-height: 1;
   }
 
   .quota-remaining-label {
-    font-size: 14px;
+    font-size: $font-size-sm-h5;
   }
 
   .sub-status-card {
@@ -361,7 +362,7 @@
 
   .sub-info-label,
   .sub-info-value {
-    font-size: 14px;
+    font-size: $font-size-sm-h5;
     line-height: 1.45;
   }
 
@@ -375,7 +376,7 @@
   }
 
   .plans-section-title {
-    font-size: 20px;
+    font-size: $font-size-lg-h5;
     margin-bottom: 14px;
   }
 
@@ -411,7 +412,7 @@
   }
 
   .plan-card-currency {
-    font-size: 13px;
+    font-size: $font-size-xs-h5;
   }
 
   .plan-card-amount {
@@ -422,7 +423,7 @@
   .plan-card-quota,
   .feature-dot,
   .feature-text {
-    font-size: 13px;
+    font-size: $font-size-xs-h5;
     line-height: 1.45;
   }
 
@@ -439,7 +440,7 @@
     min-height: 52px;
     padding: 0 12px;
     border-radius: 16px;
-    font-size: 16px;
+    font-size: $font-size-base-h5;
     line-height: 1;
     box-shadow: 0 6px 18px rgba(110, 86, 255, 0.3);
   }
@@ -449,7 +450,7 @@
   }
 
   .subscriber-bar text {
-    font-size: 13px;
+    font-size: $font-size-xs-h5;
   }
 
   .bottom-spacer {
@@ -492,7 +493,7 @@
     }
 
     .plan-card-amount {
-      font-size: 24px;
+      font-size: $font-size-xl-h5;
     }
   }
 }
@@ -589,7 +590,7 @@
   &__metric-value {
     display: block;
     color: #ffffff;
-    font-size: 18px;
+    font-size: $font-size-2xs;
     font-weight: 800;
     line-height: 1.1;
   }
@@ -785,11 +786,11 @@
     border-radius: 24px;
 
     &__title {
-      font-size: 24px;
+      font-size: $font-size-xl-h5;
     }
 
     &__desc {
-      font-size: 14px;
+      font-size: $font-size-sm-h5;
     }
 
     &__metrics {
@@ -808,7 +809,7 @@
     }
 
     &__metric-value {
-      font-size: 16px;
+      font-size: $font-size-base-h5;
     }
   }
 
@@ -821,7 +822,7 @@
   .quota-card-title,
   .sub-status-title,
   .plans-section-title {
-    font-size: 20px;
+    font-size: $font-size-lg-h5;
   }
 
   .plans-section-head {

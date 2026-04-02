@@ -27,7 +27,7 @@
   box-shadow: 0 10px 24px rgba(110, 86, 255, 0.22);
   color: $white;
   display: inline-flex;
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: $font-weight-bold;
   justify-content: center;
   min-height: $min-height;
@@ -42,7 +42,7 @@
   box-shadow: none;
   color: $text;
   display: inline-flex;
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   justify-content: center;
   min-height: $min-height;
@@ -58,7 +58,7 @@
   box-sizing: border-box;
   color: #a8a2c2;
   display: inline-flex;
-  font-size: 14px;
+  font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   justify-content: center;
   line-height: 1;
