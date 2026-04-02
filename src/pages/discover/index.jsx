@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
@@ -151,8 +151,17 @@ export default function FollowPage() {
     fetchData(1);
   }, [fetchData]);
 
+  // #27 页面重新显示时（如登录后返回），自动刷新数据
+  const prevLoggedInRef = useRef(loggedIn);
   useDidShow(() => {
     setFollowedGames((prev) => mergeBookmarkedFlags(prev));
+
+    // 检测登录状态变化，登录后自动刷新当前 tab 数据
+    const nowLoggedIn = isLoggedIn();
+    if (!prevLoggedInRef.current && nowLoggedIn) {
+      fetchData(1);
+    }
+    prevLoggedInRef.current = nowLoggedIn;
   });
 
   useEffect(() => {
@@ -610,7 +619,15 @@ export default function FollowPage() {
                   >
                     <Text>{'\u53bb\u767b\u5f55'}</Text>
                   </View>
-                ) : null}
+                ) : (
+                  /* #28 已登录但无关注时，引导用户去推荐 Tab 发现创作者 */
+                  <View
+                    className="empty-action"
+                    onClick={() => setActiveTab(TAB_RECOMMENDED)}
+                  >
+                    <Text>去发现创作者</Text>
+                  </View>
+                )}
               </View>
             ) : (
               <View className="waterfall">

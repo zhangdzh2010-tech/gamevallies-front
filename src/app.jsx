@@ -2,6 +2,7 @@ import './app.scss';
 import { Fragment, useEffect } from 'react';
 import Taro from '@tarojs/taro';
 import { isH5Runtime } from './utils/runtime';
+import { Storage } from './utils/storage';
 import useQuotaStore from './stores/quotaStore';
 import { LANDSCAPE_PLAY_PAGE_PATH, PORTRAIT_PLAY_PAGE_PATH } from './utils/gamePlayRoute';
 
@@ -118,6 +119,31 @@ Taro.eventCenter.on('__error', (err) => {
 });
 
 function App({ children }) {
+  // #15 启动时验证 token 有效性，避免过期 token 保持到首次请求
+  useEffect(() => {
+    const token = Storage.getToken();
+    if (!token) {
+      return;
+    }
+
+    // 轻量请求验证 token 是否有效，失败则静默清除
+    const { get: apiGet } = require('./services/api');
+    apiGet('/api/v1/users/me', { timeout: 5000 })
+      .then((user) => {
+        if (user) {
+          Storage.setUser(user);
+        }
+      })
+      .catch((error) => {
+        // 仅在明确的 401 时清除 token，网络错误不处理
+        if (error?.statusCode === 401) {
+          Storage.removeToken();
+          Storage.removeRefreshToken();
+          Storage.removeUser();
+        }
+      });
+  }, []);
+
   useEffect(() => {
     if (!isH5Runtime() || typeof window === 'undefined') {
       return undefined;
@@ -177,8 +203,9 @@ function App({ children }) {
         return;
       }
 
+      // #22 H5 支付回调：用户从支付页返回时自动恢复支付流程，非静默以便给用户反馈
       void useQuotaStore.getState().hydratePaymentAttempt()
-        .then(() => useQuotaStore.getState().resumePendingPayment({ silent: true }))
+        .then(() => useQuotaStore.getState().resumePendingPayment({ silent: false }))
         .catch((error) => {
           console.warn('resumePendingPayment failed:', error);
         });

@@ -63,6 +63,7 @@ function shouldRecoverUnauthorized(url) {
     return false;
   }
 
+  // #19 补全受保护 API 列表，确保所有认证操作都能触发 token 刷新
   const guardedUrls = [
     '/api/v1/social',
     '/api/v1/comments',
@@ -76,12 +77,13 @@ function shouldRecoverUnauthorized(url) {
     '/api/v1/games/my',
     '/api/v1/games/tasks',
     '/api/v1/games/creation-sessions',
+    '/api/v1/games/generate',
     '/api/v1/games/',
   ];
 
   return guardedUrls.some((path) => {
     if (path === '/api/v1/games/') {
-      return /\/api\/v1\/games\/(creation-sessions(?:\/|$)|[^/]+\/(unlock|iterate|publish|settings|fork))/.test(url);
+      return /\/api\/v1\/games\/(creation-sessions(?:\/|$)|generate|[^/]+\/(unlock|iterate|publish|settings|fork|cancel))/.test(url);
     }
 
     return url.includes(path);
@@ -206,15 +208,26 @@ retryConfig = DEFAULT_RETRY_CONFIG)
         const refreshToken = Storage.getRefreshToken();
 
         if (refreshToken) {
-          try {
-            const newToken = await requestTokenRefresh(refreshToken);
-            if (newToken) {
-              isRefreshing = false;
-              onTokenRefreshed(newToken);
-              return createRequest(config, { ...retryConfig, count: 0 });
+          // #16 Token 刷新增加重试机制，防止网络抖动导致全量登出
+          const MAX_REFRESH_RETRIES = 2;
+          for (let attempt = 0; attempt <= MAX_REFRESH_RETRIES; attempt += 1) {
+            try {
+              const newToken = await requestTokenRefresh(refreshToken);
+              if (newToken) {
+                isRefreshing = false;
+                onTokenRefreshed(newToken);
+                return createRequest(config, { ...retryConfig, count: 0 });
+              }
+            } catch (refreshErr) {
+              console.warn(`Token refresh attempt ${attempt + 1} failed:`, refreshErr);
+              // 如果是 4xx 错误（非网络问题），不再重试
+              if (refreshErr?.statusCode >= 400 && refreshErr?.statusCode < 500) {
+                break;
+              }
+              if (attempt < MAX_REFRESH_RETRIES) {
+                await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+              }
             }
-          } catch (refreshErr) {
-            console.warn('Token refresh failed:', refreshErr);
           }
         }
 

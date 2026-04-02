@@ -21,6 +21,8 @@ const ACTIVE_GENERATION_TASK_KEY = 'gamevallies_active_generation_task';
 const TRACKED_GENERATION_TASKS_KEY = 'gamevallies_tracked_generation_tasks';
 const ACTIVE_GENERATION_TASK_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_TASK_TIMEOUT_MS = 30 * 60 * 1000;
+// #8 阶段停滞检测：同一阶段超过此时间触发提示
+const STAGE_STALE_WARN_MS = 5 * 60 * 1000;
 const TRACKED_TASKS_LIMIT = 20;
 const SESSION_INIT_POLL_INTERVAL_MS = 2000;
 const SESSION_INIT_MAX_POLLS = 15;
@@ -108,6 +110,10 @@ let activeTimeoutId = null;
 let activeWebSocketUnsubscribers = [];
 let activeSessionPollInterval = null;
 let activeSessionWebSocketUnsubscribers = [];
+// #8 阶段停滞检测状态
+let lastStageKey = null;
+let lastStageChangedAt = 0;
+let staleStageWarned = false;
 
 function clearActiveTaskRuntime() {
   if (activeTaskPollInterval) {
@@ -133,6 +139,11 @@ function clearActiveTaskRuntime() {
     }
   });
   activeWebSocketUnsubscribers = [];
+
+  // #8 同步重置阶段停滞检测状态，防止残留到下一个 task
+  lastStageKey = null;
+  lastStageChangedAt = 0;
+  staleStageWarned = false;
 }
 
 function clearActiveSessionRuntime() {
@@ -305,7 +316,7 @@ function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理
   }
 
   if (/revision|版本冲突|冲突/i.test(source)) {
-    return '当前创作已在其他地方更新，请刷新后继续';
+    return '当前创作已在其他地方更新，已自动刷新，请重试';
   }
 
   if (/expired|过期/i.test(source)) {
@@ -342,6 +353,27 @@ function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理
 
   if (/must be longer than or equal to 5 characters|min length 5|at least 5/i.test(source)) {
     return '至少输入 5 个字，再开始这一轮';
+  }
+
+  // #10 补充更多常见错误类型的友好提示
+  if (/quota|limit|配额|次数.*用完|额度/i.test(source)) {
+    return '创作次数已用完，请升级或等待配额刷新';
+  }
+
+  if (/forbidden|permission|权限|禁止/i.test(source)) {
+    return '没有操作权限，请确认账号状态';
+  }
+
+  if (/not found|404|找不到/i.test(source)) {
+    return '请求的资源不存在，可能已被删除';
+  }
+
+  if (/server error|internal server|HTTP 5\d{2}|服务器/i.test(source)) {
+    return '服务器暂时出了点问题，请稍后再试';
+  }
+
+  if (/rate.?limit|too many|频繁/i.test(source)) {
+    return '操作太频繁了，请稍后再试';
   }
 
   if (!/[\u4e00-\u9fa5]/.test(source)) {
@@ -877,6 +909,11 @@ export const useGameStore = create((set, get) => {
   creationSessionContext: null,
 
   createGame: async (description, title, options) => {
+    // #4 双击防护：如果正在生成或提交中，拒绝重复请求
+    if (get().isGenerating || get().isLoading) {
+      throw new Error('正在处理中，请稍候');
+    }
+
     clearActiveTaskRuntime();
     clearActiveSessionRuntime();
 
@@ -963,6 +1000,11 @@ export const useGameStore = create((set, get) => {
   startCreationSession: async (prompt, title, options = {}) => {
     if (countPromptCharacters(prompt) < 5) {
       throw new Error('至少输入 5 个字，再开始这一轮');
+    }
+
+    // #4 双击防护：如果正在提交或恢复中，拒绝重复请求
+    if (get().creationSessionSubmitting || get().creationSessionRestoring) {
+      throw new Error('正在处理中，请稍候');
     }
 
     const previousGame = get().currentGame;
@@ -1147,6 +1189,16 @@ export const useGameStore = create((set, get) => {
       return nextSession;
     } catch (error) {
       const message = deriveCreationSessionErrorMessage(error, '提交回答失败，请稍后重试');
+
+      // #7 版本冲突时自动刷新 session 获取最新 revision
+      if (/revision|版本冲突|冲突/i.test(error?.message || '')) {
+        try {
+          await get().refreshCreationSession(session.sessionId);
+        } catch (_refreshError) {
+          // 刷新失败则保持原错误消息
+        }
+      }
+
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1191,6 +1243,11 @@ export const useGameStore = create((set, get) => {
   },
 
   generateFromCreationSession: async (sessionIdOrOptions = {}, maybeOptions = {}) => {
+    // #4 双击防护：如果正在生成中，拒绝重复请求
+    if (get().isGenerating || get().creationSessionSubmitting) {
+      throw new Error('正在处理中，请稍候');
+    }
+
     const session = get().creationSession;
     const hasLegacySessionId = typeof sessionIdOrOptions === 'string' && sessionIdOrOptions.trim();
     const targetSessionId = hasLegacySessionId
@@ -1417,11 +1474,36 @@ export const useGameStore = create((set, get) => {
 
     await get()._syncTaskEvents(task.taskId, { reset: true });
 
+    // #8 初始化阶段停滞检测
+    lastStageKey = task.displayStageKey || null;
+    lastStageChangedAt = Date.now();
+    staleStageWarned = false;
+
     activeTaskPollInterval = setInterval(() => {
       const currentTask = useGameStore.getState().currentTask;
       if (!currentTask?.taskId || currentTask.taskId !== task.taskId) {
         return;
       }
+
+      // #8 阶段停滞检测：同一阶段停留超过阈值时给出提示
+      const currentStageKey = currentTask.displayStageKey;
+      if (currentStageKey && currentStageKey !== lastStageKey) {
+        lastStageKey = currentStageKey;
+        lastStageChangedAt = Date.now();
+        staleStageWarned = false;
+      } else if (
+        !staleStageWarned
+        && lastStageChangedAt > 0
+        && Date.now() - lastStageChangedAt > STAGE_STALE_WARN_MS
+      ) {
+        staleStageWarned = true;
+        Taro.showToast({
+          title: '生成时间较长，请耐心等待或稍后查看',
+          icon: 'none',
+          duration: 3000,
+        });
+      }
+
       void useGameStore.getState()._syncTask(task.taskId);
     }, 4000);
 
@@ -1508,6 +1590,18 @@ export const useGameStore = create((set, get) => {
   },
 
   _applyTaskUpdate: async (task) => {
+    // #6 竞态防护：如果新数据的进度比当前已有的更旧，跳过更新
+    const currentTask = get().currentTask;
+    if (
+      currentTask?.taskId === task.taskId
+      && currentTask?.progressPct != null
+      && task?.progressPct != null
+      && Number(task.progressPct) < Number(currentTask.progressPct)
+      && !isTerminalTaskStatus(task.status)
+    ) {
+      return;
+    }
+
     const events = get().currentTaskEvents;
     const progress = buildProgressFromTask(task, events);
     const existingTrackedTask = get().trackedTasks.find((item) => item.taskId === task.taskId);

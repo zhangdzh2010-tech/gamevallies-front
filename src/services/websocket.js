@@ -252,8 +252,13 @@ class WebSocketManager {
     });
 
     Taro.onSocketClose(() => {
+      const wasConnected = this.isConnected;
       this.isConnected = false;
       if (!this._intentionalClose) {
+        // #9 WebSocket 断连后给用户一个轻量提示
+        if (wasConnected && this.reconnectCount === 0) {
+          Taro.showToast({ title: '实时连接已断开，正在重连…', icon: 'none', duration: 2000 });
+        }
         this._scheduleReconnect();
       }
     });
@@ -310,6 +315,12 @@ class WebSocketManager {
   _scheduleReconnect() {
     if (this.reconnectCount >= 5) {
       console.warn('[WebSocket] Max reconnect attempts reached');
+      // #9 重连失败后给用户明确提示
+      Taro.showToast({
+        title: '实时连接断开，进度将通过轮询更新',
+        icon: 'none',
+        duration: 3000,
+      });
       return;
     }
 

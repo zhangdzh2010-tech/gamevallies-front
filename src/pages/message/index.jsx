@@ -240,13 +240,17 @@ export default function Message() {
             : item
         )));
       } catch {
-        // best effort
+        // #26 标记已读失败时给出轻量提示
+        Taro.showToast({ title: '标记已读失败', icon: 'none', duration: 1500 });
       }
     }
 
     const gameId = message.gameId || message.targetId;
     if (gameId) {
-      Taro.navigateTo({ url: `/pages/game/detail/index?id=${gameId}` }).catch(() => {});
+      Taro.navigateTo({ url: `/pages/game/detail/index?id=${gameId}` }).catch(() => {
+        // #25 导航失败时提示用户，避免死路
+        Taro.showToast({ title: '该作品已不存在或暂不可用', icon: 'none' });
+      });
     }
   };
 

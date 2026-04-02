@@ -491,6 +491,15 @@ export default function GameForkPage() {
               <Text className="fork-warning-card__text">
                 {isOwnGame ? '这是你自己的作品，直接去优化会更合适。' : '作者暂未开放复刻权限，目前还不能基于这款作品生成新版本。'}
               </Text>
+              {/* #13 为 own-game 情况提供跳转到优化页面的入口 */}
+              {isOwnGame && sourceGame?.id ? (
+                <View
+                  className="fork-warning-card__action"
+                  onClick={() => openIteratePageWithAuth(sourceGame, sourceGame.id)}
+                >
+                  <Text className="fork-warning-card__action-text">去优化作品</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
 

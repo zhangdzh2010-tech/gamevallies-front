@@ -694,6 +694,16 @@ export default function GameDetail() {
 
   const handleContinueCreate = async () => {
     if (isOwnGame) {
+      // #12 校验游戏是否处于可优化状态
+      const gameStatus = game?.status;
+      if (gameStatus === 'generating') {
+        Taro.showToast({ title: '游戏还在生成中，请稍后再优化', icon: 'none' });
+        return;
+      }
+      if (gameStatus === 'banned') {
+        Taro.showToast({ title: '该游戏已被下架，无法优化', icon: 'none' });
+        return;
+      }
       openIteratePageWithAuth(game, game?.id);
       return;
     }

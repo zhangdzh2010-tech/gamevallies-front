@@ -14,7 +14,11 @@ import {
 import { isH5Runtime } from '../utils/runtime';
 import { storage } from '../utils/storage';
 
-const QUOTA_CACHE_TTL = 5 * 60 * 1000;
+// #20 缩短配额缓存时间，减少显示不准的窗口期
+const QUOTA_CACHE_TTL = 60 * 1000;
+// #24 配额预警冷却：同一预警 30 分钟内只弹一次，防止频繁 fetchQuota 导致 toast 轰炸
+const QUOTA_WARN_COOLDOWN_MS = 30 * 60 * 1000;
+let _lastQuotaWarnTime = 0;
 const POST_PAYMENT_SYNC_ATTEMPTS = 4;
 const POST_PAYMENT_SYNC_DELAY_MS = 800;
 const PAYMENT_STATUS_POLL_ATTEMPTS = 5;
@@ -149,7 +153,15 @@ function getPaymentFailureMessage(stage, error, orderStatus = null) {
     return '支付结果确认中，请稍后在订阅页查看';
   }
 
-  return error?.message || '微信支付失败，请重试';
+  // #23 提供更具体的错误信息
+  const errorMsg = error?.message || error?.errMsg || '';
+  if (/insufficient|余额不足|balance/i.test(errorMsg)) {
+    return '余额不足，请更换支付方式后重试';
+  }
+  if (/timeout|超时/i.test(errorMsg)) {
+    return '支付请求超时，请检查网络后重试';
+  }
+  return errorMsg || '微信支付未完成，请重试';
 }
 
 async function persistPaymentAttempt(attempt) {
@@ -220,6 +232,40 @@ const useQuotaStore = create((set, get) => ({
         loading: false,
         _lastFetchTime: Date.now(),
       });
+
+      // #24 配额预警：当剩余配额不足时给出提示（带冷却防止重复弹出）
+      try {
+        const now = Date.now();
+        if (now - _lastQuotaWarnTime > QUOTA_WARN_COOLDOWN_MS) {
+          const sub = data.subscription;
+          const freeRemaining = data.freeQuota ?? 0;
+          const subRemaining = sub?.remaining ?? 0;
+          const subTotal = sub?.quotaThisPeriod ?? 0;
+          const totalRemaining = freeRemaining + subRemaining;
+
+          if (totalRemaining > 0 && totalRemaining <= 2) {
+            _lastQuotaWarnTime = now;
+            Taro.showToast({
+              title: `创作配额仅剩 ${totalRemaining} 次，请合理使用`,
+              icon: 'none',
+              duration: 3000,
+            });
+          } else if (sub?.active && subTotal > 0 && subRemaining > 0) {
+            const usageRatio = (subTotal - subRemaining) / subTotal;
+            if (usageRatio >= 0.8) {
+              _lastQuotaWarnTime = now;
+              Taro.showToast({
+                title: `本周期配额已用 ${Math.round(usageRatio * 100)}%，剩余 ${subRemaining} 次`,
+                icon: 'none',
+                duration: 3000,
+              });
+            }
+          }
+        }
+      } catch (_warnError) {
+        // 预警逻辑不应影响主流程
+      }
+
       return data;
     } catch (error) {
       console.error('fetchQuota failed:', error);
@@ -253,7 +299,14 @@ const useQuotaStore = create((set, get) => ({
   },
 
   closePaywall: (options = {}) => {
-    if (get().subscribing && !options?.force) {
+    // #21 如果支付进行超过 60 秒仍未完成，允许用户强制关闭
+    const paymentAttempt = get().paymentAttempt;
+    const paymentAge = paymentAttempt?.updatedAt
+      ? Date.now() - new Date(paymentAttempt.updatedAt).getTime()
+      : 0;
+    const isStalePayment = paymentAge > 60 * 1000;
+
+    if (get().subscribing && !options?.force && !isStalePayment) {
       return false;
     }
 

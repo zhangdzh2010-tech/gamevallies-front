@@ -405,6 +405,19 @@ export async function logout() {
     Storage.removeToken();
     Storage.removeRefreshToken();
     Storage.removeUser();
+
+    // #17 登出时清除所有残留的导航和创作状态
+    try {
+      const Taro = require('@tarojs/taro').default;
+      Taro.removeStorageSync('gamevallies_post_login_redirect');
+      Taro.removeStorageSync('gamevallies_create_entry_intent');
+      Taro.removeStorageSync('gamevallies_iterate_entry_game');
+      Taro.removeStorageSync('gamevallies_active_generation_task');
+      Taro.removeStorageSync('gamevallies_create_draft_prompt');
+      Taro.removeStorageSync('gamevallies_create_draft_name');
+    } catch (_e) {
+      // 忽略清除失败
+    }
   }
 }
 
