@@ -107,29 +107,30 @@ export default function SubscriptionPage() {
       <AppTopBar showBack />
 
       <PageScrollContainer scrollY className="subscription-scroll">
-        <View className="subscription-stage">
-          <View className="subscription-stage__copy">
-            <Text className="subscription-stage__eyebrow">Payment Options</Text>
-            <Text className="subscription-stage__title">
-              {subscription.active ? '订阅已生效，继续稳定创作' : '先选支付方式，再解锁完整创作额度'}
-            </Text>
-            <Text className="subscription-stage__desc">
-              {subscription.active
-                ? '你当前的订阅权益已经生效，可以继续查看套餐、有效期与额度消耗情况。'
-                : '当前先支持支付宝支付，同时预留了微信支付入口，后续可无缝补齐。'}
-            </Text>
+        <View className="subscription-shell">
+          <View className="subscription-stage">
+            <View className="subscription-stage__copy">
+              <Text className="subscription-stage__eyebrow">Payment Options</Text>
+              <Text className="subscription-stage__title">
+                {subscription.active ? '订阅已生效，继续稳定创作' : '先选支付方式，再解锁完整创作额度'}
+              </Text>
+              <Text className="subscription-stage__desc">
+                {subscription.active
+                  ? '你当前的订阅权益已经生效，可以继续查看套餐、有效期与额度消耗情况。'
+                  : '当前先支持支付宝支付，同时预留了微信支付入口，后续可无缝补齐。'}
+              </Text>
+            </View>
+            <View className="subscription-stage__metrics">
+              {subscriptionHighlights.map((highlight) => (
+                <View key={highlight.key} className="subscription-stage__metric">
+                  <Text className="subscription-stage__metric-label">{highlight.label}</Text>
+                  <Text className="subscription-stage__metric-value">{highlight.value}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-          <View className="subscription-stage__metrics">
-            {subscriptionHighlights.map((highlight) => (
-              <View key={highlight.key} className="subscription-stage__metric">
-                <Text className="subscription-stage__metric-label">{highlight.label}</Text>
-                <Text className="subscription-stage__metric-value">{highlight.value}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
 
-        <View className="payment-method-card">
+          <View className="payment-method-card">
           <View className="payment-method-card__head">
             <View className="payment-method-card__copy">
               <Text className="payment-method-card__eyebrow">Payment Method</Text>
@@ -284,6 +285,7 @@ export default function SubscriptionPage() {
         ) : null}
 
         <View className="bottom-spacer" />
+        </View>
       </PageScrollContainer>
 
       <CustomTabBar activeIndex={4} />

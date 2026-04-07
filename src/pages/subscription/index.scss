@@ -14,6 +14,11 @@
   padding: 0 32rpx;
 }
 
+.subscription-shell {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .quota-cards {
   display: grid;
   gap: 24rpx;
@@ -296,7 +301,13 @@
     height: auto !important;
     min-height: 0;
     overflow: visible;
-    padding: 0 12px calc(108px + env(safe-area-inset-bottom));
+    padding: 0 0 calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .subscription-shell {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 12px;
   }
 
   .quota-card,
@@ -473,7 +484,7 @@
 
 @media screen and (max-width: 360px) {
   .subscription-container.subscription-container--h5 {
-    .subscription-scroll {
+    .subscription-shell {
       padding-left: 10px;
       padding-right: 10px;
     }
@@ -1016,7 +1027,13 @@
   }
 
   .subscription-scroll {
-    padding: 0 14px calc(108px + env(safe-area-inset-bottom));
+    padding: 0 0 calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .subscription-shell {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 14px;
   }
 
   .subscription-stage {

@@ -14,6 +14,7 @@ export { CreationResumePrompt } from './CreationResumePrompt';
 export { CreationEntryErrorCard } from './CreationEntryErrorCard';
 export { CreationStateCard } from './CreationStateCard';
 export { CreationReferenceCard } from './CreationReferenceCard';
+export { CreationResultCoverCard } from './CreationResultCoverCard';
 export { buildCreationSessionActions } from './sessionActions';
 export {
   buildCreationSessionSceneProps,

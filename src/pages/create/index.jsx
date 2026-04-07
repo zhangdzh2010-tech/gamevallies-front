@@ -9,7 +9,7 @@ import { PipelineOrbit } from '../../components/common/PipelineOrbit';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import {
   CreationCreateWorkspace,
-  CreationReferenceCard,
+  CreationResultCoverCard,
   CreationSessionActions,
   CreationSessionShell,
   CreationStateCard,
@@ -38,16 +38,6 @@ import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import './index.scss';
-
-const TASK_STATUS_LABELS = {
-  queued: '排队中',
-  submitted: '执行中',
-  running: '执行中',
-  succeeded: '已完成',
-  failed: '失败',
-  canceled: '已取消',
-  timed_out: '超时',
-};
 
 const ORIENTATION_OPTIONS = [
   { value: 'portrait', label: '竖屏' },
@@ -575,27 +565,11 @@ export default function Create() {
 
   if (isGenerating) {
     const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
-    const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
-    const currentStageLabel = progress.stageLabel || '正在生成游戏';
 
     return renderCreatePage(
       <CreationSessionShell
-        eyebrow="AI 创作中"
-        title="AI 正在为你生成游戏"
-        subtitle="系统会自动完成玩法拆解、规则编排和运行时装配，你也可以稍后去任务中心继续查看。"
-        statusLabel={taskStatusLabel}
-        statusValue={`${progress.pct}%`}
+        hideHero
         sections={[
-          {
-            key: 'create-progress-focus',
-            node: (
-              <CreationStateCard
-                eyebrow="当前焦点"
-                title={currentStageLabel}
-                description="这一步完成后会自动进入下一阶段，无需手动操作。"
-              />
-            ),
-          },
           {
             key: 'create-progress-orbit',
             node: (
@@ -604,9 +578,6 @@ export default function Create() {
                 currentIndex={progress.stageIndex}
                 progressPct={progress.pct}
                 title="生成进度"
-                stageLabel={currentStageLabel}
-                progressMessage="请稍候"
-                statusLabel={taskStatusLabel}
                 modeLabel="创作流程"
                 coreLabel="AI 创作"
               />
@@ -655,92 +626,50 @@ export default function Create() {
   }
 
   if (currentGame && !isGenerating && isCompletedGameStatus(currentGame?.status)) {
-    const resultActions = canPlay
-      ? [
-          {
-            key: 'play-created-game',
-            label: '试玩游戏',
-            tone: 'primary',
-            onClick: handlePlayGame,
-          },
-          {
-            key: 'iterate-created-game',
-            label: '继续优化',
-            tone: 'ghost',
-            onClick: () => openIteratePageWithAuth(currentGame, currentGame?.id),
-          },
-          {
-            key: 'create-new-game',
-            label: '再创一个',
-            tone: 'ghost',
-            onClick: handleNewGame,
-          },
-        ]
-      : [
-          {
-            key: 'unlock-created-game',
-            label: '订阅后试玩',
-            tone: 'primary',
-            onClick: handleLockedPlay,
-          },
-          {
-            key: 'iterate-created-game',
-            label: '继续优化',
-            tone: 'ghost',
-            onClick: () => openIteratePageWithAuth(currentGame, currentGame?.id),
-          },
-          {
-            key: 'create-new-game',
-            label: '再创一个',
-            tone: 'ghost',
-            onClick: handleNewGame,
-          },
-        ];
+    const resultTitle = currentGame.title || gameName || '新游戏';
+    const resultCoverUrl = getGameCoverUrl(currentGame);
+    const resultDescription = canPlay
+      ? '现在可以直接试玩，也可以继续打磨。'
+      : '作品已经生成完成，订阅后即可试玩。';
+    const playActionLabel = canPlay ? '试玩游戏' : '订阅后试玩';
 
     return renderCreatePage(
       <CreationSessionShell
-        eyebrow="Creation Completed"
-        title="创作完成"
-        subtitle="这版作品已经准备好了，你可以现在试玩，也可以继续优化下一版。"
-        statusLabel="当前状态"
-        statusValue={canPlay ? '可试玩' : '待解锁'}
+        hideHero
         sections={[
           {
-            key: 'create-result-summary',
+            key: 'create-result-cover',
             node: (
-              <CreationStateCard
-                tone={canPlay ? 'success' : 'warning'}
-                centered
-                eyebrow={canPlay ? '已就绪' : '待解锁'}
-                title={currentGame.title || gameName || '新游戏'}
-                description={canPlay ? '现在可以直接试玩，也可以继续打磨体验细节。' : '当前作品已经生成完成，订阅后即可继续试玩与验证体验。'}
-                hint={error ? getUserFacingCreateError(terminalError?.message || error, 'AI 创作') : '生成完成后，任务记录也会保留在“我的-任务”里。'}
-              />
-            ),
-          },
-          {
-            key: 'create-result-reference',
-            node: (
-              <CreationReferenceCard
-                eyebrow="生成结果"
-                title={currentGame.title || gameName || '未命名作品'}
-                badge={getGameOrientation(currentGame, orientation) === 'landscape' ? '横屏作品' : '竖屏作品'}
-                description={currentGame.description || '这版作品已经准备好进入试玩、优化或发布。'}
-                metadata={[
-                  { label: '试玩权限', value: canPlay ? '可直接试玩' : '订阅后试玩' },
-                  { label: '下一步', value: '继续优化、试玩验证，或重新开始一轮创作' },
-                ]}
+              <CreationResultCoverCard
+                badge="已就绪"
+                title={resultTitle}
+                description={resultDescription}
+                coverUrl={resultCoverUrl}
+                actionLabel={playActionLabel}
+                onAction={canPlay ? handlePlayGame : handleLockedPlay}
               />
             ),
           },
           {
             key: 'create-result-actions',
             node: (
-              <CreationSessionActions
-                title="下一步"
-                hint="你可以立刻验证这版作品，也可以继续打磨下一轮。"
-                actions={resultActions}
-              />
+              <View className="creation-session-card creation-result-next-steps">
+                <Text className="creation-session-card__title">下一步</Text>
+                <View className="creation-result-next-steps__actions">
+                  <View
+                    className="creation-result-next-steps__action creation-result-next-steps__action--primary"
+                    onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}
+                  >
+                    <Text className="creation-result-next-steps__action-text">继续优化</Text>
+                  </View>
+                  <View
+                    className="creation-result-next-steps__action"
+                    onClick={handleNewGame}
+                  >
+                    <Text className="creation-result-next-steps__action-text">再创一个</Text>
+                  </View>
+                </View>
+              </View>
             ),
           },
         ]}
