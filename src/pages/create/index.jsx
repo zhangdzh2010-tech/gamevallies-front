@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -8,15 +8,13 @@ import { PageScrollContainer } from '../../components/common/PageScrollContainer
 import { PipelineOrbit } from '../../components/common/PipelineOrbit';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import {
-  CreationAnswerComposer,
-  CreationEntryErrorCard,
+  CreationCreateWorkspace,
   CreationReferenceCard,
   CreationSessionActions,
-  CreationSessionScene,
   CreationSessionShell,
   CreationStateCard,
-  buildCreationSessionActions,
-  buildCreationSessionSceneProps,
+  canGenerateCreationSession,
+  isCreationSessionQuestioning,
 } from '../../components/creation';
 import {
   getPersistedGenerationTaskSnapshot,
@@ -41,15 +39,6 @@ import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import './index.scss';
 
-const EXAMPLE_PROMPTS = [
-  { emoji: '🐍', text: '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。' },
-  { emoji: '🐹', text: '做一个打地鼠小游戏，九宫格随机出现地鼠，点击得分，30 秒倒计时挑战。' },
-  { emoji: '🔢', text: '做一个 2048 益智游戏，上下左右滑动合并相同数字，目标达到 2048。' },
-  { emoji: '🚀', text: '做一个太空飞船躲避陨石游戏，左右移动躲避掉落障碍，存活越久分数越高。' },
-  { emoji: '🎵', text: '做一个音乐节奏点击游戏，彩色圆点出现后及时点击，连续命中可以加分。' },
-  { emoji: '🏃', text: '做一个无尽跑酷游戏，点击屏幕跳跃躲避障碍，速度会越来越快。' },
-];
-
 const TASK_STATUS_LABELS = {
   queued: '排队中',
   submitted: '执行中',
@@ -64,15 +53,6 @@ const ORIENTATION_OPTIONS = [
   { value: 'portrait', label: '竖屏' },
   { value: 'landscape', label: '横屏' },
 ];
-
-const CREATE_SESSION_STATUS_LABELS = {
-  initializing: '初始化中',
-  collecting: '继续补充',
-  ready: '可直接生成',
-  failed: '需要重开',
-  expired: '会话过期',
-  abandoned: '已结束',
-};
 
 function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
@@ -93,10 +73,6 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
   }
 
   return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
-}
-
-function getCreateSessionStatusValue(status) {
-  return CREATE_SESSION_STATUS_LABELS[status] || '等待你的方向';
 }
 
 export default function Create() {
@@ -124,7 +100,6 @@ export default function Create() {
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
     generateFromCreationSession,
-    abandonCreationSession,
     restoreActiveCreationSession,
     resetCreationSessionState,
   } = useGameStore();
@@ -133,6 +108,7 @@ export default function Create() {
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [sessionAnswer, setSessionAnswer] = useState('');
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [orientation, setOrientation] = useState('portrait');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
@@ -140,11 +116,6 @@ export default function Create() {
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `create-container${isH5 ? ' create-container--h5' : ''}${isWeapp ? ' create-container--weapp' : ''}`;
-  const createIdeaSuggestions = EXAMPLE_PROMPTS.map((item) => ({
-    label: `${item.emoji} ${item.text.split('，')[0]}`,
-    value: item.text,
-  }));
-  const createSessionStatusValue = getCreateSessionStatusValue(creationSession?.status);
   const entryErrorMessage = creationSessionError || terminalError?.message || error || '';
 
   const openTaskCenter = () => {
@@ -155,6 +126,7 @@ export default function Create() {
     setPrompt('');
     setSessionAnswer('');
     setGameName('');
+    setIsPreviewExpanded(false);
     setOrientation('portrait');
   };
 
@@ -388,24 +360,6 @@ export default function Create() {
     }
   };
 
-  const handleGenerateFromSession = async () => {
-    if (!creationSession?.sessionId) {
-      return;
-    }
-
-    clearError();
-
-    try {
-      await generateFromCreationSession({
-        orientation,
-        generationTier: creationSession?.generationTier || 'standard',
-      });
-      setSessionAnswer('');
-    } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
-    }
-  };
-
   const handleSkipQuestion = async () => {
     try {
       await skipCreationSessionQuestion();
@@ -415,15 +369,102 @@ export default function Create() {
     }
   };
 
-  const handleRestartSession = async () => {
+  const canSendEntryPrompt = prompt.trim().length >= 5;
+  const isCreateSessionActive = creationSession?.entryMode === 'create' && creationSession?.status !== 'generating';
+  const canSkipCreateQuestion = isCreateSessionActive
+    && isCreationSessionQuestioning(creationSession?.status)
+    && Boolean(creationSession?.currentQuestion);
+  const canGenerateCreateSession = isCreateSessionActive
+    && canGenerateCreationSession(creationSession?.status);
+  const activeCreateInputValue = isCreateSessionActive ? sessionAnswer : prompt;
+  const activeCreateInputPlaceholder = isCreateSessionActive
+    ? (creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt || '继续补充你的想法...')
+    : '继续补充你的想法...';
+
+  const ensureCreateConversation = async () => {
+    if (isCreateSessionActive && creationSession?.sessionId) {
+      return creationSession;
+    }
+
+    if (!canSendEntryPrompt) {
+      Taro.showToast({ title: '请先把想法说完整一点', icon: 'none' });
+      return null;
+    }
+
+    const nextSession = await startCreationSession(
+      prompt.trim(),
+      gameName.trim(),
+      {
+        entryMode: 'create',
+        orientation,
+        generationTier: 'standard',
+      },
+    );
+
+    setSessionAnswer('');
+    return nextSession;
+  };
+
+  const handleCreateWorkspaceSend = async () => {
+    if (isCreateSessionActive) {
+      await handleSubmitSessionAnswer();
+      return;
+    }
+
+    setIsPreviewExpanded(false);
+    await handleStartCreateSession();
+  };
+
+  const handleCreateWorkspacePreview = async () => {
+    if (isCreateSessionActive) {
+      setIsPreviewExpanded((currentValue) => !currentValue);
+      return;
+    }
+
     try {
-      if (creationSession?.sessionId) {
-        await abandonCreationSession(creationSession.sessionId);
+      const nextSession = await ensureCreateConversation();
+      if (nextSession) {
+        setIsPreviewExpanded(true);
       }
-      resetCreationSessionState();
-      setSessionAnswer('');
     } catch (err) {
       Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
+    }
+  };
+
+  const handleCreateWorkspaceGenerate = async () => {
+    if (isCreateSessionActive) {
+      clearError();
+
+      try {
+        await generateFromCreationSession({
+          orientation,
+          generationTier: creationSession?.generationTier || 'standard',
+          ...(gameName.trim() ? { title: gameName.trim() } : {}),
+        });
+        setSessionAnswer('');
+        setIsPreviewExpanded(false);
+      } catch (err) {
+        Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
+      }
+      return;
+    }
+
+    try {
+      const nextSession = await ensureCreateConversation();
+      if (!nextSession?.sessionId) {
+        return;
+      }
+
+      clearError();
+
+      await generateFromCreationSession(nextSession.sessionId, {
+        orientation,
+        generationTier: nextSession?.generationTier || 'standard',
+        ...(gameName.trim() ? { title: gameName.trim() } : {}),
+      });
+      setIsPreviewExpanded(false);
+    } catch (err) {
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
     }
   };
 
@@ -454,6 +495,7 @@ export default function Create() {
   const handleNewGame = () => {
     resetCreateSession();
     resetLocalCreateState();
+    setIsPreviewExpanded(false);
   };
 
   const renderCreatePage = (
@@ -473,31 +515,38 @@ export default function Create() {
       {withPaywall ? <PaywallPopup /> : null}
     </View>
   );
-
-  const createSessionSceneProps = creationSession?.entryMode === 'create'
-    ? buildCreationSessionSceneProps({
-        entryMode: 'create',
-        session: creationSession,
-        statusValue: createSessionStatusValue,
-        answerValue: sessionAnswer,
-        onAnswerChange: (e) => setSessionAnswer(e?.detail?.value || ''),
-        answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,
-        answerSuggestions: creationSession?.currentQuestion?.options || [],
-        submitting: creationSessionSubmitting,
-        actions: buildCreationSessionActions({
-          submitting: creationSessionSubmitting,
-          answerValue: sessionAnswer,
-          submitLabel: '提交补充',
-          generateLabel: creationSession?.readyToGenerate ? '开始创作' : '直接生成初稿',
-          restartLabel: '重新开始',
-          onSubmit: handleSubmitSessionAnswer,
-          onSkip: handleSkipQuestion,
-          onGenerate: handleGenerateFromSession,
-          onRestart: handleRestartSession,
-        }),
-        errorMessage: creationSessionError || (error ? getUserFacingCreateError(terminalError?.message || error, '创建游戏') : ''),
-      })
-    : null;
+  const createWorkspace = (
+    <CreationCreateWorkspace
+      gameName={gameName}
+      onGameNameChange={(e) => setGameName(e?.detail?.value || '')}
+      orientation={orientation}
+      onOrientationChange={setOrientation}
+      orientationOptions={ORIENTATION_OPTIONS}
+      session={isCreateSessionActive ? creationSession : null}
+      inputValue={activeCreateInputValue}
+      onInputChange={(e) => {
+        const nextValue = e?.detail?.value || '';
+        if (isCreateSessionActive) {
+          setSessionAnswer(nextValue);
+          return;
+        }
+        setPrompt(nextValue);
+      }}
+      inputPlaceholder={activeCreateInputPlaceholder}
+      onSend={handleCreateWorkspaceSend}
+      onSkip={handleSkipQuestion}
+      onGenerate={handleCreateWorkspaceGenerate}
+      onPreview={handleCreateWorkspacePreview}
+      sendDisabled={creationSessionSubmitting || (isCreateSessionActive ? !sessionAnswer.trim() : !canSendEntryPrompt)}
+      skipDisabled={creationSessionSubmitting || !canSkipCreateQuestion}
+      generateDisabled={creationSessionSubmitting || !(isCreateSessionActive ? canGenerateCreateSession : canSendEntryPrompt)}
+      previewDisabled={creationSessionSubmitting || !(isCreateSessionActive || canSendEntryPrompt)}
+      previewExpanded={isPreviewExpanded}
+      previewLabel={isPreviewExpanded ? '收起预览' : '预览'}
+      errorMessage={entryErrorMessage}
+      isSubmitting={creationSessionSubmitting}
+    />
+  );
 
   if (isRestoringEntry) {
     return renderCreatePage(
@@ -599,10 +648,9 @@ export default function Create() {
   if (
     creationSession?.entryMode === 'create'
     && creationSession?.status !== 'generating'
-    && createSessionSceneProps
   ) {
     return renderCreatePage(
-      <CreationSessionScene {...createSessionSceneProps} />,
+      createWorkspace,
     );
   }
 
@@ -701,91 +749,5 @@ export default function Create() {
     );
   }
 
-  return renderCreatePage(
-    <CreationSessionShell
-      eyebrow="AI Game Atelier"
-      title="创作新游戏"
-      subtitle="先把玩法方向说清楚，AI 会先整理第一版方案，再只追问最关键的细节。"
-      statusLabel="创作模式"
-      statusValue={orientation === 'landscape' ? '横屏' : '竖屏'}
-      sections={[
-        {
-          key: 'create-settings',
-          node: (
-            <View className="creation-session-card creation-config-card">
-              <View className="creation-config-grid">
-                <View className="creation-config-field">
-                  <Text className="creation-config-label">展示方向</Text>
-                  <View className="creation-mode-toggle">
-                    {ORIENTATION_OPTIONS.map((option) => {
-                      const isActive = orientation === option.value;
-                      return (
-                        <View
-                          key={option.value}
-                          className={`creation-mode-toggle__option${isActive ? ' is-active' : ''}`}
-                          onClick={() => setOrientation(option.value)}
-                        >
-                          <Text className="creation-mode-toggle__text">{option.label}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                <View className="creation-config-field creation-config-field--full">
-                  <Text className="creation-config-label">游戏名称</Text>
-                  <View className="creation-config-input-wrap">
-                    <Input
-                      className="creation-config-input"
-                      placeholder="给你的游戏起个名字（可选）"
-                      placeholderStyle="color: #55516e"
-                      value={gameName}
-                      onInput={(e) => setGameName(e.detail.value)}
-                      maxlength={30}
-                    />
-                  </View>
-                </View>
-              </View>
-            </View>
-          ),
-        },
-        entryErrorMessage ? {
-          key: 'create-entry-error',
-          node: <CreationEntryErrorCard entryMode="create" error={entryErrorMessage} />,
-        } : null,
-        {
-          key: 'create-entry-answer',
-          node: (
-            <CreationAnswerComposer
-              value={prompt}
-              onChange={(e) => setPrompt(e?.detail?.value || '')}
-              placeholder="先说一句核心想法，系统会帮你拆成可生成方案..."
-              suggestions={createIdeaSuggestions}
-              onSuggestionSelect={setPrompt}
-              disabled={creationSessionSubmitting}
-              maxLength={2000}
-            />
-          ),
-        },
-        {
-          key: 'create-start-actions',
-          node: (
-            <CreationSessionActions
-              title="开始创作"
-              hint="发起会话后，系统会先整理第一版方案，再进入共享的追问与生成流程。"
-              actions={[
-                {
-                  key: 'start-create-session',
-                  label: creationSessionSubmitting ? 'AI 正在整理...' : '开始创作会话',
-                  tone: 'primary',
-                  disabled: creationSessionSubmitting || prompt.trim().length < 5,
-                  onClick: handleStartCreateSession,
-                },
-              ]}
-            />
-          ),
-        },
-      ].filter(Boolean)}
-    />,
-  );
+  return renderCreatePage(createWorkspace);
 }

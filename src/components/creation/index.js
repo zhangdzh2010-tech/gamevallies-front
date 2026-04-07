@@ -4,6 +4,7 @@ export { CreationConfidenceCard } from './CreationConfidenceCard';
 export { CreationConversationList } from './CreationConversationList';
 export { CreationQuestionCard } from './CreationQuestionCard';
 export { CreationAnswerComposer } from './CreationAnswerComposer';
+export { CreationCreateWorkspace } from './CreationCreateWorkspace';
 export { CreationSessionActions } from './CreationSessionActions';
 export { CreationSessionStatusNotice } from './CreationSessionStatusNotice';
 export { CreationSessionPanel } from './CreationSessionPanel';

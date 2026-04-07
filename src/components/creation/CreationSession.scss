@@ -340,6 +340,177 @@
   white-space: pre-wrap;
 }
 
+.creation-create-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.creation-create-settings__grid {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.creation-create-settings__field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creation-create-settings__label {
+  display: block;
+  font-size: 18px;
+  color: #9be8d5;
+}
+
+.creation-create-orientation {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creation-create-orientation__option {
+  min-height: 56px;
+  padding: 0 14px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(90, 94, 120, 0.38);
+}
+
+.creation-create-orientation__option.is-active {
+  background: linear-gradient(135deg, rgba(110, 86, 255, 0.94), rgba(45, 212, 168, 0.82));
+  border-color: rgba(151, 226, 208, 0.3);
+}
+
+.creation-create-orientation__text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #f5f2ff;
+}
+
+.creation-create-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.creation-create-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.creation-create-preview {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(90, 94, 120, 0.32);
+}
+
+.creation-create-preview__label {
+  display: block;
+  font-size: 17px;
+  color: #8bd8c5;
+}
+
+.creation-create-preview__content {
+  display: block;
+  margin-top: 8px;
+  font-size: 19px;
+  line-height: 1.6;
+  color: #ece9f8;
+  white-space: pre-wrap;
+}
+
+.creation-create-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.creation-create-composer__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 10px;
+  align-items: center;
+}
+
+.creation-create-composer__input-wrap {
+  min-width: 0;
+  border-radius: 18px;
+  border: 1px solid rgba(90, 94, 120, 0.42);
+  background: rgba(8, 10, 18, 0.95);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.creation-create-composer__input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  font-size: 20px;
+  color: #f3f1ff;
+}
+
+.creation-create-composer__send {
+  min-height: 54px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(110, 86, 255, 0.94), rgba(45, 212, 168, 0.82));
+  border: 1px solid rgba(151, 226, 208, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.creation-create-composer__send--disabled {
+  opacity: 0.45;
+}
+
+.creation-create-composer__send-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f7f5ff;
+}
+
+.creation-create-composer__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.creation-create-composer__action {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(88, 91, 116, 0.3);
+}
+
+.creation-create-composer__action--primary {
+  background: linear-gradient(135deg, rgba(110, 86, 255, 0.2), rgba(45, 212, 168, 0.18));
+  border-color: rgba(151, 226, 208, 0.24);
+}
+
+.creation-create-composer__action--disabled {
+  opacity: 0.45;
+}
+
+.creation-create-composer__action-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f3f1ff;
+}
+
 .creation-question-card__badge {
   padding: 8px 12px;
   border-radius: 999px;
@@ -375,12 +546,15 @@
 }
 
 .creation-answer-composer__textarea,
-.creation-answer-composer__textarea textarea {
+.creation-answer-composer__textarea textarea,
+.creation-answer-composer__textarea .taro-textarea,
+.creation-answer-composer__textarea taro-textarea-core {
   background: rgba(8, 10, 18, 0.95);
   color: #f3f1ff;
 }
 
-.creation-answer-composer__textarea textarea {
+.creation-answer-composer__textarea textarea,
+.creation-answer-composer__textarea .taro-textarea {
   display: block;
   width: 100%;
   min-height: inherit;
@@ -393,6 +567,18 @@
   background: transparent;
   color: inherit;
   font: inherit;
+}
+
+.creation-answer-composer__textarea--native {
+  display: block;
+  resize: none;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+}
+
+.creation-answer-composer__textarea--native::placeholder {
+  color: #67627d;
 }
 
 .creation-answer-composer__suggestions {
@@ -516,35 +702,6 @@
   height: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
-.creation-config-card {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.creation-config-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.creation-config-field {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.creation-config-field--full {
-  grid-column: 1 / -1;
-}
-
-.creation-config-label {
-  display: block;
-  font-size: 18px;
-  color: #9be8d5;
-}
-
 .creation-config-input-wrap {
   border-radius: 18px;
   border: 1px solid rgba(90, 94, 120, 0.42);
@@ -559,34 +716,6 @@
   box-sizing: border-box;
   font-size: 22px;
   color: #f3f1ff;
-}
-
-.creation-mode-toggle {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.creation-mode-toggle__option {
-  min-height: 56px;
-  padding: 0 16px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(90, 94, 120, 0.38);
-}
-
-.creation-mode-toggle__option.is-active {
-  background: linear-gradient(135deg, rgba(110, 86, 255, 0.94), rgba(45, 212, 168, 0.82));
-  border-color: rgba(151, 226, 208, 0.3);
-}
-
-.creation-mode-toggle__text {
-  font-size: 20px;
-  font-weight: 600;
-  color: #f5f2ff;
 }
 
 .creation-state-card {
@@ -995,6 +1124,96 @@
     font-size: 13px;
   }
 
+  .creation-create-workspace {
+    gap: 12px;
+  }
+
+  .creation-create-settings__grid {
+    grid-template-columns: 108px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .creation-create-settings__field {
+    gap: 8px;
+  }
+
+  .creation-create-settings__label,
+  .creation-create-preview__label {
+    font-size: 12px;
+  }
+
+  .creation-create-orientation {
+    gap: 8px;
+  }
+
+  .creation-create-orientation__option {
+    min-height: 38px;
+    padding: 0 10px;
+    border-radius: 12px;
+  }
+
+  .creation-create-orientation__text {
+    font-size: 14px;
+  }
+
+  .creation-create-chat {
+    gap: 12px;
+  }
+
+  .creation-create-thread {
+    gap: 10px;
+  }
+
+  .creation-create-preview {
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .creation-create-preview__content {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .creation-create-composer {
+    gap: 8px;
+  }
+
+  .creation-create-composer__row {
+    grid-template-columns: minmax(0, 1fr) 60px;
+    gap: 8px;
+  }
+
+  .creation-create-composer__input-wrap {
+    border-radius: 14px;
+  }
+
+  .creation-create-composer__input {
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  .creation-create-composer__send {
+    min-height: 44px;
+    border-radius: 14px;
+  }
+
+  .creation-create-composer__send-text,
+  .creation-create-composer__action-text {
+    font-size: 13px;
+  }
+
+  .creation-create-composer__actions {
+    gap: 8px;
+  }
+
+  .creation-create-composer__action {
+    min-height: 40px;
+    padding: 0 10px;
+    border-radius: 12px;
+  }
+
   .creation-page-shell {
     max-width: 500px;
     margin: 0 auto;
@@ -1002,16 +1221,6 @@
     padding-right: 14px;
   }
 
-  .creation-config-card {
-    gap: 14px;
-  }
-
-  .creation-config-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .creation-config-label,
   .creation-state-card__eyebrow,
   .creation-reference-card__eyebrow,
   .creation-reference-card__meta-label,
@@ -1022,15 +1231,6 @@
   .creation-config-input {
     min-height: 44px;
     padding: 0 14px;
-    font-size: 14px;
-  }
-
-  .creation-mode-toggle__option {
-    min-height: 44px;
-    border-radius: 14px;
-  }
-
-  .creation-mode-toggle__text {
     font-size: 14px;
   }
 
