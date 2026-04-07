@@ -7,12 +7,15 @@ on:
   workflow_dispatch:
 
 env:
-  REGION:     cn-shanghai
-  REGISTRY:   gamevallies-repo-cn-shanghai.cr.volces.com
-  NAMESPACE:  gamevallies
-  IMAGE_NAME: gv-frontend
-  FUNC_ID:    tsrtwmbw
-  PORT:       8080
+  REGION:     ${{ vars.VOLCENGINE_REGION || 'cn-shanghai' }}
+  REGISTRY:   ${{ vars.VOLCENGINE_REGISTRY || 'gamevallies-repo-cn-shanghai.cr.volces.com' }}
+  NAMESPACE:  ${{ vars.VOLCENGINE_REGISTRY_NAMESPACE || 'gamevallies' }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME || 'gv-frontend' }}
+  FUNC_ID:    ${{ vars.FUNC_ID || 'tsrtwmbw' }}
+  PORT:       ${{ vars.PORT || '8080' }}
+  VPC_ID:     ${{ vars.VOLCENGINE_VPC_ID || '' }}
+  SUBNET_ID:  ${{ vars.VOLCENGINE_SUBNET_ID || '' }}
+  SEC_GROUP:  ${{ vars.VOLCENGINE_SECURITY_GROUP_ID || '' }}
 
 jobs:
   build-and-deploy:
@@ -69,19 +72,30 @@ jobs:
           IMAGE    = os.environ["IMAGE"]
           FUNC_ID  = "${{ env.FUNC_ID }}"
           REGION   = "${{ env.REGION }}"
+          VPC_ID   = "${{ env.VPC_ID }}"
+          SUBNET_ID = "${{ env.SUBNET_ID }}"
+          SEC_GROUP = "${{ env.SEC_GROUP }}"
 
           cfg = volcenginesdkcore.Configuration()
           cfg.ak, cfg.sk, cfg.region = AK, SK, REGION
           api = volcenginesdkvefaas.VEFAASApi(volcenginesdkcore.ApiClient(cfg))
 
           print(f"更新函数 gv-frontend (id={FUNC_ID}) → {IMAGE}")
-          api.update_function(volcenginesdkvefaas.UpdateFunctionRequest(
+          update_req = volcenginesdkvefaas.UpdateFunctionRequest(
               id=FUNC_ID,
               source_type="image",
               source=IMAGE,
               source_access_config=volcenginesdkvefaas.SourceAccessConfigForUpdateFunctionInput(
                   username=USERNAME, password=PASSWORD),
-          ))
+          )
+          if VPC_ID and SUBNET_ID and SEC_GROUP:
+              update_req.vpc_config = volcenginesdkvefaas.VpcConfigForUpdateFunctionInput(
+                  enable_vpc=True,
+                  vpc_id=VPC_ID,
+                  subnet_ids=[SUBNET_ID],
+                  security_group_ids=[SEC_GROUP],
+              )
+          api.update_function(update_req)
           print("函数配置已更新，等待镜像缓存就绪...")
 
           deadline = time.time() + 300
