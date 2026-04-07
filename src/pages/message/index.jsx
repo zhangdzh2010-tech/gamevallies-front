@@ -270,6 +270,7 @@ export default function Message() {
   return (
     <View className={`messages-page${isH5 ? ' messages-page--h5' : ''}${isWeapp ? ' messages-page--weapp' : ''}`}>
       <AppTopBar />
+      <View className="messages-shell">
 
       <View className="messages-stage">
         <View className="messages-stage__copy">
@@ -371,6 +372,7 @@ export default function Message() {
           </View>
         )}
       </PageScrollContainer>
+      </View>
 
       <CustomTabBar activeIndex={3} />
     </View>

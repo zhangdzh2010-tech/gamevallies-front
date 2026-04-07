@@ -1,10 +1,11 @@
 import { get, post } from './api';
-import { isH5Runtime, isWechatBrowserRuntime } from '../utils/runtime';
+import { isH5Runtime } from '../utils/runtime';
 
 // ═══════════════════════════════════════════
 // Mock data — 后端接口就绪后删除此文件顶部的 mock 拦截
 // ═══════════════════════════════════════════
 const USE_MOCK = false;
+const MOBILE_H5_USER_AGENT_RE = /android|webos|iphone|ipad|ipod|mobile|phone|windows phone|harmonyos/i;
 
 const MOCK_PLANS = [
   {
@@ -63,11 +64,9 @@ const MOCK_SUBSCRIPTION_STATUS = {
 const MOCK_ORDER = {
   orderId: 'order_mock_' + Date.now(),
   payment: {
-    timeStamp: String(Math.floor(Date.now() / 1000)),
-    nonceStr: 'mock_nonce_' + Math.random().toString(36).slice(2, 10),
-    package: 'prepay_id=mock_prepay_' + Date.now(),
-    signType: 'RSA',
-    paySign: 'mock_sign_' + Math.random().toString(36).slice(2),
+    provider: 'alipay',
+    flow: 'wap',
+    payUrl: 'https://openapi.alipay.com/gateway.do?mockOrderId=' + Date.now(),
   },
 };
 
@@ -106,6 +105,23 @@ function normalizeQuotaResponse(data) {
   };
 }
 
+function getSubscriptionReturnUrl() {
+  if (typeof window === 'undefined' || !window.location?.href) {
+    return '';
+  }
+
+  return window.location.href;
+}
+
+function resolveAlipayProvider() {
+  if (!isH5Runtime()) {
+    return null;
+  }
+
+  const userAgent = typeof navigator === 'undefined' ? '' : (navigator.userAgent || '');
+  return MOBILE_H5_USER_AGENT_RE.test(userAgent) ? 'alipay_wap' : 'alipay_page';
+}
+
 // ═══════════════════════════════════════════
 // API Functions
 // ═══════════════════════════════════════════
@@ -134,7 +150,7 @@ export async function getPlans() {
 }
 
 /**
- * 创建订阅订单（调起微信支付）
+ * 创建订阅订单（调起支付宝支付）
  */
 export async function createOrder(planId, gameId) {
   if (USE_MOCK) {
@@ -142,23 +158,19 @@ export async function createOrder(planId, gameId) {
     return { ...MOCK_ORDER };
   }
 
-  let platformQuery = '';
-  if (isH5Runtime()) {
-    const isWechatBrowser = isWechatBrowserRuntime();
-    const query = new URLSearchParams({
-      clientPlatform: isWechatBrowser ? 'wechat_h5' : 'h5',
-      wechatPayFlow: isWechatBrowser ? 'jsapi' : 'mweb',
-    });
+  const provider = resolveAlipayProvider();
+  if (!provider) {
+    throw new Error('当前环境暂不支持支付宝支付，请在 H5 页面完成订阅');
+  }
 
-    if (typeof window !== 'undefined' && window.location?.href) {
-      query.set('returnUrl', window.location.href);
-    }
-
-    platformQuery = `?${query.toString()}`;
+  const query = new URLSearchParams({ provider });
+  const returnUrl = getSubscriptionReturnUrl();
+  if (returnUrl) {
+    query.set('returnUrl', returnUrl);
   }
 
   return post(
-    `/api/v1/subscription/order${platformQuery}`,
+    `/api/v1/subscription/order?${query.toString()}`,
     {
       planId,
       ...(gameId ? { gameId } : {}),

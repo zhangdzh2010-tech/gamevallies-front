@@ -7,6 +7,11 @@ import { PageScrollContainer } from '../../components/common/PageScrollContainer
 import useQuotaStore from '../../stores/quotaStore';
 import { Storage } from '../../utils/storage';
 import { isH5Runtime } from '../../utils/runtime';
+import {
+  getSubscriptionPaymentOption,
+  isSubscriptionPaymentMethodAvailable,
+  SUBSCRIPTION_PAYMENT_OPTIONS,
+} from '../../utils/subscriptionPaymentMethods';
 import './index.scss';
 
 export default function SubscriptionPage() {
@@ -22,14 +27,14 @@ export default function SubscriptionPage() {
   const subscribe = useQuotaStore((s) => s.subscribe);
   const subscribing = useQuotaStore((s) => s.subscribing);
   const subscribingPlanId = useQuotaStore((s) => s.subscribingPlanId);
+  const selectedPaymentMethod = useQuotaStore((s) => s.selectedPaymentMethod);
+  const setSelectedPaymentMethod = useQuotaStore((s) => s.setSelectedPaymentMethod);
 
   const usedQuota = totalFreeQuota - freeQuota;
   const usedPercent = totalFreeQuota > 0 ? Math.round((usedQuota / totalFreeQuota) * 100) : 0;
-  const subscriptionRemaining = Number(subscription?.remaining ?? Math.max(0, (subscription?.quotaThisPeriod || 0) - (subscription?.usedThisPeriod || 0))) || 0;
-  const subscriptionUsedPercent = subscription.quotaThisPeriod > 0
-    ? Math.round(((subscription.usedThisPeriod || 0) / subscription.quotaThisPeriod) * 100)
-    : 0;
   const featuredPlan = plans.find((plan) => plan.recommended) || plans[0] || null;
+  const selectedPaymentOption = getSubscriptionPaymentOption(selectedPaymentMethod);
+  const selectedPaymentAvailable = isSubscriptionPaymentMethodAvailable(selectedPaymentMethod);
 
   useEffect(() => {
     closePaywall();
@@ -46,6 +51,12 @@ export default function SubscriptionPage() {
 
   const handleSubscribeClick = async (planId) => {
     if (subscribing) return;
+
+    if (!selectedPaymentAvailable) {
+      Taro.showToast({ title: `${selectedPaymentOption.label}暂未实现`, icon: 'none' });
+      return;
+    }
+
     await subscribe(planId);
   };
 
@@ -68,14 +79,9 @@ export default function SubscriptionPage() {
       value: subscription.active ? (subscription.planName || '会员中') : `${freeQuota} 次`,
     },
     {
-      key: 'subscription-remaining',
-      label: '订阅剩余',
-      value: subscription.active ? `${subscriptionRemaining}/${subscription.quotaThisPeriod || 0} 次` : '--',
-    },
-    {
-      key: 'popular',
-      label: '推荐方案',
-      value: featuredPlan ? featuredPlan.name : '--',
+      key: 'payment',
+      label: '支付方式',
+      value: selectedPaymentOption.label,
     },
     {
       key: 'community',
@@ -84,6 +90,18 @@ export default function SubscriptionPage() {
     },
   ];
 
+  const selectedPaymentNote = selectedPaymentAvailable
+    ? '下单后会跳转到支付宝收银台，支付完成返回后自动刷新订阅状态。'
+    : '微信支付入口已预留，当前版本先支持支付宝，后续再接入微信支付。';
+
+  const getButtonLabel = (planId) => {
+    if (subscribing && subscribingPlanId === planId) {
+      return selectedPaymentOption.loadingLabel;
+    }
+
+    return selectedPaymentOption.actionLabel;
+  };
+
   return (
     <View className={`subscription-container${isH5 ? ' subscription-container--h5' : ''}`}>
       <AppTopBar showBack />
@@ -91,12 +109,14 @@ export default function SubscriptionPage() {
       <PageScrollContainer scrollY className="subscription-scroll">
         <View className="subscription-stage">
           <View className="subscription-stage__copy">
-            <Text className="subscription-stage__eyebrow">Membership</Text>
-            <Text className="subscription-stage__title">{subscription.active ? '继续稳定创作，不被额度打断' : '把灵感创作和 AI 额度一次升级'}</Text>
+            <Text className="subscription-stage__eyebrow">Payment Options</Text>
+            <Text className="subscription-stage__title">
+              {subscription.active ? '订阅已生效，继续稳定创作' : '先选支付方式，再解锁完整创作额度'}
+            </Text>
             <Text className="subscription-stage__desc">
               {subscription.active
-                ? '你的会员权益已经生效，可以在这里查看当前配额、续期信息和更适合的套餐。'
-                : '订阅后可以获得更多创作次数、更稳定的生成队列和更完整的创作体验。'}
+                ? '你当前的订阅权益已经生效，可以继续查看套餐、有效期与额度消耗情况。'
+                : '当前先支持支付宝支付，同时预留了微信支付入口，后续可无缝补齐。'}
             </Text>
           </View>
           <View className="subscription-stage__metrics">
@@ -109,40 +129,63 @@ export default function SubscriptionPage() {
           </View>
         </View>
 
-        <View className="quota-cards">
-          <View className="quota-card">
-            <Text className="quota-card-eyebrow">Quota Overview</Text>
-            <Text className="quota-card-title">免费创作额度</Text>
-            <View className="quota-progress-wrap">
-              <View className="quota-progress-bg">
-                <View className="quota-progress-fill" style={{ width: `${usedPercent}%` }} />
-              </View>
-              <Text className="quota-progress-text">已用 {usedQuota} / {totalFreeQuota} 次</Text>
+        <View className="payment-method-card">
+          <View className="payment-method-card__head">
+            <View className="payment-method-card__copy">
+              <Text className="payment-method-card__eyebrow">Payment Method</Text>
+              <Text className="payment-method-card__title">选择支付方式</Text>
             </View>
-            <View className="quota-remaining">
-              <Text className="quota-remaining-num">{freeQuota}</Text>
-              <Text className="quota-remaining-label">次剩余</Text>
-            </View>
+            <Text className={`payment-method-card__badge ${selectedPaymentAvailable ? 'is-live' : 'is-soon'}`}>
+              {selectedPaymentAvailable ? '立即可用' : '敬请期待'}
+            </Text>
           </View>
 
-          {subscription.active ? (
-            <View className="quota-card">
-              <Text className="quota-card-eyebrow">Subscription</Text>
-              <Text className="quota-card-title">订阅创作额度</Text>
-              <View className="quota-progress-wrap">
-                <View className="quota-progress-bg">
-                  <View className="quota-progress-fill" style={{ width: `${subscriptionUsedPercent}%` }} />
+          <View className="payment-method-list">
+            {SUBSCRIPTION_PAYMENT_OPTIONS.map((option) => {
+              const selected = selectedPaymentMethod === option.id;
+
+              return (
+                <View
+                  key={option.id}
+                  className={`payment-method-option ${selected ? 'is-selected' : ''} ${option.available ? 'is-live' : 'is-soon'}`}
+                  onClick={() => setSelectedPaymentMethod(option.id)}
+                >
+                  <View className={`payment-method-option__icon payment-method-option__icon--${option.id}`}>
+                    <Text>{option.iconText}</Text>
+                  </View>
+
+                  <View className="payment-method-option__copy">
+                    <View className="payment-method-option__top">
+                      <Text className="payment-method-option__label">{option.label}</Text>
+                      <Text className={`payment-method-option__status ${option.available ? 'is-live' : 'is-soon'}`}>
+                        {option.statusLabel}
+                      </Text>
+                    </View>
+                    <Text className="payment-method-option__desc">{option.description}</Text>
+                  </View>
+
+                  <View className={`payment-method-option__radio ${selected ? 'is-selected' : ''}`} />
                 </View>
-                <Text className="quota-progress-text">
-                  已用 {subscription.usedThisPeriod || 0} / {subscription.quotaThisPeriod || 0} 次
-                </Text>
-              </View>
-              <View className="quota-remaining">
-                <Text className="quota-remaining-num">{subscriptionRemaining}</Text>
-                <Text className="quota-remaining-label">次剩余</Text>
-              </View>
+              );
+            })}
+          </View>
+
+          <Text className="payment-method-card__note">{selectedPaymentNote}</Text>
+        </View>
+
+        <View className="quota-card">
+          <Text className="quota-card-eyebrow">Subscription Billing</Text>
+          <Text className="quota-card-title">免费创作额度</Text>
+          <View className="quota-progress-wrap">
+            <View className="quota-progress-bg">
+              <View className="quota-progress-fill" style={{ width: `${usedPercent}%` }} />
             </View>
-          ) : null}
+            <Text className="quota-progress-text">已用 {usedQuota} / {totalFreeQuota} 次</Text>
+          </View>
+          <View className="quota-remaining">
+            <Text className="quota-remaining-num">{freeQuota}</Text>
+            <Text className="quota-remaining-label">次剩余</Text>
+          </View>
         </View>
 
         {subscription.active ? (
@@ -164,10 +207,6 @@ export default function SubscriptionPage() {
                   {subscription.usedThisPeriod} / {subscription.quotaThisPeriod} 次
                 </Text>
               </View>
-              <View className="sub-info-row">
-                <Text className="sub-info-label">本期剩余</Text>
-                <Text className="sub-info-value">{subscriptionRemaining} 次</Text>
-              </View>
             </View>
           </View>
         ) : null}
@@ -175,10 +214,12 @@ export default function SubscriptionPage() {
         <View className="plans-section">
           <View className="plans-section-head">
             <View className="plans-section-head__copy">
-              <Text className="plans-section-kicker">Pricing</Text>
-              <Text className="plans-section-title">订阅套餐</Text>
+              <Text className="plans-section-kicker">Subscription Plans</Text>
+              <Text className="plans-section-title">选择套餐并完成支付</Text>
             </View>
-            {featuredPlan ? <Text className="plans-section-meta">{`主推 ${featuredPlan.name}`}</Text> : null}
+            <Text className="plans-section-meta">
+              当前 {selectedPaymentOption.label}
+            </Text>
           </View>
 
           <View className="plans-list">
@@ -215,17 +256,21 @@ export default function SubscriptionPage() {
                   ))}
                 </View>
 
+                <Text className="plan-card-payment-hint">
+                  {selectedPaymentAvailable ? `使用${selectedPaymentOption.label}完成支付` : '微信支付入口暂未实现'}
+                </Text>
+
                 <View
                   className={`plan-card-subscribe-btn ${
                     subscribing && subscribingPlanId === plan.id ? 'subscribing' : ''
                   } ${
                     subscribing && subscribingPlanId !== plan.id ? 'disabled' : ''
+                  } ${
+                    !selectedPaymentAvailable ? 'coming-soon' : ''
                   }`}
                   onClick={() => handleSubscribeClick(plan.id)}
                 >
-                  <Text>
-                    {subscribing && subscribingPlanId === plan.id ? '处理中...' : '立即订阅'}
-                  </Text>
+                  <Text>{getButtonLabel(plan.id)}</Text>
                 </View>
               </View>
             ))}

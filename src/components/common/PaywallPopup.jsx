@@ -1,7 +1,13 @@
 /* eslint-disable react/prop-types */
 import { View, Text, ScrollView } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import useQuotaStore from '../../stores/quotaStore';
 import { isH5Runtime } from '../../utils/runtime';
+import {
+  getSubscriptionPaymentOption,
+  isSubscriptionPaymentMethodAvailable,
+  SUBSCRIPTION_PAYMENT_OPTIONS,
+} from '../../utils/subscriptionPaymentMethods';
 import './PaywallPopup.scss';
 
 export function PaywallPopup() {
@@ -13,8 +19,13 @@ export function PaywallPopup() {
   const subscribingPlanId = useQuotaStore((s) => s.subscribingPlanId);
   const closePaywall = useQuotaStore((s) => s.closePaywall);
   const subscribe = useQuotaStore((s) => s.subscribe);
+  const selectedPaymentMethod = useQuotaStore((s) => s.selectedPaymentMethod);
+  const setSelectedPaymentMethod = useQuotaStore((s) => s.setSelectedPaymentMethod);
 
   if (!showPaywall) return null;
+
+  const selectedPaymentOption = getSubscriptionPaymentOption(selectedPaymentMethod);
+  const selectedPaymentAvailable = isSubscriptionPaymentMethodAvailable(selectedPaymentMethod);
 
   const handleClose = () => {
     if (subscribing) return;
@@ -23,6 +34,12 @@ export function PaywallPopup() {
 
   const handleSubscribe = async (planId) => {
     if (subscribing) return;
+
+    if (!selectedPaymentAvailable) {
+      Taro.showToast({ title: `${selectedPaymentOption.label}暂未实现`, icon: 'none' });
+      return;
+    }
+
     await subscribe(planId);
   };
 
@@ -32,8 +49,57 @@ export function PaywallPopup() {
     return String(num);
   };
 
+  const selectedPaymentNote = selectedPaymentAvailable
+    ? '当前会跳转到支付宝收银台完成支付，付款后自动返回。'
+    : '微信支付入口先展示在这里，当前版本暂未开放。';
+
+  const getButtonLabel = (planId) => {
+    if (subscribing && subscribingPlanId === planId) {
+      return selectedPaymentOption.loadingLabel;
+    }
+
+    return selectedPaymentOption.actionLabel;
+  };
+
   const plansContent = (
     <>
+      <View className="paywall-payment-methods">
+        <View className="paywall-payment-methods__head">
+          <Text className="paywall-payment-methods__eyebrow">Payment Method</Text>
+          <Text className="paywall-payment-methods__title">先选支付方式，再挑套餐</Text>
+        </View>
+
+        <View className="paywall-payment-methods__list">
+          {SUBSCRIPTION_PAYMENT_OPTIONS.map((option) => {
+            const selected = selectedPaymentMethod === option.id;
+
+            return (
+              <View
+                key={option.id}
+                className={`paywall-payment-option ${selected ? 'is-selected' : ''} ${option.available ? 'is-live' : 'is-soon'}`}
+                onClick={() => setSelectedPaymentMethod(option.id)}
+              >
+                <View className={`paywall-payment-option__icon paywall-payment-option__icon--${option.id}`}>
+                  <Text>{option.iconText}</Text>
+                </View>
+
+                <View className="paywall-payment-option__copy">
+                  <View className="paywall-payment-option__top">
+                    <Text className="paywall-payment-option__label">{option.label}</Text>
+                    <Text className={`paywall-payment-option__status ${option.available ? 'is-live' : 'is-soon'}`}>
+                      {option.statusLabel}
+                    </Text>
+                  </View>
+                  <Text className="paywall-payment-option__desc">{option.description}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        <Text className="paywall-payment-methods__note">{selectedPaymentNote}</Text>
+      </View>
+
       <View className="paywall-plans">
         {plans.map((plan) => (
           <View
@@ -68,17 +134,21 @@ export function PaywallPopup() {
               ))}
             </View>
 
+            <Text className="plan-payment-hint">
+              {selectedPaymentAvailable ? `使用${selectedPaymentOption.label}完成支付` : '微信支付暂未实现'}
+            </Text>
+
             <View
               className={`plan-subscribe-btn ${plan.recommended ? 'btn-primary' : 'btn-secondary'} ${
                 subscribing && subscribingPlanId === plan.id ? 'loading' : ''
               } ${
                 subscribing && subscribingPlanId !== plan.id ? 'disabled' : ''
+              } ${
+                !selectedPaymentAvailable ? 'coming-soon' : ''
               }`}
               onClick={() => handleSubscribe(plan.id)}
             >
-              <Text>
-                {subscribing && subscribingPlanId === plan.id ? '处理中...' : '立即订阅'}
-              </Text>
+              <Text>{getButtonLabel(plan.id)}</Text>
             </View>
           </View>
         ))}
@@ -100,10 +170,10 @@ export function PaywallPopup() {
           >
             <Text className="paywall-close-text">x</Text>
           </View>
-          <Text className="paywall-icon">订阅</Text>
-          <Text className="paywall-title">解锁无限创作</Text>
+          <Text className="paywall-icon">支付方式</Text>
+          <Text className="paywall-title">选择支付方式并解锁更多创作</Text>
           <Text className="paywall-subtitle">
-            免费额度用完后，订阅即可继续创作、优化并试玩你的作品。
+            支付宝当前可用，微信支付入口先保留在这里，等你确认视觉和交互后再接真实能力。
           </Text>
         </View>
 

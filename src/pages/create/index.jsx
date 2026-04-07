@@ -1,40 +1,54 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Textarea, Input } from '@tarojs/components';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Input } from '@tarojs/components';
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
 import { PipelineOrbit } from '../../components/common/PipelineOrbit';
-import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
-import * as gameService from '../../services/game';
-import { getWebSocketManager } from '../../services/websocket';
+import { PaywallPopup } from '../../components/common/PaywallPopup';
 import {
+  CreationAnswerComposer,
+  CreationEntryErrorCard,
+  CreationReferenceCard,
+  CreationSessionActions,
+  CreationSessionScene,
+  CreationSessionShell,
+  CreationStateCard,
+  buildCreationSessionActions,
+  buildCreationSessionSceneProps,
+} from '../../components/creation';
+import {
+  getPersistedGenerationTaskSnapshot,
   isCompletedGameStatus,
   useGameStore,
   PIPELINE_STAGES,
 } from '../../store/gameStore';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import useQuotaStore from '../../stores/quotaStore';
-import { PaywallPopup } from '../../components/common/PaywallPopup';
 import {
   consumePersistedCreateEntryIntent,
   ensureCreateAccess,
+  getPersistedCreateEntryIntent,
   isLoggedIn,
   openForkPageWithAuth,
   openIteratePageWithAuth,
   openProfilePageWithTab,
 } from '../../utils/authNavigation';
-import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
-import { getInputEventValue } from '../../utils/inputValue';
-import { getSafeSystemInfo } from '../../utils/systemInfo';
+import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
-import {
-  CreationSessionScene,
-  buildCreationSessionActions,
-  buildCreationSessionSceneProps,
-} from '../../components/creation';
+import { getSafeSystemInfo } from '../../utils/systemInfo';
 import './index.scss';
+
+const EXAMPLE_PROMPTS = [
+  { emoji: '🐍', text: '做一个贪吃蛇游戏，触屏滑动控制方向，吃到食物会变长，撞墙或撞到自己游戏结束。' },
+  { emoji: '🐹', text: '做一个打地鼠小游戏，九宫格随机出现地鼠，点击得分，30 秒倒计时挑战。' },
+  { emoji: '🔢', text: '做一个 2048 益智游戏，上下左右滑动合并相同数字，目标达到 2048。' },
+  { emoji: '🚀', text: '做一个太空飞船躲避陨石游戏，左右移动躲避掉落障碍，存活越久分数越高。' },
+  { emoji: '🎵', text: '做一个音乐节奏点击游戏，彩色圆点出现后及时点击，连续命中可以加分。' },
+  { emoji: '🏃', text: '做一个无尽跑酷游戏，点击屏幕跳跃躲避障碍，速度会越来越快。' },
+];
 
 const TASK_STATUS_LABELS = {
   queued: '排队中',
@@ -51,18 +65,14 @@ const ORIENTATION_OPTIONS = [
   { value: 'landscape', label: '横屏' },
 ];
 
-const SLOT_LABEL_MAP = {
-  game_type: '游戏定位',
-  core_mechanic: '核心玩法',
-  theme: '主题场景',
-  input_method: '操作方式',
-  win_condition: '胜利目标',
-  difficulty: '难度节奏',
+const CREATE_SESSION_STATUS_LABELS = {
+  initializing: '初始化中',
+  collecting: '继续补充',
+  ready: '可直接生成',
+  failed: '需要重开',
+  expired: '会话过期',
+  abandoned: '已结束',
 };
-
-function formatSlotLabel(slotKey) {
-  return SLOT_LABEL_MAP[slotKey] || slotKey;
-}
 
 function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方案') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
@@ -85,15 +95,14 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 规划方�
   return `${fallbackStageLabel}阶段遇到问题，请稍后重试`;
 }
 
-function buildInputChangeHandler(setter) {
-  return (event) => setter(getInputEventValue(event));
+function getCreateSessionStatusValue(status) {
+  return CREATE_SESSION_STATUS_LABELS[status] || '等待你的方向';
 }
 
 export default function Create() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
   const {
-    generateFromCreationSession,
     restorePersistedTask,
     cancelCurrentTask,
     isGenerating,
@@ -106,167 +115,77 @@ export default function Create() {
     canPlay,
     createEntryIntent,
     consumeCreateEntryIntent,
-    getMatchingActiveCreationSession,
     resetCreateSession,
-    setCurrentGame,
+    setCreateEntryIntent,
+    creationSession,
+    creationSessionError,
+    creationSessionSubmitting,
+    startCreationSession,
+    answerCreationSessionQuestion,
+    skipCreationSessionQuestion,
+    generateFromCreationSession,
+    abandonCreationSession,
+    restoreActiveCreationSession,
+    resetCreationSessionState,
   } = useGameStore();
   const openGame = useGamePlayerStore((s) => s.openGame);
   const openPaywall = useQuotaStore((s) => s.openPaywall);
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [creationSession, setCreationSession] = useState(null);
   const [sessionAnswer, setSessionAnswer] = useState('');
-  const [sessionBusy, setSessionBusy] = useState(false);
   const [orientation, setOrientation] = useState('portrait');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
-  const handleGameNameChange = buildInputChangeHandler(setGameName);
-  const handlePromptChange = buildInputChangeHandler(setPrompt);
-  const handleSessionAnswerChange = buildInputChangeHandler(setSessionAnswer);
-  // Tracks the polling interval used while a creation session is initializing.
-  const sessionPollingRef = useRef(null);
-
-  const DRAFT_PROMPT_KEY = 'gamevallies_create_draft_prompt';
-  const DRAFT_NAME_KEY = 'gamevallies_create_draft_name';
-
-  const stopSessionPolling = () => {
-    if (sessionPollingRef.current) {
-      clearInterval(sessionPollingRef.current);
-      sessionPollingRef.current = null;
-    }
-  };
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
+  const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `create-container${isH5 ? ' create-container--h5' : ''}${isWeapp ? ' create-container--weapp' : ''}`;
-  const creationSessionId = creationSession?.sessionId || creationSession?.id || '';
-
-  const normalizeCreatePageSession = (snapshot) => {
-    const normalized = gameService.normalizeCreationSessionSnapshot(snapshot);
-    if (!normalized) {
-      return null;
-    }
-
-    const rawSlotFillPct = Number(snapshot?.slotFillPct ?? snapshot?.slotCompletionPct ?? 0);
-    const slotFillPct = Number.isFinite(rawSlotFillPct) ? rawSlotFillPct : 0;
-    const currentQuestion = normalized.currentQuestion
-      ? {
-          ...normalized.currentQuestion,
-          label: normalized.currentQuestion.title || formatSlotLabel(normalized.currentQuestion.key),
-          prompt: normalized.currentQuestion.content || normalized.currentQuestion.title || '',
-          skippable: snapshot?.currentQuestion?.skippable !== false && normalized.currentQuestion.required !== true,
-        }
-      : null;
-
-    return {
-      ...normalized,
-      id: normalized.sessionId,
-      titleDraft: normalized.title,
-      initialPrompt: normalized.prompt,
-      conversation: normalized.messages,
-      currentQuestion,
-      readyToGenerate: typeof snapshot?.readyToGenerate === 'boolean'
-        ? snapshot.readyToGenerate
-        : ['ready', 'ready_to_generate'].includes(normalized.status),
-      generationTaskId: normalized.generationTask?.taskId || '',
-      generatedGameId: normalized.gameId || normalized.generationTask?.gameId || '',
-      slotFillPct,
-    };
-  };
+  const createIdeaSuggestions = EXAMPLE_PROMPTS.map((item) => ({
+    label: `${item.emoji} ${item.text.split('，')[0]}`,
+    value: item.text,
+  }));
+  const createSessionStatusValue = getCreateSessionStatusValue(creationSession?.status);
+  const entryErrorMessage = creationSessionError || terminalError?.message || error || '';
 
   const openTaskCenter = () => {
     openProfilePageWithTab('tasks');
   };
 
-  // ── C4 + C5: handle session `initializing` state ─────────────────────────
-  // After POST /creation-sessions the backend returns immediately with
-  // status=initializing while AI analysis runs for 2–5 s.  We must wait for
-  // the session to reach `collecting` before showing the first question.
-  //
-  // Fast path: listen for the `session:updated` Socket.IO push.
-  // Fallback:  poll GET /creation-sessions/:id every 2 s (up to 30 s).
+  const resetLocalCreateState = () => {
+    setPrompt('');
+    setSessionAnswer('');
+    setGameName('');
+    setOrientation('portrait');
+  };
+
   useEffect(() => {
-    if (!creationSessionId || creationSession?.status !== 'initializing') {
-      stopSessionPolling();
-      return undefined;
+    if (!creationSession || creationSession.entryMode !== 'create') {
+      return;
     }
 
-    const sessionId = creationSessionId;
-    let cancelled = false;
+    if (creationSession.titleDraft || creationSession.title) {
+      setGameName(creationSession.titleDraft || creationSession.title || '');
+    }
 
-    const ws = getWebSocketManager();
+    if (creationSession.orientation) {
+      setOrientation(creationSession.orientation);
+    }
 
-    const wsUpdatedHandler = (payload) => {
-      if (payload?.sessionId !== sessionId || cancelled) return;
-      stopSessionPolling();
-      applyCreationSessionSnapshot(payload?.session || null);
-    };
-
-    const wsErrorHandler = (payload) => {
-      if (payload?.sessionId !== sessionId || cancelled) return;
-      stopSessionPolling();
-      applyCreationSessionSnapshot(null);
-      Taro.showToast({ title: '创作会话初始化失败，请重试', icon: 'none' });
-    };
-
-    ws.onMessage('session:updated', wsUpdatedHandler);
-    ws.onMessage('session:error', wsErrorHandler);
-
-    // Polling fallback — max 15 polls × 2 s = 30 s (matches backend timeout)
-    let pollCount = 0;
-    sessionPollingRef.current = setInterval(() => {
-      pollCount += 1;
-      if (pollCount > 15) {
-        stopSessionPolling();
-        if (!cancelled) {
-          applyCreationSessionSnapshot(null);
-          Taro.showToast({ title: '创作会话初始化超时，请重试', icon: 'none' });
-        }
-        return;
-      }
-
-      gameService.getCreationSession(sessionId)
-        .then((snapshot) => {
-          if (cancelled || !snapshot) return;
-          if (snapshot.status !== 'initializing') {
-            stopSessionPolling();
-            applyCreationSessionSnapshot(snapshot);
-          }
-        })
-        .catch(() => {});
-    }, 2000);
-
-    return () => {
-      cancelled = true;
-      stopSessionPolling();
-      ws.offMessage('session:updated', wsUpdatedHandler);
-      ws.offMessage('session:error', wsErrorHandler);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creationSession?.status, creationSessionId]);
-  // ─────────────────────────────────────────────────────────────────────────
+    if (creationSession.prompt && !prompt) {
+      setPrompt(creationSession.prompt);
+    }
+  }, [
+    creationSession?.entryMode,
+    creationSession?.orientation,
+    creationSession?.prompt,
+    creationSession?.title,
+    creationSession?.titleDraft,
+    prompt,
+  ]);
 
   useDidShow(() => {
     if (isLoggedIn()) {
       authRedirectingRef.current = false;
-
-      // #5 恢复离开前保存的输入草稿
-      if (!prompt && !creationSession && !isGenerating && !createEntryIntent) {
-        try {
-          const savedPrompt = Taro.getStorageSync(DRAFT_PROMPT_KEY);
-          const savedName = Taro.getStorageSync(DRAFT_NAME_KEY);
-          if (savedPrompt) {
-            setPrompt(savedPrompt);
-            Taro.removeStorageSync(DRAFT_PROMPT_KEY);
-          }
-          if (savedName) {
-            setGameName(savedName);
-            Taro.removeStorageSync(DRAFT_NAME_KEY);
-          }
-        } catch (_e) {
-          // 忽略读取失败
-        }
-      }
-
       return;
     }
 
@@ -280,18 +199,6 @@ export default function Create() {
 
   useDidHide(() => {
     authRedirectingRef.current = false;
-
-    // #5 离开页面时保存未提交的输入草稿
-    if (prompt.trim() && !creationSession && !isGenerating) {
-      try {
-        Taro.setStorageSync(DRAFT_PROMPT_KEY, prompt);
-        if (gameName) {
-          Taro.setStorageSync(DRAFT_NAME_KEY, gameName);
-        }
-      } catch (_e) {
-        // 忽略存储失败
-      }
-    }
   });
 
   useEffect(() => {
@@ -315,63 +222,42 @@ export default function Create() {
       return;
     }
 
-    getMatchingActiveCreationSession({
-      entryMode: 'create',
-    })
-      .then(async (snapshot) => {
-        if (!snapshot) {
-          applyCreationSessionSnapshot(null);
-          return;
-        }
-
-        if (snapshot.status === 'generating' && (snapshot.generationTaskId || snapshot.generationTask?.taskId)) {
-          setIsRestoringEntry(true);
-          try {
-            await restorePersistedTask({
-              taskId: snapshot.generationTaskId || snapshot.generationTask?.taskId,
-              gameId: snapshot.generatedGameId || snapshot.gameId || snapshot.generationTask?.gameId || '',
-            });
-          } finally {
-            setIsRestoringEntry(false);
-          }
-          return;
-        }
-
-        applyCreationSessionSnapshot(snapshot);
-      })
-      .catch(() => undefined);
-  });
-
-  const resetLocalCreateState = () => {
-    setPrompt('');
-    setSessionAnswer('');
-    setCreationSession(null);
-    setGameName('');
-    setOrientation('portrait');
-
-    // #5 清除本地草稿
-    try {
-      Taro.removeStorageSync(DRAFT_PROMPT_KEY);
-      Taro.removeStorageSync(DRAFT_NAME_KEY);
-    } catch (_e) {
-      // 忽略
-    }
-  };
-
-  const applyCreationSessionSnapshot = (snapshot) => {
-    const normalizedSnapshot = normalizeCreatePageSession(snapshot);
-    setCreationSession(normalizedSnapshot);
-    if (!normalizedSnapshot) {
+    const persistedCreateEntryIntent = getPersistedCreateEntryIntent();
+    if (persistedCreateEntryIntent) {
+      setCreateEntryIntent(persistedCreateEntryIntent);
       return;
     }
 
-    if (normalizedSnapshot.titleDraft) {
-      setGameName(normalizedSnapshot.titleDraft);
+    const activeTaskSnapshot = getPersistedGenerationTaskSnapshot();
+    if (!activeTaskSnapshot?.taskId || activeTaskSnapshot?.taskType === 'pipeline_iterate') {
+      return;
     }
-    if (normalizedSnapshot.orientation) {
-      setOrientation(normalizedSnapshot.orientation);
+
+    setIsRestoringEntry(true);
+    restorePersistedTask(activeTaskSnapshot)
+      .then((restored) => {
+        if (!restored) {
+          Taro.showToast({ title: '恢复创作任务失败', icon: 'none' });
+        }
+      })
+      .finally(() => {
+        setIsRestoringEntry(false);
+      });
+  });
+
+  useDidShow(() => {
+    if (!isLoggedIn() || createEntryIntent || isGenerating || currentTask?.taskId || isRestoringEntry) {
+      return;
     }
-  };
+
+    restoreActiveCreationSession({ silentIfMissing: true })
+      .then((session) => {
+        if (session?.entryMode && session.entryMode !== 'create') {
+          resetCreationSessionState();
+        }
+      })
+      .catch(() => undefined);
+  });
 
   useEffect(() => {
     if (!createEntryIntent) {
@@ -419,24 +305,6 @@ export default function Create() {
         }
       }
 
-      if (mode === 'resume' && gameId && String(currentGame?.id || '') !== String(gameId)) {
-        setIsRestoringEntry(true);
-        try {
-          const game = await gameService.getGame(gameId);
-          if (!cancelled) {
-            setCurrentGame(game);
-          }
-        } catch (error) {
-          if (!cancelled) {
-            Taro.showToast({ title: '恢复作品失败，请重试', icon: 'none' });
-          }
-        } finally {
-          if (!cancelled) {
-            setIsRestoringEntry(false);
-          }
-        }
-      }
-
       if (!cancelled) {
         consumeCreateEntryIntent();
         consumePersistedCreateEntryIntent();
@@ -452,10 +320,8 @@ export default function Create() {
     clearError,
     consumeCreateEntryIntent,
     createEntryIntent,
-    currentGame?.id,
     resetCreateSession,
     restorePersistedTask,
-    setCurrentGame,
   ]);
 
   const handleCancelTask = () => {
@@ -481,126 +347,97 @@ export default function Create() {
       },
     });
   };
-  const handleSubmit = async () => {
-    if (sessionBusy) {
+
+  const handleStartCreateSession = async () => {
+    if (!prompt.trim() || prompt.trim().length < 5) {
+      Taro.showToast({ title: '请输入更完整的游戏描述', icon: 'none' });
       return;
     }
 
-    if (!creationSession) {
-      if (!prompt.trim() || prompt.trim().length < 5) {
-        Taro.showToast({ title: '请输入游戏描述', icon: 'none' });
-        return;
-      }
+    clearError();
 
-      clearError();
-      setSessionBusy(true);
-      try {
-        const snapshot = await gameService.createCreationSession(prompt.trim(), gameName, {
+    try {
+      await startCreationSession(
+        prompt.trim(),
+        gameName.trim(),
+        {
+          entryMode: 'create',
           orientation,
-        });
-        applyCreationSessionSnapshot(snapshot);
-        setSessionAnswer('');
-      } catch (err) {
-        Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
-      } finally {
-        setSessionBusy(false);
-      }
-      return;
+          generationTier: 'standard',
+        }
+      );
+      setSessionAnswer('');
+    } catch (err) {
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
     }
+  };
 
+  const handleSubmitSessionAnswer = async () => {
     if (!sessionAnswer.trim()) {
       Taro.showToast({ title: '请先回答当前问题', icon: 'none' });
       return;
     }
 
     clearError();
-    setSessionBusy(true);
+
     try {
-      const snapshot = await gameService.appendCreationSessionMessage(
-        creationSessionId,
-        sessionAnswer.trim(),
-        creationSession.revision,
-      );
-      applyCreationSessionSnapshot(snapshot);
+      await answerCreationSessionQuestion(sessionAnswer.trim());
       setSessionAnswer('');
     } catch (err) {
       Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
-    } finally {
-      setSessionBusy(false);
     }
   };
 
-  async function handleGenerateFromSession() {
-    if (!creationSession || sessionBusy) {
+  const handleGenerateFromSession = async () => {
+    if (!creationSession?.sessionId) {
       return;
     }
 
     clearError();
-    setSessionBusy(true);
+
     try {
-      await generateFromCreationSession(creationSessionId, {
-        revision: creationSession.revision,
-        title: creationSession.title || creationSession.titleDraft || gameName,
-        promptPreview: creationSession.prompt || creationSession.initialPrompt,
+      await generateFromCreationSession({
+        orientation,
+        generationTier: creationSession?.generationTier || 'standard',
       });
-      applyCreationSessionSnapshot(null);
       setSessionAnswer('');
     } catch (err) {
       Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
-    } finally {
-      setSessionBusy(false);
     }
-  }
+  };
 
-  async function handleSkipQuestion() {
-    if (!creationSession?.currentQuestion || sessionBusy) {
-      return;
-    }
-
-    clearError();
-    setSessionBusy(true);
+  const handleSkipQuestion = async () => {
     try {
-      const snapshot = await gameService.skipCreationSessionQuestion(
-        creationSessionId,
-        creationSession.revision,
-      );
-      applyCreationSessionSnapshot(snapshot);
+      await skipCreationSessionQuestion();
       setSessionAnswer('');
     } catch (err) {
       Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
-    } finally {
-      setSessionBusy(false);
     }
-  }
+  };
 
-  async function handleRestartSession() {
-    if (!creationSession || sessionBusy) {
-      applyCreationSessionSnapshot(null);
+  const handleRestartSession = async () => {
+    try {
+      if (creationSession?.sessionId) {
+        await abandonCreationSession(creationSession.sessionId);
+      }
+      resetCreationSessionState();
       setSessionAnswer('');
+    } catch (err) {
+      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
+    }
+  };
+
+  const handlePlayGame = () => {
+    if (!currentGame?.gameUrl) {
       return;
     }
 
-    setSessionBusy(true);
-    try {
-      await gameService.abandonCreationSession(creationSessionId);
-    } catch (_error) {
-      // Ignore abandon failures and let the next session replace the old one.
-    } finally {
-      applyCreationSessionSnapshot(null);
-      setSessionAnswer('');
-      setSessionBusy(false);
-    }
-  }
-
-  const handlePlayGame = () => {
-    if (currentGame?.gameUrl) {
-      openGame(currentGame.gameUrl, currentGame.title || gameName, getGameCoverUrl(currentGame), {
-        canPlay,
-        isOwnGame: true,
-        gameId: currentGame.id,
-        orientation: getGameOrientation(currentGame, orientation),
-      });
-    }
+    openGame(currentGame.gameUrl, currentGame.title || gameName, getGameCoverUrl(currentGame), {
+      canPlay,
+      isOwnGame: true,
+      gameId: currentGame.id,
+      orientation: getGameOrientation(currentGame, orientation),
+    });
   };
 
   const handleLockedPlay = () => {
@@ -619,255 +456,336 @@ export default function Create() {
     resetLocalCreateState();
   };
 
+  const renderCreatePage = (
+    content,
+    { withGamePlayer = false, withPaywall = false } = {},
+  ) => (
+    <View className={containerClassName}>
+      <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
+      <PageScrollContainer className="create-scroll" style={scrollContainerStyle} scrollY>
+        <View className="creation-page-shell">
+          {content}
+          <View className="creation-page-spacer creation-page-spacer--tabbar" />
+        </View>
+      </PageScrollContainer>
+      <CustomTabBar activeIndex={2} />
+      {withGamePlayer ? <GlobalGamePlayer /> : null}
+      {withPaywall ? <PaywallPopup /> : null}
+    </View>
+  );
+
+  const createSessionSceneProps = creationSession?.entryMode === 'create'
+    ? buildCreationSessionSceneProps({
+        entryMode: 'create',
+        session: creationSession,
+        statusValue: createSessionStatusValue,
+        answerValue: sessionAnswer,
+        onAnswerChange: (e) => setSessionAnswer(e?.detail?.value || ''),
+        answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,
+        answerSuggestions: creationSession?.currentQuestion?.options || [],
+        submitting: creationSessionSubmitting,
+        actions: buildCreationSessionActions({
+          submitting: creationSessionSubmitting,
+          answerValue: sessionAnswer,
+          submitLabel: '提交补充',
+          generateLabel: creationSession?.readyToGenerate ? '开始创作' : '直接生成初稿',
+          restartLabel: '重新开始',
+          onSubmit: handleSubmitSessionAnswer,
+          onSkip: handleSkipQuestion,
+          onGenerate: handleGenerateFromSession,
+          onRestart: handleRestartSession,
+        }),
+        errorMessage: creationSessionError || (error ? getUserFacingCreateError(terminalError?.message || error, '创建游戏') : ''),
+      })
+    : null;
+
   if (isRestoringEntry) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header create-header--restoring">
-          <View className="create-header__copy">
-            <Text className="create-header__eyebrow">正在恢复</Text>
-            <Text className="header-title">正在恢复创作</Text>
-            <Text className="header-subtitle">马上回到当前作品或进行中的创作任务</Text>
-          </View>
-          <View className="create-header__meta">
-            <Text className="create-header__meta-label">状态</Text>
-            <Text className="create-header__meta-value">恢复中</Text>
-          </View>
-        </View>
-        <View className="expanding-panel">
-          <View className="expanding-spinner" />
-          <Text className="expanding-text">正在加载作品和任务数据...</Text>
-        </View>
-        <CustomTabBar activeIndex={2} />
-      </View>
+    return renderCreatePage(
+      <CreationSessionShell
+        eyebrow="恢复创作"
+        title="正在回到你刚刚的创作流程"
+        subtitle="系统会优先恢复进行中的任务或最近一轮会话，你不需要重新输入。"
+        statusLabel="当前状态"
+        statusValue="恢复中"
+        sections={[
+          {
+            key: 'create-restoring',
+            node: (
+              <CreationStateCard
+                eyebrow="正在同步"
+                title="马上回到当前作品或进行中的任务"
+                description="如果刚才已经进入生成阶段，任务中心里的记录也会自动接上。"
+                loading
+              />
+            ),
+          },
+        ]}
+      />,
     );
   }
 
-  // Generating progress view
   if (isGenerating) {
     const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
     const currentStageLabel = progress.stageLabel || '正在生成游戏';
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <PageScrollContainer
-          className="create-scroll create-scroll--progress"
-          style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
-        >
-          <View className="progress-panel">
-            <View className="progress-panel__intro">
-              <View className="progress-panel__intro-copy">
-                <Text className="progress-panel__intro-label">当前焦点</Text>
-                <Text className="progress-panel__intro-title">{currentStageLabel}</Text>
-                <Text className="progress-panel__intro-desc">
-                  系统会自动完成创意拆解、规则编排和运行时装配，你也可以稍后去“我的-任务”继续查看。
-                </Text>
-              </View>
-              <View className="progress-panel__intro-chip">
-                <Text className="progress-panel__intro-chip-label">任务状态</Text>
-                <Text className="progress-panel__intro-chip-value">{taskStatusLabel}</Text>
-              </View>
-            </View>
 
-            <PipelineOrbit
-              stages={PIPELINE_STAGES}
-              currentIndex={progress.stageIndex}
-              progressPct={progress.pct}
-              title="生成进度"
-              stageLabel={currentStageLabel}
-              progressMessage="请稍候"
-              statusLabel={taskStatusLabel}
-              modeLabel="创作流程"
-              coreLabel="AI 创作"
-            />
-
-            {currentTask?.taskId ? (
-              <View className="task-actions">
-                <View className="task-cancel-btn" onClick={handleCancelTask}>
-                  <Text>取消任务</Text>
-                </View>
-              </View>
-            ) : null}
-
-            <View className="progress-panel__footnote">
-              <Text className="progress-panel__footnote-text">
-                任务记录会自动同步到个人中心，完成后可以继续试玩、优化或发布作品。
-              </Text>
-            </View>
-          </View>
-
-          <View className="bottom-spacer" />
-        </PageScrollContainer>
-
-        <CustomTabBar activeIndex={2} />
-      </View>
+    return renderCreatePage(
+      <CreationSessionShell
+        eyebrow="AI 创作中"
+        title="AI 正在为你生成游戏"
+        subtitle="系统会自动完成玩法拆解、规则编排和运行时装配，你也可以稍后去任务中心继续查看。"
+        statusLabel={taskStatusLabel}
+        statusValue={`${progress.pct}%`}
+        sections={[
+          {
+            key: 'create-progress-focus',
+            node: (
+              <CreationStateCard
+                eyebrow="当前焦点"
+                title={currentStageLabel}
+                description="这一步完成后会自动进入下一阶段，无需手动操作。"
+              />
+            ),
+          },
+          {
+            key: 'create-progress-orbit',
+            node: (
+              <PipelineOrbit
+                stages={PIPELINE_STAGES}
+                currentIndex={progress.stageIndex}
+                progressPct={progress.pct}
+                title="生成进度"
+                stageLabel={currentStageLabel}
+                progressMessage="请稍候"
+                statusLabel={taskStatusLabel}
+                modeLabel="创作流程"
+                coreLabel="AI 创作"
+              />
+            ),
+          },
+          currentTask?.taskId ? {
+            key: 'create-progress-actions',
+            node: (
+              <CreationSessionActions
+                title="任务操作"
+                hint="如果这轮方向不对，可以先取消，稍后再重新发起。"
+                actions={[
+                  {
+                    key: 'cancel-create-task',
+                    label: '取消任务',
+                    tone: 'danger',
+                    onClick: handleCancelTask,
+                  },
+                ]}
+              />
+            ),
+          } : null,
+          {
+            key: 'create-progress-notice',
+            node: (
+              <CreationStateCard
+                eyebrow="同步说明"
+                title="任务记录会自动同步到个人中心"
+                description="完成后你可以继续试玩、优化，或者直接发布到作品区。"
+              />
+            ),
+          },
+        ].filter(Boolean)}
+      />,
+      { withGamePlayer: true, withPaywall: true },
     );
   }
 
-  // Completion view
+  if (
+    creationSession?.entryMode === 'create'
+    && creationSession?.status !== 'generating'
+    && createSessionSceneProps
+  ) {
+    return renderCreatePage(
+      <CreationSessionScene {...createSessionSceneProps} />,
+    );
+  }
+
   if (currentGame && !isGenerating && isCompletedGameStatus(currentGame?.status)) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-        <View className="create-header create-header--completion">
-          <View className="create-header__copy">
-            <Text className="create-header__eyebrow">创作完成</Text>
-            <Text className="header-title">创作完成！</Text>
-            <Text className="header-subtitle">{currentGame.title || gameName || '你的游戏'}已经准备好了</Text>
-          </View>
-          <View className="create-header__meta">
-            <Text className="create-header__meta-label">{canPlay ? 'Ready' : 'Locked'}</Text>
-            <Text className="create-header__meta-value">{canPlay ? '试玩' : '订阅'}</Text>
-          </View>
-        </View>
+    const resultActions = canPlay
+      ? [
+          {
+            key: 'play-created-game',
+            label: '试玩游戏',
+            tone: 'primary',
+            onClick: handlePlayGame,
+          },
+          {
+            key: 'iterate-created-game',
+            label: '继续优化',
+            tone: 'ghost',
+            onClick: () => openIteratePageWithAuth(currentGame, currentGame?.id),
+          },
+          {
+            key: 'create-new-game',
+            label: '再创一个',
+            tone: 'ghost',
+            onClick: handleNewGame,
+          },
+        ]
+      : [
+          {
+            key: 'unlock-created-game',
+            label: '订阅后试玩',
+            tone: 'primary',
+            onClick: handleLockedPlay,
+          },
+          {
+            key: 'iterate-created-game',
+            label: '继续优化',
+            tone: 'ghost',
+            onClick: () => openIteratePageWithAuth(currentGame, currentGame?.id),
+          },
+          {
+            key: 'create-new-game',
+            label: '再创一个',
+            tone: 'ghost',
+            onClick: handleNewGame,
+          },
+        ];
 
-        <PageScrollContainer
-          className="create-scroll"
-          style={isH5 ? undefined : { height: `${scrollViewHeight}px` }}
-        >
-        <View className="completion-panel">
-          <View className="completion-badge">
-            <Text>{canPlay ? '已就绪' : '待解锁'}</Text>
-          </View>
-          <Text className="completion-emoji">OK</Text>
-          <Text className="completion-title">{currentGame.title || gameName || '新游戏'}</Text>
-          <Text className="completion-subtitle">
-            {canPlay ? '可以直接试玩这款作品，也可以继续进入优化流程补全细节。' : '当前作品已经生成完成，订阅后即可继续试玩与验证体验。'}
-          </Text>
-
-          {error ? (
-            <View className="completion-error-banner">
-              <Text className="completion-error-text">
-                {getUserFacingCreateError(terminalError?.message || error, 'AI 创作')}
-              </Text>
-            </View>
-          ) : null}
-
-          <View className="completion-actions">
-            {canPlay ? (
-              <View className="action-btn play-btn" onClick={handlePlayGame}>
-                <Text>试玩游戏</Text>
-              </View>
-            ) : (
-              <View className="action-btn locked-play-btn" onClick={handleLockedPlay}>
-                <Text>订阅后试玩</Text>
-              </View>
-            )}
-            <View className="action-btn new-btn" onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}>
-              <Text>继续优化</Text>
-            </View>
-            <View className="action-btn new-btn" onClick={handleNewGame}>
-              <Text>再创一个</Text>
-            </View>
-          </View>
-
-        </View>
-        <View style={{ height: '80px' }} />
-        </PageScrollContainer>
-
-        <CustomTabBar activeIndex={2} />
-        <GlobalGamePlayer />
-        <PaywallPopup />
-      </View>
+    return renderCreatePage(
+      <CreationSessionShell
+        eyebrow="Creation Completed"
+        title="创作完成"
+        subtitle="这版作品已经准备好了，你可以现在试玩，也可以继续优化下一版。"
+        statusLabel="当前状态"
+        statusValue={canPlay ? '可试玩' : '待解锁'}
+        sections={[
+          {
+            key: 'create-result-summary',
+            node: (
+              <CreationStateCard
+                tone={canPlay ? 'success' : 'warning'}
+                centered
+                eyebrow={canPlay ? '已就绪' : '待解锁'}
+                title={currentGame.title || gameName || '新游戏'}
+                description={canPlay ? '现在可以直接试玩，也可以继续打磨体验细节。' : '当前作品已经生成完成，订阅后即可继续试玩与验证体验。'}
+                hint={error ? getUserFacingCreateError(terminalError?.message || error, 'AI 创作') : '生成完成后，任务记录也会保留在“我的-任务”里。'}
+              />
+            ),
+          },
+          {
+            key: 'create-result-reference',
+            node: (
+              <CreationReferenceCard
+                eyebrow="生成结果"
+                title={currentGame.title || gameName || '未命名作品'}
+                badge={getGameOrientation(currentGame, orientation) === 'landscape' ? '横屏作品' : '竖屏作品'}
+                description={currentGame.description || '这版作品已经准备好进入试玩、优化或发布。'}
+                metadata={[
+                  { label: '试玩权限', value: canPlay ? '可直接试玩' : '订阅后试玩' },
+                  { label: '下一步', value: '继续优化、试玩验证，或重新开始一轮创作' },
+                ]}
+              />
+            ),
+          },
+          {
+            key: 'create-result-actions',
+            node: (
+              <CreationSessionActions
+                title="下一步"
+                hint="你可以立刻验证这版作品，也可以继续打磨下一轮。"
+                actions={resultActions}
+              />
+            ),
+          },
+        ]}
+      />,
+      { withGamePlayer: true, withPaywall: true },
     );
   }
 
-  // Main create form (step 1)
-  return (
-    <View className={containerClassName}>
-      <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-
-      <PageScrollContainer className="create-scroll">
-        <View className="create-entry">
-          {!creationSession ? (
-            <>
-              <View className="create-entry__topbar">
-                <View className="create-entry__name">
-                  <Input
-                    className="create-entry__name-input"
-                    placeholder="游戏名称（可选）"
-                    placeholderStyle="color: #67627d"
-                    value={gameName}
-                    onInput={handleGameNameChange}
-                    onChange={handleGameNameChange}
-                    maxlength={30}
-                  />
+  return renderCreatePage(
+    <CreationSessionShell
+      eyebrow="AI Game Atelier"
+      title="创作新游戏"
+      subtitle="先把玩法方向说清楚，AI 会先整理第一版方案，再只追问最关键的细节。"
+      statusLabel="创作模式"
+      statusValue={orientation === 'landscape' ? '横屏' : '竖屏'}
+      sections={[
+        {
+          key: 'create-settings',
+          node: (
+            <View className="creation-session-card creation-config-card">
+              <View className="creation-config-grid">
+                <View className="creation-config-field">
+                  <Text className="creation-config-label">展示方向</Text>
+                  <View className="creation-mode-toggle">
+                    {ORIENTATION_OPTIONS.map((option) => {
+                      const isActive = orientation === option.value;
+                      return (
+                        <View
+                          key={option.value}
+                          className={`creation-mode-toggle__option${isActive ? ' is-active' : ''}`}
+                          onClick={() => setOrientation(option.value)}
+                        >
+                          <Text className="creation-mode-toggle__text">{option.label}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
-                <View className="create-entry__orientation">
-                  {ORIENTATION_OPTIONS.map((option) => {
-                    const isActive = orientation === option.value;
-                    return (
-                      <View
-                        key={option.value}
-                        className={`create-entry__orientation-option${isActive ? ' is-active' : ''}`}
-                        onClick={() => setOrientation(option.value)}
-                      >
-                        <Text className="create-entry__orientation-text">{option.label}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
 
-              <View className="create-entry__composer">
-                <Textarea
-                  className="create-entry__textarea"
-                  placeholder="先说一句你想做什么游戏"
-                  placeholderStyle="color: #67627d"
-                  value={prompt}
-                  onInput={handlePromptChange}
-                  onChange={handlePromptChange}
-                  maxlength={2000}
-                  autoHeight
-                />
-                <View className="create-entry__footer">
-                  <Text className="create-entry__count">{prompt.length}/2000</Text>
-                  <View
-                    className={`create-entry__submit${sessionBusy || !prompt.trim() ? ' is-disabled' : ''}`}
-                    onClick={handleSubmit}
-                  >
-                    <Text>{sessionBusy ? '分析中...' : '开始创作'}</Text>
+                <View className="creation-config-field creation-config-field--full">
+                  <Text className="creation-config-label">游戏名称</Text>
+                  <View className="creation-config-input-wrap">
+                    <Input
+                      className="creation-config-input"
+                      placeholder="给你的游戏起个名字（可选）"
+                      placeholderStyle="color: #55516e"
+                      value={gameName}
+                      onInput={(e) => setGameName(e.detail.value)}
+                      maxlength={30}
+                    />
                   </View>
                 </View>
               </View>
-            </>
-          ) : (
-            <CreationSessionScene
-              {...buildCreationSessionSceneProps({
-                entryMode: 'create',
-                session: creationSession,
-                answerValue: sessionAnswer,
-                onAnswerChange: handleSessionAnswerChange,
-                answerPlaceholder: creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt,
-                answerSuggestions: creationSession?.currentQuestion?.options || [],
-                submitting: sessionBusy,
-                actions: buildCreationSessionActions({
-                  submitting: sessionBusy,
-                  answerValue: sessionAnswer,
-                  generateLabel: '开始创作',
-                  onSubmit: handleSubmit,
-                  onSkip: handleSkipQuestion,
-                  onGenerate: handleGenerateFromSession,
-                  onRestart: handleRestartSession,
-                }),
-                errorMessage: error ? getUserFacingCreateError(terminalError?.message || error, '创建游戏') : '',
-              })}
-            />
-          )}
-
-          {!creationSession && error && (
-            <View className="error-banner">
-              <Text className="error-text">{getUserFacingCreateError(terminalError?.message || error, '创建游戏')}</Text>
-              <Text className="error-dismiss" onClick={clearError}>×</Text>
             </View>
-          )}
-        </View>
-
-        <View className="bottom-spacer" />
-      </PageScrollContainer>
-
-      <CustomTabBar activeIndex={2} />
-    </View>
+          ),
+        },
+        entryErrorMessage ? {
+          key: 'create-entry-error',
+          node: <CreationEntryErrorCard entryMode="create" error={entryErrorMessage} />,
+        } : null,
+        {
+          key: 'create-entry-answer',
+          node: (
+            <CreationAnswerComposer
+              value={prompt}
+              onChange={(e) => setPrompt(e?.detail?.value || '')}
+              placeholder="先说一句核心想法，系统会帮你拆成可生成方案..."
+              suggestions={createIdeaSuggestions}
+              onSuggestionSelect={setPrompt}
+              disabled={creationSessionSubmitting}
+              maxLength={2000}
+            />
+          ),
+        },
+        {
+          key: 'create-start-actions',
+          node: (
+            <CreationSessionActions
+              title="开始创作"
+              hint="发起会话后，系统会先整理第一版方案，再进入共享的追问与生成流程。"
+              actions={[
+                {
+                  key: 'start-create-session',
+                  label: creationSessionSubmitting ? 'AI 正在整理...' : '开始创作会话',
+                  tone: 'primary',
+                  disabled: creationSessionSubmitting || prompt.trim().length < 5,
+                  onClick: handleStartCreateSession,
+                },
+              ]}
+            />
+          ),
+        },
+      ].filter(Boolean)}
+    />,
   );
 }

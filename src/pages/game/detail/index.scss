@@ -1,7 +1,7 @@
 @import '../../../styles/game-ui.scss';
 
 .game-detail {
-  background: $bg;
+  background: #08080d;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -14,12 +14,20 @@
     right: 0;
     z-index: 40;
     box-sizing: border-box;
-    padding-left: 30px;
-    padding-right: 30px;
     display: flex;
-    align-items: flex-start;
+    justify-content: center;
     pointer-events: none;
-    background: linear-gradient(180deg, rgba(36, 25, 79, 0.96) 0%, rgba(36, 25, 79, 0.82) 55%, rgba(36, 25, 79, 0) 100%);
+
+    &__inner {
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: 30px;
+      padding-right: 30px;
+      display: flex;
+      align-items: flex-start;
+      background: linear-gradient(180deg, rgba(36, 25, 79, 0.96) 0%, rgba(36, 25, 79, 0.82) 55%, rgba(36, 25, 79, 0) 100%);
+      pointer-events: auto;
+    }
   }
 
   .back-btn {
@@ -50,6 +58,10 @@
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+
+    .detail-shell {
+      width: 100%;
+    }
 
     .preview-banner {
       width: 100%;
@@ -105,7 +117,7 @@
           display: block;
           font-size: 50px;
           font-weight: 800;
-          color: $text;
+          color: #eae8f4;
           margin-bottom: 16px;
           line-height: 1.15;
           letter-spacing: 0.4px;
@@ -170,7 +182,7 @@
             flex-direction: column;
             min-width: 0;
             gap: 6px;
-            .author-name { font-size: 30px; font-weight: 700; color: $text; }
+            .author-name { font-size: 30px; font-weight: 700; color: #eae8f4; }
             .author-desc { font-size: 23px; color: #9f9ab5; line-height: 1.45; }
           }
         }
@@ -229,7 +241,7 @@
             }
           }
           .stat-value { display: block; font-size: 30px; font-weight: 800; color: #f8f6ff; margin-bottom: 8px; }
-          .stat-text { display: block; font-size: 21px; color: $sub; }
+          .stat-text { display: block; font-size: 21px; color: #8b87a3; }
         }
       }
 
@@ -289,7 +301,7 @@
           &.locked {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
-            color: $sub;
+            color: #8b87a3;
 
             &:active {
               background: rgba(255, 255, 255, 0.1);
@@ -306,7 +318,7 @@
         .icon-btn {
           @include game-surface-card();
           padding: 18px 18px 16px;
-          color: $sub;
+          color: #8b87a3;
           font-size: 26px;
           font-weight: 600;
           text-align: left;
@@ -362,15 +374,15 @@
           .icon-label {
             font-size: 18px;
             line-height: 1.35;
-            color: $sub;
+            color: #8b87a3;
           }
 
           &.bookmark-btn.bookmarked {
-            color: $amber;
+            color: #fbbf24;
             border-color: rgba(251, 191, 36, 0.3);
 
             .icon-value {
-              color: $amber;
+              color: #fbbf24;
             }
 
             .icon-symbol--bookmark {
@@ -378,7 +390,7 @@
             }
           }
           &.disabled {
-            color: $dim;
+            color: #55516e;
             border-color: #1d1d28;
             background: rgba(17, 17, 24, 0.72);
 
@@ -399,7 +411,7 @@
           padding: 14px 26px;
           background: rgba(110, 86, 255, 0.15);
           border-radius: 999px;
-          color: $primary;
+          color: #6e56ff;
           font-size: 24px;
           font-weight: 700;
         }
@@ -430,7 +442,7 @@
           .comments-title-text {
             font-size: 34px;
             font-weight: 700;
-            color: $text;
+            color: #eae8f4;
           }
 
           .comments-compose-btn {
@@ -517,7 +529,7 @@
               .comment-name {
                 font-size: 26px;
                 font-weight: 600;
-                color: $text;
+                color: #eae8f4;
               }
               .comment-time {
                 font-size: 21px;
@@ -544,7 +556,7 @@
                 align-items: center;
                 gap: 8px;
                 cursor: pointer;
-                color: $dim;
+                color: #55516e;
                 font-size: 23px;
 
                 .comment-action-icon {
@@ -567,7 +579,7 @@
                 .comment-action-label { font-size: 22px; }
 
                 &.liked {
-                  color: $rose;
+                  color: #ff5c8a;
 
                   .comment-action-icon--like {
                     background-image: url('../../../images/detail-icons/heart-active.svg');
@@ -575,7 +587,7 @@
                 }
                 &.danger {
                   color: #ff5c8a55;
-                  &:active { color: $rose; }
+                  &:active { color: #ff5c8a; }
                 }
                 &:active { opacity: 0.7; }
               }
@@ -592,7 +604,7 @@
 
           .expand-replies {
             padding: 10px 0;
-            color: $primary;
+            color: #6e56ff;
             font-size: 22px;
             cursor: pointer;
             &:active { opacity: 0.7; }
@@ -600,17 +612,17 @@
 
           .reply-shortcut {
             padding: 8px 0;
-            color: $dim;
+            color: #55516e;
             font-size: 22px;
             cursor: pointer;
-            &:active { color: $primary; }
+            &:active { color: #6e56ff; }
           }
         }
 
         .load-more {
           text-align: center;
           padding: 28px;
-          color: $primary;
+          color: #6e56ff;
           font-size: 24px;
           cursor: pointer;
           background: rgba(110, 86, 255, 0.06);
@@ -632,10 +644,19 @@
     bottom: 0;
     z-index: 30;
     box-sizing: border-box;
+    display: flex;
+    justify-content: center;
     flex-shrink: 0;
-    background: $surface;
-    border-top: 1px solid $border;
-    padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
+    pointer-events: none;
+
+    &__inner {
+      width: 100%;
+      box-sizing: border-box;
+      background: #111118;
+      border-top: 1px solid #252535;
+      padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);
+      pointer-events: auto;
+    }
 
     .reply-hint {
       display: flex;
@@ -647,7 +668,7 @@
 
       .reply-hint-text {
         font-size: 24px;
-        color: $primary;
+        color: #6e56ff;
       }
 
       .reply-cancel {
@@ -656,10 +677,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: $sub;
+        color: #8b87a3;
         font-size: 28px;
         cursor: pointer;
-        &:active { color: $rose; }
+        &:active { color: #ff5c8a; }
       }
     }
 
@@ -672,17 +693,17 @@
       .comment-input {
         flex: 1;
         background: #15151e;
-        border: 1px solid $border;
+        border: 1px solid #252535;
         border-radius: 36px;
         padding: 18px 24px;
         font-size: 26px;
-        color: $text;
+        color: #eae8f4;
         &:focus { border-color: rgba(110, 86, 255, 0.5); }
       }
 
       .comment-send {
         padding: 17px 32px;
-        background: $brand-gradient;
+        background: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
         border-radius: 36px;
         color: white;
         font-size: 25px;
@@ -692,7 +713,7 @@
         &:active { opacity: 0.85; }
         &.disabled {
           background: rgba(110, 86, 255, 0.15);
-          color: $dim;
+          color: #55516e;
         }
       }
     }
@@ -706,8 +727,12 @@
   overflow: visible;
 
   .detail-top-bar {
-    padding-left: 12px;
-    padding-right: 12px;
+    &__inner {
+      width: min(100vw, 500px);
+      max-width: 100%;
+      padding-left: 12px;
+      padding-right: 12px;
+    }
   }
 
   .back-btn {
@@ -727,6 +752,12 @@
     min-height: 0;
     overflow: visible;
 
+    .detail-shell {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
     .preview-banner {
       height: clamp(164px, 46vw, 196px);
 
@@ -736,8 +767,6 @@
     }
 
     .detail-content {
-      max-width: 432px;
-      margin: 0 auto;
       padding: 16px 14px 0;
 
       .title-section {
@@ -808,27 +837,29 @@
       }
 
       .stats-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
         margin-bottom: 18px;
 
         .stat-item {
-          padding: 16px 12px 14px;
-          border-radius: 18px;
+          min-width: 0;
+          padding: 14px 8px 12px;
+          border-radius: 16px;
 
           .stat-icon {
-            width: 28px;
-            height: 28px;
-            margin-bottom: 10px;
+            width: 24px;
+            height: 24px;
+            margin-bottom: 8px;
           }
 
           .stat-value {
-            font-size: 18px;
-            margin-bottom: 4px;
+            font-size: 17px;
+            margin-bottom: 3px;
           }
 
           .stat-text {
-            font-size: 12px;
+            font-size: 11px;
+            line-height: 1.35;
           }
         }
       }
@@ -1046,6 +1077,11 @@
   }
 
   .comment-input-bar {
+    &__inner {
+      width: min(100vw, 500px);
+      max-width: 100%;
+    }
+
     .reply-hint {
       padding: 8px 12px 5px;
 
@@ -1145,7 +1181,25 @@
         padding-right: 10px;
 
         .stats-row {
-          gap: 8px;
+          gap: 6px;
+
+          .stat-item {
+            padding: 12px 6px 10px;
+
+            .stat-icon {
+              width: 22px;
+              height: 22px;
+              margin-bottom: 7px;
+            }
+
+            .stat-value {
+              font-size: 16px;
+            }
+
+            .stat-text {
+              font-size: 10px;
+            }
+          }
         }
 
         .action-buttons {

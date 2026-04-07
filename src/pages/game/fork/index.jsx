@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Textarea } from '@tarojs/components';
+import { View } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
@@ -7,6 +7,19 @@ import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
 import { PipelineOrbit } from '../../../components/common/PipelineOrbit';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
+import {
+  CreationAnswerComposer,
+  CreationEntryErrorCard,
+  CreationQuestionCard,
+  CreationReferenceCard,
+  CreationResumeScene,
+  CreationSessionActions,
+  CreationSessionScene,
+  CreationSessionShell,
+  CreationStateCard,
+  buildCreationSessionActions,
+  buildCreationSessionSceneProps,
+} from '../../../components/creation';
 import * as gameService from '../../../services/game';
 import {
   PIPELINE_STAGES,
@@ -20,18 +33,29 @@ import {
   openIteratePageWithAuth,
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
-import { Storage } from '../../../utils/storage';
-import { getInputEventValue } from '../../../utils/inputValue';
 import { isH5Runtime } from '../../../utils/runtime';
+import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
-import {
-  CreationEntryErrorCard,
-  CreationResumeScene,
-  CreationSessionScene,
-  buildCreationSessionActions,
-  buildCreationSessionSceneProps,
-} from '../../../components/creation';
 import './index.scss';
+
+const TASK_STATUS_LABELS = {
+  queued: '排队中',
+  submitted: '执行中',
+  running: '执行中',
+  succeeded: '已完成',
+  failed: '失败',
+  canceled: '已取消',
+  timed_out: '超时',
+};
+
+const FORK_SESSION_STATUS_LABELS = {
+  initializing: '初始化中',
+  collecting: '继续补充',
+  ready: '可直接生成',
+  failed: '需要重开',
+  expired: '会话过期',
+  abandoned: '已结束',
+};
 
 function formatNumber(num) {
   const n = Number(num) || 0;
@@ -50,18 +74,22 @@ function getAuthorName(game) {
     || '创作者';
 }
 
-const TASK_STATUS_LABELS = {
-  queued: '排队中',
-  submitted: '执行中',
-  running: '执行中',
-  succeeded: '已完成',
-  failed: '失败',
-  canceled: '已取消',
-  timed_out: '超时',
-};
+function getUserFacingForkError(rawError) {
+  const source = typeof rawError === 'string' ? rawError.trim() : '';
 
-function buildInputChangeHandler(setter) {
-  return (event) => setter(getInputEventValue(event));
+  if (!source) {
+    return '复刻阶段遇到问题，请稍后重试';
+  }
+
+  if (/已取消|canceled|cancelled/i.test(source)) {
+    return '复刻任务已取消';
+  }
+
+  if (/超时|timeout|timed out/i.test(source)) {
+    return '复刻阶段处理超时，请稍后重试';
+  }
+
+  return source;
 }
 
 export default function GameForkPage() {
@@ -78,7 +106,6 @@ export default function GameForkPage() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
-    getMatchingActiveCreationSession,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -100,7 +127,6 @@ export default function GameForkPage() {
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `fork-page${isWeapp ? ' fork-page--weapp' : ''}${isH5 ? ' fork-page--h5' : ''}`;
-  const handleForkAnswerChange = buildInputChangeHandler(setForkAnswer);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -132,7 +158,7 @@ export default function GameForkPage() {
         }
       } catch (_error) {
         if (!cancelled) {
-          setPageError('加载作品失败，请返回详情页重试');
+          setPageError('加载作品失败，请返回详情页后重试');
         }
       } finally {
         if (!cancelled) {
@@ -174,6 +200,8 @@ export default function GameForkPage() {
     && String(creationSession?.gameId || currentGame?.id || '') === String(currentGame?.id || '')
     && isCompletedGameStatus(currentGame?.status)
   );
+  const forkSessionStatusValue = FORK_SESSION_STATUS_LABELS[creationSession?.status] || '等待你的方向';
+
   useEffect(() => {
     if (!sourceGameId || !sourceGame || isLoading || !canForkGame) {
       return;
@@ -190,16 +218,19 @@ export default function GameForkPage() {
 
     forkSessionBootstrappedSourceIdRef.current = sourceGameId;
 
-    getMatchingActiveCreationSession({
-      entryMode: 'fork',
-      sourceGameId,
-    })
+    gameService.getActiveCreationSession()
       .then((restoredSession) => {
-        if (restoredSession) {
+        const restoredMatches = restoredSession
+          && restoredSession.entryMode === 'fork'
+          && String(restoredSession.sourceGameId || '') === String(sourceGameId);
+
+        if (restoredMatches) {
+          resetCreationSessionState();
           setResumeCandidate(restoredSession);
           return restoredSession;
         }
 
+        resetCreationSessionState();
         setResumeCandidate(null);
         return null;
       })
@@ -213,9 +244,9 @@ export default function GameForkPage() {
       });
   }, [
     canForkGame,
-    getMatchingActiveCreationSession,
     isCurrentForkSession,
     isLoading,
+    resetCreationSessionState,
     sourceGame,
     sourceGameId,
   ]);
@@ -310,7 +341,6 @@ export default function GameForkPage() {
   const handleGenerateFork = async () => {
     try {
       await generateFromCreationSession({
-        revision: creationSession?.revision,
         orientation: sourceGame?.orientation || 'portrait',
         generationTier: creationSession?.generationTier || 'standard',
       });
@@ -356,28 +386,90 @@ export default function GameForkPage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack />
-        <View className="fork-loading-card">
-          <View className="fork-loading-card__spinner" />
-          <Text className="fork-loading-card__text">正在加载作品详情...</Text>
+  const forkSessionSceneProps = isCurrentForkSession
+    ? buildCreationSessionSceneProps({
+        entryMode: 'fork',
+        session: creationSession,
+        statusValue: forkSessionStatusValue,
+        answerValue: forkAnswer,
+        onAnswerChange: (e) => setForkAnswer(e?.detail?.value || ''),
+        answerPlaceholder: creationSession?.currentQuestion?.placeholder,
+        answerSuggestions: creationSession?.currentQuestion?.options || [],
+        submitting: creationSessionSubmitting,
+        actions: buildCreationSessionActions({
+          submitting: creationSessionSubmitting,
+          answerValue: forkAnswer,
+          generateLabel: '直接开始复刻',
+          onSubmit: handleSubmitForkAnswer,
+          onSkip: handleSkipForkQuestion,
+          onGenerate: handleGenerateFork,
+          onRestart: handleRestartForkSession,
+        }),
+        errorMessage: creationSessionError,
+      })
+    : null;
+
+  const renderForkPage = (content) => (
+    <View className={containerClassName}>
+      <AppTopBar showBack />
+      <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
+        <View className="creation-page-shell">
+          {content}
+          <View className="creation-page-spacer" />
         </View>
-      </View>
+      </PageScrollContainer>
+      <GlobalGamePlayer />
+      <PaywallPopup />
+    </View>
+  );
+
+  if (isLoading) {
+    return renderForkPage(
+      <CreationSessionShell
+        eyebrow="加载复刻上下文"
+        title="正在准备复刻页面"
+        subtitle="马上展示这款作品的当前信息。"
+        statusLabel="当前状态"
+        statusValue="准备中"
+        sections={[
+          {
+            key: 'fork-loading',
+            node: (
+              <CreationStateCard
+                eyebrow="稍等一下"
+                title="正在加载作品详情"
+                description="系统会先确认原作品信息、作者权限和可复刻状态。"
+                loading
+              />
+            ),
+          },
+        ]}
+      />,
     );
   }
 
   if (!sourceGame) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack />
-        <View className="fork-empty-card">
-          <Text className="fork-empty-card__icon">⎇</Text>
-          <Text className="fork-empty-card__title">{pageError || '没有拿到作品数据'}</Text>
-          <Text className="fork-empty-card__text">请返回作品详情页后重试。</Text>
-        </View>
-      </View>
+    return renderForkPage(
+      <CreationSessionShell
+        eyebrow="暂时无法继续"
+        title="暂时无法复刻这款作品"
+        subtitle="请返回详情页后重新进入，或稍后再试。"
+        statusLabel="当前状态"
+        statusValue="加载失败"
+        sections={[
+          {
+            key: 'fork-missing-source',
+            node: (
+              <CreationStateCard
+                tone="danger"
+                eyebrow="原作缺失"
+                title="没有拿到作品数据"
+                description={pageError || '请返回作品详情页后重试。'}
+              />
+            ),
+          },
+        ]}
+      />,
     );
   }
 
@@ -386,183 +478,283 @@ export default function GameForkPage() {
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
     const currentStageLabel = progress.stageLabel || '正在生成复刻作品';
 
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack />
-        <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
-          <View className="fork-panel">
-            <PipelineOrbit
-              stages={PIPELINE_STAGES}
-              currentIndex={progress.stageIndex}
-              progressPct={progress.pct}
-              title="复刻进度"
-              stageLabel={currentStageLabel}
-              statusLabel={taskStatusLabel}
-              modeLabel="复刻流程"
-              coreLabel="AI 复刻"
-            />
-
-            {currentTask?.taskId ? (
-              <View className="fork-actions">
-                <View className="fork-submit-btn" onClick={handleCancelTask}>
-                  <Text>取消任务</Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
-        </PageScrollContainer>
-
-        <GlobalGamePlayer />
-        <PaywallPopup />
-      </View>
+    return renderForkPage(
+      <CreationSessionShell
+        eyebrow="AI 复刻中"
+        title="AI 正在生成新的版本"
+        subtitle="系统会沿着你刚才的改动方向，生成一版新的作品。"
+        statusLabel={taskStatusLabel}
+        statusValue={`${progress.pct}%`}
+        sections={[
+          {
+            key: 'fork-progress-focus',
+            node: (
+              <CreationStateCard
+                eyebrow="当前焦点"
+                title={currentStageLabel}
+                description="这轮完成后，你就可以继续优化这版新作品。"
+              />
+            ),
+          },
+          {
+            key: 'fork-progress-orbit',
+            node: (
+              <PipelineOrbit
+                stages={PIPELINE_STAGES}
+                currentIndex={progress.stageIndex}
+                progressPct={progress.pct}
+                title="复刻进度"
+                stageLabel={currentStageLabel}
+                statusLabel={taskStatusLabel}
+                modeLabel="复刻流程"
+                coreLabel="AI 复刻"
+              />
+            ),
+          },
+          currentTask?.taskId ? {
+            key: 'fork-progress-actions',
+            node: (
+              <CreationSessionActions
+                title="任务操作"
+                hint="如果这轮方向不对，可以先取消任务，再重新发起新的复刻会话。"
+                actions={[
+                  {
+                    key: 'cancel-fork-task',
+                    label: '取消任务',
+                    tone: 'danger',
+                    onClick: handleCancelTask,
+                  },
+                ]}
+              />
+            ),
+          } : null,
+        ].filter(Boolean)}
+      />,
     );
   }
 
   if (isCurrentForkCompleted) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack />
-        <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
-          <View className="fork-panel">
-            <View className="fork-source-card">
-              <View className="fork-source-card__preview">
-                <Text className="fork-source-card__emoji">{currentGame?.emoji || '🎮'}</Text>
-              </View>
-              <View className="fork-source-card__copy">
-                <Text className="fork-source-card__title">{currentGame?.title || '未命名游戏'}</Text>
-                <Text className="fork-source-card__meta">已加入我的创作</Text>
-                {currentGame?.description ? (
-                  <Text className="fork-source-card__desc">{currentGame.description}</Text>
-                ) : null}
-              </View>
-            </View>
-
-            <View className="fork-actions">
-              <View className="fork-submit-btn" onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}>
-                <Text>继续优化这版作品</Text>
-              </View>
-            </View>
-          </View>
-        </PageScrollContainer>
-
-        <GlobalGamePlayer />
-        <PaywallPopup />
-      </View>
+    return renderForkPage(
+      <CreationSessionShell
+        eyebrow="复刻完成"
+        title="新的版本已经准备好了"
+        subtitle="这版作品已经进入你的创作链路，你可以继续优化它。"
+        statusLabel="当前状态"
+        statusValue="已生成"
+        sections={[
+          {
+            key: 'fork-complete-summary',
+            node: (
+              <CreationStateCard
+                tone="success"
+                centered
+                eyebrow="已就绪"
+                title={currentGame?.title || '新版本作品'}
+                description="现在可以继续打磨、验证玩法，或进入详情页查看。"
+              />
+            ),
+          },
+          {
+            key: 'fork-complete-reference',
+            node: (
+              <CreationReferenceCard
+                eyebrow="新版本"
+                title={currentGame?.title || '未命名作品'}
+                badge="已加入你的创作链路"
+                description={currentGame?.description || '新的版本已经生成完成。'}
+                metadata={[
+                  { label: '下一步', value: '继续优化这版作品，或回到详情页查看结果' },
+                ]}
+              />
+            ),
+          },
+          {
+            key: 'fork-complete-actions',
+            node: (
+              <CreationSessionActions
+                title="下一步"
+                hint="你可以继续把这版作品迭代下去。"
+                actions={[
+                  {
+                    key: 'continue-iterate-fork-result',
+                    label: '继续优化这版作品',
+                    tone: 'primary',
+                    onClick: () => openIteratePageWithAuth(currentGame, currentGame?.id),
+                  },
+                ]}
+              />
+            ),
+          },
+        ]}
+      />,
     );
   }
 
   if (resumeCandidate?.entryMode === 'fork' && !creationSession) {
-    return (
-      <View className={containerClassName}>
-        <AppTopBar showBack />
-        <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
-          <View className="fork-panel">
-            <CreationResumeScene
-              entryMode="fork"
-              session={resumeCandidate}
-              subjectTitle={resumeCandidate?.title || sourceGame?.title || '原作品'}
-              submitting={resumeDecisionSubmitting}
-              onContinue={handleContinueForkSession}
-              onRestart={handleStartFreshForkSession}
-            />
-          </View>
-        </PageScrollContainer>
-      </View>
+    return renderForkPage(
+      <CreationResumeScene
+        entryMode="fork"
+        session={resumeCandidate}
+        subjectTitle={resumeCandidate?.title || sourceGame?.title || '原作品'}
+        submitting={resumeDecisionSubmitting}
+        onContinue={handleContinueForkSession}
+        onRestart={handleStartFreshForkSession}
+      />,
     );
   }
 
-  return (
-    <View className={containerClassName}>
-      <AppTopBar showBack />
-      <PageScrollContainer className="fork-scroll" style={scrollContainerStyle} scrollY>
-        <View className="fork-panel">
-          <View className="fork-source-card fork-source-card--top">
-            <View className="fork-source-card__preview">
-              <Text className="fork-source-card__emoji">{sourceGame.emoji || '🎮'}</Text>
-            </View>
-            <View className="fork-source-card__copy">
-              <Text className="fork-source-card__title">{sourceGame.title || '未命名游戏'}</Text>
-              <Text className="fork-source-card__meta">{authorName} · {statItems.map((s) => `${s.label} ${s.value}`).join(' · ')}</Text>
-            </View>
-          </View>
+  const sourceReferenceCard = (
+    <CreationReferenceCard
+      eyebrow="原作品参考"
+      title={sourceGame?.title || '未命名游戏'}
+      badge={authorName}
+      description={sourceGame?.description || '你可以基于这版作品做出全新的方向。'}
+      metadata={[
+        { label: '题材归属', value: isOwnGame ? '这是你的作品' : '来自社区作品' },
+        { label: '复刻权限', value: canForkGame ? '允许复刻' : '当前不可复刻' },
+      ]}
+      metrics={statItems}
+    />
+  );
 
-          {!canForkGame ? (
-            <View className="fork-warning-card">
-              <Text className="fork-warning-card__text">
-                {isOwnGame ? '这是你自己的作品，直接去优化会更合适。' : '作者暂未开放复刻权限，目前还不能基于这款作品生成新版本。'}
-              </Text>
-              {/* #13 为 own-game 情况提供跳转到优化页面的入口 */}
-              {isOwnGame && sourceGame?.id ? (
-                <View
-                  className="fork-warning-card__action"
-                  onClick={() => openIteratePageWithAuth(sourceGame, sourceGame.id)}
-                >
-                  <Text className="fork-warning-card__action-text">去优化作品</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
+  if (!canForkGame && !isCurrentForkSession) {
+    return renderForkPage(
+      <>
+        <CreationSessionShell
+          eyebrow="当前不可复刻"
+          title={isOwnGame ? '这是你自己的作品' : '作者暂未开放复刻'}
+          subtitle={isOwnGame ? '对自己的作品直接走优化链路会更合适。' : '这款作品目前不能基于原作生成新版本。'}
+          statusLabel="当前状态"
+          statusValue="不可开始"
+          sections={[
+            {
+              key: 'fork-blocked',
+              node: (
+                <CreationStateCard
+                  tone="danger"
+                  eyebrow="无法发起"
+                  title={isOwnGame ? '请直接去优化你的作品' : '当前没有复刻权限'}
+                  description={isOwnGame ? '你已经拥有这款作品，直接优化会更顺手，也能保留完整的创作链路。' : pageError || '如需开放复刻，需要原作者允许该作品被复刻。'}
+                />
+              ),
+            },
+            isOwnGame ? {
+              key: 'fork-own-game-actions',
+              node: (
+                <CreationSessionActions
+                  title="下一步"
+                  hint="直接去优化这款作品，会更符合你的创作链路。"
+                  actions={[
+                    {
+                      key: 'go-iterate-own-game',
+                      label: '去优化这款作品',
+                      tone: 'primary',
+                      onClick: () => openIteratePageWithAuth(sourceGame, sourceGame?.id),
+                    },
+                  ]}
+                />
+              ),
+            } : null,
+          ].filter(Boolean)}
+        />
+        {sourceReferenceCard}
+      </>,
+    );
+  }
 
-          {isCurrentForkSession ? (
-            <CreationSessionScene
-              {...buildCreationSessionSceneProps({
-                entryMode: 'fork',
-                session: creationSession,
-                answerValue: forkAnswer,
-                onAnswerChange: handleForkAnswerChange,
-                answerPlaceholder: creationSession?.currentQuestion?.placeholder,
-                answerSuggestions: creationSession?.currentQuestion?.options || [],
-                submitting: creationSessionSubmitting,
-                actions: buildCreationSessionActions({
-                  submitting: creationSessionSubmitting,
-                  answerValue: forkAnswer,
-                  generateLabel: '开始复刻',
-                  onSubmit: handleSubmitForkAnswer,
-                  onSkip: handleSkipForkQuestion,
-                  onGenerate: handleGenerateFork,
-                  onRestart: handleRestartForkSession,
-                }),
-                errorMessage: creationSessionError,
-              })}
-            />
-          ) : (
-            <>
-              {!creationSession && creationSessionError ? (
-                <CreationEntryErrorCard entryMode="fork" error={creationSessionError} />
-              ) : null}
-              {canForkGame ? (
-                <View className="fork-form-section">
-                  <Textarea
-                    aria-label="fork-initial-answer"
-                    className="fork-textarea"
-                    placeholder="说说你想保留什么、改变什么"
-                    placeholderStyle="color: #67627d"
-                    value={forkAnswer}
-                    onInput={handleForkAnswerChange}
-                    onChange={handleForkAnswerChange}
-                    maxlength={1000}
-                    autoHeight
-                    disabled={creationSessionSubmitting}
-                  />
-                  <Text className="fork-count">{forkAnswer.length}/1000</Text>
-                  <View
-                    className={`fork-submit-btn${creationSessionSubmitting || !forkAnswer.trim() ? ' disabled' : ''}`}
-                    onClick={handleStartForkSession}
-                  >
-                    <Text>{creationSessionSubmitting ? '处理中...' : '开始复刻'}</Text>
-                  </View>
-                </View>
-              ) : null}
-            </>
-          )}
+  if (isCurrentForkSession && forkSessionSceneProps) {
+    return renderForkPage(
+      <>
+        <CreationSessionScene {...forkSessionSceneProps} />
+        {sourceReferenceCard}
+        <CreationStateCard
+          eyebrow="你可以这样描述"
+          title="先说保留什么，再说改变什么"
+          description="越清楚地区分“延续的部分”和“变化的部分”，AI 越容易做出真正像新版本的结果。"
+          items={[
+            { label: '保留', value: '哪些核心玩法、节奏感或操作逻辑必须保留。' },
+            { label: '改变', value: '想替换的题材、角色、视觉风格或反馈手感。' },
+            { label: '拉开差异', value: '希望和原作有多大差异，是小改还是彻底换方向。' },
+          ]}
+        />
+      </>
+    );
+  }
 
-        </View>
-
-        <View style={{ height: '80px' }} />
-      </PageScrollContainer>
-
-      <GlobalGamePlayer />
-      <PaywallPopup />
-    </View>
+  return renderForkPage(
+    <>
+      <CreationSessionShell
+        eyebrow="做一个新版本"
+        title="先说你想保留什么、改变什么"
+        subtitle="先用一句话告诉 AI 这次准备怎么改，它会据此整理方向，再继续追问。"
+        statusLabel="进行中"
+        statusValue="等待你的方向"
+        sections={[
+          (creationSessionError || pageError) ? {
+            key: 'fork-entry-error',
+            node: <CreationEntryErrorCard entryMode="fork" error={getUserFacingForkError(creationSessionError || pageError)} />,
+          } : null,
+          {
+            key: 'fork-first-prompt',
+            node: (
+              <>
+                <CreationQuestionCard
+                  title="你想怎么改这款作品？"
+                  hint="你可以直接说保留哪些核心体验，再补充想换掉的题材、角色、节奏或视觉风格。"
+                  question={{
+                    content: '这次你最想保留什么，又最想改变什么？',
+                    description: '比如玩法不变，但题材更换、节奏更快、视觉更鲜明。',
+                  }}
+                />
+                <CreationAnswerComposer
+                  value={forkAnswer}
+                  onChange={(e) => setForkAnswer(e?.detail?.value || '')}
+                  placeholder="例如：保留贪吃蛇的核心玩法，但换成赛博风，节奏更快，吃到食物时有更强的反馈。"
+                  suggestions={[
+                    '保留核心玩法，但把题材换成赛博风。',
+                    '想保留简单上手的节奏，但把视觉做得更有冲击力。',
+                    '我想让它和原作差异更大一些，角色和场景都重新设计。',
+                  ]}
+                  disabled={creationSessionSubmitting}
+                />
+                <CreationSessionActions
+                  title="开始复刻"
+                  hint="发起会话后，系统会先整理新版本方向，再进入统一的追问和生成流程。"
+                  actions={[
+                    {
+                      key: 'start-fork-session',
+                      label: creationSessionSubmitting ? 'AI 正在整理你的方向...' : '开始这轮新版本会话',
+                      tone: 'primary',
+                      disabled: creationSessionSubmitting || !forkAnswer.trim(),
+                      onClick: handleStartForkSession,
+                    },
+                    ...(creationSessionError
+                      ? [{
+                          key: 'retry-fork-session',
+                          label: creationSessionSubmitting ? '重试中...' : '重新提交这段方向',
+                          tone: 'ghost',
+                          disabled: creationSessionSubmitting || !forkAnswer.trim(),
+                          onClick: handleStartForkSession,
+                        }]
+                      : []),
+                  ]}
+                />
+              </>
+            ),
+          },
+        ].filter(Boolean)}
+      />
+      {sourceReferenceCard}
+      <CreationStateCard
+        eyebrow="你可以这样描述"
+        title="让 AI 更快理解新版本方向"
+        description="如果你能把“保留”和“改变”说得更明确，复刻出来的结果通常会更稳定。"
+        items={[
+          { label: '保留什么', value: '哪些玩法、操作逻辑或节奏感必须留下。' },
+          { label: '改变什么', value: '想换掉的题材、角色、视觉风格或反馈方式。' },
+          { label: '差异多大', value: '希望是轻改原作，还是直接拉开明显差异。' },
+        ]}
+      />
+    </>,
   );
 }

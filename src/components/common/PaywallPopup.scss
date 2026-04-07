@@ -95,6 +95,140 @@
   gap: 12px;
 }
 
+.paywall-payment-methods {
+  margin-bottom: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(101, 113, 156, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.16), transparent 30%),
+    rgba(10, 12, 22, 0.92);
+
+  &__head {
+    margin-bottom: 12px;
+  }
+
+  &__eyebrow {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(132, 144, 194, 0.82);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  &__title {
+    display: block;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__note {
+    display: block;
+    margin-top: 12px;
+    color: rgba(191, 199, 226, 0.74);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+}
+
+.paywall-payment-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(101, 113, 156, 0.14);
+  background: rgba(13, 16, 28, 0.9);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+
+  &:active {
+    transform: scale(0.985);
+  }
+
+  &.is-selected {
+    border-color: rgba(99, 180, 255, 0.34);
+    background:
+      radial-gradient(circle at top right, rgba(60, 128, 255, 0.16), transparent 32%),
+      rgba(13, 16, 28, 0.96);
+  }
+
+  &.is-soon {
+    opacity: 0.84;
+  }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+    background: linear-gradient(135deg, rgba(94, 114, 235, 0.82), rgba(57, 222, 196, 0.82));
+
+    &--wechat {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.82), rgba(16, 185, 129, 0.82));
+    }
+  }
+
+  &__copy {
+    min-width: 0;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  &__label {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  &__status {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+
+    &.is-live {
+      background: rgba(56, 189, 248, 0.14);
+      color: #93ddff;
+    }
+
+    &.is-soon {
+      background: rgba(148, 163, 184, 0.12);
+      color: #d4dced;
+    }
+  }
+
+  &__desc {
+    display: block;
+    color: rgba(191, 199, 226, 0.74);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+}
+
 .paywall-plan-card {
   background: #12121f;
   border-radius: 16px;
@@ -190,6 +324,14 @@
   color: #c4c1d4;
 }
 
+.plan-payment-hint {
+  display: block;
+  margin-bottom: 12px;
+  color: rgba(191, 199, 226, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .plan-subscribe-btn {
   width: 100%;
   padding: 18px 24px;
@@ -224,6 +366,13 @@
     background: $dim;
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: #ffffff;
+    box-shadow: none;
+  }
+
+  &.coming-soon {
+    background: linear-gradient(135deg, rgba(78, 88, 120, 0.96), rgba(56, 64, 92, 0.96));
+    border: none;
+    color: #e7ecff;
     box-shadow: none;
   }
 
@@ -286,6 +435,27 @@
     gap: 10px;
   }
 
+  .paywall-payment-methods {
+    padding: 14px;
+    border-radius: 16px;
+
+    &__title {
+      font-size: 16px;
+    }
+  }
+
+  .paywall-payment-option {
+    padding: 10px;
+    border-radius: 14px;
+
+    &__icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+  }
+
   .paywall-plan-card {
     border-radius: 14px;
     padding: 16px;
@@ -328,6 +498,10 @@
 @media screen and (max-width: 360px) {
   .paywall-panel {
     max-height: 88vh;
+  }
+
+  .paywall-payment-option {
+    align-items: flex-start;
   }
 
   .plan-top {

@@ -5,31 +5,21 @@ describe('paymentRuntime', () => {
     jest.resetModules();
   });
 
-  test('prefers weapp jsapi payload in weapp runtime', () => {
+  test('maps payUrl to redirect action', () => {
     const { resolveSubscriptionPaymentAction } = require('../paymentRuntime');
 
     const action = resolveSubscriptionPaymentAction(
       {
         payment: {
-          timeStamp: '1',
-          nonceStr: 'nonce',
-          package: 'prepay_id=123',
-          signType: 'RSA',
-          paySign: 'sign',
+          payUrl: 'https://openapi.alipay.com/gateway.do?token=abc',
         },
-      },
-      { runtime: 'weapp' }
+      }
     );
 
     expect(action).toEqual({
-      kind: 'weapp_jsapi',
-      payload: {
-        timeStamp: '1',
-        nonceStr: 'nonce',
-        package: 'prepay_id=123',
-        signType: 'RSA',
-        paySign: 'sign',
-      },
+      kind: 'h5_redirect',
+      source: 'payUrl',
+      url: 'https://openapi.alipay.com/gateway.do?token=abc',
     });
   });
 
@@ -52,7 +42,30 @@ describe('paymentRuntime', () => {
     expect(action.url).toContain('redirect_url=');
   });
 
-  test('maps jsapi params in wechat browser to h5 jsapi action', () => {
+  test('keeps redirect action when payUrl and legacy jsapi params coexist', () => {
+    const { resolveSubscriptionPaymentAction } = require('../paymentRuntime');
+
+    const action = resolveSubscriptionPaymentAction(
+      {
+        payment: {
+          payUrl: 'https://openapi.alipay.com/gateway.do?token=abc',
+          timeStamp: '1',
+          nonceStr: 'nonce',
+          package: 'prepay_id=123',
+          signType: 'RSA',
+          paySign: 'sign',
+        },
+      }
+    );
+
+    expect(action).toEqual({
+      kind: 'h5_redirect',
+      source: 'payUrl',
+      url: 'https://openapi.alipay.com/gateway.do?token=abc',
+    });
+  });
+
+  test('marks pure jsapi payload as unsupported', () => {
     const { resolveSubscriptionPaymentAction } = require('../paymentRuntime');
 
     const action = resolveSubscriptionPaymentAction(
@@ -64,15 +77,11 @@ describe('paymentRuntime', () => {
           signType: 'RSA',
           paySign: 'sign',
         },
-      },
-      {
-        runtime: 'h5',
-        isWechatBrowser: true,
       }
     );
 
     expect(action).toEqual({
-      kind: 'wechat_h5_jsapi',
+      kind: 'unsupported_jsapi',
       payload: {
         timeStamp: '1',
         nonceStr: 'nonce',

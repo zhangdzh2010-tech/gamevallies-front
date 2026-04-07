@@ -12,6 +12,10 @@ describe('subscriptionService.createOrder', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
     jest.clearAllMocks();
+    Object.defineProperty(window, 'navigator', {
+      value: { userAgent: 'Mozilla/5.0' },
+      configurable: true,
+    });
     post.mockResolvedValue({
       orderId: 'order-1',
       payment: {
@@ -20,16 +24,19 @@ describe('subscriptionService.createOrder', () => {
     });
   });
 
-  test('uses jsapi payment flow markers for h5 wechat browser orders', async () => {
+  test('uses alipay_wap for mobile h5 orders', async () => {
     jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(true);
-    jest.spyOn(runtime, 'isWechatBrowserRuntime').mockReturnValue(true);
+    Object.defineProperty(window, 'navigator', {
+      value: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' },
+      configurable: true,
+    });
     window.history.replaceState({}, '', '/#/pages/subscription/index');
     const expectedReturnUrl = encodeURIComponent(window.location.href);
 
     await createOrder('plan-pro', 'game-1');
 
     expect(post).toHaveBeenCalledWith(
-      `/api/v1/subscription/order?clientPlatform=wechat_h5&wechatPayFlow=jsapi&returnUrl=${expectedReturnUrl}`,
+      `/api/v1/subscription/order?provider=alipay_wap&returnUrl=${expectedReturnUrl}`,
       {
         planId: 'plan-pro',
         gameId: 'game-1',
@@ -37,32 +44,30 @@ describe('subscriptionService.createOrder', () => {
     );
   });
 
-  test('uses mweb payment flow markers for h5 browser orders outside wechat', async () => {
+  test('uses alipay_page for desktop h5 orders', async () => {
     jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(true);
-    jest.spyOn(runtime, 'isWechatBrowserRuntime').mockReturnValue(false);
+    Object.defineProperty(window, 'navigator', {
+      value: { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/135.0 Safari/537.36' },
+      configurable: true,
+    });
     window.history.replaceState({}, '', '/#/pages/subscription/index');
     const expectedReturnUrl = encodeURIComponent(window.location.href);
 
     await createOrder('plan-pro');
 
     expect(post).toHaveBeenCalledWith(
-      `/api/v1/subscription/order?clientPlatform=h5&wechatPayFlow=mweb&returnUrl=${expectedReturnUrl}`,
+      `/api/v1/subscription/order?provider=alipay_page&returnUrl=${expectedReturnUrl}`,
       {
         planId: 'plan-pro',
       }
     );
   });
 
-  test('keeps weapp orders on the plain order endpoint', async () => {
+  test('rejects non-h5 environments while wechat payment is disabled', async () => {
     jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(false);
-    jest.spyOn(runtime, 'isWechatBrowserRuntime').mockReturnValue(false);
 
-    await createOrder('plan-pro', 'game-1');
-
-    expect(post).toHaveBeenCalledWith('/api/v1/subscription/order', {
-      planId: 'plan-pro',
-      gameId: 'game-1',
-    });
+    await expect(createOrder('plan-pro', 'game-1')).rejects.toThrow('当前环境暂不支持支付宝支付');
+    expect(post).not.toHaveBeenCalled();
   });
 
   test('normalizes free and subscription quota fields from the quota api', async () => {

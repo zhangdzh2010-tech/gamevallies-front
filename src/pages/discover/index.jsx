@@ -438,6 +438,7 @@ export default function FollowPage() {
   return (
     <View className={`follow-page${isH5 ? ' follow-page--h5' : ''}${isWeapp ? ' follow-page--weapp' : ''}`}>
       <AppTopBar />
+      <View className="follow-shell">
 
       <View className="follow-stage">
         <View className="follow-stage__copy">
@@ -668,6 +669,7 @@ export default function FollowPage() {
 
         <View className="bottom-spacer" />
       </PageScrollContainer>
+      </View>
 
       <CustomTabBar activeIndex={1} />
       <GlobalGamePlayer />

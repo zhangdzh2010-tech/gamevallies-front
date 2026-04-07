@@ -12,16 +12,25 @@
   right: 0;
   z-index: 1000;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
 
   .tab-container {
     display: flex;
     justify-content: space-around;
     align-items: center;
+    width: var(--gv-h5-tabbar-width);
+    max-width: 100%;
+    margin: 0 auto;
     background: rgba(12, 12, 18, 0.97);
     backdrop-filter: blur(14px);
     border-top: 1px solid rgba(110, 86, 255, 0.08);
     height: var(--gv-h5-tabbar-height);
     padding-bottom: max(env(safe-area-inset-bottom), 6px);
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    pointer-events: auto;
 
     .tab-item {
       flex: 1;
@@ -85,7 +94,13 @@
 }
 
 .custom-tab-bar.custom-tab-bar--weapp {
+  display: block;
+  pointer-events: auto;
+
   .tab-container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
     height: 149rpx;
 
     .tab-item {
@@ -115,6 +130,9 @@
 @media screen and (max-width: 480px) {
   .custom-tab-bar {
     .tab-container {
+      width: var(--gv-h5-tabbar-width);
+      max-width: 100%;
+      margin: 0 auto;
       height: var(--gv-h5-tabbar-height);
       padding-bottom: max(env(safe-area-inset-bottom), 6px);
 

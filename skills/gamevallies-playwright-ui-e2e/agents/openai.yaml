@@ -1,0 +1,7 @@
+interface:
+  display_name: "GameVallies Playwright UI E2E"
+  short_description: "Run the live Playwright full-flow UI regression for GameVallies."
+  default_prompt: "Use $gamevallies-playwright-ui-e2e to run or debug the live GameVallies Playwright UI full-flow test and summarize the JSON result."
+
+policy:
+  allow_implicit_invocation: true

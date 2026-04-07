@@ -1,64 +1,58 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
 import { View, Text, Textarea } from '@tarojs/components';
-import { getInputEventValue } from '../../utils/inputValue';
 import './CreationSession.scss';
-
-function emitValue(onChange, nextValue) {
-  if (!onChange) {
-    return;
-  }
-
-  onChange({
-    detail: { value: nextValue },
-    target: { value: nextValue },
-  });
-}
 
 export function CreationAnswerComposer({
   value = '',
-  placeholder = '继续补充你想确认的内容…',
+  placeholder = '直接写下你想补充、修正或强调的内容...',
   onChange,
   suggestions = [],
+  onSuggestionSelect,
   disabled = false,
+  maxLength = 1000,
 }) {
-  const handleChange = (event) => {
-    const nextValue = getInputEventValue(event);
-    onChange?.({
-      ...event,
-      detail: { ...event?.detail, value: nextValue },
-      target: { ...event?.target, value: nextValue },
-      currentTarget: { ...event?.currentTarget, value: nextValue },
-    });
-  };
+  const normalizedSuggestions = suggestions.map((item) => (
+    typeof item === 'string'
+      ? { label: item, value: item }
+      : item
+  ));
 
   return (
-    <View className="creation-answer-composer">
-      <Textarea
-        className="creation-answer-composer__textarea"
-        placeholder={placeholder}
-        placeholderStyle="color: #67627d"
-        value={value}
-        onInput={handleChange}
-        onChange={handleChange}
-        autoHeight
-        disabled={disabled}
-        maxlength={1000}
-      />
-
-      {suggestions.length ? (
-        <View className="creation-answer-composer__suggestions">
-          {suggestions.map((item) => (
-            <View
-              key={item}
-              className="creation-answer-composer__chip"
-              onClick={disabled ? undefined : () => emitValue(onChange, item)}
-            >
-              <Text className="creation-answer-composer__chip-text">{item}</Text>
-            </View>
-          ))}
+    <View className="creation-session-card">
+      <View className="creation-session-card__header">
+        <View>
+          <Text className="creation-session-card__title">回答输入</Text>
+          <Text className="creation-session-card__hint">先用自然语言说清楚想法，系统会继续帮你整理成清晰方案。</Text>
         </View>
-      ) : null}
+      </View>
+
+      <View className="creation-answer-composer">
+        <Textarea
+          className="creation-answer-composer__textarea"
+          placeholder={placeholder}
+          placeholderStyle="color: #67627d"
+          value={value}
+          onInput={onChange}
+          autoHeight
+          disabled={disabled}
+          maxlength={maxLength}
+        />
+
+        {normalizedSuggestions.length ? (
+          <View className="creation-answer-composer__suggestions">
+            {normalizedSuggestions.map((item) => (
+              <View
+                key={item.value}
+                className={`creation-answer-composer__chip${onSuggestionSelect && !disabled ? ' creation-answer-composer__chip--interactive' : ''}`}
+                onClick={onSuggestionSelect && !disabled ? () => onSuggestionSelect(item.value) : undefined}
+              >
+                <Text className="creation-answer-composer__chip-text">{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }

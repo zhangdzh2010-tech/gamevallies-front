@@ -4,7 +4,7 @@ import { View, Text } from '@tarojs/components';
 import './AppTopBar.scss';
 
 export function AppTopBar({
-  title = '智了空间',
+  title = '\u667a\u4e86\u7a7a\u95f4',
   showBack = false,
   onBack,
   rightText = '',
@@ -27,7 +27,7 @@ export function AppTopBar({
     isWeapp && menuButtonRect
       ? { width: `${menuButtonRect.width + 16}px`, height: `${menuButtonRect.height}px` }
       : undefined;
-  const barStyle =
+  const innerStyle =
     isWeapp && menuButtonRect
       ? {
           paddingTop: `${statusBarHeight + menuTopInset}px`,
@@ -53,22 +53,24 @@ export function AppTopBar({
   };
 
   return (
-    <View className={barClassName} style={barStyle}>
-      <View className="app-top-bar__side" style={sideStyle}>
-        {showBack ? (
-          <View className="app-top-bar__back" onClick={handleBack}>
-            <Text className="app-top-bar__back-icon">←</Text>
-            <Text className="app-top-bar__back-text">返回</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text className="app-top-bar__title">{title}</Text>
-      <View className="app-top-bar__side app-top-bar__side--right" style={sideStyle}>
-        {rightText ? (
-          <View className="app-top-bar__action" onClick={onRightClick}>
-            <Text className="app-top-bar__action-text">{rightText}</Text>
-          </View>
-        ) : null}
+    <View className={barClassName}>
+      <View className="app-top-bar__inner" style={innerStyle}>
+        <View className="app-top-bar__side" style={sideStyle}>
+          {showBack ? (
+            <View className="app-top-bar__back" onClick={handleBack}>
+              <Text className="app-top-bar__back-icon">{'\u2190'}</Text>
+              <Text className="app-top-bar__back-text">{'\u8fd4\u56de'}</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text className="app-top-bar__title">{title}</Text>
+        <View className="app-top-bar__side app-top-bar__side--right" style={sideStyle}>
+          {rightText ? (
+            <View className="app-top-bar__action" onClick={onRightClick}>
+              <Text className="app-top-bar__action-text">{rightText}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
     </View>
   );
