@@ -10,7 +10,6 @@ const mockShowToast = jest.fn();
 const mockRequestPayment = jest.fn(() => Promise.resolve());
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockLaunchPaymentAction = jest.fn();
-const mockInvokeWechatH5Payment = jest.fn(() => Promise.resolve());
 
 const mockListeners = new Map();
 const mockStorage = {};
@@ -94,7 +93,6 @@ jest.mock('../../utils/paymentRuntime', () => {
   return {
     ...actual,
     launchPaymentAction: (...args) => mockLaunchPaymentAction(...args),
-    invokeWechatH5Payment: (...args) => mockInvokeWechatH5Payment(...args),
   };
 });
 
@@ -105,7 +103,7 @@ const { useGameStore } = require('../../store/gameStore');
 describe('quotaStore payment unlock flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.TARO_ENV = 'weapp';
+    process.env.TARO_ENV = 'h5';
     Object.keys(mockStorage).forEach((key) => {
       delete mockStorage[key];
     });
@@ -113,11 +111,7 @@ describe('quotaStore payment unlock flow', () => {
     mockCreateOrder.mockResolvedValue({
       orderId: 'order-1',
       payment: {
-        timeStamp: '1',
-        nonceStr: 'nonce',
-        package: 'prepay_id=123',
-        signType: 'RSA',
-        paySign: 'sign',
+        payUrl: 'https://openapi.alipay.com/gateway.do?token=abc',
       },
     });
     mockGetOrderStatus.mockResolvedValue({
@@ -174,19 +168,7 @@ describe('quotaStore payment unlock flow', () => {
     });
   });
 
-  test('subscribing unlocks the pending game and resumes play', async () => {
-    useGameStore.setState({
-      currentGame: {
-        id: 'game-1',
-        title: 'Locked Game',
-        gameUrl: 'https://game.example/play',
-        canPlay: false,
-        requireSubscription: true,
-      },
-      generatingGameId: 'game-1',
-      canPlay: false,
-    });
-
+  test('h5 subscription redirects to alipay and persists a pending payment attempt', async () => {
     useQuotaStore.getState().openPaywall({
       gameId: 'game-1',
       gameUrl: 'https://game.example/play',
@@ -200,6 +182,58 @@ describe('quotaStore payment unlock flow', () => {
 
     expect(result).toBe(true);
     expect(mockCreateOrder).toHaveBeenCalledWith('plan-pro', 'game-1');
+    expect(mockLaunchPaymentAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'h5_redirect',
+        url: 'https://openapi.alipay.com/gateway.do?token=abc',
+      })
+    );
+    expect(mockRequestPayment).not.toHaveBeenCalled();
+    expect(useQuotaStore.getState().showPaywall).toBe(false);
+    expect(useQuotaStore.getState().paymentAttempt).toEqual(
+      expect.objectContaining({
+        orderId: 'order-1',
+        status: 'redirecting_payment',
+        gameId: 'game-1',
+      })
+    );
+    expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({
+      title: '正在打开支付宝，请支付完成后返回',
+      icon: 'none',
+    }));
+  });
+
+  test('resumePendingPayment unlocks the pending game and resumes play after payment is confirmed', async () => {
+    useGameStore.setState({
+      currentGame: {
+        id: 'game-1',
+        title: 'Locked Game',
+        gameUrl: 'https://game.example/play',
+        canPlay: false,
+        requireSubscription: true,
+      },
+      generatingGameId: 'game-1',
+      canPlay: false,
+    });
+
+    useQuotaStore.setState({
+      paymentAttempt: {
+        orderId: 'order-1',
+        status: 'redirecting_payment',
+        gameId: 'game-1',
+        pendingPlayContext: {
+          gameId: 'game-1',
+          gameUrl: 'https://game.example/play',
+          gameTitle: 'Locked Game',
+          gameCover: 'https://img.example/cover.png',
+          gameOrientation: 'landscape',
+        },
+      },
+    });
+
+    const result = await useQuotaStore.getState().resumePendingPayment({ silent: false });
+
+    expect(result).toBe(true);
     expect(mockGetOrderStatus).toHaveBeenCalledWith('order-1');
     expect(mockUnlockGame).toHaveBeenCalledWith('game-1');
     expect(mockGetGame).toHaveBeenCalledWith('game-1');
@@ -211,9 +245,7 @@ describe('quotaStore payment unlock flow', () => {
     expect(useGamePlayerStore.getState().gameId).toBe('game-1');
     expect(useGamePlayerStore.getState().gameUrl).toBe('https://game.example/play');
     expect(useGamePlayerStore.getState().gameOrientation).toBe('landscape');
-    expect(mockNavigateTo).toHaveBeenCalledWith({
-      url: '/pages/game/play-landscape/index?id=game-1',
-    });
+    expect(mockNavigateTo).not.toHaveBeenCalled();
     expect(useQuotaStore.getState().paymentAttempt).toEqual(
       expect.objectContaining({
         orderId: 'order-1',
@@ -227,58 +259,6 @@ describe('quotaStore payment unlock flow', () => {
     }));
   });
 
-  test('payment callback failure still recovers when order status is paid', async () => {
-    mockRequestPayment.mockRejectedValueOnce(new Error('requestPayment:fail timeout'));
-    mockInvokeWechatH5Payment.mockResolvedValue(undefined);
-    mockGetQuota
-      .mockResolvedValueOnce({
-        freeQuota: 0,
-        totalFreeQuota: 5,
-        subscription: {
-          active: false,
-          planId: null,
-          planName: null,
-          expiresAt: null,
-          usedThisPeriod: 0,
-          quotaThisPeriod: 0,
-        },
-      })
-      .mockResolvedValue({
-        freeQuota: 0,
-        totalFreeQuota: 5,
-        subscription: {
-          active: true,
-          planId: 'plan-pro',
-          planName: '专业月卡',
-          expiresAt: null,
-          usedThisPeriod: 1,
-          quotaThisPeriod: 30,
-        },
-      });
-
-    useQuotaStore.getState().openPaywall({
-      gameId: 'game-1',
-      gameUrl: 'https://game.example/play',
-      gameTitle: 'Locked Game',
-      gameCover: 'https://img.example/cover.png',
-      gameOrientation: 'landscape',
-      resumePlay: true,
-    });
-
-    const result = await useQuotaStore.getState().subscribe('plan-pro');
-
-    expect(result).toBe(true);
-    expect(mockGetOrderStatus).toHaveBeenCalledWith('order-1');
-    expect(mockUnlockGame).toHaveBeenCalledWith('game-1');
-    expect(useQuotaStore.getState().paymentAttempt).toEqual(
-      expect.objectContaining({
-        orderId: 'order-1',
-        status: 'completed',
-        orderStatus: 'paid',
-      })
-    );
-  });
-
   test('paywall cannot be closed while payment is in progress', () => {
     useQuotaStore.getState().openPaywall({ gameId: 'game-1' });
     useQuotaStore.setState({ subscribing: true, subscribingPlanId: 'plan-pro' });
@@ -290,52 +270,9 @@ describe('quotaStore payment unlock flow', () => {
     expect(useQuotaStore.getState().pendingGameId).toBe('game-1');
   });
 
-  test('h5 subscription can redirect to native or h5 pay url without requestPayment', async () => {
-    process.env.TARO_ENV = 'h5';
+  test('fails fast when the backend still returns legacy wechat-only payment payload', async () => {
     mockCreateOrder.mockResolvedValueOnce({
-      orderId: 'order-h5',
-      payment: {
-        payUrl: 'https://pay.example.com/cashier?token=abc',
-      },
-    });
-
-    useQuotaStore.getState().openPaywall({
-      gameId: 'game-1',
-      gameUrl: 'https://game.example/play',
-      gameTitle: 'Locked Game',
-      gameCover: 'https://img.example/cover.png',
-      gameOrientation: 'portrait',
-      resumePlay: true,
-    });
-
-    const result = await useQuotaStore.getState().subscribe('plan-pro');
-
-    expect(result).toBe(true);
-    expect(mockRequestPayment).not.toHaveBeenCalled();
-    expect(mockLaunchPaymentAction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: 'h5_redirect',
-        url: 'https://pay.example.com/cashier?token=abc',
-      })
-    );
-    expect(useQuotaStore.getState().showPaywall).toBe(false);
-    expect(useQuotaStore.getState().paymentAttempt).toEqual(
-      expect.objectContaining({
-        orderId: 'order-h5',
-        status: 'redirecting_payment',
-      })
-    );
-  });
-
-  test('wechat h5 subscription can invoke jsapi without taro requestPayment', async () => {
-    process.env.TARO_ENV = 'h5';
-    Object.defineProperty(global, 'navigator', {
-      value: { userAgent: 'MicroMessenger' },
-      configurable: true,
-    });
-
-    mockCreateOrder.mockResolvedValueOnce({
-      orderId: 'order-h5-jsapi',
+      orderId: 'order-legacy',
       payment: {
         timeStamp: '2',
         nonceStr: 'nonce-h5',
@@ -347,15 +284,15 @@ describe('quotaStore payment unlock flow', () => {
 
     const result = await useQuotaStore.getState().subscribe('plan-pro');
 
-    expect(result).toBe(true);
-    expect(mockRequestPayment).not.toHaveBeenCalled();
-    expect(mockInvokeWechatH5Payment).toHaveBeenCalledWith({
-      timeStamp: '2',
-      nonceStr: 'nonce-h5',
-      package: 'prepay_id=wx123',
-      signType: 'RSA',
-      paySign: 'sign-h5',
-    });
+    expect(result).toBe(false);
+    expect(mockLaunchPaymentAction).not.toHaveBeenCalled();
+    expect(useQuotaStore.getState().paymentAttempt).toEqual(
+      expect.objectContaining({
+        orderId: 'order-legacy',
+        status: 'failed',
+        stage: 'request_payment',
+      })
+    );
   });
 
   test('updateAfterCreate keeps quota display untouched until fetchQuota refreshes it', () => {

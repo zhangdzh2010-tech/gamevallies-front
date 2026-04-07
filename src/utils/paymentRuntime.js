@@ -61,22 +61,7 @@ export function resolveSubscriptionPaymentAction(order, options = {}) {
     return null;
   }
 
-  const runtime = options.runtime || process.env.TARO_ENV || '';
   const weappJsapiPayload = normalizeWeappJsapiPayload(payment);
-
-  if (weappJsapiPayload && runtime === 'weapp') {
-    return {
-      kind: 'weapp_jsapi',
-      payload: weappJsapiPayload,
-    };
-  }
-
-  if (weappJsapiPayload && options.isWechatBrowser) {
-    return {
-      kind: 'wechat_h5_jsapi',
-      payload: weappJsapiPayload,
-    };
-  }
 
   const redirectCandidate = pickPaymentValue(payment, [
     'mwebUrl',
@@ -156,11 +141,11 @@ export function getPaymentActionFailureMessage(action) {
   }
 
   if (action.kind === 'unsupported_jsapi') {
-    return '当前 H5 后端仍返回小程序支付参数，请改为返回 H5/native 支付跳转链接';
+    return '当前订单未返回可跳转的支付宝支付链接，请检查后端支付 provider 配置';
   }
 
   if (action.kind === 'unsupported_qrcode') {
-    return '当前 H5 后端返回的是二维码 code_url，请改为返回可直接拉起支付的链接';
+    return '当前订单返回的是二维码地址，前端暂不支持，请改为返回 payUrl';
   }
 
   return '支付参数异常，请稍后重试';
@@ -176,75 +161,4 @@ export function launchPaymentAction(action) {
   }
 
   window.location.assign(action.url);
-}
-
-function waitForWeixinJSBridge() {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('当前环境不支持微信 H5 支付'));
-  }
-
-  if (window.WeixinJSBridge?.invoke) {
-    return Promise.resolve(window.WeixinJSBridge);
-  }
-
-  return new Promise((resolve, reject) => {
-    let settled = false;
-
-    const cleanup = () => {
-      document.removeEventListener('WeixinJSBridgeReady', handleReady);
-      document.removeEventListener('onWeixinJSBridgeReady', handleReady);
-    };
-
-    const handleReady = () => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      cleanup();
-      resolve(window.WeixinJSBridge);
-    };
-
-    document.addEventListener('WeixinJSBridgeReady', handleReady, { once: true });
-    document.addEventListener('onWeixinJSBridgeReady', handleReady, { once: true });
-
-    window.setTimeout(() => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      cleanup();
-      reject(new Error('微信支付桥接未就绪，请稍后重试'));
-    }, 4000);
-  });
-}
-
-export async function invokeWechatH5Payment(payload) {
-  if (!payload) {
-    throw new Error('微信 H5 支付参数为空');
-  }
-
-  const bridge = await waitForWeixinJSBridge();
-
-  return new Promise((resolve, reject) => {
-    bridge.invoke('getBrandWCPayRequest', payload, (result) => {
-      const errMsg = result?.err_msg || result?.errMsg || '';
-      const normalized = String(errMsg).toLowerCase();
-
-      if (normalized.includes('ok')) {
-        resolve(result);
-        return;
-      }
-
-      if (normalized.includes('cancel')) {
-        const error = new Error(errMsg || '支付已取消');
-        error.code = 'PAYMENT_CANCELLED';
-        reject(error);
-        return;
-      }
-
-      reject(new Error(errMsg || '微信支付失败'));
-    });
-  });
 }

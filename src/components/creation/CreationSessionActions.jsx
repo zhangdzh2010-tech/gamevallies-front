@@ -13,22 +13,31 @@ function getButtonClassName(action) {
   ].filter(Boolean).join(' ');
 }
 
-export function CreationSessionActions({ actions = [] }) {
-  if (!actions.length) {
-    return null;
-  }
-
+export function CreationSessionActions({
+  actions = [],
+  title = '会话操作',
+  hint = '统一承载回答、跳过、直接生成、重新开始等动作。',
+}) {
   return (
-    <View className={`creation-session-actions creation-session-actions--count-${actions.length || 0}`}>
-      {actions.map((action) => (
-        <View
-          key={action.key}
-          className={getButtonClassName(action)}
-          onClick={action.disabled ? undefined : action.onClick}
-        >
-          <Text className="creation-session-actions__button-text">{action.label}</Text>
+    <View className="creation-session-card">
+      <View className="creation-session-card__header">
+        <View>
+          <Text className="creation-session-card__title">{title}</Text>
+          <Text className="creation-session-card__hint">{hint}</Text>
         </View>
-      ))}
+      </View>
+
+      <View className="creation-session-actions">
+        {actions.map((action) => (
+          <View
+            key={action.key}
+            className={getButtonClassName(action)}
+            onClick={action.disabled ? undefined : action.onClick}
+          >
+            <Text className="creation-session-actions__button-text">{action.label}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }

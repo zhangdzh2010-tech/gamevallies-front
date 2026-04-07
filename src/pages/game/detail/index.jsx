@@ -799,9 +799,11 @@ export default function GameDetail() {
 
   return (
     <View className={containerClassName}>
-      <View className="detail-top-bar" style={topBarStyle}>
-        <View className="back-btn" onClick={handleBack}>
-          <View className="back-btn__icon" />
+      <View className="detail-top-bar">
+        <View className="detail-top-bar__inner" style={topBarStyle}>
+          <View className="back-btn" onClick={handleBack}>
+            <View className="back-btn__icon" />
+          </View>
         </View>
       </View>
       <PageScrollContainer
@@ -811,19 +813,20 @@ export default function GameDetail() {
         scrollWithAnimation
         scrollIntoView={commentScrollTarget}
       >
-        <View className="preview-banner">
-          {detailCoverUrl ? (
-            <Image className="preview-cover" src={detailCoverUrl} mode="aspectFill" />
-          ) : (
-            <Text className="preview-emoji">{game.emoji || '🎮'}</Text>
-          )}
-        </View>
+        <View className="detail-shell">
+          <View className="preview-banner">
+            {detailCoverUrl ? (
+              <Image className="preview-cover" src={detailCoverUrl} mode="aspectFill" />
+            ) : (
+              <Text className="preview-emoji">{game.emoji || '🎮'}</Text>
+            )}
+          </View>
 
-        <View className="back-btn" onClick={handleBack}>
-          <View className="back-btn__icon" />
-        </View>
+          <View className="back-btn" onClick={handleBack}>
+            <View className="back-btn__icon" />
+          </View>
 
-        <View className="detail-content">
+          <View className="detail-content">
           <View className="title-section">
             <Text className="title">{game.title}</Text>
             <Text className="description">{game.description}</Text>
@@ -974,43 +977,46 @@ export default function GameDetail() {
             )}
           </View>
 
-          <View
-            className="bottom-spacer"
-            style={{
-              height: `${Math.max(isH5 ? 120 : 180, (isH5 ? 92 : 132) + safeBottomInset)}px`,
-            }}
-          />
+            <View
+              className="bottom-spacer"
+              style={{
+                height: `${Math.max(isH5 ? 120 : 180, (isH5 ? 92 : 132) + safeBottomInset)}px`,
+              }}
+            />
+          </View>
         </View>
       </PageScrollContainer>
 
       <View className="comment-input-bar">
-        {replyingTo && (
-          <View className="reply-hint">
-            <Text className="reply-hint-text">回复 @{replyingTo.username}</Text>
-            <View className="reply-cancel" onClick={() => { setReplyingTo(null); setCommentText(''); }}>
-              <Text>×</Text>
+        <View className="comment-input-bar__inner">
+          {replyingTo && (
+            <View className="reply-hint">
+              <Text className="reply-hint-text">回复 @{replyingTo.username}</Text>
+              <View className="reply-cancel" onClick={() => { setReplyingTo(null); setCommentText(''); }}>
+                <Text>×</Text>
+              </View>
             </View>
-          </View>
-        )}
-        <View className="comment-input-row">
-          <Input
-            className="comment-input"
-            type="text"
-            placeholder={replyingTo ? `回复 @${replyingTo.username}...` : '写下你的想法...'}
-            placeholderStyle="color: #55516e"
-            focus={commentInputFocused}
-            value={commentText}
-            onFocus={() => setCommentInputFocused(true)}
-            onBlur={() => setCommentInputFocused(false)}
-            onInput={(e) => setCommentText(e.detail.value)}
-            confirmType="send"
-            onConfirm={handleSend}
-          />
-          <View
-            className={`comment-send ${(!commentText.trim() || submitting) ? 'disabled' : ''}`}
-            onClick={handleSend}
-          >
-            <Text>{submitting ? '...' : '发送'}</Text>
+          )}
+          <View className="comment-input-row">
+            <Input
+              className="comment-input"
+              type="text"
+              placeholder={replyingTo ? `回复 @${replyingTo.username}...` : '写下你的想法...'}
+              placeholderStyle="color: #55516e"
+              focus={commentInputFocused}
+              value={commentText}
+              onFocus={() => setCommentInputFocused(true)}
+              onBlur={() => setCommentInputFocused(false)}
+              onInput={(e) => setCommentText(e.detail.value)}
+              confirmType="send"
+              onConfirm={handleSend}
+            />
+            <View
+              className={`comment-send ${(!commentText.trim() || submitting) ? 'disabled' : ''}`}
+              onClick={handleSend}
+            >
+              <Text>{submitting ? '...' : '发送'}</Text>
+            </View>
           </View>
         </View>
       </View>

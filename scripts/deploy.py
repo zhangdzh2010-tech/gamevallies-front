@@ -42,6 +42,7 @@ VCR_PASSWORD      = os.environ.get("VOLCENGINE_REGISTRY_PASSWORD",  "")
 VPC_ID            = os.environ.get("VOLCENGINE_VPC_ID",             "")
 SUBNET_ID         = os.environ.get("VOLCENGINE_SUBNET_ID",          "")
 SECURITY_GROUP_ID = os.environ.get("VOLCENGINE_SECURITY_GROUP_ID",  "")
+SKIP_DOCKER_LOGIN = os.environ.get("SKIP_DOCKER_LOGIN",             "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def shell(cmd: list) -> bool:
@@ -118,16 +119,19 @@ def main():
 
     # 1. docker login
     # VCR 用户名含 '#'，通过 stdin 传密码避免 shell 解析问题（见 DEPLOY_RUNBOOK §6.1）
-    print("\n🔐 登录 VCR...")
-    login = subprocess.run(
-        ["docker", "login", REGISTRY, "-u", VCR_USERNAME, "--password-stdin"],
-        input=VCR_PASSWORD.encode(),
-        cwd=ROOT_DIR,
-    )
-    if login.returncode != 0:
-        print("❌ docker login 失败")
-        sys.exit(1)
-    print("✅ 登录成功")
+    if SKIP_DOCKER_LOGIN:
+        print("\n🔐 跳过 VCR 登录，使用当前 Docker 已有登录态...")
+    else:
+        print("\n🔐 登录 VCR...")
+        login = subprocess.run(
+            ["docker", "login", REGISTRY, "-u", VCR_USERNAME, "--password-stdin"],
+            input=VCR_PASSWORD.encode(),
+            cwd=ROOT_DIR,
+        )
+        if login.returncode != 0:
+            print("❌ docker login 失败")
+            sys.exit(1)
+        print("✅ 登录成功")
 
     # 2. docker build
     print(f"\n🔨 构建镜像: {image}")

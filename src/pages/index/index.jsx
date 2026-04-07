@@ -580,21 +580,6 @@ export default function Home() {
         </View>
       )}
 
-      {!loadingGames && !loadError && heroGames.length > 0 ? (
-        <View className="home-footer-callout" onClick={handleCreateClick}>
-          <View className="home-footer-callout__copy">
-            <Text className="home-footer-callout__eyebrow">NEXT MOVE</Text>
-            <Text className="home-footer-callout__title">看到灵感了？现在就开始做你的版本</Text>
-            <Text className="home-footer-callout__desc">
-              把你喜欢的氛围、规则和视觉关键词一次性告诉创作工具，很快就能得到自己的第一版原型。
-            </Text>
-          </View>
-          <View className="home-footer-callout__action">
-            <Text className="home-footer-callout__action-text">去创作</Text>
-          </View>
-        </View>
-      ) : null}
-
       {isLoadingMore && (
         <View className="loading-indicator">
           <Text className="loading-text">加载中...</Text>

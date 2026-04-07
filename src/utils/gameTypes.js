@@ -4,12 +4,14 @@ const GAME_TYPE_LABELS = Object.freeze({
   casual: '休闲',
   puzzle: '益智',
   education: '教育',
+  funny: '趣味',
 });
 
 const FALLBACK_GAME_TYPE_OPTIONS = Object.freeze([
   { key: 'casual', label: GAME_TYPE_LABELS.casual },
   { key: 'puzzle', label: GAME_TYPE_LABELS.puzzle },
   { key: 'education', label: GAME_TYPE_LABELS.education },
+  { key: 'funny', label: GAME_TYPE_LABELS.funny },
 ]);
 
 let cachedGameTypeOptions = null;
@@ -36,6 +38,10 @@ export function normalizeGameTypeKey(value) {
 
   if (['education', 'educational', 'learning', 'learn', '教育', '启蒙', '知识'].includes(normalized)) {
     return 'education';
+  }
+
+  if (['funny', 'fun', 'humor', 'comedy', '趣味', '搞笑'].includes(normalized)) {
+    return 'funny';
   }
 
   return normalized;

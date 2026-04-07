@@ -418,6 +418,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
   return (
     <View className="more-overlay" onClick={onClose}>
       <View className="more-menu" onClick={(e) => e.stopPropagation()}>
+        <View className="more-handle" />
         <View className="more-header">
           <View className="more-header-copy">
             <Text className="more-title">作品操作</Text>
@@ -712,7 +713,7 @@ export default function Profile() {
   const currentUserId = Storage.getUser()?.id;
   const freeQuota = useQuotaStore((s) => s.freeQuota);
   const totalFreeQuota = useQuotaStore((s) => s.totalFreeQuota);
-  const subscription = useQuotaStore((s) => s.subscription);
+  const subscriptionActive = useQuotaStore((s) => s.subscription.active);
   const fetchQuota = useQuotaStore((s) => s.fetchQuota);
   const [activeTab, setActiveTab] = useState('works');
   const [profile, setProfile] = useState({
@@ -789,14 +790,7 @@ export default function Profile() {
 
   const redirectToLogin = () => {
     Taro.showToast({ title: '请先登录', icon: 'none', duration: 1500 });
-    // #18 先跳到首页再跳登录，避免用户取消登录后被困在Profile循环跳转
-    setTimeout(() => {
-      Taro.switchTab({ url: '/pages/index/index' }).then(() => {
-        Taro.navigateTo({ url: '/pages/login/index' });
-      }).catch(() => {
-        Taro.navigateTo({ url: '/pages/login/index' }).catch(() => {});
-      });
-    }, 500);
+    setTimeout(() => Taro.navigateTo({ url: '/pages/login/index' }), 500);
   };
 
   const refreshProfilePage = ({ redirectOnMissingToken = false } = {}) => {
@@ -1120,7 +1114,7 @@ export default function Profile() {
                   handlePublish(game);
                 }}
               >
-                <Text>发布作品</Text>
+                <Text className="game-publish-primary-btn__text">发布作品</Text>
               </View>
             ) : null}
           </View>
@@ -1212,27 +1206,23 @@ export default function Profile() {
   const stats = [
     { value: formatNumber(profile.totalLikes), label: '获赞' },
     { value: formatNumber(profile.following), label: '关注' },
-    { value: formatNumber(trackedTasks.length), label: '粉丝' },
+    { value: formatNumber(trackedTasks.length), label: '分析' },
     { value: formatNumber(normalizedBookmarkedGames.length), label: '收藏' },
   ];
   const quotaUsed = Math.max(0, totalFreeQuota - freeQuota);
-  const subscriptionActive = Boolean(subscription?.active);
-  const subscriptionTotal = Number(subscription?.quotaThisPeriod ?? 0) || 0;
-  const subscriptionUsed = Number(subscription?.usedThisPeriod ?? 0) || 0;
-  const subscriptionRemaining = Number(subscription?.remaining ?? Math.max(0, subscriptionTotal - subscriptionUsed)) || 0;
-  const membershipPlanLabel = subscriptionActive ? (subscription?.planName || '会员卡') : '免费卡';
-  const membershipQuotaText = subscriptionActive
-    ? `订阅剩余 ${subscriptionRemaining}/${subscriptionTotal} 次`
-    : `免费剩余 ${freeQuota}/${totalFreeQuota} 次`;
-  const membershipQuotaSub = subscriptionActive
-    ? `免费剩余 ${freeQuota}/${totalFreeQuota} 次`
-    : `已使用 ${quotaUsed}/${totalFreeQuota}`;
+  const quotaUsagePercent = totalFreeQuota > 0
+    ? Math.max(0, Math.min(100, Math.round((quotaUsed / totalFreeQuota) * 100)))
+    : 0;
+  const membershipPlanLabel = subscriptionActive ? '会员卡' : '免费卡';
+  const membershipQuotaText = subscriptionActive ? '已解锁更多创作额度' : `剩余 ${freeQuota} 次免费额度`;
+  const membershipQuotaSub = subscriptionActive ? '查看订阅权益与有效期' : `已使用 ${quotaUsed}/${totalFreeQuota}`;
   const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
   return (
     <View className={`profile-container${isH5 ? ' profile-container--h5' : ''}${isWeapp ? ' profile-container--weapp' : ''}`}>
       <AppTopBar />
+      <View className="profile-shell">
       <View className="profile-header">
         <View className="profile-summary-card">
           <View className="header-top">
@@ -1255,20 +1245,6 @@ export default function Profile() {
                   </View>
 
                   <Text className="user-bio">{profile.bio || '这个人很懒，还没有介绍自己'}</Text>
-
-                  <View className="profile-membership-row">
-                    <Text className="profile-membership-plan">{membershipPlanLabel}</Text>
-                    <View className="profile-membership-copy">
-                      <Text className="profile-membership-text">{membershipQuotaText}</Text>
-                      <Text className="profile-membership-sub">{membershipQuotaSub}</Text>
-                    </View>
-                    <View
-                      className="profile-membership-btn"
-                      onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
-                    >
-                      <Text className="profile-membership-btn__text">{subscriptionActive ? '查看' : '订阅'}</Text>
-                    </View>
-                  </View>
                 </View>
 
                 <View className="header-actions">
@@ -1283,6 +1259,31 @@ export default function Profile() {
             </View>
           </View>
 
+          <View className="profile-membership-row">
+            <View className="profile-membership-main">
+              <View className="profile-membership-head">
+                <Text className="profile-membership-plan">{membershipPlanLabel}</Text>
+                <Text className="profile-membership-kicker">{subscriptionActive ? '订阅权益' : '免费额度'}</Text>
+              </View>
+              <Text className="profile-membership-text">{membershipQuotaText}</Text>
+              <View className="profile-membership-meter">
+                <View className="profile-membership-meter__track">
+                  <View
+                    className="profile-membership-meter__fill"
+                    style={{ width: `${subscriptionActive ? 100 : quotaUsagePercent}%` }}
+                  />
+                </View>
+                <Text className="profile-membership-sub">{membershipQuotaSub}</Text>
+              </View>
+            </View>
+            <View
+              className="profile-membership-btn"
+              onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}
+            >
+              <Text className="profile-membership-btn__text">{subscriptionActive ? '管理' : '订阅'}</Text>
+            </View>
+          </View>
+
           <View className="stats-row">
             {stats.map((s) => (
               <View key={s.label} className="stat">
@@ -1290,6 +1291,25 @@ export default function Profile() {
                 <Text className="stat-label">{s.label}</Text>
               </View>
             ))}
+          </View>
+        </View>
+      </View>
+
+      {/* 增强版身份与数据区 */}
+      <View className="creator-identity">
+        <View className="identity-main">
+          <View className="identity-copy">
+            <View className="identity-badges">
+              <Text className="badge creator-badge">创作者</Text>
+              <Text className="badge level-badge">Lv.5</Text>
+              <Text className="badge verified-badge">已认证</Text>
+            </View>
+            <Text className="identity-title">专注休闲益智小游戏</Text>
+            <Text className="identity-desc">持续创作有趣又轻巧的互动体验。</Text>
+          </View>
+          <View className="identity-orb">
+            <Text className="identity-orb-value">{formatNumber(allGames.length)}</Text>
+            <Text className="identity-orb-label">作品</Text>
           </View>
         </View>
       </View>
@@ -1321,6 +1341,7 @@ export default function Profile() {
 
         <View className="bottom-spacer" />
       </PageScrollContainer>
+      </View>
 
       {moreGame && (
         <MoreMenu

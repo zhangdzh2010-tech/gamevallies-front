@@ -9,8 +9,13 @@ import { API_CONFIG } from '../types';
  *   "http://localhost:3002/ws"  → { engineBase: "http://localhost:3002", namespace: "/ws" }
  *   "https://api.example.com"  → { engineBase: "https://api.example.com", namespace: "/" }
  */
-function parseWsUrl(wsUrl) {
-  if (!wsUrl) return { engineBase: '', namespace: '/' };
+function normalizePathPrefix(pathname) {
+  if (!pathname || pathname === '/') return '';
+  return String(pathname).replace(/\/+$/, '');
+}
+
+export function parseWsUrl(wsUrl) {
+  if (!wsUrl) return { engineBase: '', enginePathPrefix: '', namespace: '/' };
 
   try {
     // Accept ws:// / wss:// as well as http:// / https://
@@ -18,11 +23,19 @@ function parseWsUrl(wsUrl) {
       m === 'wss://' ? 'https://' : 'http://'
     );
     const url = new URL(normalized);
-    const namespace =
-      url.pathname && url.pathname !== '/' ? url.pathname : '/';
-    return { engineBase: url.origin, namespace };
+    const enginePathPrefix = normalizePathPrefix(url.pathname);
+    return {
+      engineBase: url.origin,
+      enginePathPrefix,
+      namespace: enginePathPrefix || '/',
+    };
   } catch (_e) {
-    return { engineBase: wsUrl, namespace: '/' };
+    const enginePathPrefix = wsUrl.startsWith('/') ? normalizePathPrefix(wsUrl) : '';
+    return {
+      engineBase: enginePathPrefix ? '' : wsUrl,
+      enginePathPrefix,
+      namespace: enginePathPrefix || '/',
+    };
   }
 }
 
@@ -32,13 +45,13 @@ function parseWsUrl(wsUrl) {
  *
  * Result: wss://host/socket.io/?EIO=4&transport=websocket&token=…
  */
-function buildEngineIoWsUrl(engineBase, token) {
-  // /socket.io/ is the default Socket.IO server path
+export function buildEngineIoWsUrl(engineBase, token, enginePathPrefix = '') {
+  const normalizedPrefix = normalizePathPrefix(enginePathPrefix);
   const base = String(engineBase)
     .replace(/^https?:\/\//, (m) => (m === 'https://' ? 'wss://' : 'ws://'))
     .replace(/\/$/, '');
   const tokenPart = token ? `&token=${encodeURIComponent(token)}` : '';
-  return `${base}/socket.io/?EIO=4&transport=websocket${tokenPart}`;
+  return `${base}${normalizedPrefix}/socket.io/?EIO=4&transport=websocket${tokenPart}`;
 }
 
 /**
@@ -129,10 +142,10 @@ class WebSocketManager {
       this._intentionalClose = false;
       this._token = token || '';
 
-      const { engineBase, namespace } = parseWsUrl(API_CONFIG.WS_URL);
+      const { engineBase, enginePathPrefix, namespace } = parseWsUrl(API_CONFIG.WS_URL);
       this._namespace = namespace;
 
-      const url = buildEngineIoWsUrl(engineBase, token);
+      const url = buildEngineIoWsUrl(engineBase, token, enginePathPrefix);
 
       try {
         Taro.connectSocket({

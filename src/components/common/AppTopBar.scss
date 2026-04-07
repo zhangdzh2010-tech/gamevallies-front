@@ -11,15 +11,25 @@
   --gv-h5-topbar-title-size: clamp(18px, calc(var(--gv-h5-topbar-width) * 38 / 750), 21px);
   position: sticky;
   top: 0;
-  align-items: center;
-  backdrop-filter: blur(10px);
-  background: rgba(17, 17, 24, 0.95);
-  border-bottom: 1px solid rgba(37, 37, 53, 0.5);
   box-sizing: border-box;
-  display: flex;
-  min-height: var(--gv-h5-topbar-min-height);
-  padding: var(--gv-h5-topbar-top-padding) var(--gv-h5-topbar-horizontal-padding) var(--gv-h5-topbar-bottom-padding);
+  display: block;
+  width: 100%;
   z-index: 100;
+
+  &__inner {
+    align-items: center;
+    backdrop-filter: blur(10px);
+    background: rgba(17, 17, 24, 0.95);
+    border-bottom: 1px solid rgba(37, 37, 53, 0.5);
+    box-sizing: border-box;
+    display: flex;
+    min-height: var(--gv-h5-topbar-min-height);
+    padding: var(--gv-h5-topbar-top-padding) var(--gv-h5-topbar-horizontal-padding) var(--gv-h5-topbar-bottom-padding);
+    width: var(--gv-h5-topbar-width);
+    max-width: 100%;
+    margin: 0 auto;
+    pointer-events: auto;
+  }
 
   &__side {
     align-items: center;
@@ -83,7 +93,19 @@
   }
 }
 
+.app-top-bar:not(.app-top-bar--weapp) {
+  pointer-events: none;
+}
+
 .app-top-bar.app-top-bar--weapp {
+  pointer-events: auto;
+
+  .app-top-bar__inner {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
   .app-top-bar__back-icon {
     font-size: 34rpx;
   }
@@ -103,8 +125,10 @@
 
 @media screen and (max-width: 480px) {
   .app-top-bar {
-    min-height: var(--gv-h5-topbar-min-height);
-    padding: var(--gv-h5-topbar-top-padding) var(--gv-h5-topbar-horizontal-padding) var(--gv-h5-topbar-bottom-padding);
+    &__inner {
+      min-height: var(--gv-h5-topbar-min-height);
+      padding: var(--gv-h5-topbar-top-padding) var(--gv-h5-topbar-horizontal-padding) var(--gv-h5-topbar-bottom-padding);
+    }
 
     &__side {
       min-width: var(--gv-h5-topbar-side-width);
