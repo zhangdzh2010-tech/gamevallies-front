@@ -1,5 +1,5 @@
 export function isCreationSessionQuestioning(status) {
-  return status === 'collecting';
+  return status === 'collecting' || status === 'ready';
 }
 
 export function canGenerateCreationSession(status) {

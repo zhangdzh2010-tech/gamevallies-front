@@ -338,7 +338,8 @@ export default function GameDetail() {
     ? '继续优化'
     : (canForkGame ? '复刻后继续创作' : '作者未开放复刻权限');
   const continueCreateDisabled = Boolean(game) && !isOwnGame && !canForkGame;
-  const canUnlockOwnGame = game?.canPlay === false && currentUserId === game?.author?.id;
+  const requiresSubscriptionToPlay = game?.canPlay === false && !isOwnGame;
+  const canPlayCurrentGame = Boolean(game?.gameUrl) && (game?.canPlay !== false || isOwnGame);
   const detailStats = [
     { key: 'plays', value: formatNumber(game?.plays), label: '次游玩' },
     { key: 'likes', value: formatNumber(game?.likes), label: '次点赞' },
@@ -865,9 +866,9 @@ export default function GameDetail() {
 
           <View className="action-buttons">
             <View
-              className={`play-btn ${!game.canPlay ? 'locked' : ''}`}
+              className={`play-btn ${!canPlayCurrentGame ? 'locked' : ''}`}
               onClick={() => {
-                if (canUnlockOwnGame) {
+                if (requiresSubscriptionToPlay) {
                   useQuotaStore.getState().openPaywall({
                     gameId: game.id,
                     gameUrl: game.gameUrl,
@@ -880,7 +881,7 @@ export default function GameDetail() {
                 }
                 if (game?.gameUrl) {
                   openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
-                    canPlay: game.canPlay !== false,
+                    canPlay: canPlayCurrentGame,
                     isOwnGame: currentUserId === game.author?.id,
                     gameId: game.id,
                     orientation: getGameOrientation(game),
@@ -890,11 +891,11 @@ export default function GameDetail() {
                 Taro.showToast({ title: '游戏暂不可用', icon: 'none' });
               }}
             >
-              <View className={`btn-icon ${canUnlockOwnGame ? 'btn-icon--lock' : 'btn-icon--play'}`} />
+              <View className={`btn-icon ${requiresSubscriptionToPlay ? 'btn-icon--lock' : 'btn-icon--play'}`} />
               <View className="btn-copy">
-                <Text className="btn-text">{canUnlockOwnGame ? '订阅后试玩' : '立即试玩'}</Text>
+                <Text className="btn-text">{requiresSubscriptionToPlay ? '订阅后试玩' : '立即试玩'}</Text>
                 <Text className="btn-subtext">
-                  {canUnlockOwnGame ? '开通后自动解锁当前作品' : '沉浸体验这个小游戏'}
+                  {requiresSubscriptionToPlay ? '开通后自动解锁当前作品' : '沉浸体验这个小游戏'}
                 </Text>
               </View>
             </View>
@@ -938,7 +939,7 @@ export default function GameDetail() {
                 </Text>
               </View>
               <View className="comments-compose-btn" onClick={handleOpenCommentComposer}>
-                <Text>写评论</Text>
+                <Text>发表评论</Text>
               </View>
             </View>
 

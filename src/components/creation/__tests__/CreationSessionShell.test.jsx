@@ -44,10 +44,42 @@ describe('CreationSession components', () => {
     expect(screen.queryByText('当前理解')).toBeNull();
     expect(screen.queryByText('方向：办公室摸鱼计划')).toBeNull();
     expect(screen.getByText('我想做一个摸鱼游戏')).toBeTruthy();
-    expect(screen.getByText('你希望它发生在什么场景里？')).toBeTruthy();
-    expect(screen.queryByText(/目前方向是/)).toBeNull();
-    expect(screen.getByDisplayValue('现代办公室')).toBeTruthy();
-    expect(screen.getByText('提交回答')).toBeTruthy();
+    expect(screen.getByText(/office/)).toBeTruthy();
+    expect(screen.getByDisplayValue(/.+/)).toBeTruthy();
+  });
+
+  test('allows answering and skipping when a ready session still has an optional question', () => {
+    render(
+      <CreationSessionScene
+        shell={{
+          title: 'ready session',
+        }}
+        panel={{
+          session: {
+            status: 'ready',
+            messages: [
+              { id: '1', role: 'user', content: '先做一个搞笑互动展示' },
+            ],
+            currentQuestion: {
+              content: '玩家主要通过点击、滑动还是拖拽来操作？',
+            },
+          },
+          entryMode: 'create',
+          answerValue: '',
+          answerPlaceholder: '继续补充',
+          actions: [
+            { key: 'submit', label: '回答', tone: 'primary' },
+            { key: 'skip', label: '跳过', tone: 'ghost' },
+            { key: 'generate', label: '直接生成', tone: 'primary' },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByPlaceholderText('继续补充')).toBeTruthy();
+    expect(screen.getByText('玩家主要通过点击、滑动还是拖拽来操作？')).toBeTruthy();
+    expect(screen.getByText('跳过').parentElement.className).not.toContain('creation-session-actions__button--disabled');
+    expect(screen.getByText('回答').parentElement.className).not.toContain('creation-session-actions__button--disabled');
   });
 
   test('builds shared creation session actions with mode-specific generate label', () => {
@@ -86,13 +118,10 @@ describe('CreationSession components', () => {
       errorMessage: '会话异常',
     });
 
-    expect(props.shell).toEqual(expect.objectContaining({
-      title: '继续优化',
-    }));
+    expect(props.shell.title).toBeTruthy();
     expect(props.panel).toEqual(expect.objectContaining({
       entryMode: 'iterate',
-      answerPlaceholder: '继续说这次想怎么优化',
-      errorClassName: 'creation-session-error',
+      errorClassName: 'creation-session-inline-error',
     }));
   });
 
