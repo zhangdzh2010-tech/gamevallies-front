@@ -66,7 +66,7 @@ function getUserFacingForkError(rawError) {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
 
   if (!source) {
-    return '复刻阶段遇到问题，请稍后重试';
+    return '';
   }
 
   if (/已取消|canceled|cancelled/i.test(source)) {
@@ -91,6 +91,8 @@ export default function GameForkPage() {
     currentTask,
     isGenerating,
     generationProgress,
+    error,
+    terminalError,
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
@@ -666,7 +668,13 @@ export default function GameForkPage() {
       previewExpanded={isPreviewExpanded}
       previewLabel={isPreviewExpanded ? '收起预览' : '预览'}
       generateLabel="直接开始复刻"
-      errorMessage={getUserFacingForkError(creationSessionError || pageError)}
+      errorMessage={getUserFacingForkError(
+        (creationSession?.entryMode === 'fork'
+          ? (creationSessionError || terminalError?.message || error || '')
+          : '')
+        || pageError
+        || ''
+      )}
       isSubmitting={creationSessionSubmitting}
       threadTitle="说说这次想怎么改"
       threadHint="像聊天一样往下说，AI 会继续追问或直接整理这版新版本方案。"
@@ -717,10 +725,6 @@ export default function GameForkPage() {
         {sourceReferenceCard}
       </>,
     );
-  }
-
-  if (isCurrentForkSession && creationSession?.status !== 'generating') {
-    return renderForkPage(forkWorkspace, { workspaceLayout: true });
   }
 
   return renderForkPage(forkWorkspace, { workspaceLayout: true });

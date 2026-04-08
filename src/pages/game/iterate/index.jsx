@@ -64,7 +64,7 @@ const GAME_STATUS_LABELS = {
 function getUserFacingIterateError(rawError) {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
   if (!source) {
-    return '优化阶段遇到问题，请稍后重试';
+    return '';
   }
 
   if (/作品已生成完成|加载结果失败|我的作品/i.test(source)) {
@@ -640,10 +640,13 @@ export default function GameIteratePage() {
     && isCompletedGameStatus(currentGame?.status)
   );
 
-  const pagePrimaryError = getUserFacingIterateError(terminalError?.message || error || pageError || '');
-  const iterateWorkspaceError = creationSession?.entryMode === 'iterate'
-    ? getUserFacingIterateError(creationSessionError || pagePrimaryError || '')
-    : pagePrimaryError;
+  const iterateWorkspaceError = getUserFacingIterateError(
+    (creationSession?.entryMode === 'iterate'
+      ? (creationSessionError || terminalError?.message || error || '')
+      : '')
+    || pageError
+    || ''
+  );
 
   const renderIteratePage = (content, { workspaceLayout = false } = {}) => (
     <View className={containerClassName}>
@@ -895,10 +898,6 @@ export default function GameIteratePage() {
         ]}
       />,
     );
-  }
-
-  if (creationSession?.entryMode === 'iterate' && creationSession?.status !== 'generating') {
-    return renderIteratePage(iterateWorkspace, { workspaceLayout: true });
   }
 
   return renderIteratePage(iterateWorkspace, { workspaceLayout: true });
