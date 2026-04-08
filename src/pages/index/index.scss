@@ -457,20 +457,23 @@
 
   .type-tabs-scroll {
     margin-bottom: 12px;
-    white-space: nowrap;
+    width: 100%;
 
     .type-tabs {
-      display: inline-flex;
-      gap: 10px;
-      padding: 0 18px 4px;
+      display: flex;
+      width: 100%;
+      gap: 8px;
+      padding: 0 12px 4px;
+      box-sizing: border-box;
     }
 
     .type-tab {
       display: inline-flex;
+      flex: 1 1 0;
       align-items: center;
       justify-content: center;
-      min-width: 66px;
-      padding: 10px 16px;
+      min-width: 0;
+      padding: 10px 6px;
       border-radius: 999px;
       background: rgba(15, 16, 27, 0.92);
       border: 1px solid rgba(103, 113, 157, 0.18);
@@ -484,10 +487,14 @@
       }
 
       .type-tab__label {
+        display: block;
         color: #9a9fbe;
         font-size: 14px;
         font-weight: 700;
         line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
 
         &.active {
           color: #ffffff;

@@ -53,7 +53,7 @@ export default function SubscriptionPage() {
     if (subscribing) return;
 
     if (!selectedPaymentAvailable) {
-      Taro.showToast({ title: `${selectedPaymentOption.label}暂未实现`, icon: 'none' });
+      Taro.showToast({ title: `${selectedPaymentOption.label}暂不可用`, icon: 'none' });
       return;
     }
 
@@ -92,7 +92,7 @@ export default function SubscriptionPage() {
 
   const selectedPaymentNote = selectedPaymentAvailable
     ? '下单后会跳转到支付宝收银台，支付完成返回后自动刷新订阅状态。'
-    : '微信支付入口已预留，当前版本先支持支付宝，后续再接入微信支付。';
+    : '当前暂不支持微信支付，请先使用支付宝完成支付。';
 
   const getButtonLabel = (planId) => {
     if (subscribing && subscribingPlanId === planId) {
@@ -117,7 +117,7 @@ export default function SubscriptionPage() {
               <Text className="subscription-stage__desc">
                 {subscription.active
                   ? '你当前的订阅权益已经生效，可以继续查看套餐、有效期与额度消耗情况。'
-                  : '当前先支持支付宝支付，同时预留了微信支付入口，后续可无缝补齐。'}
+                  : '当前支持支付宝支付，微信支付暂不可用。'}
               </Text>
             </View>
             <View className="subscription-stage__metrics">
@@ -258,7 +258,7 @@ export default function SubscriptionPage() {
                 </View>
 
                 <Text className="plan-card-payment-hint">
-                  {selectedPaymentAvailable ? `使用${selectedPaymentOption.label}完成支付` : '微信支付入口暂未实现'}
+                  {selectedPaymentAvailable ? `使用${selectedPaymentOption.label}完成支付` : '微信支付暂不可用'}
                 </Text>
 
                 <View

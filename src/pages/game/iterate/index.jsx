@@ -8,17 +8,14 @@ import { PageScrollContainer } from '../../../components/common/PageScrollContai
 import { PipelineOrbit } from '../../../components/common/PipelineOrbit';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import {
-  CreationAnswerComposer,
-  CreationEntryErrorCard,
-  CreationQuestionCard,
+  CreationCreateWorkspace,
   CreationReferenceCard,
   CreationResumeScene,
   CreationSessionActions,
-  CreationSessionScene,
   CreationSessionShell,
   CreationStateCard,
-  buildCreationSessionActions,
-  buildCreationSessionSceneProps,
+  canGenerateCreationSession,
+  isCreationSessionQuestioning,
 } from '../../../components/creation';
 import * as gameService from '../../../services/game';
 import {
@@ -62,15 +59,6 @@ const GAME_STATUS_LABELS = {
   generating: '生成中',
   failed: '失败',
   banned: '不可用',
-};
-
-const ITERATE_SESSION_STATUS_LABELS = {
-  initializing: '初始化中',
-  collecting: '继续补充',
-  ready: '可直接生成',
-  failed: '需要重开',
-  expired: '会话过期',
-  abandoned: '已结束',
 };
 
 function getUserFacingIterateError(rawError) {
@@ -144,7 +132,6 @@ export default function GameIteratePage() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
-    getCreationFlowStage,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -157,6 +144,7 @@ export default function GameIteratePage() {
   const openGame = useGamePlayerStore((s) => s.openGame);
   const openPaywall = useQuotaStore((s) => s.openPaywall);
   const [iterateFeedback, setIterateFeedback] = useState('');
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pageError, setPageError] = useState('');
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
@@ -174,11 +162,13 @@ export default function GameIteratePage() {
     && activeIterateTask
     && (!gameId || !activeIterateTask.gameId || String(activeIterateTask.gameId) === String(gameId))
   );
-  const creationFlowStage = getCreationFlowStage ? getCreationFlowStage() : 'idle';
-  const iterateSessionStatusValue = ITERATE_SESSION_STATUS_LABELS[creationSession?.status] || (
-    creationFlowStage === 'ready' ? '可直接生成' : '继续补充'
-  );
-
+  const isIterateSessionActive = creationSession?.entryMode === 'iterate' && creationSession?.status !== 'generating';
+  const canStartIterateSession = Boolean(iterateFeedback.trim());
+  const canSkipIterateQuestion = isIterateSessionActive
+    && isCreationSessionQuestioning(creationSession?.status)
+    && Boolean(creationSession?.currentQuestion);
+  const canGenerateIterateSession = isIterateSessionActive
+    && canGenerateCreationSession(creationSession?.status);
   useEffect(() => {
     if (isLoggedIn()) {
       return;
@@ -566,28 +556,81 @@ export default function GameIteratePage() {
     }
   };
 
-  const iterateSessionSceneProps = creationSession?.entryMode === 'iterate'
-    ? buildCreationSessionSceneProps({
+  const activeIterateInputPlaceholder = isIterateSessionActive
+    ? (creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt || '继续补充你这轮最想优化的部分...')
+    : '继续补充你这轮最想优化的部分...';
+  const ensureIterateConversation = async () => {
+    if (isIterateSessionActive && creationSession?.sessionId) {
+      return creationSession;
+    }
+
+    if (!canStartIterateSession) {
+      Taro.showToast({ title: '请先说说这次最想优化的部分', icon: 'none' });
+      return null;
+    }
+
+    const nextSession = await startCreationSession(
+      iterateFeedback.trim(),
+      currentGame?.title || '',
+      {
         entryMode: 'iterate',
-        session: creationSession,
-        statusValue: iterateSessionStatusValue,
-        answerValue: iterateFeedback,
-        onAnswerChange: (e) => setIterateFeedback(e?.detail?.value || ''),
-        answerPlaceholder: creationSession?.currentQuestion?.placeholder,
-        answerSuggestions: creationSession?.currentQuestion?.options || [],
-        submitting: creationSessionSubmitting,
-        actions: buildCreationSessionActions({
-          submitting: creationSessionSubmitting,
-          answerValue: iterateFeedback,
-          generateLabel: '直接开始优化',
-          onSubmit: handleSubmitSessionAnswer,
-          onSkip: handleSkipSessionQuestion,
-          onGenerate: handleGenerateFromSession,
-          onRestart: handleRestartIterateSession,
-        }),
-        errorMessage: creationSessionError,
-      })
-    : null;
+        sourceGameId: currentGame?.id,
+        orientation: getGameOrientation(currentGame),
+        generationTier: 'standard',
+      },
+    );
+
+    iterateSessionBootstrappedGameIdRef.current = String(currentGame?.id || '');
+    setResumeCandidate(null);
+    setIterateFeedback('');
+    return nextSession;
+  };
+  const handleIterateWorkspaceSend = async () => {
+    if (isIterateSessionActive) {
+      await handleSubmitSessionAnswer();
+      return;
+    }
+
+    setIsPreviewExpanded(false);
+    await handleStartIterateSession();
+  };
+  const handleIterateWorkspacePreview = async () => {
+    if (isIterateSessionActive) {
+      setIsPreviewExpanded((currentValue) => !currentValue);
+      return;
+    }
+
+    try {
+      const nextSession = await ensureIterateConversation();
+      if (nextSession) {
+        setIsPreviewExpanded(true);
+      }
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '预览优化方案失败，请稍后重试', icon: 'none' });
+    }
+  };
+  const handleIterateWorkspaceGenerate = async () => {
+    if (isIterateSessionActive) {
+      await handleGenerateFromSession();
+      setIsPreviewExpanded(false);
+      return;
+    }
+
+    try {
+      const nextSession = await ensureIterateConversation();
+      if (!nextSession?.sessionId) {
+        return;
+      }
+
+      await generateFromCreationSession(nextSession.sessionId, {
+        orientation: getGameOrientation(currentGame),
+        generationTier: nextSession?.generationTier || 'standard',
+      });
+      setIsPreviewExpanded(false);
+    } catch (err) {
+      Taro.showToast({ title: err?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+    }
+  };
   const isIterateSessionCompleted = Boolean(
     !isGenerating
     && creationSession?.entryMode === 'iterate'
@@ -598,14 +641,21 @@ export default function GameIteratePage() {
   );
 
   const pagePrimaryError = getUserFacingIterateError(terminalError?.message || error || pageError || '');
+  const iterateWorkspaceError = creationSession?.entryMode === 'iterate'
+    ? getUserFacingIterateError(creationSessionError || pagePrimaryError || '')
+    : pagePrimaryError;
 
-  const renderIteratePage = (content) => (
+  const renderIteratePage = (content, { workspaceLayout = false } = {}) => (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={() => openProfilePageWithTab('tasks')} />
-      <PageScrollContainer className="iterate-scroll" style={scrollContainerStyle} scrollY>
-        <View className="creation-page-shell">
+      <PageScrollContainer
+        className={`iterate-scroll${workspaceLayout ? ' iterate-scroll--workspace' : ''}`}
+        style={scrollContainerStyle}
+        scrollY
+      >
+        <View className={`creation-page-shell${workspaceLayout ? ' creation-page-shell--workspace' : ''}`}>
           {content}
-          <View className="creation-page-spacer" />
+          {!workspaceLayout ? <View className="creation-page-spacer" /> : null}
         </View>
       </PageScrollContainer>
       <GlobalGamePlayer />
@@ -645,22 +695,8 @@ export default function GameIteratePage() {
 
     return renderIteratePage(
       <CreationSessionShell
-        eyebrow="AI 优化中"
-        title="AI 正在优化这款作品"
-        subtitle="系统会沿着当前方向继续打磨玩法、节奏和体验细节。"
-        statusLabel={taskStatusLabel}
-        statusValue={`${progress.pct}%`}
+        hideHero
         sections={[
-          {
-            key: 'iterate-progress-focus',
-            node: (
-              <CreationStateCard
-                eyebrow="当前焦点"
-                title={currentStageLabel}
-                description="完成这一轮后，你就可以试玩新的版本或继续追改。"
-              />
-            ),
-          },
           {
             key: 'iterate-progress-orbit',
             node: (
@@ -693,6 +729,16 @@ export default function GameIteratePage() {
               />
             ),
           } : null,
+          {
+            key: 'iterate-progress-notice',
+            node: (
+              <CreationStateCard
+                eyebrow="同步说明"
+                title="任务记录会自动同步到个人中心"
+                description="完成后你可以先试玩新版本，再决定是否继续下一轮优化。"
+              />
+            ),
+          },
         ].filter(Boolean)}
       />,
     );
@@ -753,51 +799,46 @@ export default function GameIteratePage() {
     );
   }
 
-  const actionCards = (
-    <>
-      <CreationReferenceCard
-        eyebrow="当前底稿"
-        title={currentGame?.title || '未命名作品'}
-        badge="这次优化会基于这一版继续生成"
-        description={currentGame?.description || '这版作品会作为本轮优化的起点。'}
-        metadata={metadataItems}
-      />
-      <CreationSessionActions
-        title="作品操作"
-        hint="你可以先试玩当前版本，再决定是否继续追加一轮新的优化。"
-        actions={[
-          canPlay
-            ? {
-                key: 'play-current-game',
-                label: '试玩当前版本',
-                tone: 'primary',
-                onClick: handlePlayGame,
-              }
-            : {
-                key: 'unlock-current-game',
-                label: '订阅后试玩',
-                tone: 'primary',
-                onClick: handleLockedPlay,
-              },
-          {
-            key: 'open-current-detail',
-            label: '查看作品详情',
-            tone: 'ghost',
-            onClick: handleOpenDetail,
-          },
-        ]}
-      />
-    </>
+  const iterateReferenceCard = (
+    <CreationReferenceCard
+      eyebrow="当前底稿"
+      title={currentGame?.title || '未命名作品'}
+      badge="这次优化会基于这一版继续生成"
+      description={currentGame?.description || '这版作品会作为本轮优化的起点。'}
+      metadata={metadataItems}
+    />
+  );
+  const iterateWorkspace = (
+    <CreationCreateWorkspace
+      showSettings={false}
+      topContent={iterateReferenceCard}
+      session={isIterateSessionActive ? creationSession : null}
+      inputValue={iterateFeedback}
+      onInputChange={(e) => setIterateFeedback(e?.detail?.value || '')}
+      inputPlaceholder={activeIterateInputPlaceholder}
+      onSend={handleIterateWorkspaceSend}
+      onSkip={handleSkipSessionQuestion}
+      onGenerate={handleIterateWorkspaceGenerate}
+      onPreview={handleIterateWorkspacePreview}
+      sendDisabled={creationSessionSubmitting || !(isIterateSessionActive ? iterateFeedback.trim() : canStartIterateSession)}
+      skipDisabled={creationSessionSubmitting || !canSkipIterateQuestion}
+      generateDisabled={creationSessionSubmitting || !(isIterateSessionActive ? canGenerateIterateSession : canStartIterateSession)}
+      previewDisabled={creationSessionSubmitting || !(isIterateSessionActive || canStartIterateSession)}
+      previewExpanded={isPreviewExpanded}
+      previewLabel={isPreviewExpanded ? '收起预览' : '预览'}
+      generateLabel="直接开始优化"
+      errorMessage={iterateWorkspaceError}
+      isSubmitting={creationSessionSubmitting}
+      threadTitle="说说这轮想怎么优化"
+      threadHint="像聊天一样往下说，AI 会继续追问或直接整理这轮优化方案。"
+      introMessage="先告诉我这轮最想优化哪里，我会帮你整理方向。"
+    />
   );
 
   if (isIterateSessionCompleted) {
     return renderIteratePage(
       <CreationSessionShell
-        eyebrow="优化完成"
-        title="这轮优化已经准备好了"
-        subtitle="新的版本已经生成完成，你可以先试玩验证，再决定要不要继续下一轮打磨。"
-        statusLabel="当前状态"
-        statusValue={canPlay ? '可试玩' : '待解锁'}
+        hideHero
         sections={[
           {
             key: 'iterate-result-summary',
@@ -849,86 +890,16 @@ export default function GameIteratePage() {
           },
           {
             key: 'iterate-result-reference',
-            node: actionCards,
+            node: iterateReferenceCard,
           },
         ]}
       />,
     );
   }
 
-  if (creationSession?.entryMode === 'iterate' && iterateSessionSceneProps) {
-    return renderIteratePage(
-      <>
-        <CreationSessionScene {...iterateSessionSceneProps} />
-        {actionCards}
-      </>,
-    );
+  if (creationSession?.entryMode === 'iterate' && creationSession?.status !== 'generating') {
+    return renderIteratePage(iterateWorkspace, { workspaceLayout: true });
   }
 
-  return renderIteratePage(
-    <>
-      <CreationSessionShell
-        eyebrow="继续打磨"
-        title="先说这次最想优化哪里"
-        subtitle="先用一句话告诉 AI 这次要改什么，它会据此整理方向，再继续追问。"
-        statusLabel="进行中"
-        statusValue="等待你的方向"
-        sections={[
-          (error || pageError) ? {
-            key: 'iterate-entry-error',
-            node: <CreationEntryErrorCard entryMode="iterate" error={pagePrimaryError} />,
-          } : null,
-          {
-            key: 'iterate-first-prompt',
-            node: (
-              <>
-                <CreationQuestionCard
-                  title="这次想重点优化什么？"
-                  hint="你可以直接说节奏、手感、视觉、角色反馈，或者你觉得现在最不满意的地方。"
-                  question={{
-                    content: '这次你最想先把哪部分变得更好？',
-                    description: '比如更爽快、更紧张、更清晰，或者更换题材和视觉风格。',
-                  }}
-                />
-                <CreationAnswerComposer
-                  value={iterateFeedback}
-                  onChange={(e) => setIterateFeedback(e?.detail?.value || '')}
-                  placeholder="例如：保留贪吃蛇核心玩法，但节奏更快一点，吃到食物时的反馈更爽。"
-                  suggestions={[
-                    '保留核心玩法，但把节奏做得更快一点。',
-                    '我想重点优化视觉表现和吃到食物时的反馈。',
-                    '想让难度爬升更平滑，前期更轻松，后期更刺激。',
-                  ]}
-                  disabled={creationSessionSubmitting}
-                />
-                <CreationSessionActions
-                  title="开始优化"
-                  hint="发起会话后，系统会先整理优化方向，再进入统一的追问和生成流程。"
-                  actions={[
-                    {
-                      key: 'start-iterate-session',
-                      label: creationSessionSubmitting ? 'AI 正在整理你的方向...' : '开始这轮优化会话',
-                      tone: 'primary',
-                      disabled: creationSessionSubmitting || !iterateFeedback.trim(),
-                      onClick: handleStartIterateSession,
-                    },
-                    ...(creationSessionError
-                      ? [{
-                          key: 'retry-iterate-session',
-                          label: creationSessionSubmitting ? '重试中...' : '重新提交这段方向',
-                          tone: 'ghost',
-                          disabled: creationSessionSubmitting || !iterateFeedback.trim(),
-                          onClick: handleStartIterateSession,
-                        }]
-                      : []),
-                  ]}
-                />
-              </>
-            ),
-          },
-        ].filter(Boolean)}
-      />
-      {actionCards}
-    </>,
-  );
+  return renderIteratePage(iterateWorkspace, { workspaceLayout: true });
 }
