@@ -490,14 +490,18 @@ export default function Create() {
 
   const renderCreatePage = (
     content,
-    { withGamePlayer = false, withPaywall = false } = {},
+    { withGamePlayer = false, withPaywall = false, workspaceLayout = false } = {},
   ) => (
     <View className={containerClassName}>
       <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
-      <PageScrollContainer className="create-scroll" style={scrollContainerStyle} scrollY>
-        <View className="creation-page-shell">
+      <PageScrollContainer
+        className={`create-scroll${workspaceLayout ? ' create-scroll--workspace' : ''}`}
+        style={scrollContainerStyle}
+        scrollY
+      >
+        <View className={`creation-page-shell${workspaceLayout ? ' creation-page-shell--workspace' : ''}`}>
           {content}
-          <View className="creation-page-spacer creation-page-spacer--tabbar" />
+          {!workspaceLayout ? <View className="creation-page-spacer creation-page-spacer--tabbar" /> : null}
         </View>
       </PageScrollContainer>
       <CustomTabBar activeIndex={2} />
@@ -622,6 +626,7 @@ export default function Create() {
   ) {
     return renderCreatePage(
       createWorkspace,
+      { workspaceLayout: true },
     );
   }
 
@@ -678,5 +683,5 @@ export default function Create() {
     );
   }
 
-  return renderCreatePage(createWorkspace);
+  return renderCreatePage(createWorkspace, { workspaceLayout: true });
 }

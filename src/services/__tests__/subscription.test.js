@@ -101,4 +101,35 @@ describe('subscriptionService.createOrder', () => {
       },
     });
   });
+
+  test('treats freeQuota as remaining when totalFreeQuota is provided by the quota api', async () => {
+    get.mockResolvedValueOnce({
+      freeQuota: 3,
+      totalFreeQuota: 5,
+      subscription: {
+        active: true,
+        planName: '专业月卡',
+        usedThisPeriod: 12,
+        quotaThisPeriod: 30,
+      },
+    });
+
+    const quota = await getQuota();
+
+    expect(quota).toEqual({
+      freeQuota: 3,
+      totalFreeQuota: 5,
+      subscription: {
+        active: true,
+        planId: null,
+        planName: '专业月卡',
+        expiresAt: null,
+        usedThisPeriod: 12,
+        quotaThisPeriod: 30,
+        autoRenew: false,
+        remaining: 18,
+        totalRemaining: 21,
+      },
+    });
+  });
 });

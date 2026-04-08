@@ -78,9 +78,21 @@ function normalizeQuotaResponse(data) {
     return { ...MOCK_QUOTA };
   }
 
-  const freeQuota = Number(data.freeQuota ?? data.totalFreeQuota ?? 0) || 0;
-  const freeQuotaUsed = Number(data.freeQuotaUsed ?? 0) || 0;
-  const freeQuotaRemaining = Number(data.freeQuotaRemaining ?? Math.max(0, freeQuota - freeQuotaUsed)) || 0;
+  const rawFreeQuota = Number(data.freeQuota ?? 0) || 0;
+  const explicitTotalFreeQuota = data.totalFreeQuota;
+  const hasExplicitTotalFreeQuota = explicitTotalFreeQuota !== null && explicitTotalFreeQuota !== undefined;
+  const freeQuotaUsed = Number(data.usedFreeQuota ?? data.freeQuotaUsed ?? 0) || 0;
+  const hasExplicitRemaining = data.freeQuotaRemaining !== null && data.freeQuotaRemaining !== undefined;
+  const totalFreeQuota = Number(
+    hasExplicitTotalFreeQuota
+      ? explicitTotalFreeQuota
+      : (hasExplicitRemaining || data.freeQuotaUsed !== undefined || data.usedFreeQuota !== undefined ? rawFreeQuota : rawFreeQuota)
+  ) || 0;
+  const freeQuotaRemaining = Number(
+    hasExplicitRemaining
+      ? data.freeQuotaRemaining
+      : (hasExplicitTotalFreeQuota ? rawFreeQuota : Math.max(0, rawFreeQuota - freeQuotaUsed))
+  ) || 0;
   const subscriptionQuota = Number(data.subscription?.quotaThisPeriod ?? data.subscriptionQuota ?? 0) || 0;
   const subscriptionUsed = Number(data.subscription?.usedThisPeriod ?? data.subscriptionUsed ?? 0) || 0;
   const subscriptionRemaining = Number(
@@ -90,7 +102,7 @@ function normalizeQuotaResponse(data) {
 
   return {
     freeQuota: freeQuotaRemaining,
-    totalFreeQuota: freeQuota,
+    totalFreeQuota,
     subscription: {
       active: data.subscription?.active ?? data.subscriptionActive ?? false,
       planId: data.subscription?.planId ?? data.planId ?? null,

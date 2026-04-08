@@ -344,11 +344,19 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.creation-create-workspace__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .creation-create-settings__grid {
   display: grid;
-  grid-template-columns: 124px minmax(0, 1fr);
+  grid-template-columns: 116px minmax(0, 1fr);
   gap: 14px;
   align-items: stretch;
 }
@@ -367,15 +375,15 @@
 }
 
 .creation-create-orientation {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .creation-create-orientation__option {
-  min-height: 56px;
-  padding: 0 14px;
-  border-radius: 16px;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -389,15 +397,49 @@
 }
 
 .creation-create-orientation__text {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   color: #f5f2ff;
+  white-space: nowrap;
 }
 
 .creation-create-chat {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.creation-create-chat__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.creation-create-thread-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(134, 139, 176, 0.42) transparent;
+}
+
+.creation-create-thread-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.creation-create-thread-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.creation-create-thread-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(134, 139, 176, 0.42);
 }
 
 .creation-create-thread {
@@ -407,6 +449,7 @@
 }
 
 .creation-create-preview {
+  margin-top: 12px;
   padding: 16px 18px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.035);
@@ -432,6 +475,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  background:
+    linear-gradient(180deg, rgba(11, 12, 19, 0) 0%, rgba(11, 12, 19, 0.96) 18%, rgba(11, 12, 19, 0.98) 100%);
+  border-top: 1px solid rgba(72, 76, 101, 0.32);
 }
 
 .creation-create-composer__row {
@@ -671,6 +719,11 @@
   flex-direction: column;
 }
 
+.create-container {
+  min-height: 100dvh;
+  height: 100dvh;
+}
+
 .create-scroll,
 .iterate-scroll,
 .fork-scroll {
@@ -679,10 +732,31 @@
   overflow-y: auto;
 }
 
+.create-scroll--workspace,
+.iterate-scroll--workspace,
+.fork-scroll--workspace {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .creation-page-shell {
   width: 100%;
   box-sizing: border-box;
   padding: 0 20px;
+}
+
+.creation-page-shell--workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 100%;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+}
+
+.creation-page-shell--workspace > .creation-create-workspace {
+  flex: 1;
+  min-height: 0;
 }
 
 .create-container .creation-page-shell {
@@ -1277,8 +1351,12 @@
     gap: 12px;
   }
 
+  .creation-create-workspace__stack {
+    gap: 12px;
+  }
+
   .creation-create-settings__grid {
-    grid-template-columns: 108px minmax(0, 1fr);
+    grid-template-columns: 100px minmax(0, 1fr);
     gap: 10px;
   }
 
@@ -1292,21 +1370,25 @@
   }
 
   .creation-create-orientation {
-    gap: 8px;
+    gap: 6px;
   }
 
   .creation-create-orientation__option {
-    min-height: 38px;
-    padding: 0 10px;
-    border-radius: 12px;
+    min-height: 34px;
+    padding: 0 6px;
+    border-radius: 10px;
   }
 
   .creation-create-orientation__text {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .creation-create-chat {
     gap: 12px;
+  }
+
+  .creation-create-thread-scroll {
+    padding-right: 4px;
   }
 
   .creation-create-thread {
@@ -1316,6 +1398,10 @@
   .creation-create-preview {
     padding: 12px 14px;
     border-radius: 14px;
+  }
+
+  .creation-create-composer {
+    padding-top: 12px;
   }
 
   .creation-create-preview__content {

@@ -36,7 +36,7 @@ export function PaywallPopup() {
     if (subscribing) return;
 
     if (!selectedPaymentAvailable) {
-      Taro.showToast({ title: `${selectedPaymentOption.label}暂未实现`, icon: 'none' });
+      Taro.showToast({ title: `${selectedPaymentOption.label}暂不可用`, icon: 'none' });
       return;
     }
 
@@ -51,7 +51,7 @@ export function PaywallPopup() {
 
   const selectedPaymentNote = selectedPaymentAvailable
     ? '当前会跳转到支付宝收银台完成支付，付款后自动返回。'
-    : '微信支付入口先展示在这里，当前版本暂未开放。';
+    : '当前暂不支持微信支付，请先使用支付宝完成支付。';
 
   const getButtonLabel = (planId) => {
     if (subscribing && subscribingPlanId === planId) {
@@ -135,7 +135,7 @@ export function PaywallPopup() {
             </View>
 
             <Text className="plan-payment-hint">
-              {selectedPaymentAvailable ? `使用${selectedPaymentOption.label}完成支付` : '微信支付暂未实现'}
+              {selectedPaymentAvailable ? `使用${selectedPaymentOption.label}完成支付` : '微信支付暂不可用'}
             </Text>
 
             <View
@@ -173,7 +173,7 @@ export function PaywallPopup() {
           <Text className="paywall-icon">支付方式</Text>
           <Text className="paywall-title">选择支付方式并解锁更多创作</Text>
           <Text className="paywall-subtitle">
-            支付宝当前可用，微信支付入口先保留在这里，等你确认视觉和交互后再接真实能力。
+            当前支持支付宝支付，微信支付暂不可用。
           </Text>
         </View>
 
