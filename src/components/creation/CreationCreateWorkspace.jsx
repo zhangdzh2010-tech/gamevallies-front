@@ -23,7 +23,33 @@ function normalizeMessageContent(content) {
   return String(content || '').trim();
 }
 
-function buildThreadMessages(session, introMessage) {
+function appendStreamingMessage(messages, streamingMessage) {
+  const streamingContent = normalizeMessageContent(streamingMessage?.content);
+  if (!streamingContent) {
+    return messages;
+  }
+
+  const hasDuplicateAssistantMessage = messages.some((message) => (
+    message.role === 'assistant'
+    && normalizeMessageContent(message.content) === streamingContent
+  ));
+
+  if (hasDuplicateAssistantMessage) {
+    return messages;
+  }
+
+  return [
+    ...messages,
+    {
+      id: streamingMessage?.id || 'assistant-stream',
+      role: 'assistant',
+      content: streamingContent,
+      isStreaming: streamingMessage?.isStreaming === true,
+    },
+  ];
+}
+
+function buildThreadMessages(session, introMessage, streamingMessage) {
   const sessionMessages = Array.isArray(session?.messages) ? session.messages : [];
 
   if (!sessionMessages.length) {
@@ -55,7 +81,7 @@ function buildThreadMessages(session, introMessage) {
       });
     }
 
-    return initialMessages;
+    return appendStreamingMessage(initialMessages, streamingMessage);
   }
 
   const normalizedMessages = sessionMessages.map((message, index) => ({
@@ -69,7 +95,7 @@ function buildThreadMessages(session, introMessage) {
     .join('\n');
 
   if (!questionText) {
-    return normalizedMessages;
+    return appendStreamingMessage(normalizedMessages, streamingMessage);
   }
 
   const hasSameQuestion = normalizedMessages.some((message) => (
@@ -78,17 +104,17 @@ function buildThreadMessages(session, introMessage) {
   ));
 
   if (hasSameQuestion) {
-    return normalizedMessages;
+    return appendStreamingMessage(normalizedMessages, streamingMessage);
   }
 
-  return [
+  return appendStreamingMessage([
     ...normalizedMessages,
     {
       id: 'current-question',
       role: 'assistant',
       content: questionText,
     },
-  ];
+  ], streamingMessage);
 }
 
 function getActionButtonClassName({ tone = 'ghost', disabled = false }) {
@@ -108,6 +134,7 @@ export function CreationCreateWorkspace({
   orientationOptions = [],
   topContent = null,
   session = null,
+  streamingMessage = null,
   inputValue = '',
   onInputChange,
   inputPlaceholder = '继续补充你的想法...',
@@ -135,11 +162,13 @@ export function CreationCreateWorkspace({
   previewEmptyText = 'AI 正在整理这一版方向，稍等片刻就会显示在这里。',
   introMessage = '先告诉我你想做什么，我会帮你补齐细节。',
 }) {
-  const threadMessages = buildThreadMessages(session, introMessage);
+  const threadMessages = buildThreadMessages(session, introMessage, streamingMessage);
   const previewDraftText = formatPreviewDraft(session?.planDraft);
   const showPreviewPanel = previewExpanded && (previewDraftText || session);
   const threadScrollRef = React.useRef(null);
   const actionCount = [showSkip, showGenerate, showPreview].filter(Boolean).length || 1;
+  const latestThreadMessage = threadMessages[threadMessages.length - 1];
+  const threadTailSignature = `${threadMessages.length}:${latestThreadMessage?.id || ''}:${latestThreadMessage?.content || ''}`;
 
   React.useEffect(() => {
     const scrollHost = threadScrollRef.current?.root || threadScrollRef.current;
@@ -160,7 +189,7 @@ export function CreationCreateWorkspace({
 
     scrollToBottom();
     return undefined;
-  }, [threadMessages.length, showPreviewPanel, previewDraftText]);
+  }, [threadTailSignature, showPreviewPanel, previewDraftText]);
 
   return (
     <View className="creation-create-workspace">
@@ -229,7 +258,7 @@ export function CreationCreateWorkspace({
               {threadMessages.map((message) => (
                 <View
                   key={message.id}
-                  className={`creation-conversation-item${message.role === 'user' ? ' creation-conversation-item--user' : ''}`}
+                  className={`creation-conversation-item${message.role === 'user' ? ' creation-conversation-item--user' : ''}${message.isStreaming ? ' creation-conversation-item--streaming' : ''}`}
                 >
                   <Text className="creation-conversation-item__role">{message.role === 'user' ? '你' : 'AI'}</Text>
                   <Text className="creation-conversation-item__content">{message.content || ' '}</Text>

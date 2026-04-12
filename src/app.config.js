@@ -19,7 +19,7 @@ export default {
     },
     {
       root: 'pages/subscription',
-      pages: ['index'],
+      pages: ['index', 'history/index'],
     },
   ],
 

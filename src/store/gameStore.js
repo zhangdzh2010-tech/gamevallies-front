@@ -1,4 +1,4 @@
-import Taro from '@tarojs/taro';
+﻿import Taro from '@tarojs/taro';
 import { create } from 'zustand';
 import * as gameService from '../services/game';
 import { getWebSocketManager } from '../services/websocket';
@@ -9,7 +9,7 @@ import { subscribeGameUnlocked } from '../utils/gameUnlock';
 const COMPLETED_GAME_STATUSES = ['ready', 'draft', 'published', 'review'];
 // Include both frontend vocabulary and schema vocabulary so tasks are recognised
 // as terminal regardless of which variant the backend returns.
-//   Schema uses: "completed" (≈ succeeded), "cancelled" (UK spelling)
+//   Schema uses: "completed" (鈮?succeeded), "cancelled" (UK spelling)
 //   Frontend uses: "succeeded", "canceled" (US spelling), "timed_out"
 const TERMINAL_TASK_STATUSES = new Set([
   'succeeded', 'completed',          // task finished successfully
@@ -21,11 +21,12 @@ const ACTIVE_GENERATION_TASK_KEY = 'gamevallies_active_generation_task';
 const TRACKED_GENERATION_TASKS_KEY = 'gamevallies_tracked_generation_tasks';
 const ACTIVE_GENERATION_TASK_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_TASK_TIMEOUT_MS = 30 * 60 * 1000;
-// #8 阶段停滞检测：同一阶段超过此时间触发提示
+// #8 闃舵鍋滄粸妫€娴嬶細鍚屼竴闃舵瓒呰繃姝ゆ椂闂磋Е鍙戞彁绀?
 const STAGE_STALE_WARN_MS = 5 * 60 * 1000;
 const TRACKED_TASKS_LIMIT = 20;
 const SESSION_INIT_POLL_INTERVAL_MS = 2000;
 const SESSION_INIT_MAX_POLLS = 15;
+const ACTIVE_CREATION_SESSION_STATUSES = new Set(['initializing', 'collecting', 'ready']);
 
 const PIPELINE_STAGES = [
   { key: 'submitting', label: '提交创作请求', pct: 5 },
@@ -110,7 +111,8 @@ let activeTimeoutId = null;
 let activeWebSocketUnsubscribers = [];
 let activeSessionPollInterval = null;
 let activeSessionWebSocketUnsubscribers = [];
-// #8 阶段停滞检测状态
+let activeSessionStreamUnsubscribe = null;
+// #8 闃舵鍋滄粸妫€娴嬬姸鎬?
 let lastStageKey = null;
 let lastStageChangedAt = 0;
 let staleStageWarned = false;
@@ -140,7 +142,7 @@ function clearActiveTaskRuntime() {
   });
   activeWebSocketUnsubscribers = [];
 
-  // #8 同步重置阶段停滞检测状态，防止残留到下一个 task
+  // #8 鍚屾閲嶇疆闃舵鍋滄粸妫€娴嬬姸鎬侊紝闃叉娈嬬暀鍒颁笅涓€涓?task
   lastStageKey = null;
   lastStageChangedAt = 0;
   staleStageWarned = false;
@@ -152,6 +154,15 @@ function clearActiveSessionRuntime() {
     activeSessionPollInterval = null;
   }
 
+  if (activeSessionStreamUnsubscribe) {
+    try {
+      activeSessionStreamUnsubscribe();
+    } catch (_error) {
+      // Ignore stream cleanup failures.
+    }
+    activeSessionStreamUnsubscribe = null;
+  }
+
   activeSessionWebSocketUnsubscribers.forEach((unsubscribe) => {
     try {
       unsubscribe();
@@ -160,6 +171,31 @@ function clearActiveSessionRuntime() {
     }
   });
   activeSessionWebSocketUnsubscribers = [];
+}
+
+function getCreationSessionRuntimePhase(session) {
+  if (!session?.sessionId) {
+    return '';
+  }
+
+  if (session.status === 'initializing') {
+    return 'initializing';
+  }
+
+  if (ACTIVE_CREATION_SESSION_STATUSES.has(session.status)) {
+    return 'interactive';
+  }
+
+  return '';
+}
+
+function getCreationSessionRuntimeBindingKey(session) {
+  const phase = getCreationSessionRuntimePhase(session);
+  if (!phase) {
+    return '';
+  }
+
+  return `${String(session.sessionId)}:${phase}`;
 }
 
 function clampProgress(progress, fallback = 5) {
@@ -381,6 +417,75 @@ function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理
   }
 
   return source || fallback;
+}
+
+function normalizeSessionMessageContent(content) {
+  return String(content || '').trim();
+}
+
+function getCreationSessionRevision(session) {
+  const revision = Number(session?.revision ?? 0);
+  return Number.isFinite(revision) ? revision : 0;
+}
+
+function getCreationSessionQuestionText(session) {
+  return [session?.currentQuestion?.content, session?.currentQuestion?.description]
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function sessionContainsAssistantReply(session, reply) {
+  const replyContent = normalizeSessionMessageContent(reply?.content);
+  if (!replyContent) {
+    return false;
+  }
+
+  const hasMatchingMessage = Array.isArray(session?.messages) && session.messages.some((message) => (
+    message?.role === 'assistant'
+    && normalizeSessionMessageContent(message.content) === replyContent
+  ));
+
+  if (hasMatchingMessage) {
+    return true;
+  }
+
+  return normalizeSessionMessageContent(getCreationSessionQuestionText(session)) === replyContent;
+}
+
+function isStaleCreationSessionSnapshot(previousSession, nextSession) {
+  if (!previousSession?.sessionId || !nextSession?.sessionId) {
+    return false;
+  }
+
+  if (String(previousSession.sessionId) !== String(nextSession.sessionId)) {
+    return false;
+  }
+
+  const previousRevision = getCreationSessionRevision(previousSession);
+  const nextRevision = getCreationSessionRevision(nextSession);
+
+  return previousRevision > 0 && nextRevision > 0 && nextRevision < previousRevision;
+}
+
+function resolveCreationSessionStreamingReply(previousSession, nextSession, streamingReply) {
+  if (!streamingReply) {
+    return null;
+  }
+
+  if (!previousSession?.sessionId || !nextSession?.sessionId) {
+    return null;
+  }
+
+  if (String(previousSession.sessionId) !== String(nextSession.sessionId)) {
+    return null;
+  }
+
+  if (!getCreationSessionRuntimePhase(nextSession)) {
+    return null;
+  }
+
+  return sessionContainsAssistantReply(nextSession, streamingReply) ? null : streamingReply;
 }
 
 function countPromptCharacters(value) {
@@ -715,7 +820,22 @@ function buildUnlockedCurrentGame(currentGame, payload) {
 
 export const useGameStore = create((set, get) => {
   const applyCreationSessionSnapshot = (session, overrides = {}) => {
-    const nextSession = session || null;
+    const previousSession = get().creationSession;
+    const previousStreamingReply = get().creationSessionStreamingReply;
+    const rawNextSession = session || null;
+    const nextSession = isStaleCreationSessionSnapshot(previousSession, rawNextSession)
+      ? previousSession
+      : rawNextSession;
+    const previousRuntimeKey = getCreationSessionRuntimeBindingKey(previousSession);
+    const nextRuntimeKey = getCreationSessionRuntimeBindingKey(nextSession);
+    const preserveStreamConnection = Boolean(
+      previousRuntimeKey
+      && previousRuntimeKey === nextRuntimeKey
+      && get().creationSessionStreamConnected
+    );
+    const nextStreamingReply = isStaleCreationSessionSnapshot(previousSession, rawNextSession)
+      ? previousStreamingReply
+      : resolveCreationSessionStreamingReply(previousSession, nextSession, previousStreamingReply);
 
     set({
       creationSession: nextSession,
@@ -729,17 +849,22 @@ export const useGameStore = create((set, get) => {
             sourceGameId: nextSession.sourceGameId,
           })
         : null,
+      creationSessionStreamingReply: nextStreamingReply,
+      creationSessionStreamConnected: preserveStreamConnection,
       ...overrides,
     });
 
-    bindCreationSessionRuntime(nextSession);
+    if (previousRuntimeKey !== nextRuntimeKey) {
+      bindCreationSessionRuntime(nextSession);
+    }
     return nextSession;
   };
 
   const bindCreationSessionRuntime = (session) => {
     clearActiveSessionRuntime();
 
-    if (!session?.sessionId || session.status !== 'initializing') {
+    const runtimePhase = getCreationSessionRuntimePhase(session);
+    if (!session?.sessionId || !runtimePhase) {
       return;
     }
 
@@ -748,20 +873,162 @@ export const useGameStore = create((set, get) => {
 
     ensureTaskWebSocketConnected();
 
-    if (ws) {
-      const handleSessionUpdated = (payload) => {
-        const payloadSession = payload?.session || payload;
-        const nextSession = gameService.normalizeCreationSessionSnapshot(payloadSession);
+    const applyRuntimeSessionSnapshot = (payloadSession, overrides = {}) => {
+      const nextSession = gameService.normalizeCreationSessionSnapshot(payloadSession);
 
-        if (!nextSession?.sessionId || String(nextSession.sessionId) !== targetSessionId) {
+      if (!nextSession?.sessionId || String(nextSession.sessionId) !== targetSessionId) {
+        return;
+      }
+
+      applyCreationSessionSnapshot(nextSession, {
+        creationSessionRestoring: false,
+        creationSessionError: null,
+        ...overrides,
+      });
+    };
+
+    const applyRuntimeSessionError = (message, details = {}) => {
+      const currentSession = get().creationSession;
+      if (String(currentSession?.sessionId || '') !== targetSessionId) {
+        return;
+      }
+
+      const isInitializationFailure = currentSession?.status === 'initializing'
+        || details?.reason === 'init_failed'
+        || details?.reason === 'init_timeout';
+
+      if (isInitializationFailure) {
+        applyCreationSessionSnapshot(
+          {
+            ...currentSession,
+            status: 'abandoned',
+            metadata: {
+              ...(currentSession.metadata || {}),
+              initError: message || '',
+              initReason: details?.reason || '',
+            },
+          },
+          {
+            creationSessionSubmitting: false,
+            creationSessionRestoring: false,
+            creationSessionError: deriveCreationSessionErrorMessage(
+              message,
+              '创作会话初始化失败，请重新开始'
+            ),
+            creationSessionStreamingReply: null,
+            creationSessionStreamConnected: false,
+          }
+        );
+        return;
+      }
+
+      set({
+        creationSessionSubmitting: false,
+        creationSessionRestoring: false,
+        creationSessionError: deriveCreationSessionErrorMessage(
+          message,
+          '鍒涗綔浼氳瘽澶勭悊澶辫触锛岃绋嶅悗閲嶈瘯'
+        ),
+        creationSessionStreamingReply: null,
+      });
+    };
+
+    activeSessionStreamUnsubscribe = gameService.subscribeCreationSessionStream(session, {
+      onOpen: () => {
+        const currentSession = get().creationSession;
+        if (String(currentSession?.sessionId || '') !== targetSessionId) {
           return;
         }
 
-        applyCreationSessionSnapshot(nextSession, {
-          creationSessionSubmitting: false,
-          creationSessionRestoring: false,
-          creationSessionError: null,
+        set({ creationSessionStreamConnected: true });
+      },
+      onBootstrap: (event) => {
+        if (event?.session) {
+          applyRuntimeSessionSnapshot(event.session, {
+            creationSessionStreamConnected: true,
+          });
+          return;
+        }
+
+        set({ creationSessionStreamConnected: true });
+      },
+      onSnapshot: (event) => {
+        if (!event?.session) {
+          return;
+        }
+
+        applyRuntimeSessionSnapshot(event.session, {
+          creationSessionStreamConnected: true,
         });
+      },
+      onDelta: (event) => {
+        if (!event?.sessionId || String(event.sessionId) !== targetSessionId) {
+          return;
+        }
+
+        const currentSession = get().creationSession;
+        if (String(currentSession?.sessionId || '') !== targetSessionId || !getCreationSessionRuntimePhase(currentSession)) {
+          return;
+        }
+
+        set({
+          creationSessionStreamConnected: true,
+          creationSessionStreamingReply: {
+            id: event.messageId || 'assistant-stream',
+            role: 'assistant',
+            kind: event.kind || 'question',
+            content: event.accumulated || event.delta || '',
+            createdAt: event.timestamp || Date.now(),
+            isStreaming: true,
+          },
+        });
+      },
+      onDone: (event) => {
+        if (!event?.sessionId || String(event.sessionId) !== targetSessionId) {
+          return;
+        }
+
+        const currentSession = get().creationSession;
+        if (String(currentSession?.sessionId || '') !== targetSessionId || !getCreationSessionRuntimePhase(currentSession)) {
+          return;
+        }
+
+        set({
+          creationSessionStreamConnected: true,
+          creationSessionStreamingReply: {
+            id: event.messageId || 'assistant-stream',
+            role: 'assistant',
+            kind: event.kind || 'question',
+            content: event.message || '',
+            createdAt: event.timestamp || Date.now(),
+            isStreaming: false,
+          },
+        });
+      },
+      onError: (event) => {
+        if (!event?.sessionId || String(event.sessionId) !== targetSessionId) {
+          return;
+        }
+
+        applyRuntimeSessionError(event.message, {
+          ...(event.details || {}),
+          reason: event.code || event.details?.reason || '',
+        });
+      },
+      onTransportError: () => {
+        const currentSession = get().creationSession;
+        if (String(currentSession?.sessionId || '') !== targetSessionId) {
+          return;
+        }
+
+        set({ creationSessionStreamConnected: false });
+      },
+    });
+
+    if (ws) {
+      const handleSessionUpdated = (payload) => {
+        const payloadSession = payload?.session || payload;
+        applyRuntimeSessionSnapshot(payloadSession);
       };
 
       const handleSessionError = (payload) => {
@@ -771,28 +1038,7 @@ export const useGameStore = create((set, get) => {
         }
 
         clearActiveSessionRuntime();
-
-        const currentSession = get().creationSession;
-        const nextSession = currentSession && String(currentSession.sessionId || '') === targetSessionId
-          ? {
-              ...currentSession,
-              status: 'abandoned',
-              metadata: {
-                ...(currentSession.metadata || {}),
-                initError: payload?.error || payload?.message || '',
-                initReason: payload?.details?.reason || '',
-              },
-            }
-          : null;
-
-        applyCreationSessionSnapshot(nextSession, {
-          creationSessionSubmitting: false,
-          creationSessionRestoring: false,
-          creationSessionError: deriveCreationSessionErrorMessage(
-            payload?.error || payload?.message,
-            '创作会话初始化失败，请重新开始'
-          ),
-        });
+        applyRuntimeSessionError(payload?.error || payload?.message, payload?.details || {});
       };
 
       ws.onMessage('session:updated', handleSessionUpdated);
@@ -800,6 +1046,10 @@ export const useGameStore = create((set, get) => {
 
       activeSessionWebSocketUnsubscribers.push(() => ws.offMessage('session:updated', handleSessionUpdated));
       activeSessionWebSocketUnsubscribers.push(() => ws.offMessage('session:error', handleSessionError));
+    }
+
+    if (runtimePhase !== 'initializing') {
+      return;
     }
 
     let pollCount = 0;
@@ -907,12 +1157,14 @@ export const useGameStore = create((set, get) => {
   creationSessionSubmitting: false,
   creationSessionRestoring: false,
   creationSessionContext: null,
+  creationSessionStreamingReply: null,
+  creationSessionStreamConnected: false,
   startCreationSession: async (prompt, title, options = {}) => {
     if (countPromptCharacters(prompt) < 5) {
       throw new Error('至少输入 5 个字，再开始这一轮');
     }
 
-    // #4 双击防护：如果正在提交或恢复中，拒绝重复请求
+    // #4 鍙屽嚮闃叉姢锛氬鏋滄鍦ㄦ彁浜ゆ垨鎭㈠涓紝鎷掔粷閲嶅璇锋眰
     if (get().creationSessionSubmitting || get().creationSessionRestoring) {
       throw new Error('正在处理中，请稍候');
     }
@@ -944,6 +1196,8 @@ export const useGameStore = create((set, get) => {
       creationSessionSubmitting: true,
       creationSessionRestoring: false,
       creationSessionContext: context,
+      creationSessionStreamingReply: null,
+      creationSessionStreamConnected: false,
     });
 
     try {
@@ -971,6 +1225,8 @@ export const useGameStore = create((set, get) => {
     set({
       creationSessionRestoring: true,
       creationSessionError: null,
+      creationSessionStreamingReply: null,
+      creationSessionStreamConnected: false,
     });
 
     try {
@@ -993,12 +1249,14 @@ export const useGameStore = create((set, get) => {
 
       return session;
     } catch (error) {
-      if (silentIfMissing && (error?.statusCode === 404 || /not found|不存在|没有/i.test(error?.message || ''))) {
+      if (silentIfMissing && (error?.statusCode === 404 || /not found|涓嶅瓨鍦▅娌℃湁/i.test(error?.message || ''))) {
         clearActiveSessionRuntime();
         set({
           creationSession: null,
           creationSessionRestoring: false,
           creationSessionError: null,
+          creationSessionStreamingReply: null,
+          creationSessionStreamConnected: false,
         });
         return null;
       }
@@ -1007,6 +1265,8 @@ export const useGameStore = create((set, get) => {
       set({
         creationSessionRestoring: false,
         creationSessionError: message,
+        creationSessionStreamingReply: null,
+        creationSessionStreamConnected: false,
       });
       throw new Error(message);
     }
@@ -1034,7 +1294,7 @@ export const useGameStore = create((set, get) => {
 
       return null;
     } catch (error) {
-      if (silentIfMissing && (error?.statusCode === 404 || /not found|不存在|没有/i.test(error?.message || ''))) {
+      if (silentIfMissing && (error?.statusCode === 404 || /not found|涓嶅瓨鍦▅娌℃湁/i.test(error?.message || ''))) {
         get().resetCreationSessionState();
         return null;
       }
@@ -1062,7 +1322,7 @@ export const useGameStore = create((set, get) => {
       });
       return session;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '刷新创作会话失败，请稍后重试');
+      const message = deriveCreationSessionErrorMessage(error, '鍒锋柊鍒涗綔浼氳瘽澶辫触锛岃绋嶅悗閲嶈瘯');
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1098,14 +1358,14 @@ export const useGameStore = create((set, get) => {
 
       return nextSession;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '提交回答失败，请稍后重试');
+      const message = deriveCreationSessionErrorMessage(error, '鎻愪氦鍥炵瓟澶辫触锛岃绋嶅悗閲嶈瘯');
 
-      // #7 版本冲突时自动刷新 session 获取最新 revision
-      if (/revision|版本冲突|冲突/i.test(error?.message || '')) {
+      // #7 鐗堟湰鍐茬獊鏃惰嚜鍔ㄥ埛鏂?session 鑾峰彇鏈€鏂?revision
+      if (/revision|鐗堟湰鍐茬獊|鍐茬獊/i.test(error?.message || '')) {
         try {
           await get().refreshCreationSession(session.sessionId);
         } catch (_refreshError) {
-          // 刷新失败则保持原错误消息
+          // 鍒锋柊澶辫触鍒欎繚鎸佸師閿欒娑堟伅
         }
       }
 
@@ -1143,7 +1403,7 @@ export const useGameStore = create((set, get) => {
 
       return nextSession;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '跳过问题失败，请稍后重试');
+      const message = deriveCreationSessionErrorMessage(error, '璺宠繃闂澶辫触锛岃绋嶅悗閲嶈瘯');
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1153,7 +1413,7 @@ export const useGameStore = create((set, get) => {
   },
 
   generateFromCreationSession: async (sessionIdOrOptions = {}, maybeOptions = {}) => {
-    // #4 双击防护：如果正在生成中，拒绝重复请求
+    // #4 鍙屽嚮闃叉姢锛氬鏋滄鍦ㄧ敓鎴愪腑锛屾嫆缁濋噸澶嶈姹?
     if (get().isGenerating || get().creationSessionSubmitting) {
       throw new Error('正在处理中，请稍候');
     }
@@ -1226,6 +1486,8 @@ export const useGameStore = create((set, get) => {
         isLoading: false,
         canPlay: result.canPlay !== false,
         creationSessionSubmitting: false,
+        creationSessionStreamingReply: null,
+        creationSessionStreamConnected: false,
         creationSession: resolvedSession
           ? {
               ...resolvedSession,
@@ -1261,15 +1523,17 @@ export const useGameStore = create((set, get) => {
           },
         });
       } else {
-        throw new Error('会话生成响应缺少 generationTask');
+        throw new Error('浼氳瘽鐢熸垚鍝嶅簲缂哄皯 generationTask');
       }
 
       return result;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '生成阶段遇到问题，可稍后重试');
+      const message = deriveCreationSessionErrorMessage(error, '鐢熸垚闃舵閬囧埌闂锛屽彲绋嶅悗閲嶈瘯');
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
+        creationSessionStreamingReply: null,
+        creationSessionStreamConnected: false,
         isGenerating: false,
         generationProgress: null,
         latestTaskMessage: '',
@@ -1301,7 +1565,7 @@ export const useGameStore = create((set, get) => {
       );
       return nextSession;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '结束创作会话失败，请稍后重试');
+      const message = deriveCreationSessionErrorMessage(error, '缁撴潫鍒涗綔浼氳瘽澶辫触锛岃绋嶅悗閲嶈瘯');
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1318,6 +1582,8 @@ export const useGameStore = create((set, get) => {
       creationSessionSubmitting: false,
       creationSessionRestoring: false,
       creationSessionContext: null,
+      creationSessionStreamingReply: null,
+      creationSessionStreamConnected: false,
     });
   },
 
@@ -1384,7 +1650,7 @@ export const useGameStore = create((set, get) => {
 
     await get()._syncTaskEvents(task.taskId, { reset: true });
 
-    // #8 初始化阶段停滞检测
+    // #8 鍒濆鍖栭樁娈靛仠婊炴娴?
     lastStageKey = task.displayStageKey || null;
     lastStageChangedAt = Date.now();
     staleStageWarned = false;
@@ -1395,7 +1661,7 @@ export const useGameStore = create((set, get) => {
         return;
       }
 
-      // #8 阶段停滞检测：同一阶段停留超过阈值时给出提示
+      // #8 闃舵鍋滄粸妫€娴嬶細鍚屼竴闃舵鍋滅暀瓒呰繃闃堝€兼椂缁欏嚭鎻愮ず
       const currentStageKey = currentTask.displayStageKey;
       if (currentStageKey && currentStageKey !== lastStageKey) {
         lastStageKey = currentStageKey;
@@ -1436,7 +1702,7 @@ export const useGameStore = create((set, get) => {
         status: 'timed_out',
         terminalError: store.currentTask?.terminalError || {
           errorCode: 'task_timeout',
-          message: '创作超时，请稍后到“我的作品”里查看结果',
+          message: '鍒涗綔瓒呮椂锛岃绋嶅悗鍒扳€滄垜鐨勪綔鍝佲€濋噷鏌ョ湅缁撴灉',
         },
       });
     }, ACTIVE_TASK_TIMEOUT_MS);
@@ -1500,7 +1766,7 @@ export const useGameStore = create((set, get) => {
   },
 
   _applyTaskUpdate: async (task) => {
-    // #6 竞态防护：如果新数据的进度比当前已有的更旧，跳过更新
+    // #6 绔炴€侀槻鎶わ細濡傛灉鏂版暟鎹殑杩涘害姣斿綋鍓嶅凡鏈夌殑鏇存棫锛岃烦杩囨洿鏂?
     const currentTask = get().currentTask;
     if (
       currentTask?.taskId === task.taskId
@@ -1772,11 +2038,11 @@ export const useGameStore = create((set, get) => {
       },
       currentTaskEvents: [],
       currentTaskCursor: 0,
-      latestTaskMessage: '正在恢复创作任务...',
+      latestTaskMessage: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',
       generationProgress: {
         stageIndex: 0,
         stageKey: DISPLAY_PIPELINE_STAGES[0].key,
-        stageLabel: '正在恢复创作任务...',
+        stageLabel: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',
         pct: DISPLAY_PIPELINE_STAGES[0].pct,
       },
       generatingGameId: persistedTask.gameId || null,
@@ -1859,7 +2125,7 @@ export const useGameStore = create((set, get) => {
     } catch (error) {
       set({
         isLoading: false,
-        error: error?.message || '取消任务失败，请重试',
+        error: error?.message || '鍙栨秷浠诲姟澶辫触锛岃閲嶈瘯',
       });
       throw error;
     }
@@ -1963,7 +2229,7 @@ export const useGameStore = create((set, get) => {
       const publishedGame = await gameService.publishGame(gameId, data);
       set({ currentGame: publishedGame, isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: error?.message || '发布失败' });
+      set({ isLoading: false, error: error?.message || '鍙戝竷澶辫触' });
       throw error;
     }
   },
@@ -1978,7 +2244,7 @@ export const useGameStore = create((set, get) => {
         isLoading: false,
       });
     } catch (error) {
-      set({ isLoading: false, error: error?.message || '加载失败' });
+      set({ isLoading: false, error: error?.message || '鍔犺浇澶辫触' });
       throw error;
     }
   },
@@ -2010,6 +2276,8 @@ export const useGameStore = create((set, get) => {
       creationSessionSubmitting: false,
       creationSessionRestoring: false,
       creationSessionContext: null,
+      creationSessionStreamingReply: null,
+      creationSessionStreamConnected: false,
     });
   },
 

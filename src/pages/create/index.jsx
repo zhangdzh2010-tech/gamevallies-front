@@ -86,6 +86,7 @@ export default function Create() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
+    creationSessionStreamingReply,
     startCreationSession,
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
@@ -363,7 +364,8 @@ export default function Create() {
   const isCreateSessionActive = creationSession?.entryMode === 'create' && creationSession?.status !== 'generating';
   const canSkipCreateQuestion = isCreateSessionActive
     && isCreationSessionQuestioning(creationSession?.status)
-    && Boolean(creationSession?.currentQuestion);
+    && Boolean(creationSession?.currentQuestion)
+    && creationSession?.currentQuestion?.skippable !== false;
   const canGenerateCreateSession = isCreateSessionActive
     && canGenerateCreationSession(creationSession?.status);
   const activeCreateInputValue = isCreateSessionActive ? sessionAnswer : prompt;
@@ -517,6 +519,7 @@ export default function Create() {
       onOrientationChange={setOrientation}
       orientationOptions={ORIENTATION_OPTIONS}
       session={isCreateSessionActive ? creationSession : null}
+      streamingMessage={isCreateSessionActive ? creationSessionStreamingReply : null}
       inputValue={activeCreateInputValue}
       onInputChange={(e) => {
         const nextValue = e?.detail?.value || '';

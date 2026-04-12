@@ -132,6 +132,7 @@ export default function GameIteratePage() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
+    creationSessionStreamingReply,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -166,7 +167,8 @@ export default function GameIteratePage() {
   const canStartIterateSession = Boolean(iterateFeedback.trim());
   const canSkipIterateQuestion = isIterateSessionActive
     && isCreationSessionQuestioning(creationSession?.status)
-    && Boolean(creationSession?.currentQuestion);
+    && Boolean(creationSession?.currentQuestion)
+    && creationSession?.currentQuestion?.skippable !== false;
   const canGenerateIterateSession = isIterateSessionActive
     && canGenerateCreationSession(creationSession?.status);
   useEffect(() => {
@@ -816,6 +818,7 @@ export default function GameIteratePage() {
       showSettings={false}
       topContent={iterateReferenceCard}
       session={isIterateSessionActive ? creationSession : null}
+      streamingMessage={isIterateSessionActive ? creationSessionStreamingReply : null}
       inputValue={iterateFeedback}
       onInputChange={(e) => setIterateFeedback(e?.detail?.value || '')}
       inputPlaceholder={activeIterateInputPlaceholder}
