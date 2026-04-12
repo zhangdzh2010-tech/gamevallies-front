@@ -5,7 +5,9 @@ const mockCreateCreationSession = jest.fn();
 const mockGetCreationSession = jest.fn();
 const mockGetActiveCreationSession = jest.fn();
 const mockGenerateFromCreationSession = jest.fn();
+const mockSubscribeCreationSessionStream = jest.fn();
 const mockSessionMessageHandlers = {};
+let mockCreationSessionStreamHandlers = null;
 const mockOnMessage = jest.fn((type, callback) => {
   mockSessionMessageHandlers[type] = callback;
 });
@@ -51,6 +53,7 @@ jest.mock('../../services/game', () => ({
   getCreationSession: (...args) => mockGetCreationSession(...args),
   getActiveCreationSession: (...args) => mockGetActiveCreationSession(...args),
   generateFromCreationSession: (...args) => mockGenerateFromCreationSession(...args),
+  subscribeCreationSessionStream: (...args) => mockSubscribeCreationSessionStream(...args),
   getGame: jest.fn(),
   generateGame: jest.fn(),
   getGameTypes: jest.fn(),
@@ -108,6 +111,11 @@ describe('gameStore creation session actions', () => {
     Object.keys(mockSessionMessageHandlers).forEach((key) => {
       delete mockSessionMessageHandlers[key];
     });
+    mockCreationSessionStreamHandlers = null;
+    mockSubscribeCreationSessionStream.mockImplementation((_session, handlers = {}) => {
+      mockCreationSessionStreamHandlers = handlers;
+      return jest.fn();
+    });
 
     useGameStore.setState({
       currentGame: null,
@@ -130,6 +138,8 @@ describe('gameStore creation session actions', () => {
       creationSessionSubmitting: false,
       creationSessionRestoring: false,
       creationSessionContext: null,
+      creationSessionStreamingReply: null,
+      creationSessionStreamConnected: false,
     });
   });
 
@@ -182,6 +192,7 @@ describe('gameStore creation session actions', () => {
       status: 'initializing',
     }));
     expect(useGameStore.getState().getCreationFlowStage()).toBe('initializing');
+    expect(mockSubscribeCreationSessionStream).toHaveBeenCalledTimes(1);
     expect(mockOnMessage).toHaveBeenCalledWith('session:updated', expect.any(Function));
 
     mockSessionMessageHandlers['session:updated']({
@@ -203,6 +214,152 @@ describe('gameStore creation session actions', () => {
       status: 'collecting',
     }));
     expect(useGameStore.getState().getCreationFlowStage()).toBe('collecting');
+  });
+
+  test('stores streaming assistant drafts from creation session SSE events', async () => {
+    mockCreateCreationSession.mockResolvedValue({
+      sessionId: 'session-stream',
+      status: 'collecting',
+      prompt: '做一个双人搞笑游戏',
+      title: 'Funny Duo',
+      entryMode: 'create',
+      currentQuestion: {
+        content: '想先确认一下互动方式。',
+      },
+    });
+
+    await useGameStore.getState().startCreationSession('做一个双人搞笑游戏', 'Funny Duo', {
+      entryMode: 'create',
+    });
+
+    expect(mockCreationSessionStreamHandlers).toBeTruthy();
+
+    mockCreationSessionStreamHandlers.onDelta({
+      type: 'delta',
+      sessionId: 'session-stream',
+      messageId: 'reply-1',
+      kind: 'question',
+      delta: '玩家',
+      accumulated: '玩家主要通过点击还是拖拽来操作？',
+      timestamp: Date.now(),
+    });
+
+    expect(useGameStore.getState().creationSessionStreamingReply).toEqual(expect.objectContaining({
+      id: 'reply-1',
+      role: 'assistant',
+      content: '玩家主要通过点击还是拖拽来操作？',
+      isStreaming: true,
+    }));
+
+    mockCreationSessionStreamHandlers.onSnapshot({
+      type: 'snapshot',
+      sessionId: 'session-stream',
+      session: {
+        sessionId: 'session-stream',
+        status: 'ready',
+        prompt: '做一个双人搞笑游戏',
+        title: 'Funny Duo',
+        entryMode: 'create',
+        messages: [
+          { id: 'message-1', role: 'user', content: '做一个双人搞笑游戏' },
+          { id: 'message-2', role: 'assistant', content: '玩家主要通过点击还是拖拽来操作？' },
+        ],
+      },
+    });
+
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      sessionId: 'session-stream',
+      status: 'ready',
+    }));
+    expect(useGameStore.getState().creationSessionStreamingReply).toBeNull();
+  });
+
+  test('preserves live assistant drafts when snapshots are partial or stale', async () => {
+    mockCreateCreationSession.mockResolvedValue({
+      sessionId: 'session-stale',
+      status: 'collecting',
+      revision: 7,
+      prompt: 'make a silly arcade game',
+      title: 'Arcade Draft',
+      entryMode: 'create',
+      currentQuestion: {
+        content: 'What is the main interaction?',
+      },
+      messages: [
+        { id: 'message-user-1', role: 'user', content: 'make a silly arcade game' },
+      ],
+    });
+
+    await useGameStore.getState().startCreationSession('make a silly arcade game', 'Arcade Draft', {
+      entryMode: 'create',
+    });
+
+    mockCreationSessionStreamHandlers.onDelta({
+      type: 'delta',
+      sessionId: 'session-stale',
+      messageId: 'reply-stale-1',
+      kind: 'question',
+      delta: 'tap',
+      accumulated: 'Should the player tap or drag to move?',
+      timestamp: Date.now(),
+    });
+
+    mockCreationSessionStreamHandlers.onSnapshot({
+      type: 'snapshot',
+      sessionId: 'session-stale',
+      session: {
+        sessionId: 'session-stale',
+        status: 'collecting',
+        revision: 7,
+        prompt: 'make a silly arcade game',
+        title: 'Arcade Draft',
+        entryMode: 'create',
+        messages: [
+          { id: 'message-user-1', role: 'user', content: 'make a silly arcade game' },
+        ],
+        currentQuestion: {
+          content: 'What is the main interaction?',
+        },
+      },
+    });
+
+    expect(useGameStore.getState().creationSessionStreamingReply).toEqual(expect.objectContaining({
+      id: 'reply-stale-1',
+      content: 'Should the player tap or drag to move?',
+      isStreaming: true,
+    }));
+
+    mockCreationSessionStreamHandlers.onSnapshot({
+      type: 'snapshot',
+      sessionId: 'session-stale',
+      session: {
+        sessionId: 'session-stale',
+        status: 'collecting',
+        revision: 6,
+        prompt: 'make a silly arcade game',
+        title: 'Arcade Draft',
+        entryMode: 'create',
+        messages: [
+          { id: 'message-user-1', role: 'user', content: 'make a silly arcade game' },
+        ],
+        currentQuestion: {
+          content: 'Older question that should be ignored',
+        },
+      },
+    });
+
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      sessionId: 'session-stale',
+      revision: 7,
+      currentQuestion: expect.objectContaining({
+        content: 'What is the main interaction?',
+      }),
+    }));
+    expect(useGameStore.getState().creationSessionStreamingReply).toEqual(expect.objectContaining({
+      id: 'reply-stale-1',
+      content: 'Should the player tap or drag to move?',
+      isStreaming: true,
+    }));
   });
 
   test('getCreationFlowStage reflects session and task state priority', () => {

@@ -1,5 +1,8 @@
 import { post, get, del, patch } from './api';
+import { API_CONFIG } from '../types';
 import { normalizeGameOrientation } from '../utils/gameOrientation';
+import { isH5Runtime } from '../utils/runtime';
+import { Storage } from '../utils/storage';
 
 function mergeTaskPayload(source) {
   if (!source || typeof source !== 'object') {
@@ -124,6 +127,7 @@ function normalizeCreationSessionMessage(message, index = 0) {
     id: message.id || message.messageId || `message-${index}`,
     role: message.role || message.senderRole || message.type || 'assistant',
     content: message.content || message.text || message.message || '',
+    kind: message.kind || message.messageKind || null,
     createdAt: message.createdAt || message.timestamp || null,
     revision: message.revision ?? null,
     meta: message.meta || null,
@@ -138,14 +142,228 @@ function normalizeCreationQuestion(question) {
   return {
     id: question.id || question.questionId || '',
     key: question.key || question.slotKey || question.id || '',
+    slotKey: question.slotKey || question.key || question.id || '',
     title: question.title || question.label || '',
     content: question.content || question.text || question.prompt || '',
     description: question.description || question.hint || '',
     answerType: question.answerType || question.inputType || 'text',
     required: question.required !== false,
+    skippable: question.skippable !== false,
     options: Array.isArray(question.options) ? question.options : [],
     placeholder: question.placeholder || '',
     metadata: question.metadata || null,
+  };
+}
+
+function normalizeCreationSessionStreamTimestamp(rawTimestamp) {
+  const numericTimestamp = Number(rawTimestamp);
+  if (Number.isFinite(numericTimestamp) && numericTimestamp > 0) {
+    return numericTimestamp;
+  }
+
+  if (typeof rawTimestamp === 'string') {
+    const parsedTimestamp = Date.parse(rawTimestamp);
+    if (Number.isFinite(parsedTimestamp)) {
+      return parsedTimestamp;
+    }
+  }
+
+  return Date.now();
+}
+
+function getCreationSessionStreamPath(sessionOrPath) {
+  if (typeof sessionOrPath === 'string') {
+    return sessionOrPath;
+  }
+
+  if (!sessionOrPath || typeof sessionOrPath !== 'object') {
+    return '';
+  }
+
+  if (sessionOrPath.streamPath) {
+    return sessionOrPath.streamPath;
+  }
+
+  if (sessionOrPath.sessionId) {
+    return `/api/v1/games/creation-sessions/${sessionOrPath.sessionId}/events`;
+  }
+
+  return '';
+}
+
+function getCreationSessionStreamBaseUrl() {
+  return API_CONFIG.SERVICE_URLS?.GAME || API_CONFIG.BASE_URL || '';
+}
+
+function appendTokenQuery(url, token) {
+  if (!url || !token) {
+    return url;
+  }
+
+  const joiner = url.includes('?') ? '&' : '?';
+  return `${url}${joiner}token=${encodeURIComponent(token)}`;
+}
+
+function getEventSourceConstructor() {
+  if (typeof window !== 'undefined' && typeof window.EventSource === 'function') {
+    return window.EventSource;
+  }
+
+  if (typeof globalThis !== 'undefined' && typeof globalThis.EventSource === 'function') {
+    return globalThis.EventSource;
+  }
+
+  return null;
+}
+
+function parseCreationSessionStreamPayload(rawData) {
+  if (rawData == null || rawData === '') {
+    return null;
+  }
+
+  if (typeof rawData === 'object') {
+    return rawData;
+  }
+
+  try {
+    return JSON.parse(rawData);
+  } catch (_error) {
+    return null;
+  }
+}
+
+export function supportsCreationSessionEventStream() {
+  return isH5Runtime() && Boolean(getEventSourceConstructor());
+}
+
+export function buildCreationSessionStreamUrl(sessionOrPath) {
+  const rawPath = getCreationSessionStreamPath(sessionOrPath);
+  if (!rawPath) {
+    return '';
+  }
+
+  const absoluteUrl = rawPath.startsWith('http')
+    ? rawPath
+    : `${getCreationSessionStreamBaseUrl()}${rawPath}`;
+  const token = Storage.getToken();
+
+  return appendTokenQuery(absoluteUrl, token);
+}
+
+export function normalizeCreationSessionStreamEvent(rawEvent) {
+  if (!rawEvent || typeof rawEvent !== 'object') {
+    return null;
+  }
+
+  const type = rawEvent.type || 'message';
+  const timestamp = normalizeCreationSessionStreamTimestamp(rawEvent.timestamp);
+  const baseEvent = {
+    type,
+    sessionId: rawEvent.sessionId || '',
+    timestamp,
+  };
+
+  if (type === 'bootstrap' || type === 'snapshot') {
+    const session = normalizeCreationSessionSnapshot(rawEvent.session || rawEvent.snapshot || null);
+    if (!session?.sessionId) {
+      return null;
+    }
+
+    return {
+      ...baseEvent,
+      sessionId: baseEvent.sessionId || session.sessionId,
+      session,
+    };
+  }
+
+  if (type === 'delta') {
+    return {
+      ...baseEvent,
+      messageId: rawEvent.messageId || '',
+      kind: rawEvent.kind || 'question',
+      delta: String(rawEvent.delta || ''),
+      accumulated: String(rawEvent.accumulated || rawEvent.delta || ''),
+    };
+  }
+
+  if (type === 'done') {
+    return {
+      ...baseEvent,
+      messageId: rawEvent.messageId || '',
+      kind: rawEvent.kind || 'question',
+      message: String(rawEvent.message || ''),
+    };
+  }
+
+  if (type === 'error') {
+    return {
+      ...baseEvent,
+      code: rawEvent.code || 'session_error',
+      message: String(rawEvent.message || ''),
+      retryable: rawEvent.retryable === true,
+      details: rawEvent.details || null,
+    };
+  }
+
+  return {
+    ...baseEvent,
+    payload: rawEvent,
+  };
+}
+
+export function subscribeCreationSessionStream(sessionOrPath, handlers = {}) {
+  if (!supportsCreationSessionEventStream()) {
+    handlers.onUnsupported?.();
+    return () => {};
+  }
+
+  const streamUrl = buildCreationSessionStreamUrl(sessionOrPath);
+  const EventSourceCtor = getEventSourceConstructor();
+  if (!streamUrl || !EventSourceCtor) {
+    handlers.onUnsupported?.();
+    return () => {};
+  }
+
+  const eventSource = new EventSourceCtor(streamUrl, { withCredentials: true });
+  const removeListeners = [];
+  const bindNamedEvent = (eventName, callbackName) => {
+    const listener = (nativeEvent) => {
+      const payload = parseCreationSessionStreamPayload(nativeEvent?.data);
+      const normalizedEvent = normalizeCreationSessionStreamEvent({
+        ...(payload || {}),
+        type: payload?.type || eventName,
+      });
+
+      if (!normalizedEvent) {
+        return;
+      }
+
+      handlers[callbackName]?.(normalizedEvent, nativeEvent);
+    };
+
+    eventSource.addEventListener(eventName, listener);
+    removeListeners.push(() => eventSource.removeEventListener(eventName, listener));
+  };
+
+  bindNamedEvent('bootstrap', 'onBootstrap');
+  bindNamedEvent('snapshot', 'onSnapshot');
+  bindNamedEvent('delta', 'onDelta');
+  bindNamedEvent('done', 'onDone');
+  bindNamedEvent('error', 'onError');
+
+  eventSource.onopen = (nativeEvent) => {
+    handlers.onOpen?.(nativeEvent);
+  };
+
+  eventSource.onerror = (nativeEvent) => {
+    handlers.onTransportError?.(nativeEvent);
+  };
+
+  return () => {
+    eventSource.onopen = null;
+    eventSource.onerror = null;
+    removeListeners.forEach((removeListener) => removeListener());
+    eventSource.close();
   };
 }
 
@@ -180,6 +398,9 @@ export function normalizeCreationSessionSnapshot(raw) {
     revision: Number.isFinite(revision) ? revision : 0,
     status: raw.status || 'collecting',
     entryMode: raw.entryMode || raw.mode || 'create',
+    streamPath: raw.streamPath || raw.eventsPath || '',
+    initialPrompt: raw.initialPrompt || raw.prompt || raw.description || '',
+    titleDraft: raw.titleDraft || raw.title || raw.sessionTitle || '',
     title: raw.title || raw.titleDraft || raw.sessionTitle || '',
     prompt: raw.prompt || raw.description || raw.initialPrompt || '',
     orientation: normalizeGameOrientation(raw.orientation || raw.gameOrientation),
@@ -188,9 +409,14 @@ export function normalizeCreationSessionSnapshot(raw) {
     gameId: raw.gameId || raw.generatedGameId || raw.resultGameId || '',
     slotState: raw.slotState && typeof raw.slotState === 'object' ? raw.slotState : {},
     missingRequired: Array.isArray(raw.missingRequired) ? raw.missingRequired : [],
+    skippedSlots: Array.isArray(raw.skippedSlots) ? raw.skippedSlots : [],
+    slotFillPct: Number(raw.slotFillPct ?? raw.slotCoverage ?? 0) || 0,
+    readyToGenerate: raw.readyToGenerate === true || raw.ready === true || raw.status === 'ready',
+    questionBudget: Number(raw.questionBudget ?? 0) || 0,
     planDraft: raw.planDraft || raw.plan || raw.specDraft || null,
     confidenceSummary: raw.confidenceSummary || raw.confidence || null,
     questionStrategy: raw.questionStrategy || raw.strategy || null,
+    intentBuild: raw.intentBuild || null,
     currentQuestion: normalizeCreationQuestion(raw.currentQuestion || raw.question || null),
     messages: messages.map((message, index) => normalizeCreationSessionMessage(message, index)).filter(Boolean),
     generationTask: normalizeGenerationTask(generationTask),
@@ -386,6 +612,10 @@ export async function updateGameSettings(gameId, settings) {
 
 export default {
   normalizeCreationSessionSnapshot,
+  normalizeCreationSessionStreamEvent,
+  supportsCreationSessionEventStream,
+  buildCreationSessionStreamUrl,
+  subscribeCreationSessionStream,
   createCreationSession,
   getActiveCreationSession,
   getCreationSession,

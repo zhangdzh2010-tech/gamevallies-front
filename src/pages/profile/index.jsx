@@ -27,6 +27,7 @@ import { getBookmarkedGames, mergeBookmarkedFlags, setGameBookmarked } from '../
 import { subscribeGameUnlocked } from '../../utils/gameUnlock';
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
+import { getQuotaSummary } from '../../utils/quotaSummary';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
@@ -713,6 +714,7 @@ export default function Profile() {
   const currentUserId = Storage.getUser()?.id;
   const freeQuota = useQuotaStore((s) => s.freeQuota);
   const totalFreeQuota = useQuotaStore((s) => s.totalFreeQuota);
+  const subscription = useQuotaStore((s) => s.subscription);
   const subscriptionActive = useQuotaStore((s) => s.subscription.active);
   const fetchQuota = useQuotaStore((s) => s.fetchQuota);
   const [activeTab, setActiveTab] = useState('works');
@@ -1209,13 +1211,12 @@ export default function Profile() {
     { value: formatNumber(trackedTasks.length), label: '分析' },
     { value: formatNumber(normalizedBookmarkedGames.length), label: '收藏' },
   ];
-  const quotaUsed = Math.max(0, totalFreeQuota - freeQuota);
-  const quotaUsagePercent = totalFreeQuota > 0
-    ? Math.max(0, Math.min(100, Math.round((quotaUsed / totalFreeQuota) * 100)))
-    : 0;
-  const membershipPlanLabel = subscriptionActive ? '会员卡' : '免费卡';
-  const membershipQuotaText = subscriptionActive ? '已解锁更多创作额度' : `剩余 ${freeQuota} 次免费额度`;
-  const membershipQuotaSub = subscriptionActive ? '查看订阅权益与有效期' : `已使用 ${quotaUsed}/${totalFreeQuota}`;
+  const quotaSummary = getQuotaSummary({ freeQuota, totalFreeQuota, subscription });
+  const membershipPlanLabel = '创作额度';
+  const membershipQuotaText = `剩余 ${quotaSummary.totalRemaining} 次创作额度`;
+  const membershipQuotaSub = quotaSummary.totalQuota > 0
+    ? `已使用 ${quotaSummary.totalUsed}/${quotaSummary.totalQuota}`
+    : '当前还没有可用额度';
   const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
@@ -1260,20 +1261,20 @@ export default function Profile() {
           </View>
 
           <View className="profile-membership-row">
-            <View className="profile-membership-main">
-              <View className="profile-membership-head">
-                <Text className="profile-membership-plan">{membershipPlanLabel}</Text>
-                <Text className="profile-membership-kicker">{subscriptionActive ? '订阅权益' : '免费额度'}</Text>
-              </View>
-              <Text className="profile-membership-text">{membershipQuotaText}</Text>
-              <View className="profile-membership-meter">
-                <View className="profile-membership-meter__track">
-                  <View
-                    className="profile-membership-meter__fill"
-                    style={{ width: `${subscriptionActive ? 100 : quotaUsagePercent}%` }}
-                  />
+              <View className="profile-membership-main">
+                <View className="profile-membership-head">
+                  <Text className="profile-membership-plan">{membershipPlanLabel}</Text>
+                  <Text className="profile-membership-kicker">{subscriptionActive ? '会员权益已生效' : '当前为基础额度'}</Text>
                 </View>
-                <Text className="profile-membership-sub">{membershipQuotaSub}</Text>
+                <Text className="profile-membership-text">{membershipQuotaText}</Text>
+                <View className="profile-membership-meter">
+                  <View className="profile-membership-meter__track">
+                    <View
+                      className="profile-membership-meter__fill"
+                      style={{ width: `${quotaSummary.usagePercent}%` }}
+                    />
+                  </View>
+                  <Text className="profile-membership-sub">{membershipQuotaSub}</Text>
               </View>
             </View>
             <View

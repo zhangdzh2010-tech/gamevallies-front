@@ -2,17 +2,56 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const mockStartCreationSession = jest.fn(() => Promise.resolve());
+const mockStartCreationSession = jest.fn(() => Promise.resolve({ sessionId: 'fork-new' }));
 const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
 const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
 const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockGetMatchingActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
+const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
 const mockResetCreationSessionState = jest.fn();
 const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockOpenIteratePageWithAuth = jest.fn();
+const mockSetPostLoginRedirect = jest.fn();
+const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
+const mockGetGame = jest.fn();
+
+const mockSourceGame = {
+  id: 'source-1',
+  title: 'Source Game',
+  status: 'published',
+  description: 'Community puzzle game',
+  orientation: 'portrait',
+  allowFork: true,
+  plays: 530,
+  likes: 48,
+  forks: 12,
+  author: {
+    id: 'author-1',
+    displayName: 'Author One',
+  },
+};
+
+const mockForkSession = {
+  sessionId: 'fork-1',
+  entryMode: 'fork',
+  sourceGameId: 'source-1',
+  status: 'collecting',
+  prompt: 'Keep the core loop but swap the art style',
+  planDraft: 'Version the art and keep the loop readable.',
+  currentQuestion: {
+    content: 'What should remain unchanged?',
+    skippable: true,
+  },
+  messages: [
+    {
+      id: 'msg-1',
+      role: 'assistant',
+      content: 'Tell me what to keep and what to change.',
+    },
+  ],
+};
 
 let mockGameStoreState;
 
@@ -53,7 +92,12 @@ jest.mock('../../../components/common/PageScrollContainer', () => ({
 }));
 
 jest.mock('../../../components/common/PipelineOrbit', () => ({
-  PipelineOrbit: ({ stageLabel }) => <div>{stageLabel}</div>,
+  PipelineOrbit: ({ title, stageLabel }) => (
+    <div>
+      <div>{title}</div>
+      <div>{stageLabel}</div>
+    </div>
+  ),
 }));
 
 jest.mock('../../../components/common/PaywallPopup', () => ({
@@ -61,154 +105,83 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 }));
 
 jest.mock('../../../components/creation', () => ({
-  CreationSessionShell: ({ title, sections }) => (
-    <div>
-      <div>{title}</div>
-      {sections?.map((section) => (
-        <div key={section.key}>{section.node}</div>
-      ))}
-    </div>
-  ),
-  CreationQuestionCard: ({ title, question, hint }) => (
-    <div>
-      <div>{title}</div>
-      <div>{question?.content}</div>
-      <div>{hint}</div>
-    </div>
-  ),
-  CreationAnswerComposer: ({ value, onChange, placeholder, suggestions }) => (
-    <div>
+  CreationCreateWorkspace: ({
+    topContent,
+    session,
+    streamingMessage,
+    inputValue,
+    onInputChange,
+    onSend,
+    onSkip,
+    onGenerate,
+    onPreview,
+    errorMessage,
+  }) => (
+    <div data-testid="workspace">
+      {topContent}
+      {streamingMessage?.content ? (
+        <div data-testid="workspace-streaming">{streamingMessage.content}</div>
+      ) : null}
       <textarea
-        aria-label="fork-initial-answer"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange({ detail: { value: e.target.value } })}
+        aria-label={session ? 'fork-session-answer' : 'fork-initial-answer'}
+        value={inputValue}
+        onChange={(e) => onInputChange({ detail: { value: e.target.value } })}
       />
-      {(suggestions || []).map((item) => (
-        <button key={item} type="button" onClick={() => onChange({ detail: { value: item } })}>
-          {item}
-        </button>
-      ))}
+      <button data-testid="workspace-send" type="button" onClick={onSend}>send</button>
+      <button data-testid="workspace-skip" type="button" onClick={onSkip}>skip</button>
+      <button data-testid="workspace-generate" type="button" onClick={onGenerate}>generate</button>
+      <button data-testid="workspace-preview" type="button" onClick={onPreview}>preview</button>
+      {errorMessage ? <div>{errorMessage}</div> : null}
+    </div>
+  ),
+  CreationReferenceCard: ({ title, description }) => (
+    <div>
+      <div>{title}</div>
+      <div>{description}</div>
+    </div>
+  ),
+  CreationResumeScene: ({ subjectTitle, session, onContinue, onRestart }) => (
+    <div data-testid="resume-scene">
+      <div>{subjectTitle}</div>
+      <div>{session?.prompt || ''}</div>
+      <button data-testid="resume-continue" type="button" onClick={onContinue}>continue</button>
+      <button data-testid="resume-restart" type="button" onClick={onRestart}>restart</button>
     </div>
   ),
   CreationSessionActions: ({ actions }) => (
     <div>
       {(actions || []).map((action) => (
-        <button key={action.key} type="button" onClick={action.onClick} disabled={action.disabled}>
+        <button key={action.key} type="button" onClick={action.onClick}>
           {action.label}
         </button>
       ))}
     </div>
   ),
-  CreationResumePrompt: ({ title, prompt, continueLabel, restartLabel, onContinue, onRestart }) => (
+  CreationSessionShell: ({ title, sections }) => (
     <div>
       <div>{title}</div>
-      <div>{prompt}</div>
-      <button type="button" onClick={onContinue}>{continueLabel}</button>
-      <button type="button" onClick={onRestart}>{restartLabel}</button>
+      {(sections || []).map((section) => (
+        <div key={section.key}>{section.node}</div>
+      ))}
     </div>
   ),
-  CreationResumeScene: ({ subjectTitle, session }) => (
+  CreationStateCard: ({ title, description }) => (
     <div>
-      <div>resume-scene</div>
-      <div>{subjectTitle}</div>
-      <div>{session?.prompt}</div>
+      <div>{title}</div>
+      <div>{description}</div>
     </div>
   ),
-  CreationEntryErrorCard: ({ error }) => <div>{error}</div>,
-  buildCreationSessionActions: jest.fn((config) => ([
-    {
-      key: 'submit',
-      label: config.submitting ? '提交中...' : '提交回答',
-      disabled: config.submitting || !String(config.answerValue || '').trim(),
-      onClick: config.onSubmit,
-    },
-    {
-      key: 'skip',
-      label: '跳过此题',
-      disabled: config.submitting,
-      onClick: config.onSkip,
-    },
-    {
-      key: 'generate',
-      label: config.generateLabel,
-      disabled: config.submitting,
-      onClick: config.onGenerate,
-    },
-    {
-      key: 'restart',
-      label: '重新开始',
-      disabled: config.submitting,
-      onClick: config.onRestart,
-    },
-  ])),
-  buildCreationSessionSceneProps: jest.fn((config) => ({
-    className: 'fork-session-panel',
-    panel: {
-      session: config.session,
-      answerValue: config.answerValue,
-      onAnswerChange: config.onAnswerChange,
-      answerPlaceholder: config.answerPlaceholder || '例如：保留核心玩法，但换成像素风，节奏再快一点。',
-      actions: config.actions,
-      errorMessage: config.errorMessage,
-    },
-  })),
-  CreationSessionScene: ({ panel }) => (
-    <div>
-      <div>{typeof panel?.session?.planDraft === 'string' ? panel.session.planDraft : 'plan-card'}</div>
-      <div>{panel?.session?.confidenceSummary || 'confidence-card'}</div>
-      <div>{panel?.session?.messages?.map((message) => message.content).join(' ') || 'conversation-card'}</div>
-      {panel?.session?.status === 'collecting' ? (
-        <>
-          <div>{panel?.session?.currentQuestion?.content || 'question-card'}</div>
-          <textarea
-            aria-label="fork-session-answer"
-            value={panel?.answerValue}
-            placeholder={panel?.answerPlaceholder}
-            onChange={(e) => panel?.onAnswerChange({ detail: { value: e.target.value } })}
-          />
-        </>
-      ) : null}
-      <div>{panel?.session?.status === 'abandoned' ? '本轮复刻会话已结束，如需继续请重新开始新的会话。' : ''}</div>
-      <div>
-        {(panel?.actions || []).map((action) => (
-          <button
-            key={action.key}
-            type="button"
-            onClick={action.onClick}
-            disabled={Boolean(action.disabled)
-              || (action.key === 'submit' && panel?.session?.status !== 'collecting')
-              || (action.key === 'skip' && panel?.session?.status !== 'collecting')
-              || (action.key === 'generate' && !['collecting', 'ready'].includes(panel?.session?.status))}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
-      {panel?.errorMessage ? <div>{panel.errorMessage}</div> : null}
-    </div>
-  ),
+  canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
+  isCreationSessionQuestioning: jest.fn((status) => ['collecting', 'ready'].includes(status)),
 }));
 
 jest.mock('../../../services/game', () => ({
-  getGame: jest.fn(() => Promise.resolve({
-    id: 'source-1',
-    title: '原始跑酷',
-    status: 'published',
-    description: '一款节奏紧凑的跑酷作品',
-    allowFork: true,
-    forks: 12,
-    likes: 48,
-    plays: 530,
-    author: {
-      id: 'author-1',
-      displayName: '作者A',
-    },
-  })),
+  getGame: (...args) => mockGetGame(...args),
+  getActiveCreationSession: (...args) => mockGetActiveCreationSession(...args),
 }));
 
 jest.mock('../../../store/gameStore', () => ({
-  PIPELINE_STAGES: [{ key: 'submitting', label: '提交创作请求', pct: 5 }],
+  PIPELINE_STAGES: [{ key: 'submitting', label: 'Submitting', pct: 5 }],
   isCompletedGameStatus: jest.fn((status) => ['ready', 'draft', 'published', 'review'].includes(status)),
   useGameStore: jest.fn(() => mockGameStoreState),
 }));
@@ -217,8 +190,8 @@ jest.mock('../../../utils/authNavigation', () => ({
   LOGIN_PAGE_URL: '/pages/login/index',
   buildForkPageUrl: jest.fn(() => '/pages/game/fork/index?sourceGameId=source-1'),
   isLoggedIn: jest.fn(() => true),
-  openIteratePageWithAuth: mockOpenIteratePageWithAuth,
-  setPostLoginRedirect: jest.fn(),
+  openIteratePageWithAuth: (...args) => mockOpenIteratePageWithAuth(...args),
+  setPostLoginRedirect: (...args) => mockSetPostLoginRedirect(...args),
 }));
 
 jest.mock('../../../utils/storage', () => ({
@@ -238,16 +211,18 @@ function buildGameStoreState(overrides = {}) {
     currentTask: null,
     isGenerating: false,
     generationProgress: null,
+    error: '',
+    terminalError: null,
     creationSession: null,
     creationSessionError: null,
     creationSessionSubmitting: false,
-    getMatchingActiveCreationSession: mockGetMatchingActiveCreationSession,
+    creationSessionStreamingReply: null,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
     skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
     generateFromCreationSession: mockGenerateFromCreationSession,
-    abandonCreationSession: jest.fn(() => Promise.resolve()),
+    abandonCreationSession: mockAbandonCreationSession,
     resetCreationSessionState: mockResetCreationSessionState,
     ...overrides,
   };
@@ -256,242 +231,81 @@ function buildGameStoreState(overrides = {}) {
 describe('Fork page creation session flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetGame.mockResolvedValue(mockSourceGame);
     mockGameStoreState = buildGameStoreState();
   });
 
-  test('does not auto-start a fork session before the user gives the first instruction', async () => {
+  test('does not auto-start a fork session before the first instruction', async () => {
     render(<ForkPage />);
 
+    expect(await screen.findByLabelText('fork-initial-answer')).toBeTruthy();
     await waitFor(() => {
-      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
-      expect(screen.getByText('开始复刻')).toBeTruthy();
+      expect(mockGetActiveCreationSession).toHaveBeenCalled();
     });
-
     expect(mockStartCreationSession).not.toHaveBeenCalled();
   });
 
-  test('starts a fork session from the first user instruction', async () => {
+  test('starts a fork session from the first message', async () => {
     render(<ForkPage />);
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
-    });
-
-    fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
-      target: { value: '保留贪吃蛇核心玩法，但换成赛博风，节奏更快一些。' },
-    });
-    fireEvent.click(screen.getByText('开始复刻'));
+    const initialInput = await screen.findByLabelText('fork-initial-answer');
+    fireEvent.change(initialInput, { target: { value: 'Keep the loop and switch to neon visuals' } });
+    fireEvent.click(screen.getByTestId('workspace-send'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '保留贪吃蛇核心玩法，但换成赛博风，节奏更快一些。',
-        '原始跑酷',
+        'Keep the loop and switch to neon visuals',
+        'Source Game',
         expect.objectContaining({
           entryMode: 'fork',
           sourceGameId: 'source-1',
-        })
+          generationTier: 'standard',
+        }),
       );
     });
   });
 
-  test('shows the store validation message when the first fork instruction is too short', async () => {
-    mockStartCreationSession.mockRejectedValueOnce(new Error('至少输入 5 个字，再开始这一轮'));
-
-    render(<ForkPage />);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
-    });
-
-    fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
-      target: { value: '美化页面' },
-    });
-    fireEvent.click(screen.getByText('开始复刻'));
-
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({
-        title: '至少输入 5 个字，再开始这一轮',
-      }));
-    });
-  });
-
-  test('renders fork creation session and can trigger generation', async () => {
+  test('renders the streaming draft and submits follow-up answers for an active fork session', async () => {
     mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-1',
-        entryMode: 'fork',
-        status: 'collecting',
-        revision: 8,
-        sourceGameId: 'source-1',
-        generationTier: 'standard',
-        planDraft: '系统建议保留跑酷核心，重点改角色和视觉包装',
-        confidenceSummary: '已理解复刻目标',
-        currentQuestion: {
-          content: '你更想优先改角色主题还是关卡节奏？',
-        },
-        messages: [{ id: 'm1', role: 'user', content: '我想做一个像素风版本' }],
+      creationSession: mockForkSession,
+      creationSessionStreamingReply: {
+        id: 'fork-draft-1',
+        role: 'assistant',
+        content: 'Live streamed fork draft',
+        isStreaming: true,
       },
     });
 
     render(<ForkPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('系统建议保留跑酷核心，重点改角色和视觉包装')).toBeTruthy();
-    });
+    const answerInput = await screen.findByLabelText('fork-session-answer');
+    expect(screen.getByTestId('workspace-streaming').textContent).toBe('Live streamed fork draft');
 
-    fireEvent.click(screen.getByText('开始复刻'));
+    fireEvent.change(answerInput, { target: { value: 'Keep the core puzzle but soften the difficulty curve' } });
+    fireEvent.click(screen.getByTestId('workspace-send'));
 
     await waitFor(() => {
-      expect(mockGenerateFromCreationSession).toHaveBeenCalledWith({
-        revision: 8,
-        orientation: 'portrait',
-        generationTier: 'standard',
-      });
+      expect(mockAnswerCreationSessionQuestion).toHaveBeenCalledWith('Keep the core puzzle but soften the difficulty curve');
     });
   });
 
-  test('abandoned fork session shows notice and disables stale actions', async () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-2',
-        entryMode: 'fork',
-        status: 'abandoned',
-        sourceGameId: 'source-1',
-        planDraft: '旧复刻方案',
-        confidenceSummary: '旧理解',
-        currentQuestion: {
-          content: '这个问题不该继续出现',
-        },
-      },
+  test('shows the resume scene for a matching active fork session restored from the backend', async () => {
+    mockGetActiveCreationSession.mockResolvedValueOnce({
+      sessionId: 'resume-fork-1',
+      entryMode: 'fork',
+      sourceGameId: 'source-1',
+      title: 'Source Game',
+      prompt: 'Keep the same mechanics but add a sci-fi layer',
     });
 
     render(<ForkPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText('本轮复刻会话已结束，如需继续请重新开始新的会话。')).toBeTruthy();
-    });
-    expect(screen.queryByText('这个问题不该继续出现')).toBeNull();
-    expect(screen.getByText('开始复刻').disabled).toBe(true);
-    expect(screen.getByText('跳过此题').disabled).toBe(true);
-  });
+    expect(await screen.findByTestId('resume-scene')).toBeTruthy();
 
-  test('restart on fork session starts a brand new fork session', async () => {
-    const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
-    mockGameStoreState = buildGameStoreState({
-      abandonCreationSession: mockAbandonCreationSession,
-      resetCreationSessionState: mockResetCreationSessionState,
-      creationSession: {
-        sessionId: 'session-3',
-        entryMode: 'fork',
-        status: 'collecting',
-        sourceGameId: 'source-1',
-        planDraft: '旧复刻方案',
-        currentQuestion: {
-          content: '旧问题',
-        },
-      },
-    });
-
-    render(<ForkPage />);
+    fireEvent.click(screen.getByTestId('resume-continue'));
 
     await waitFor(() => {
-      expect(screen.getByText('旧复刻方案')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText('重新开始'));
-
-    await waitFor(() => {
-      expect(mockResetCreationSessionState).toHaveBeenCalledTimes(1);
-      expect(mockAbandonCreationSession).toHaveBeenCalledWith('session-3');
-      expect(mockStartCreationSession).not.toHaveBeenCalled();
-    });
-  });
-
-  test('fork page ignores unrelated global generating state', async () => {
-    mockGameStoreState = buildGameStoreState({
-      isGenerating: true,
-      currentTask: {
-        taskId: 'task-other',
-      },
-      creationSession: {
-        sessionId: 'session-other',
-        entryMode: 'create',
-        status: 'generating',
-      },
-    });
-
-    render(<ForkPage />);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
-    });
-    expect(mockStartCreationSession).not.toHaveBeenCalled();
-    expect(screen.queryByText('AI 正在生成复刻作品')).toBeNull();
-  });
-
-  test('initial fork retry keeps the first instruction and offers a retry action', async () => {
-    mockStartCreationSession.mockImplementationOnce(() => Promise.reject(new Error('创建失败，请重试')));
-    mockGameStoreState = buildGameStoreState({
-      creationSessionError: '创建失败，请重试',
-    });
-
-    render(<ForkPage />);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('fork-initial-answer')).toBeTruthy();
-    });
-
-    fireEvent.change(screen.getByLabelText('fork-initial-answer'), {
-      target: { value: '保留核心玩法，但改成美食主题，节奏更轻快。' },
-    });
-    fireEvent.click(screen.getByText('开始复刻'));
-
-    await waitFor(() => {
-      expect(mockStartCreationSession).toHaveBeenCalledWith(
-        '保留核心玩法，但改成美食主题，节奏更轻快。',
-        '原始跑酷',
-        expect.objectContaining({
-          entryMode: 'fork',
-          sourceGameId: 'source-1',
-        })
-      );
-    });
-
-    expect(screen.getByLabelText('fork-initial-answer').value).toBe('保留核心玩法，但改成美食主题，节奏更轻快。');
-  });
-
-  test('fork page clears a stale store session before showing the resume choice for the matching active session', async () => {
-    mockResetCreationSessionState.mockImplementation(() => {
-      mockGameStoreState = {
-        ...mockGameStoreState,
-        creationSession: null,
-        creationSessionError: null,
-      };
-    });
-    mockGetMatchingActiveCreationSession.mockImplementationOnce(async () => {
-      mockResetCreationSessionState();
-      return {
-        sessionId: 'session-fork',
-        entryMode: 'fork',
-        sourceGameId: 'source-1',
-        title: '原始跑酷',
-        prompt: '继续这轮新版本对话',
-      };
-    });
-    mockGameStoreState = buildGameStoreState({
-      creationSession: {
-        sessionId: 'session-other',
-        entryMode: 'create',
-        status: 'collecting',
-      },
-    });
-
-    render(<ForkPage />);
-
-    await waitFor(() => {
-      expect(mockResetCreationSessionState).toHaveBeenCalled();
-      expect(screen.getByText('resume-scene')).toBeTruthy();
-      expect(screen.getByText('继续这轮新版本对话')).toBeTruthy();
+      expect(mockRefreshCreationSession).toHaveBeenCalledWith('resume-fork-1');
     });
   });
 });

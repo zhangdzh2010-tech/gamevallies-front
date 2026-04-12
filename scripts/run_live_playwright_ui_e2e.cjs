@@ -7,6 +7,11 @@ const BACKEND_ROOT = path.resolve(FRONTEND_ROOT, '..', 'gamevallies-backend');
 const ENV_PATH = path.join(BACKEND_ROOT, '.env.deploy');
 const CHROME_EXECUTABLE = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const MOBILE_DEVICE = devices['iPhone 13'];
+const WORKSPACE_TITLE_INPUT_SELECTOR = '.creation-config-input-wrap input, .creation-create-settings__field--name input, input.creation-config-input, input.form-input, input.create-entry__name-input, input.weui-input';
+const WORKSPACE_COMPOSER_INPUT_SELECTOR = '.creation-create-composer__input-wrap input, .creation-create-composer__input input, input.creation-create-composer__input, textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea.form-textarea, textarea.create-entry__textarea, textarea';
+const WORKSPACE_SEND_SELECTOR = '.creation-create-composer__send:not(.creation-create-composer__send--disabled), .creation-session-actions__button--ghost:not(.creation-session-actions__button--disabled)';
+const WORKSPACE_PRIMARY_ACTION_SELECTOR = '.creation-create-composer__action--primary:not(.creation-create-composer__action--disabled), .creation-session-actions__button--primary:not(.creation-session-actions__button--disabled), .form-actions .action-btn.play-btn, .iterate-submit-btn, .iterate-primary-btn, .fork-submit-btn';
+const WORKSPACE_LANDSCAPE_SELECTOR = '.creation-create-orientation__option:nth-child(2), .orientation-option:nth-child(2), .create-entry__orientation-option:nth-child(2)';
 const PROFILE_TAB_PATTERNS = {
   works: /\u4f5c\u54c1|Works/i,
   drafts: /\u8349\u7a3f|Draft/i,
@@ -239,6 +244,16 @@ async function waitForCreateSessionReady(page) {
 async function waitForWorkflowSessionReady(page, label) {
   await Promise.race([
     page.waitForFunction(
+      () => document.querySelectorAll('.creation-conversation-item').length >= 2,
+      null,
+      { timeout: 180000 },
+    ),
+    page.waitForFunction(
+      () => document.querySelectorAll('.creation-create-composer__action').length >= 2,
+      null,
+      { timeout: 180000 },
+    ),
+    page.waitForFunction(
       () => document.querySelectorAll('.creation-session-actions__button').length >= 2,
       null,
       { timeout: 180000 },
@@ -415,33 +430,21 @@ async function maybeAnswerSessionQuestion(page, answer, label) {
     return { answered: false, reason: 'empty_answer' };
   }
 
-  const textareaSelector = 'textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea.form-textarea, textarea.create-entry__textarea, textarea';
-  const textarea = page.locator(textareaSelector).first();
-  const submitButton = page.locator('.creation-session-actions__button--ghost:not(.creation-session-actions__button--disabled)').first();
+  const composerInput = page.locator(WORKSPACE_COMPOSER_INPUT_SELECTOR).first();
+  const submitButton = page.locator(WORKSPACE_SEND_SELECTOR).first();
 
-  if (!(await textarea.isVisible().catch(() => false)) || !(await submitButton.isVisible().catch(() => false))) {
+  if (!(await composerInput.isVisible().catch(() => false)) || !(await submitButton.isVisible().catch(() => false))) {
     return { answered: false, reason: 'question_not_visible' };
   }
 
-  await fill(page, textareaSelector, answer, 120000);
-  await page.waitForFunction(
-    () => {
-      const buttons = Array.from(document.querySelectorAll('.creation-session-actions__button--ghost'));
-      const button = buttons.find((node) => !node.className.includes('creation-session-actions__button--disabled'));
-      return Boolean(button);
-    },
-    null,
-    { timeout: 120000 },
-  );
+  await fill(page, WORKSPACE_COMPOSER_INPUT_SELECTOR, answer, 120000);
   await submitButton.click({ force: true });
   await waitForWorkflowSessionReady(page, label);
   return { answered: true };
 }
 
 async function clickPrimaryWorkflowAction(page, label, timeout = 120000) {
-  const button = page.locator(
-    '.creation-session-actions__button--primary:not(.creation-session-actions__button--disabled), .form-actions .action-btn.play-btn, .iterate-submit-btn, .iterate-primary-btn, .fork-submit-btn',
-  ).first();
+  const button = page.locator(WORKSPACE_PRIMARY_ACTION_SELECTOR).first();
   await button.waitFor({ state: 'visible', timeout });
   const text = ((await button.textContent().catch(() => '')) || '').trim();
   await button.click({ force: true });
@@ -523,9 +526,11 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
     await gotoMiniPage(authorPage, baseUrl, '/pages/create/index');
     await authorPage.waitForFunction(
       () => Boolean(
-        document.querySelector('.create-container')
+        document.querySelector('.creation-create-workspace')
+        || document.querySelector('.create-container')
         || document.querySelector('input')
         || document.querySelector('textarea')
+        || document.querySelector('.creation-create-composer__action')
         || document.querySelector('.creation-session-actions__button')
       ),
       null,
@@ -533,17 +538,17 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
     );
 
     if (caseConfig.orientation === 'landscape') {
-      const landscapeSwitch = authorPage.locator('.orientation-option, .create-entry__orientation-option').nth(1);
+      const landscapeSwitch = authorPage.locator(WORKSPACE_LANDSCAPE_SELECTOR).first();
       if (await landscapeSwitch.isVisible().catch(() => false)) {
         await landscapeSwitch.click({ force: true });
       }
     }
 
-    const freshTitleInput = authorPage.locator('input.form-input, input.create-entry__name-input, input.weui-input, input').first();
+    const freshTitleInput = authorPage.locator(WORKSPACE_TITLE_INPUT_SELECTOR).first();
     if (await freshTitleInput.isVisible().catch(() => false)) {
-      await fill(authorPage, 'input.form-input, input.create-entry__name-input, input.weui-input, input', title);
-      await fill(authorPage, 'textarea.form-textarea, textarea.create-entry__textarea, textarea', caseConfig.prompt);
-      await click(authorPage, '.submit-btn, .create-entry__submit');
+      await fill(authorPage, WORKSPACE_TITLE_INPUT_SELECTOR, title);
+      await fill(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.prompt);
+      await click(authorPage, WORKSPACE_SEND_SELECTOR);
       await waitForWorkflowSessionReady(authorPage, 'create');
     }
     result.create.sessionAnswer = await maybeAnswerSessionQuestion(authorPage, caseConfig.createAnswer || caseConfig.prompt, 'create');
@@ -584,9 +589,9 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
     await waitForHash(authorPage, '/pages/game/iterate/index', 30000);
     const authorGameIdsBeforeIterate = (await captureMyGames(authorPage, baseUrl).catch(() => [])).map((game) => game.id);
     await gotoMiniPage(authorPage, baseUrl, `/pages/game/iterate/index?gameId=${sourceGame.id}`);
-    await waitForVisible(authorPage, 'textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea', 120000);
-    await fill(authorPage, 'textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea', caseConfig.iterateFeedback, 120000);
-    await click(authorPage, '.creation-session-actions__button--primary, .iterate-submit-btn, .iterate-primary-btn', { timeout: 120000 });
+    await waitForVisible(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, 120000);
+    await fill(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.iterateFeedback, 120000);
+    await click(authorPage, WORKSPACE_SEND_SELECTOR, { timeout: 120000 });
     await waitForWorkflowSessionReady(authorPage, 'iterate');
     result.iterate.sessionAnswer = await maybeAnswerSessionQuestion(authorPage, caseConfig.iterateFeedback, 'iterate');
     result.iterate.generateAction = await clickPrimaryWorkflowAction(authorPage, 'iterate', 120000);
@@ -662,9 +667,9 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
 
     await click(forkerPage, '.action-buttons .fork-btn');
     await waitForHash(forkerPage, '/pages/game/fork/index', 30000);
-    await waitForVisible(forkerPage, 'textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea', 120000);
-    await fill(forkerPage, 'textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea', caseConfig.forkPrompt, 120000);
-    await click(forkerPage, '.creation-session-actions__button--primary, .fork-submit-btn', { timeout: 120000 });
+    await waitForVisible(forkerPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, 120000);
+    await fill(forkerPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.forkPrompt, 120000);
+    await click(forkerPage, WORKSPACE_SEND_SELECTOR, { timeout: 120000 });
     await waitForWorkflowSessionReady(forkerPage, 'fork');
     result.fork.sessionAnswer = await maybeAnswerSessionQuestion(forkerPage, caseConfig.forkPrompt, 'fork');
     result.fork.generateAction = await clickPrimaryWorkflowAction(forkerPage, 'fork', 120000);

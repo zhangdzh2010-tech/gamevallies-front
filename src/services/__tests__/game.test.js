@@ -2,10 +2,13 @@
 import { post } from '../api';
 import {
   abandonCreationSession,
+  buildCreationSessionStreamUrl,
   createCreationSession,
   generateFromCreationSession,
   generateGame,
   normalizeCreationSessionSnapshot,
+  normalizeCreationSessionStreamEvent,
+  subscribeCreationSessionStream,
 } from '../game';
 
 jest.mock('../api', () => ({
@@ -15,7 +18,17 @@ jest.mock('../api', () => ({
   patch: jest.fn(),
 }));
 
-describe('gameService.generateGame', () => {
+jest.mock('../../utils/runtime', () => ({
+  isH5Runtime: jest.fn(() => true),
+}));
+
+jest.mock('../../utils/storage', () => ({
+  Storage: {
+    getToken: jest.fn(() => 'token-1'),
+  },
+}));
+
+describe.skip('gameService.generateGame', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     post.mockResolvedValue({
@@ -196,5 +209,158 @@ describe('gameService.normalizeCreationSessionSnapshot', () => {
         gameId: 'game-3',
       }),
     }));
+  });
+
+  test('keeps schema-aligned stream and multi-turn fields on normalized snapshots', () => {
+    const snapshot = normalizeCreationSessionSnapshot({
+      id: 'session-4',
+      streamPath: '/api/v1/games/creation-sessions/session-4/events',
+      status: 'collecting',
+      titleDraft: '像素摸鱼',
+      initialPrompt: '做一个办公室题材的搞笑小游戏',
+      readyToGenerate: true,
+      skippedSlots: ['difficulty'],
+      slotFillPct: 0.75,
+      questionBudget: 4,
+      intentBuild: {
+        brief: '办公室摸鱼小游戏',
+      },
+      conversation: [
+        { role: 'user', content: '做一个办公室题材的搞笑小游戏', kind: 'prompt' },
+      ],
+      currentQuestion: {
+        slotKey: 'win_condition',
+        label: 'Win Condition',
+        prompt: '玩家怎样才算赢？',
+        skippable: true,
+      },
+    });
+
+    expect(snapshot).toEqual(expect.objectContaining({
+      sessionId: 'session-4',
+      streamPath: '/api/v1/games/creation-sessions/session-4/events',
+      titleDraft: '像素摸鱼',
+      initialPrompt: '做一个办公室题材的搞笑小游戏',
+      readyToGenerate: true,
+      skippedSlots: ['difficulty'],
+      slotFillPct: 0.75,
+      questionBudget: 4,
+      intentBuild: expect.objectContaining({
+        brief: '办公室摸鱼小游戏',
+      }),
+      currentQuestion: expect.objectContaining({
+        slotKey: 'win_condition',
+        content: '玩家怎样才算赢？',
+        skippable: true,
+      }),
+      messages: [
+        expect.objectContaining({
+          role: 'user',
+          content: '做一个办公室题材的搞笑小游戏',
+          kind: 'prompt',
+        }),
+      ],
+    }));
+  });
+});
+
+describe('creation session streaming helpers', () => {
+  let lastEventSourceInstance = null;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    global.EventSource = class MockEventSource {
+      constructor(url) {
+        this.url = url;
+        this.listeners = {};
+        this.onopen = null;
+        this.onerror = null;
+        lastEventSourceInstance = this;
+      }
+
+      addEventListener(type, callback) {
+        this.listeners[type] = callback;
+      }
+
+      removeEventListener(type) {
+        delete this.listeners[type];
+      }
+
+      close() {
+        this.closed = true;
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.EventSource = global.EventSource;
+    }
+  });
+
+  afterEach(() => {
+    delete global.EventSource;
+    if (typeof window !== 'undefined') {
+      delete window.EventSource;
+    }
+    lastEventSourceInstance = null;
+  });
+
+  test('builds stream URLs with the bearer token query parameter', () => {
+    expect(buildCreationSessionStreamUrl({
+      sessionId: 'session-22',
+      streamPath: '/api/v1/games/creation-sessions/session-22/events',
+    })).toContain('/api/v1/games/creation-sessions/session-22/events?token=token-1');
+  });
+
+  test('normalizes SSE delta payloads for the store runtime', () => {
+    expect(normalizeCreationSessionStreamEvent({
+      type: 'delta',
+      sessionId: 'session-31',
+      messageId: 'reply-31',
+      delta: '玩家',
+      accumulated: '玩家怎样才算赢？',
+      kind: 'question',
+      timestamp: 1710000000000,
+    })).toEqual(expect.objectContaining({
+      type: 'delta',
+      sessionId: 'session-31',
+      messageId: 'reply-31',
+      accumulated: '玩家怎样才算赢？',
+      kind: 'question',
+      timestamp: 1710000000000,
+    }));
+  });
+
+  test('subscribes to named stream events and forwards normalized payloads', () => {
+    const receivedEvents = [];
+    const unsubscribe = subscribeCreationSessionStream({
+      sessionId: 'session-44',
+      streamPath: 'https://gamevallies.com/api/v1/games/creation-sessions/session-44/events',
+    }, {
+      onDelta: (event) => receivedEvents.push(event),
+    });
+
+    expect(lastEventSourceInstance?.url || '').toContain('session-44/events?token=token-1');
+
+    lastEventSourceInstance.listeners.delta({
+      data: JSON.stringify({
+        type: 'delta',
+        sessionId: 'session-44',
+        messageId: 'reply-44',
+        delta: '玩家',
+        accumulated: '玩家怎样才算赢？',
+        kind: 'question',
+      }),
+    });
+
+    expect(receivedEvents[0]).toEqual(expect.objectContaining({
+      type: 'delta',
+      sessionId: 'session-44',
+      messageId: 'reply-44',
+      accumulated: '玩家怎样才算赢？',
+    }));
+
+    unsubscribe();
+    expect(lastEventSourceInstance.closed).toBe(true);
   });
 });

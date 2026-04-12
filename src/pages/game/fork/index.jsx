@@ -96,6 +96,7 @@ export default function GameForkPage() {
     creationSession,
     creationSessionError,
     creationSessionSubmitting,
+    creationSessionStreamingReply,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -195,7 +196,8 @@ export default function GameForkPage() {
   const canStartForkSession = Boolean(forkAnswer.trim());
   const canSkipForkQuestion = isForkSessionActive
     && isCreationSessionQuestioning(creationSession?.status)
-    && Boolean(creationSession?.currentQuestion);
+    && Boolean(creationSession?.currentQuestion)
+    && creationSession?.currentQuestion?.skippable !== false;
   const canGenerateForkSession = isForkSessionActive
     && canGenerateCreationSession(creationSession?.status);
 
@@ -654,6 +656,7 @@ export default function GameForkPage() {
       showSettings={false}
       topContent={sourceReferenceCard}
       session={isForkSessionActive ? creationSession : null}
+      streamingMessage={isForkSessionActive ? creationSessionStreamingReply : null}
       inputValue={forkAnswer}
       onInputChange={(e) => setForkAnswer(e?.detail?.value || '')}
       inputPlaceholder={activeForkInputPlaceholder}

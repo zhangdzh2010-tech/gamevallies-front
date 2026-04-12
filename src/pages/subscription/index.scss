@@ -116,6 +116,53 @@
   font-weight: 500;
 }
 
+.subscription-record-entry {
+  margin-top: 16px;
+  padding: 18px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(94, 103, 145, 0.14);
+  background: linear-gradient(180deg, rgba(15, 16, 28, 0.94) 0%, rgba(8, 9, 16, 0.98) 100%);
+  box-shadow: 0 20px 34px rgba(2, 5, 16, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  &__copy {
+    min-width: 0;
+  }
+
+  &__title {
+    display: block;
+    color: #f5f7ff;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  &__desc {
+    display: block;
+    margin-top: 8px;
+    color: rgba(191, 199, 226, 0.74);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  &__action {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    background: linear-gradient(135deg, rgba(93, 127, 255, 0.96), rgba(57, 222, 196, 0.88));
+  }
+}
+
 /* Plans Section */
 .plans-section {
   margin-top: 48rpx;
@@ -781,7 +828,7 @@
 
   &__metrics {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 
@@ -1049,7 +1096,7 @@
     }
 
     &__metrics {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -1072,6 +1119,16 @@
   .sub-status-card,
   .plan-card {
     border-radius: 24px;
+  }
+
+  .subscription-record-entry {
+    border-radius: 24px;
+    align-items: flex-start;
+    flex-direction: column;
+
+    &__action {
+      width: 100%;
+    }
   }
 
   .quota-card-title,
