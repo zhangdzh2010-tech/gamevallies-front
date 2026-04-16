@@ -5,6 +5,8 @@ const mockCreateCreationSession = jest.fn();
 const mockGetCreationSession = jest.fn();
 const mockGetActiveCreationSession = jest.fn();
 const mockGenerateFromCreationSession = jest.fn();
+const mockConfirmEditedPrompt = jest.fn();
+const mockConfirmCurrentPrompt = jest.fn();
 const mockSubscribeCreationSessionStream = jest.fn();
 const mockGetGenerationTaskEvents = jest.fn(() => Promise.resolve({ items: [], nextCursor: 0, hasMore: false }));
 const mockSessionMessageHandlers = {};
@@ -58,8 +60,10 @@ jest.mock('../../services/game', () => ({
   getGame: jest.fn(),
   generateGame: jest.fn(),
   getGameTypes: jest.fn(),
-  appendCreationSessionMessage: jest.fn(),
-  skipCreationSessionQuestion: jest.fn(),
+  appendCreationSessionMessage: mockConfirmEditedPrompt,
+  confirmEditedPrompt: mockConfirmEditedPrompt,
+  skipCreationSessionQuestion: mockConfirmCurrentPrompt,
+  confirmCurrentPrompt: mockConfirmCurrentPrompt,
   abandonCreationSession: jest.fn(),
   getGenerationStatus: jest.fn(),
   getGenerationTask: jest.fn(),
@@ -120,6 +124,8 @@ describe('gameStore creation session actions', () => {
     });
     mockGetGenerationTaskEvents.mockReset();
     mockGetGenerationTaskEvents.mockResolvedValue({ items: [], nextCursor: 0, hasMore: false });
+    mockConfirmEditedPrompt.mockReset();
+    mockConfirmCurrentPrompt.mockReset();
 
     useGameStore.setState({
       currentGame: null,
@@ -138,6 +144,12 @@ describe('gameStore creation session actions', () => {
       latestTaskMessage: '',
       canPlay: true,
       creationSession: null,
+      creationSessionUiState: {
+        isInitializing: false,
+        isAwaitingPromptConfirmation: false,
+        canGenerate: false,
+        canEditPrompt: false,
+      },
       creationSessionError: null,
       creationSessionSubmitting: false,
       creationSessionRestoring: false,
@@ -584,7 +596,7 @@ describe('gameStore creation session actions', () => {
     }));
   });
 
-  test('generateFromCreationSession waits for initializing sessions before triggering generation', async () => {
+  test('confirmAndGenerate waits for initializing sessions before triggering generation', async () => {
     jest.useFakeTimers();
 
     try {
@@ -603,11 +615,21 @@ describe('gameStore creation session actions', () => {
           sourceGameId: 'game-init-1',
           title: 'Init Wait Game',
           prompt: 'Make movement feel tighter',
+          expandedPrompt: 'Expanded iterate prompt',
         },
         trackedTasks: [],
         _beginTaskTracking: beginTaskTracking,
       });
 
+      mockConfirmCurrentPrompt.mockResolvedValue({
+        sessionId: 'session-init-1',
+        status: 'ready',
+        revision: 5,
+        entryMode: 'iterate',
+        sourceGameId: 'game-init-1',
+        title: 'Init Wait Game',
+        expandedPrompt: 'Expanded iterate prompt',
+      });
       mockGenerateFromCreationSession.mockResolvedValue({
         gameId: 'game-init-1',
         title: 'Init Wait Game',
@@ -621,7 +643,7 @@ describe('gameStore creation session actions', () => {
         },
       });
 
-      const generationPromise = useGameStore.getState().generateFromCreationSession({
+      const generationPromise = useGameStore.getState().confirmAndGenerate({
         orientation: 'portrait',
         generationTier: 'standard',
       });
@@ -644,11 +666,12 @@ describe('gameStore creation session actions', () => {
       expect(mockGenerateFromCreationSession).toHaveBeenCalledWith(
         'session-init-1',
         expect.objectContaining({
-          revision: 4,
+          revision: 5,
           orientation: 'portrait',
           generationTier: 'standard',
         }),
       );
+      expect(mockConfirmCurrentPrompt).toHaveBeenCalledWith('session-init-1', 4);
       expect(beginTaskTracking).toHaveBeenCalledWith(
         expect.objectContaining({ taskId: 'task-init-1' }),
         expect.objectContaining({
@@ -661,6 +684,37 @@ describe('gameStore creation session actions', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test('generateFromCreationSession rebinds the interactive session runtime after a failed generate attempt', async () => {
+    mockCreateCreationSession.mockResolvedValue({
+      sessionId: 'session-rebind',
+      status: 'ready',
+      revision: 3,
+      prompt: 'make a neon arcade game',
+      expandedPrompt: 'Expanded arcade prompt',
+      title: 'Arcade Rebind',
+      entryMode: 'create',
+    });
+    mockGenerateFromCreationSession.mockRejectedValue(new Error('network error'));
+
+    await useGameStore.getState().startCreationSession('make a neon arcade game', 'Arcade Rebind', {
+      entryMode: 'create',
+    });
+
+    expect(mockSubscribeCreationSessionStream).toHaveBeenCalledTimes(1);
+
+    await expect(
+      useGameStore.getState().generateFromCreationSession({
+        generationTier: 'standard',
+      })
+    ).rejects.toThrow();
+
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      sessionId: 'session-rebind',
+      status: 'ready',
+    }));
+    expect(mockSubscribeCreationSessionStream).toHaveBeenCalledTimes(2);
   });
 
   test('syncTaskEvents builds a dynamic stage sequence from backend progress events', async () => {

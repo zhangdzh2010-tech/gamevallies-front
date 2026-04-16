@@ -14,8 +14,6 @@ import {
   CreationSessionActions,
   CreationSessionShell,
   CreationStateCard,
-  canGenerateCreationSession,
-  isCreationSessionQuestioning,
 } from '../../../components/creation';
 import * as gameService from '../../../services/game';
 import {
@@ -67,19 +65,19 @@ function getUserFacingIterateError(rawError) {
     return '';
   }
 
-  if (/作品已生成完成|加载结果失败|我的作品/i.test(source)) {
-    return '作品已生成完成，请到“我的作品”查看';
+  if (/作品已经生成完成|加载结果失败|我的作品/i.test(source)) {
+    return '作品已经生成完成，请到“我的作品”查看';
   }
 
-  if (/已取消|canceled|cancelled/i.test(source)) {
+  if (/canceled|cancelled|已取消/i.test(source)) {
     return '优化任务已取消';
   }
 
-  if (/超时|timeout|timed out/i.test(source)) {
+  if (/timeout|timed out|超时/i.test(source)) {
     return '优化阶段处理超时，请稍后重试';
   }
 
-  return '优化阶段遇到问题，请稍后重试';
+  return source;
 }
 
 function formatVersionLabel(version) {
@@ -130,15 +128,14 @@ export default function GameIteratePage() {
     terminalError,
     canPlay,
     creationSession,
+    creationSessionUiState,
     creationSessionError,
     creationSessionSubmitting,
-    creationSessionStreamingReply,
-    creationSessionPendingUserMessage,
     refreshCreationSession,
     startCreationSession,
-    answerCreationSessionQuestion,
-    skipCreationSessionQuestion,
-    generateFromCreationSession,
+    confirmEditedPrompt,
+    confirmCurrentPrompt,
+    confirmAndGenerate,
     abandonCreationSession,
     resetCreationSessionState,
     setCurrentGame,
@@ -146,13 +143,14 @@ export default function GameIteratePage() {
   const openGame = useGamePlayerStore((s) => s.openGame);
   const openPaywall = useQuotaStore((s) => s.openPaywall);
   const [iterateFeedback, setIterateFeedback] = useState('');
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [sessionPromptDraft, setSessionPromptDraft] = useState('');
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pageError, setPageError] = useState('');
   const [authorTaskMetadata, setAuthorTaskMetadata] = useState(null);
   const [resumeCandidate, setResumeCandidate] = useState(null);
   const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const iterateSessionBootstrappedGameIdRef = useRef('');
+  const promptDraftSyncKeyRef = useRef('');
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
@@ -166,12 +164,7 @@ export default function GameIteratePage() {
   );
   const isIterateSessionActive = creationSession?.entryMode === 'iterate' && creationSession?.status !== 'generating';
   const canStartIterateSession = Boolean(iterateFeedback.trim());
-  const canSkipIterateQuestion = isIterateSessionActive
-    && isCreationSessionQuestioning(creationSession?.status)
-    && Boolean(creationSession?.currentQuestion)
-    && creationSession?.currentQuestion?.skippable !== false;
-  const canGenerateIterateSession = isIterateSessionActive
-    && canGenerateCreationSession(creationSession?.status);
+
   useEffect(() => {
     if (isLoggedIn()) {
       return;
@@ -318,18 +311,18 @@ export default function GameIteratePage() {
         if (restoredMatches) {
           resetCreationSessionState();
           setResumeCandidate(restoredSession);
-          return restoredSession;
+          return;
         }
 
         resetCreationSessionState();
         setResumeCandidate(null);
-        return null;
       })
       .catch((err) => {
         if (err?.statusCode === 404) {
           setResumeCandidate(null);
           return;
         }
+
         setPageError(err?.message || '初始化优化会话失败，请稍后重试');
         iterateSessionBootstrappedGameIdRef.current = '';
       });
@@ -340,6 +333,23 @@ export default function GameIteratePage() {
     isIterateTaskActive,
     resetCreationSessionState,
     taskId,
+  ]);
+
+  useEffect(() => {
+    if (!creationSession || creationSession.entryMode !== 'iterate') {
+      return;
+    }
+
+    const nextDraftKey = `${creationSession.sessionId || ''}:${creationSession.revision ?? ''}`;
+    if (promptDraftSyncKeyRef.current !== nextDraftKey) {
+      setSessionPromptDraft(creationSession.expandedPrompt || '');
+      promptDraftSyncKeyRef.current = nextDraftKey;
+    }
+  }, [
+    creationSession?.entryMode,
+    creationSession?.expandedPrompt,
+    creationSession?.revision,
+    creationSession?.sessionId,
   ]);
 
   const taskMetadata = useMemo(() => {
@@ -448,20 +458,17 @@ export default function GameIteratePage() {
     });
   };
 
-  const handleSubmitSessionAnswer = async () => {
-    const nextAnswer = iterateFeedback.trim();
-    if (!nextAnswer) {
-      Taro.showToast({ title: '请先输入这轮优化说明', icon: 'none' });
+  const handleConfirmEditedIteratePrompt = async () => {
+    const nextPromptDraft = sessionPromptDraft.trim();
+    if (!nextPromptDraft) {
+      Taro.showToast({ title: '请先完善提示词', icon: 'none' });
       return;
     }
 
-    setIterateFeedback('');
-
     try {
-      await answerCreationSessionQuestion(nextAnswer);
+      await confirmEditedPrompt(nextPromptDraft);
     } catch (err) {
-      setIterateFeedback((currentValue) => currentValue || nextAnswer);
-      Taro.showToast({ title: err?.message || '提交回答失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: err?.message || '确认提示词失败，请稍后重试', icon: 'none' });
     }
   };
 
@@ -485,12 +492,14 @@ export default function GameIteratePage() {
           sourceGameId: currentGame.id,
           orientation: getGameOrientation(currentGame),
           generationTier: 'standard',
-        }
+        },
       );
       iterateSessionBootstrappedGameIdRef.current = String(currentGame.id);
       setIterateFeedback('');
+      setSessionPromptDraft('');
+      promptDraftSyncKeyRef.current = '';
     } catch (err) {
-      Taro.showToast({ title: err?.message || '开启优化对话失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: err?.message || '开启优化会话失败，请稍后重试', icon: 'none' });
     }
   };
 
@@ -522,6 +531,8 @@ export default function GameIteratePage() {
       resetCreationSessionState();
       setResumeCandidate(null);
       iterateSessionBootstrappedGameIdRef.current = '';
+      setSessionPromptDraft('');
+      promptDraftSyncKeyRef.current = '';
     } catch (err) {
       Taro.showToast({ title: err?.message || '开始新一轮优化失败，请稍后重试', icon: 'none' });
     } finally {
@@ -529,23 +540,11 @@ export default function GameIteratePage() {
     }
   };
 
-  const handleSkipSessionQuestion = async () => {
+  const handleConfirmCurrentIteratePrompt = async () => {
     try {
-      await skipCreationSessionQuestion();
-      setIterateFeedback('');
+      await confirmCurrentPrompt();
     } catch (err) {
-      Taro.showToast({ title: err?.message || '跳过问题失败，请稍后重试', icon: 'none' });
-    }
-  };
-
-  const handleGenerateFromSession = async () => {
-    try {
-      await generateFromCreationSession({
-        orientation: getGameOrientation(currentGame),
-        generationTier: creationSession?.generationTier || 'standard',
-      });
-    } catch (err) {
-      Taro.showToast({ title: err?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+      Taro.showToast({ title: err?.message || '确认当前提示词失败，请稍后重试', icon: 'none' });
     }
   };
 
@@ -557,15 +556,29 @@ export default function GameIteratePage() {
       resetCreationSessionState();
       iterateSessionBootstrappedGameIdRef.current = '';
       setIterateFeedback('');
+      setSessionPromptDraft('');
+      promptDraftSyncKeyRef.current = '';
     } catch (err) {
       Taro.showToast({ title: err?.message || '重新开始优化会话失败', icon: 'none' });
     }
   };
 
+  const normalizedIterateExpandedPrompt = String(creationSession?.expandedPrompt || '').trim();
+  const normalizedIteratePromptDraft = sessionPromptDraft.trim();
+  const hasIteratePromptChanges = Boolean(
+    normalizedIteratePromptDraft
+    && normalizedIteratePromptDraft !== normalizedIterateExpandedPrompt
+  );
+  const canConfirmCurrentIteratePrompt = Boolean(
+    isIterateSessionActive && creationSession?.status === 'collecting'
+  );
+  const canEditIteratePrompt = Boolean(isIterateSessionActive && creationSessionUiState?.canEditPrompt);
+  const canGenerateIterateSession = Boolean(isIterateSessionActive && creationSessionUiState?.canGenerate);
   const activeIterateInputPlaceholder = isIterateSessionActive
-    ? (creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt || '继续补充你这轮最想优化的部分...')
+    ? '在这里修改这一轮优化提示词...'
     : '继续补充你这轮最想优化的部分...';
-  const ensureIterateConversation = async () => {
+
+  const ensureIterateSession = async () => {
     if (isIterateSessionActive && creationSession?.sessionId) {
       return creationSession;
     }
@@ -589,54 +602,37 @@ export default function GameIteratePage() {
     iterateSessionBootstrappedGameIdRef.current = String(currentGame?.id || '');
     setResumeCandidate(null);
     setIterateFeedback('');
+    setSessionPromptDraft('');
+    promptDraftSyncKeyRef.current = '';
     return nextSession;
   };
-  const handleIterateWorkspaceSend = async () => {
+
+  const handleIterateWorkspacePrimaryAction = async () => {
     if (isIterateSessionActive) {
-      await handleSubmitSessionAnswer();
+      await handleConfirmEditedIteratePrompt();
       return;
     }
 
-    setIsPreviewExpanded(false);
     await handleStartIterateSession();
   };
-  const handleIterateWorkspacePreview = async () => {
-    if (isIterateSessionActive) {
-      setIsPreviewExpanded((currentValue) => !currentValue);
-      return;
-    }
 
-    try {
-      const nextSession = await ensureIterateConversation();
-      if (nextSession) {
-        setIsPreviewExpanded(true);
-      }
-    } catch (err) {
-      Taro.showToast({ title: err?.message || '预览优化方案失败，请稍后重试', icon: 'none' });
-    }
-  };
   const handleIterateWorkspaceGenerate = async () => {
-    if (isIterateSessionActive) {
-      await handleGenerateFromSession();
-      setIsPreviewExpanded(false);
-      return;
-    }
-
     try {
-      const nextSession = await ensureIterateConversation();
+      const nextSession = await ensureIterateSession();
       if (!nextSession?.sessionId) {
         return;
       }
 
-      await generateFromCreationSession(nextSession.sessionId, {
+      await confirmAndGenerate({
+        editedPrompt: isIterateSessionActive ? sessionPromptDraft : '',
         orientation: getGameOrientation(currentGame),
         generationTier: nextSession?.generationTier || 'standard',
       });
-      setIsPreviewExpanded(false);
     } catch (err) {
       Taro.showToast({ title: err?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
     }
   };
+
   const isIterateSessionCompleted = Boolean(
     !isGenerating
     && creationSession?.entryMode === 'iterate'
@@ -819,36 +815,96 @@ export default function GameIteratePage() {
       eyebrow="当前底稿"
       title={currentGame?.title || '未命名作品'}
       badge="这次优化会基于这一版继续生成"
-      description={currentGame?.description || '这版作品会作为本轮优化的起点。'}
+      description={currentGame?.description || '这一版作品会作为本轮优化的起点。'}
       metadata={metadataItems}
     />
   );
+
+  const iterateWorkspaceSecondaryActions = (() => {
+    if (!isIterateSessionActive) {
+      return [
+        {
+          key: 'generate-iterate-directly',
+          label: '直接生成',
+          tone: 'primary',
+          onClick: handleIterateWorkspaceGenerate,
+          disabled: creationSessionSubmitting || !canStartIterateSession,
+        },
+      ];
+    }
+
+    const actions = [];
+
+    if (canConfirmCurrentIteratePrompt) {
+      actions.push({
+        key: 'confirm-current-iterate-prompt',
+        label: '直接使用当前提示词',
+        onClick: handleConfirmCurrentIteratePrompt,
+        disabled: creationSessionSubmitting,
+      });
+    }
+
+    if (canGenerateIterateSession) {
+      actions.push({
+        key: 'generate-iterate-session',
+        label: creationSession?.status === 'ready' ? '开始生成' : '直接生成',
+        tone: 'primary',
+        onClick: handleIterateWorkspaceGenerate,
+        disabled: creationSessionSubmitting,
+      });
+    }
+
+    actions.push({
+      key: 'restart-iterate-session',
+      label: '重新开始',
+      tone: 'danger',
+      onClick: handleRestartIterateSession,
+      disabled: creationSessionSubmitting,
+    });
+
+    return actions;
+  })();
+
   const iterateWorkspace = (
     <CreationCreateWorkspace
       showSettings={false}
       topContent={iterateReferenceCard}
       session={isIterateSessionActive ? creationSession : null}
-      streamingMessage={isIterateSessionActive ? creationSessionStreamingReply : null}
-      pendingUserMessage={isIterateSessionActive ? creationSessionPendingUserMessage : null}
-      inputValue={iterateFeedback}
-      onInputChange={(e) => setIterateFeedback(e?.detail?.value || '')}
+      inputValue={isIterateSessionActive ? sessionPromptDraft : iterateFeedback}
+      onInputChange={(e) => {
+        const nextValue = e?.detail?.value || '';
+        if (isIterateSessionActive) {
+          setSessionPromptDraft(nextValue);
+          return;
+        }
+        setIterateFeedback(nextValue);
+      }}
       inputPlaceholder={activeIterateInputPlaceholder}
-      onSend={handleIterateWorkspaceSend}
-      onSkip={handleSkipSessionQuestion}
-      onGenerate={handleIterateWorkspaceGenerate}
-      onPreview={handleIterateWorkspacePreview}
-      sendDisabled={creationSessionSubmitting || !(isIterateSessionActive ? iterateFeedback.trim() : canStartIterateSession)}
-      skipDisabled={creationSessionSubmitting || !canSkipIterateQuestion}
-      generateDisabled={creationSessionSubmitting || !(isIterateSessionActive ? canGenerateIterateSession : canStartIterateSession)}
-      previewDisabled={creationSessionSubmitting || !(isIterateSessionActive || canStartIterateSession)}
-      previewExpanded={isPreviewExpanded}
-      previewLabel={isPreviewExpanded ? '收起预览' : '预览'}
-      generateLabel="直接开始优化"
+      onPrimaryAction={handleIterateWorkspacePrimaryAction}
+      primaryActionLabel={isIterateSessionActive ? '确认并保存提示词' : '开始整理优化提示词'}
+      primaryActionDisabled={
+        creationSessionSubmitting
+        || (isIterateSessionActive ? !canEditIteratePrompt || !hasIteratePromptChanges : !canStartIterateSession)
+      }
+      secondaryActions={iterateWorkspaceSecondaryActions}
       errorMessage={iterateWorkspaceError}
       isSubmitting={creationSessionSubmitting}
-      threadTitle="说说这轮想怎么优化"
-      threadHint="像聊天一样往下说，AI 会继续追问或直接整理这轮优化方案。"
-      introMessage="先告诉我这轮最想优化哪里，我会帮你整理方向。"
+      workspaceTitle={isIterateSessionActive ? '确认这轮优化提示词' : '说说这轮想怎么优化'}
+      workspaceHint={isIterateSessionActive
+        ? 'AI 已经整理出一版优化提示词。你可以先修改确认，再开始真正生成。'
+        : '先描述这一轮最想优化的地方，AI 会先扩写成一版提示词，再由你确认。'}
+      introMessage="先告诉我这轮最想优化哪里，我会先帮你整理出一版完整提示词。"
+      helperText={isIterateSessionActive
+        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这版优化提示词。')
+        : ''}
+      loadingTitle="正在整理并扩写这一轮优化方向"
+      loadingDescription="完成后你会先看到一版可编辑提示词，确认后才会真正开始优化生成。"
+      initialLabel="这轮优化方向"
+      initialHint="可以描述你想调整的节奏、手感、美术或目标用户体验。"
+      draftLabel="优化提示词"
+      draftHint={creationSession?.status === 'ready'
+        ? '这版提示词已经确认。你仍然可以继续修改并再次保存。'
+        : '你可以直接修改这段提示词，也可以直接使用当前版本。'}
     />
   );
 
@@ -865,7 +921,9 @@ export default function GameIteratePage() {
                 centered
                 eyebrow={canPlay ? '已就绪' : '待解锁'}
                 title={currentGame?.title || '优化后的作品'}
-                description={canPlay ? '现在可以直接试玩这版结果，也可以继续追加新的优化方向。' : '这版结果已经生成完成，订阅后即可试玩并继续验证体验。'}
+                description={canPlay
+                  ? '现在可以直接试玩这版结果，也可以继续追加新的优化方向。'
+                  : '这版结果已经生成完成，订阅后即可试玩并继续验证体验。'}
               />
             ),
           },
@@ -890,24 +948,18 @@ export default function GameIteratePage() {
                         onClick: handleLockedPlay,
                       },
                   {
-                    key: 'open-iterate-result-detail',
-                    label: '查看作品详情',
-                    tone: 'ghost',
+                    key: 'iterate-open-detail',
+                    label: '查看详情',
                     onClick: handleOpenDetail,
                   },
                   {
-                    key: 'restart-iterate-after-result',
-                    label: '开始下一轮优化',
-                    tone: 'ghost',
+                    key: 'iterate-again',
+                    label: '继续优化',
                     onClick: handleRestartIterateSession,
                   },
                 ]}
               />
             ),
-          },
-          {
-            key: 'iterate-result-reference',
-            node: iterateReferenceCard,
           },
         ]}
       />,

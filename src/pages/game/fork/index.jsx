@@ -14,8 +14,6 @@ import {
   CreationSessionActions,
   CreationSessionShell,
   CreationStateCard,
-  canGenerateCreationSession,
-  isCreationSessionQuestioning,
 } from '../../../components/creation';
 import * as gameService from '../../../services/game';
 import {
@@ -47,7 +45,7 @@ const TASK_STATUS_LABELS = {
 
 function formatNumber(num) {
   const n = Number(num) || 0;
-  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`;
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}w`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return n.toString();
 }
@@ -69,11 +67,11 @@ function getUserFacingForkError(rawError) {
     return '';
   }
 
-  if (/已取消|canceled|cancelled/i.test(source)) {
+  if (/canceled|cancelled|已取消/i.test(source)) {
     return '复刻任务已取消';
   }
 
-  if (/超时|timeout|timed out/i.test(source)) {
+  if (/timeout|timed out|超时/i.test(source)) {
     return '复刻阶段处理超时，请稍后重试';
   }
 
@@ -94,26 +92,26 @@ export default function GameForkPage() {
     error,
     terminalError,
     creationSession,
+    creationSessionUiState,
     creationSessionError,
     creationSessionSubmitting,
-    creationSessionStreamingReply,
-    creationSessionPendingUserMessage,
     refreshCreationSession,
     startCreationSession,
-    answerCreationSessionQuestion,
-    skipCreationSessionQuestion,
-    generateFromCreationSession,
+    confirmEditedPrompt,
+    confirmCurrentPrompt,
+    confirmAndGenerate,
     abandonCreationSession,
     resetCreationSessionState,
   } = useGameStore();
   const [sourceGame, setSourceGame] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [forkAnswer, setForkAnswer] = useState('');
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [forkInstruction, setForkInstruction] = useState('');
+  const [sessionPromptDraft, setSessionPromptDraft] = useState('');
   const [pageError, setPageError] = useState('');
   const [resumeCandidate, setResumeCandidate] = useState(null);
   const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const forkSessionBootstrappedSourceIdRef = useRef('');
+  const promptDraftSyncKeyRef = useRef('');
   const currentUser = Storage.getUser() || {};
   const currentUserId = currentUser?.id || '';
   const { windowHeight = 720 } = getSafeSystemInfo();
@@ -176,6 +174,7 @@ export default function GameForkPage() {
     { label: '点赞', value: formatNumber(sourceGame?.likes) },
     { label: '复刻', value: formatNumber(sourceGame?.forks) },
   ]), [sourceGame?.forks, sourceGame?.likes, sourceGame?.plays]);
+
   const isCurrentForkSession = Boolean(
     creationSession
     && creationSession.entryMode === 'fork'
@@ -194,13 +193,7 @@ export default function GameForkPage() {
     && isCompletedGameStatus(currentGame?.status)
   );
   const isForkSessionActive = isCurrentForkSession && creationSession?.status !== 'generating';
-  const canStartForkSession = Boolean(forkAnswer.trim());
-  const canSkipForkQuestion = isForkSessionActive
-    && isCreationSessionQuestioning(creationSession?.status)
-    && Boolean(creationSession?.currentQuestion)
-    && creationSession?.currentQuestion?.skippable !== false;
-  const canGenerateForkSession = isForkSessionActive
-    && canGenerateCreationSession(creationSession?.status);
+  const canStartForkSession = Boolean(forkInstruction.trim());
 
   useEffect(() => {
     if (!sourceGameId || !sourceGame || isLoading || !canForkGame) {
@@ -227,12 +220,11 @@ export default function GameForkPage() {
         if (restoredMatches) {
           resetCreationSessionState();
           setResumeCandidate(restoredSession);
-          return restoredSession;
+          return;
         }
 
         resetCreationSessionState();
         setResumeCandidate(null);
-        return null;
       })
       .catch((error) => {
         if (error?.statusCode === 404) {
@@ -251,20 +243,34 @@ export default function GameForkPage() {
     sourceGameId,
   ]);
 
-  const handleSubmitForkAnswer = async () => {
-    const nextAnswer = forkAnswer.trim();
-    if (!nextAnswer) {
-      Taro.showToast({ title: '请先补充你想修改的方向', icon: 'none' });
+  useEffect(() => {
+    if (!creationSession || creationSession.entryMode !== 'fork') {
       return;
     }
 
-    setForkAnswer('');
+    const nextDraftKey = `${creationSession.sessionId || ''}:${creationSession.revision ?? ''}`;
+    if (promptDraftSyncKeyRef.current !== nextDraftKey) {
+      setSessionPromptDraft(creationSession.expandedPrompt || '');
+      promptDraftSyncKeyRef.current = nextDraftKey;
+    }
+  }, [
+    creationSession?.entryMode,
+    creationSession?.expandedPrompt,
+    creationSession?.revision,
+    creationSession?.sessionId,
+  ]);
+
+  const handleConfirmEditedForkPrompt = async () => {
+    const nextPromptDraft = sessionPromptDraft.trim();
+    if (!nextPromptDraft) {
+      Taro.showToast({ title: '请先完善提示词', icon: 'none' });
+      return;
+    }
 
     try {
-      await answerCreationSessionQuestion(nextAnswer);
+      await confirmEditedPrompt(nextPromptDraft);
     } catch (error) {
-      setForkAnswer((currentValue) => currentValue || nextAnswer);
-      Taro.showToast({ title: error?.message || '提交回答失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '确认提示词失败，请重试', icon: 'none' });
     }
   };
 
@@ -273,7 +279,7 @@ export default function GameForkPage() {
       return;
     }
 
-    if (!forkAnswer.trim()) {
+    if (!forkInstruction.trim()) {
       Taro.showToast({ title: '请先说说你想保留和改变的部分', icon: 'none' });
       return;
     }
@@ -281,19 +287,21 @@ export default function GameForkPage() {
     try {
       setResumeCandidate(null);
       await startCreationSession(
-        forkAnswer.trim(),
+        forkInstruction.trim(),
         sourceGame?.title || '',
         {
           entryMode: 'fork',
           sourceGameId,
           orientation: sourceGame?.orientation || 'portrait',
           generationTier: 'standard',
-        }
+        },
       );
       forkSessionBootstrappedSourceIdRef.current = sourceGameId;
-      setForkAnswer('');
+      setForkInstruction('');
+      setSessionPromptDraft('');
+      promptDraftSyncKeyRef.current = '';
     } catch (error) {
-      Taro.showToast({ title: error?.message || '开启新版本对话失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '开启新版本会话失败，请重试', icon: 'none' });
     }
   };
 
@@ -325,6 +333,8 @@ export default function GameForkPage() {
       resetCreationSessionState();
       setResumeCandidate(null);
       forkSessionBootstrappedSourceIdRef.current = '';
+      setSessionPromptDraft('');
+      promptDraftSyncKeyRef.current = '';
     } catch (error) {
       Taro.showToast({ title: error?.message || '开始新一轮复刻失败，请重试', icon: 'none' });
     } finally {
@@ -332,23 +342,11 @@ export default function GameForkPage() {
     }
   };
 
-  const handleSkipForkQuestion = async () => {
+  const handleConfirmCurrentForkPrompt = async () => {
     try {
-      await skipCreationSessionQuestion();
-      setForkAnswer('');
+      await confirmCurrentPrompt();
     } catch (error) {
-      Taro.showToast({ title: error?.message || '跳过问题失败，请重试', icon: 'none' });
-    }
-  };
-
-  const handleGenerateFork = async () => {
-    try {
-      await generateFromCreationSession({
-        orientation: sourceGame?.orientation || 'portrait',
-        generationTier: creationSession?.generationTier || 'standard',
-      });
-    } catch (error) {
-      Taro.showToast({ title: error?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '确认当前提示词失败，请重试', icon: 'none' });
     }
   };
 
@@ -376,10 +374,22 @@ export default function GameForkPage() {
     });
   };
 
+  const normalizedForkExpandedPrompt = String(creationSession?.expandedPrompt || '').trim();
+  const normalizedForkPromptDraft = sessionPromptDraft.trim();
+  const hasForkPromptChanges = Boolean(
+    normalizedForkPromptDraft
+    && normalizedForkPromptDraft !== normalizedForkExpandedPrompt
+  );
+  const canConfirmCurrentForkPrompt = Boolean(
+    isForkSessionActive && creationSession?.status === 'collecting'
+  );
+  const canEditForkPrompt = Boolean(isForkSessionActive && creationSessionUiState?.canEditPrompt);
+  const canGenerateForkSession = Boolean(isForkSessionActive && creationSessionUiState?.canGenerate);
   const activeForkInputPlaceholder = isForkSessionActive
-    ? (creationSession?.currentQuestion?.placeholder || creationSession?.currentQuestion?.prompt || '继续补充你想保留和改变的部分...')
+    ? '在这里修改这次复刻提示词...'
     : '继续补充你想保留和改变的部分...';
-  const ensureForkConversation = async () => {
+
+  const ensureForkSession = async () => {
     if (isForkSessionActive && creationSession?.sessionId) {
       return creationSession;
     }
@@ -390,7 +400,7 @@ export default function GameForkPage() {
     }
 
     const nextSession = await startCreationSession(
-      forkAnswer.trim(),
+      forkInstruction.trim(),
       sourceGame?.title || '',
       {
         entryMode: 'fork',
@@ -402,53 +412,50 @@ export default function GameForkPage() {
 
     forkSessionBootstrappedSourceIdRef.current = sourceGameId;
     setResumeCandidate(null);
-    setForkAnswer('');
+    setForkInstruction('');
+    setSessionPromptDraft('');
+    promptDraftSyncKeyRef.current = '';
     return nextSession;
   };
-  const handleForkWorkspaceSend = async () => {
+
+  const handleForkWorkspacePrimaryAction = async () => {
     if (isForkSessionActive) {
-      await handleSubmitForkAnswer();
+      await handleConfirmEditedForkPrompt();
       return;
     }
 
-    setIsPreviewExpanded(false);
     await handleStartForkSession();
   };
-  const handleForkWorkspacePreview = async () => {
-    if (isForkSessionActive) {
-      setIsPreviewExpanded((currentValue) => !currentValue);
-      return;
-    }
 
-    try {
-      const nextSession = await ensureForkConversation();
-      if (nextSession) {
-        setIsPreviewExpanded(true);
-      }
-    } catch (error) {
-      Taro.showToast({ title: error?.message || '预览新版本方案失败，请重试', icon: 'none' });
-    }
-  };
   const handleForkWorkspaceGenerate = async () => {
-    if (isForkSessionActive) {
-      await handleGenerateFork();
-      setIsPreviewExpanded(false);
-      return;
-    }
-
     try {
-      const nextSession = await ensureForkConversation();
+      const nextSession = await ensureForkSession();
       if (!nextSession?.sessionId) {
         return;
       }
 
-      await generateFromCreationSession(nextSession.sessionId, {
+      await confirmAndGenerate({
+        editedPrompt: isForkSessionActive ? sessionPromptDraft : '',
         orientation: sourceGame?.orientation || 'portrait',
         generationTier: nextSession?.generationTier || 'standard',
       });
-      setIsPreviewExpanded(false);
     } catch (error) {
       Taro.showToast({ title: error?.message || '生成阶段遇到问题，可稍后重试', icon: 'none' });
+    }
+  };
+
+  const handleRestartForkSession = async () => {
+    try {
+      if (creationSession?.sessionId) {
+        await abandonCreationSession(creationSession.sessionId);
+      }
+      resetCreationSessionState();
+      setForkInstruction('');
+      setSessionPromptDraft('');
+      promptDraftSyncKeyRef.current = '';
+      forkSessionBootstrappedSourceIdRef.current = '';
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '重新开始复刻会话失败', icon: 'none' });
     }
   };
 
@@ -595,21 +602,7 @@ export default function GameForkPage() {
                 centered
                 eyebrow="已就绪"
                 title={currentGame?.title || '新版本作品'}
-                description="现在可以继续打磨、验证玩法，或进入详情页查看。"
-              />
-            ),
-          },
-          {
-            key: 'fork-complete-reference',
-            node: (
-              <CreationReferenceCard
-                eyebrow="新版本"
-                title={currentGame?.title || '未命名作品'}
-                badge="已加入你的创作链路"
-                description={currentGame?.description || '新的版本已经生成完成。'}
-                metadata={[
-                  { label: '下一步', value: '继续优化这版作品，或回到详情页查看结果' },
-                ]}
+                description="现在可以继续打磨、验证玩法，或者进入详情页查看。"
               />
             ),
           },
@@ -661,27 +654,74 @@ export default function GameForkPage() {
       metrics={statItems}
     />
   );
+
+  const forkWorkspaceSecondaryActions = (() => {
+    if (!isForkSessionActive) {
+      return [
+        {
+          key: 'generate-fork-directly',
+          label: '直接生成',
+          tone: 'primary',
+          onClick: handleForkWorkspaceGenerate,
+          disabled: creationSessionSubmitting || !canStartForkSession,
+        },
+      ];
+    }
+
+    const actions = [];
+
+    if (canConfirmCurrentForkPrompt) {
+      actions.push({
+        key: 'confirm-current-fork-prompt',
+        label: '直接使用当前提示词',
+        onClick: handleConfirmCurrentForkPrompt,
+        disabled: creationSessionSubmitting,
+      });
+    }
+
+    if (canGenerateForkSession) {
+      actions.push({
+        key: 'generate-fork-session',
+        label: creationSession?.status === 'ready' ? '开始生成' : '直接生成',
+        tone: 'primary',
+        onClick: handleForkWorkspaceGenerate,
+        disabled: creationSessionSubmitting,
+      });
+    }
+
+    actions.push({
+      key: 'restart-fork-session',
+      label: '重新开始',
+      tone: 'danger',
+      onClick: handleRestartForkSession,
+      disabled: creationSessionSubmitting,
+    });
+
+    return actions;
+  })();
+
   const forkWorkspace = (
     <CreationCreateWorkspace
       showSettings={false}
       topContent={sourceReferenceCard}
       session={isForkSessionActive ? creationSession : null}
-      streamingMessage={isForkSessionActive ? creationSessionStreamingReply : null}
-      pendingUserMessage={isForkSessionActive ? creationSessionPendingUserMessage : null}
-      inputValue={forkAnswer}
-      onInputChange={(e) => setForkAnswer(e?.detail?.value || '')}
+      inputValue={isForkSessionActive ? sessionPromptDraft : forkInstruction}
+      onInputChange={(e) => {
+        const nextValue = e?.detail?.value || '';
+        if (isForkSessionActive) {
+          setSessionPromptDraft(nextValue);
+          return;
+        }
+        setForkInstruction(nextValue);
+      }}
       inputPlaceholder={activeForkInputPlaceholder}
-      onSend={handleForkWorkspaceSend}
-      onSkip={handleSkipForkQuestion}
-      onGenerate={handleForkWorkspaceGenerate}
-      onPreview={handleForkWorkspacePreview}
-      sendDisabled={creationSessionSubmitting || !(isForkSessionActive ? forkAnswer.trim() : canStartForkSession)}
-      skipDisabled={creationSessionSubmitting || !canSkipForkQuestion}
-      generateDisabled={creationSessionSubmitting || !(isForkSessionActive ? canGenerateForkSession : canStartForkSession)}
-      previewDisabled={creationSessionSubmitting || !(isForkSessionActive || canStartForkSession)}
-      previewExpanded={isPreviewExpanded}
-      previewLabel={isPreviewExpanded ? '收起预览' : '预览'}
-      generateLabel="直接开始复刻"
+      onPrimaryAction={handleForkWorkspacePrimaryAction}
+      primaryActionLabel={isForkSessionActive ? '确认并保存提示词' : '开始整理复刻提示词'}
+      primaryActionDisabled={
+        creationSessionSubmitting
+        || (isForkSessionActive ? !canEditForkPrompt || !hasForkPromptChanges : !canStartForkSession)
+      }
+      secondaryActions={forkWorkspaceSecondaryActions}
       errorMessage={getUserFacingForkError(
         (creationSession?.entryMode === 'fork'
           ? (creationSessionError || terminalError?.message || error || '')
@@ -690,9 +730,22 @@ export default function GameForkPage() {
         || ''
       )}
       isSubmitting={creationSessionSubmitting}
-      threadTitle="说说这次想怎么改"
-      threadHint="像聊天一样往下说，AI 会继续追问或直接整理这版新版本方案。"
-      introMessage="先告诉我你想保留什么、改变什么，我会帮你整理新版本方向。"
+      workspaceTitle={isForkSessionActive ? '确认这次复刻提示词' : '说说这次想怎么改'}
+      workspaceHint={isForkSessionActive
+        ? 'AI 已经整理出一版复刻提示词。你可以先修改确认，再开始真正生成。'
+        : '先描述你想保留什么、改变什么，AI 会先扩写成一版提示词，再由你确认。'}
+      introMessage="先告诉我你想保留什么、改变什么，我会先帮你整理出一版完整提示词。"
+      helperText={isForkSessionActive
+        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这版复刻提示词。')
+        : ''}
+      loadingTitle="正在整理并扩写这次复刻方向"
+      loadingDescription="完成后你会先看到一版可编辑提示词，确认后才会真正开始生成。"
+      initialLabel="复刻方向"
+      initialHint="可以描述你想保留的核心、想改变的体验、风格或目标玩家。"
+      draftLabel="复刻提示词"
+      draftHint={creationSession?.status === 'ready'
+        ? '这版提示词已经确认。你仍然可以继续修改并再次保存。'
+        : '你可以直接修改这段提示词，也可以直接使用当前版本。'}
     />
   );
 
@@ -713,7 +766,9 @@ export default function GameForkPage() {
                   tone="danger"
                   eyebrow="无法发起"
                   title={isOwnGame ? '请直接去优化你的作品' : '当前没有复刻权限'}
-                  description={isOwnGame ? '你已经拥有这款作品，直接优化会更顺手，也能保留完整的创作链路。' : pageError || '如需开放复刻，需要原作者允许该作品被复刻。'}
+                  description={isOwnGame
+                    ? '你已经拥有这款作品，直接优化会更顺手，也能保留完整的创作链路。'
+                    : pageError || '如需开放复刻，需要原作者允许该作品被复刻。'}
                 />
               ),
             },

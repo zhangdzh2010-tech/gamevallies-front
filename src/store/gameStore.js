@@ -153,6 +153,14 @@ function clearActiveSessionRuntime() {
   activeSessionWebSocketUnsubscribers = [];
 }
 
+function hasActiveSessionRuntimeBinding() {
+  return Boolean(
+    activeSessionPollInterval
+    || activeSessionStreamUnsubscribe
+    || activeSessionWebSocketUnsubscribers.length
+  );
+}
+
 function getCreationSessionRuntimePhase(session) {
   if (!session?.sessionId) {
     return '';
@@ -582,11 +590,43 @@ function getCreationSessionRevision(session) {
   return Number.isFinite(revision) ? revision : 0;
 }
 
+function getCreationSessionExpandedPrompt(session) {
+  if (session?.expandedPrompt != null && session.expandedPrompt !== '') {
+    return String(session.expandedPrompt);
+  }
+
+  if (session?.prompt != null && session.prompt !== '') {
+    return String(session.prompt);
+  }
+
+  if (session?.initialPrompt != null && session.initialPrompt !== '') {
+    return String(session.initialPrompt);
+  }
+
+  return '';
+}
+
 function getCreationSessionQuestionText(session) {
   return [session?.currentQuestion?.content, session?.currentQuestion?.description]
     .filter(Boolean)
     .join('\n')
     .trim();
+}
+
+function buildCreationSessionUiState(session) {
+  const status = String(session?.status || '');
+
+  return {
+    isInitializing: status === 'initializing',
+    isAwaitingPromptConfirmation: status === 'collecting',
+    canGenerate: status === 'collecting' || status === 'ready',
+    canEditPrompt: status === 'collecting' || status === 'ready',
+  };
+}
+
+function isCreationSessionRevisionConflictError(error) {
+  const statusCode = Number(error?.statusCode ?? error?.status ?? 0);
+  return statusCode === 409 || /revision|版本冲突|冲突/i.test(error?.message || '');
 }
 
 function sessionContainsAssistantReply(session, reply) {
@@ -1011,10 +1051,12 @@ export const useGameStore = create((set, get) => {
       : rawNextSession;
     const previousRuntimeKey = getCreationSessionRuntimeBindingKey(previousSession);
     const nextRuntimeKey = getCreationSessionRuntimeBindingKey(nextSession);
+    const runtimeBindingActive = hasActiveSessionRuntimeBinding();
     const preserveStreamConnection = Boolean(
       previousRuntimeKey
       && previousRuntimeKey === nextRuntimeKey
       && get().creationSessionStreamConnected
+      && runtimeBindingActive
     );
     const nextStreamingReply = isStaleCreationSessionSnapshot(previousSession, rawNextSession)
       ? previousStreamingReply
@@ -1025,9 +1067,10 @@ export const useGameStore = create((set, get) => {
 
     set({
       creationSession: nextSession,
+      creationSessionUiState: buildCreationSessionUiState(nextSession),
       creationSessionContext: nextSession
         ? buildCreationSessionContext({
-            prompt: nextSession.prompt,
+            prompt: nextSession.initialPrompt || nextSession.prompt,
             title: nextSession.title,
             entryMode: nextSession.entryMode,
             orientation: nextSession.orientation,
@@ -1042,6 +1085,8 @@ export const useGameStore = create((set, get) => {
     });
 
     if (previousRuntimeKey !== nextRuntimeKey) {
+      bindCreationSessionRuntime(nextSession);
+    } else if (nextRuntimeKey && !runtimeBindingActive) {
       bindCreationSessionRuntime(nextSession);
     }
     return nextSession;
@@ -1364,6 +1409,22 @@ export const useGameStore = create((set, get) => {
     return readMatchingSession();
   };
 
+  const recoverCreationSessionRevisionConflict = async (sessionId) => {
+    const message = '会话已更新，请基于最新版本继续操作';
+
+    if (!sessionId) {
+      return message;
+    }
+
+    try {
+      await get().refreshCreationSession(sessionId);
+    } catch (_refreshError) {
+      // Keep the user-facing conflict hint even if the refresh also fails.
+    }
+
+    return message;
+  };
+
   return ({
   currentGame: null,
   currentTask: null,
@@ -1381,6 +1442,7 @@ export const useGameStore = create((set, get) => {
   latestTaskMessage: '',
   canPlay: true,
   creationSession: null,
+  creationSessionUiState: buildCreationSessionUiState(null),
   creationSessionError: null,
   creationSessionSubmitting: false,
   creationSessionRestoring: false,
@@ -1421,6 +1483,7 @@ export const useGameStore = create((set, get) => {
       terminalError: null,
       latestTaskMessage: '',
       creationSession: null,
+      creationSessionUiState: buildCreationSessionUiState(null),
       creationSessionError: null,
       creationSessionSubmitting: true,
       creationSessionRestoring: false,
@@ -1484,6 +1547,7 @@ export const useGameStore = create((set, get) => {
         clearActiveSessionRuntime();
         set({
           creationSession: null,
+          creationSessionUiState: buildCreationSessionUiState(null),
           creationSessionRestoring: false,
           creationSessionError: null,
           creationSessionStreamingReply: null,
@@ -1564,20 +1628,44 @@ export const useGameStore = create((set, get) => {
     }
   },
 
-  answerCreationSessionQuestion: async (content, options = {}) => {
-    const session = get().creationSession;
+  confirmEditedPrompt: async (content, options = {}) => {
+    let session = get().creationSession;
     const normalizedContent = normalizeSessionMessageContent(content);
     if (!session?.sessionId) {
-      throw new Error('当前没有可回答的创作会话');
+      throw new Error('当前没有可确认的创作会话');
     }
 
     if (!normalizedContent) {
-      throw new Error('请先回答当前问题');
+      throw new Error('请先完善提示词内容');
     }
 
     if (session.status === 'initializing') {
-      const message = 'AI 还在整理第一轮问题，请稍等';
-      set({ creationSessionError: message });
+      set({
+        creationSessionSubmitting: true,
+        creationSessionError: null,
+      });
+
+      session = await waitForCreationSessionReady(session.sessionId);
+    }
+
+    if (session?.status === 'initializing') {
+      const message = 'AI 还在整理提示词，请稍等';
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+
+    if (session && ['abandoned', 'expired', 'failed'].includes(String(session.status || ''))) {
+      const message = deriveCreationSessionErrorMessage(
+        session?.metadata?.initError || session?.metadata?.lastError || '',
+        '创作会话初始化失败，请重新开始'
+      );
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
       throw new Error(message);
     }
 
@@ -1588,7 +1676,7 @@ export const useGameStore = create((set, get) => {
     });
 
     try {
-      const nextSession = await gameService.appendCreationSessionMessage(
+      const nextSession = await gameService.confirmEditedPrompt(
         session.sessionId,
         normalizedContent,
         options.revision ?? session.revision
@@ -1600,16 +1688,9 @@ export const useGameStore = create((set, get) => {
 
       return nextSession;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '鎻愪氦鍥炵瓟澶辫触锛岃绋嶅悗閲嶈瘯');
-
-      // #7 鐗堟湰鍐茬獊鏃惰嚜鍔ㄥ埛鏂?session 鑾峰彇鏈€鏂?revision
-      if (/revision|鐗堟湰鍐茬獊|鍐茬獊/i.test(error?.message || '')) {
-        try {
-          await get().refreshCreationSession(session.sessionId);
-        } catch (_refreshError) {
-          // 鍒锋柊澶辫触鍒欎繚鎸佸師閿欒娑堟伅
-        }
-      }
+      const message = isCreationSessionRevisionConflictError(error)
+        ? await recoverCreationSessionRevisionConflict(session.sessionId)
+        : deriveCreationSessionErrorMessage(error, '确认提示词失败，请稍后重试');
 
       set({
         creationSessionSubmitting: false,
@@ -1620,22 +1701,50 @@ export const useGameStore = create((set, get) => {
     }
   },
 
-  skipCreationSessionQuestion: async (options = {}) => {
-    const session = get().creationSession;
+  answerCreationSessionQuestion: async (content, options = {}) => (
+    get().confirmEditedPrompt(content, options)
+  ),
+
+  confirmCurrentPrompt: async (options = {}) => {
+    let session = get().creationSession;
     if (!session?.sessionId) {
-      throw new Error('当前没有可跳过的创作会话');
+      throw new Error('当前没有可确认的创作会话');
     }
 
     if (session.status === 'initializing') {
-      const message = 'AI 还在整理第一轮问题，请稍等';
-      set({ creationSessionError: message });
+      set({
+        creationSessionSubmitting: true,
+        creationSessionError: null,
+      });
+
+      session = await waitForCreationSessionReady(session.sessionId);
+    }
+
+    if (session?.status === 'initializing') {
+      const message = 'AI 还在整理提示词，请稍等';
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+
+    if (session && ['abandoned', 'expired', 'failed'].includes(String(session.status || ''))) {
+      const message = deriveCreationSessionErrorMessage(
+        session?.metadata?.initError || session?.metadata?.lastError || '',
+        '创作会话初始化失败，请重新开始'
+      );
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
       throw new Error(message);
     }
 
     set({ creationSessionSubmitting: true, creationSessionError: null });
 
     try {
-      const nextSession = await gameService.skipCreationSessionQuestion(
+      const nextSession = await gameService.confirmCurrentPrompt(
         session.sessionId,
         options.revision ?? session.revision
       );
@@ -1646,13 +1755,79 @@ export const useGameStore = create((set, get) => {
 
       return nextSession;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '璺宠繃闂澶辫触锛岃绋嶅悗閲嶈瘯');
+      const message = isCreationSessionRevisionConflictError(error)
+        ? await recoverCreationSessionRevisionConflict(session.sessionId)
+        : deriveCreationSessionErrorMessage(error, '确认当前提示词失败，请稍后重试');
+
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
       });
       throw new Error(message);
     }
+  },
+
+  skipCreationSessionQuestion: async (options = {}) => (
+    get().confirmCurrentPrompt(options)
+  ),
+
+  confirmAndGenerate: async (promptOrOptions = {}, maybeOptions = {}) => {
+    const hasPromptArgument = typeof promptOrOptions === 'string';
+    const rawOptions = hasPromptArgument
+      ? (maybeOptions && typeof maybeOptions === 'object' ? maybeOptions : {})
+      : (promptOrOptions && typeof promptOrOptions === 'object' ? promptOrOptions : {});
+    const normalizedEditedPrompt = normalizeSessionMessageContent(
+      hasPromptArgument ? promptOrOptions : rawOptions.editedPrompt
+    );
+    const {
+      editedPrompt: _ignoredEditedPrompt,
+      ...generateOptions
+    } = rawOptions || {};
+    let session = get().creationSession;
+
+    if (!session?.sessionId) {
+      throw new Error('当前没有可生成的创作会话');
+    }
+
+    if (session.status === 'initializing') {
+      set({
+        creationSessionSubmitting: true,
+        creationSessionError: null,
+      });
+
+      session = await waitForCreationSessionReady(session.sessionId);
+    }
+
+    if (session?.status === 'initializing') {
+      const message = 'AI 还在整理提示词，请稍等';
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+
+    const currentExpandedPrompt = normalizeSessionMessageContent(
+      getCreationSessionExpandedPrompt(session)
+    );
+    const hasEditedPrompt = Boolean(normalizedEditedPrompt);
+    const hasPromptChanges = hasEditedPrompt && normalizedEditedPrompt !== currentExpandedPrompt;
+
+    if (session?.status === 'collecting' || hasPromptChanges) {
+      session = hasPromptChanges
+        ? await get().confirmEditedPrompt(normalizedEditedPrompt, {
+            revision: generateOptions.revision ?? session?.revision,
+          })
+        : await get().confirmCurrentPrompt({
+            revision: generateOptions.revision ?? session?.revision,
+          });
+    }
+
+    return get().generateFromCreationSession(session?.sessionId || '', {
+      ...generateOptions,
+      revision: session?.revision ?? generateOptions.revision,
+      promptPreview: normalizedEditedPrompt || currentExpandedPrompt,
+    });
   },
 
   generateFromCreationSession: async (sessionIdOrOptions = {}, maybeOptions = {}) => {
@@ -1705,6 +1880,15 @@ export const useGameStore = create((set, get) => {
       throw new Error(message);
     }
 
+    if (resolvedSession?.status === 'collecting') {
+      const message = '请先确认提示词，再开始生成';
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+
     const options = {
       ...(rawOptions || {}),
       ...((rawOptions?.revision == null && resolvedSession?.revision != null)
@@ -1721,6 +1905,9 @@ export const useGameStore = create((set, get) => {
       currentTaskCursor: 0,
       creationSessionSubmitting: true,
       creationSessionError: null,
+      creationSessionStreamingReply: null,
+      creationSessionPendingUserMessage: null,
+      creationSessionStreamConnected: false,
       error: null,
       terminalError: null,
       isGenerating: true,
@@ -1741,8 +1928,8 @@ export const useGameStore = create((set, get) => {
       const gameTitle = options.title || result.title || resolvedSession?.title || '';
       const promptPreview = options.promptPreview
         ? String(options.promptPreview).slice(0, 80)
-        : resolvedSession?.prompt
-          ? String(resolvedSession.prompt).slice(0, 80)
+        : getCreationSessionExpandedPrompt(resolvedSession)
+          ? String(getCreationSessionExpandedPrompt(resolvedSession)).slice(0, 80)
           : '';
       const trackedTaskType = resolvedSession?.entryMode === 'iterate'
         ? 'pipeline_iterate'
@@ -1750,6 +1937,14 @@ export const useGameStore = create((set, get) => {
       const trackedTaskGameId = resolvedSession?.entryMode === 'iterate'
         ? (resolvedSession?.sourceGameId || gameId)
         : gameId;
+
+      const nextGeneratingSession = resolvedSession
+        ? {
+            ...resolvedSession,
+            status: 'generating',
+            gameId,
+          }
+        : get().creationSession;
 
       set({
         generatingGameId: gameId,
@@ -1759,13 +1954,8 @@ export const useGameStore = create((set, get) => {
         creationSessionStreamingReply: null,
         creationSessionPendingUserMessage: null,
         creationSessionStreamConnected: false,
-        creationSession: resolvedSession
-          ? {
-              ...resolvedSession,
-              status: 'generating',
-              gameId,
-            }
-          : get().creationSession,
+        creationSession: nextGeneratingSession,
+        creationSessionUiState: buildCreationSessionUiState(nextGeneratingSession),
       });
 
       if (result.generationTask?.taskId) {
@@ -1799,17 +1989,28 @@ export const useGameStore = create((set, get) => {
 
       return result;
     } catch (error) {
-      const message = deriveCreationSessionErrorMessage(error, '鐢熸垚闃舵閬囧埌闂锛屽彲绋嶅悗閲嶈瘯');
+      const message = isCreationSessionRevisionConflictError(error)
+        ? await recoverCreationSessionRevisionConflict(targetSessionId)
+        : deriveCreationSessionErrorMessage(error, '鐢熸垚闃舵閬囧埌闂锛屽彲绋嶅悗閲嶈瘯');
+      const runtimeBindingActive = hasActiveSessionRuntimeBinding();
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
         creationSessionStreamingReply: null,
         creationSessionPendingUserMessage: null,
-        creationSessionStreamConnected: false,
+        creationSessionStreamConnected: runtimeBindingActive
+          ? get().creationSessionStreamConnected
+          : false,
         isGenerating: false,
         generationProgress: null,
         latestTaskMessage: '',
       });
+
+      const recoverySession = get().creationSession || resolvedSession;
+      if (!runtimeBindingActive && getCreationSessionRuntimePhase(recoverySession)) {
+        bindCreationSessionRuntime(recoverySession);
+      }
+
       throw new Error(message);
     }
   },
@@ -1850,6 +2051,7 @@ export const useGameStore = create((set, get) => {
     clearActiveSessionRuntime();
     set({
       creationSession: null,
+      creationSessionUiState: buildCreationSessionUiState(null),
       creationSessionError: null,
       creationSessionSubmitting: false,
       creationSessionRestoring: false,
@@ -1860,6 +2062,7 @@ export const useGameStore = create((set, get) => {
     });
   },
 
+  getCreationSessionUiState: () => buildCreationSessionUiState(get().creationSession),
   getCreationFlowStage: () => getCreationFlowStageFromState(get()),
 
   _beginTaskTracking: async (task, options = {}) => {
@@ -2547,6 +2750,7 @@ export const useGameStore = create((set, get) => {
       latestTaskMessage: '',
       canPlay: true,
       creationSession: null,
+      creationSessionUiState: buildCreationSessionUiState(null),
       creationSessionError: null,
       creationSessionSubmitting: false,
       creationSessionRestoring: false,
