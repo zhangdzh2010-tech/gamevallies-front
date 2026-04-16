@@ -5,7 +5,7 @@ import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
-import { PipelineOrbit } from '../../../components/common/PipelineOrbit';
+import { GenerationProgressPanel } from '../../../components/common/GenerationProgressPanel';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import {
   CreationCreateWorkspace,
@@ -97,6 +97,7 @@ export default function GameForkPage() {
     creationSessionError,
     creationSessionSubmitting,
     creationSessionStreamingReply,
+    creationSessionPendingUserMessage,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -251,15 +252,18 @@ export default function GameForkPage() {
   ]);
 
   const handleSubmitForkAnswer = async () => {
-    if (!forkAnswer.trim()) {
+    const nextAnswer = forkAnswer.trim();
+    if (!nextAnswer) {
       Taro.showToast({ title: '请先补充你想修改的方向', icon: 'none' });
       return;
     }
 
+    setForkAnswer('');
+
     try {
-      await answerCreationSessionQuestion(forkAnswer.trim());
-      setForkAnswer('');
+      await answerCreationSessionQuestion(nextAnswer);
     } catch (error) {
+      setForkAnswer((currentValue) => currentValue || nextAnswer);
       Taro.showToast({ title: error?.message || '提交回答失败，请重试', icon: 'none' });
     }
   };
@@ -517,7 +521,13 @@ export default function GameForkPage() {
   }
 
   if (isCurrentForkGenerating) {
-    const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
+    const progress = generationProgress || {
+      stages: PIPELINE_STAGES.length ? [PIPELINE_STAGES[0]] : [],
+      stageIndex: 0,
+      pct: 5,
+      stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
+      message: '正在接收你的复刻需求',
+    };
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
     const currentStageLabel = progress.stageLabel || '正在生成复刻作品';
 
@@ -526,14 +536,14 @@ export default function GameForkPage() {
         hideHero
         sections={[
           {
-            key: 'fork-progress-orbit',
+            key: 'fork-progress-panel',
             node: (
-              <PipelineOrbit
-                stages={PIPELINE_STAGES}
+              <GenerationProgressPanel
+                stages={progress.stages || PIPELINE_STAGES}
                 currentIndex={progress.stageIndex}
                 progressPct={progress.pct}
-                title="复刻进度"
                 stageLabel={currentStageLabel}
+                progressMessage={progress.message}
                 statusLabel={taskStatusLabel}
                 modeLabel="复刻流程"
                 coreLabel="AI 复刻"
@@ -657,6 +667,7 @@ export default function GameForkPage() {
       topContent={sourceReferenceCard}
       session={isForkSessionActive ? creationSession : null}
       streamingMessage={isForkSessionActive ? creationSessionStreamingReply : null}
+      pendingUserMessage={isForkSessionActive ? creationSessionPendingUserMessage : null}
       inputValue={forkAnswer}
       onInputChange={(e) => setForkAnswer(e?.detail?.value || '')}
       inputPlaceholder={activeForkInputPlaceholder}

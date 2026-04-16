@@ -1,0 +1,502 @@
+@import '../../styles/variables.scss';
+
+.generation-progress-panel {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: 24px 22px 28px;
+  background:
+    radial-gradient(circle at 76% 16%, rgba(76, 201, 240, 0.22), transparent 24%),
+    radial-gradient(circle at 50% 68%, rgba(107, 76, 255, 0.2), transparent 34%),
+    linear-gradient(180deg, rgba(16, 18, 37, 0.98) 0%, rgba(18, 16, 46, 0.98) 100%);
+  border: 1px solid rgba(96, 86, 255, 0.22);
+  border-radius: 28px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 26px 46px rgba(7, 9, 24, 0.34);
+}
+
+.generation-progress-panel__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(100, 116, 139, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.generation-progress-panel__header,
+.generation-progress-panel__visual,
+.generation-progress-panel__metrics {
+  position: relative;
+  z-index: 1;
+}
+
+.generation-progress-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.generation-progress-panel__eyebrow {
+  font-size: $font-size-base;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #8aa2ff;
+}
+
+.generation-progress-panel__status-chip {
+  width: 104px;
+  height: 104px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 238, 214, 0.28);
+  background:
+    radial-gradient(circle at 50% 38%, rgba(74, 238, 214, 0.16), transparent 54%),
+    rgba(27, 39, 66, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 28px rgba(74, 238, 214, 0.1),
+    0 0 26px rgba(74, 238, 214, 0.08),
+    0 14px 28px rgba(12, 19, 40, 0.22);
+}
+
+.generation-progress-panel__status-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: #89f7db;
+  text-shadow: 0 0 18px rgba(74, 238, 214, 0.22);
+}
+
+.generation-progress-panel__visual {
+  --orbit-center-y: 47%;
+  position: relative;
+  width: 352px;
+  height: 452px;
+  margin: 0 auto 24px;
+}
+
+.generation-progress-panel__halo,
+.generation-progress-panel__ring {
+  position: absolute;
+  left: 50%;
+  top: var(--orbit-center-y);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.generation-progress-panel__halo--outer {
+  width: 312px;
+  height: 312px;
+  background: radial-gradient(circle, rgba(86, 124, 255, 0.24) 0%, rgba(86, 124, 255, 0.03) 58%, transparent 74%);
+  filter: blur(10px);
+}
+
+.generation-progress-panel__halo--inner {
+  width: 214px;
+  height: 214px;
+  background: radial-gradient(circle, rgba(74, 238, 214, 0.18) 0%, rgba(74, 238, 214, 0.03) 60%, transparent 76%);
+  filter: blur(12px);
+}
+
+.generation-progress-panel__ring--outer {
+  width: 334px;
+  height: 334px;
+  border: 1px solid rgba(112, 122, 255, 0.3);
+  box-shadow:
+    inset 0 0 24px rgba(112, 122, 255, 0.1),
+    0 0 28px rgba(112, 122, 255, 0.1);
+}
+
+.generation-progress-panel__ring--inner {
+  width: 268px;
+  height: 268px;
+  border: 1px dashed rgba(92, 189, 255, 0.24);
+  animation: generation-progress-orbit-spin-slow 12s linear infinite;
+}
+
+.generation-progress-panel__scan {
+  position: absolute;
+  left: 50%;
+  top: var(--orbit-center-y);
+  width: 12px;
+  height: 168px;
+  margin-left: -6px;
+  margin-top: -168px;
+  transform-origin: 50% 100%;
+  animation: generation-progress-orbit-spin 3.4s linear infinite;
+}
+
+.generation-progress-panel__beam {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(74, 238, 214, 0.86) 0%, rgba(74, 238, 214, 0.1) 72%, transparent 100%);
+  box-shadow: 0 0 18px rgba(74, 238, 214, 0.26);
+}
+
+.generation-progress-panel__beam-head {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 50%;
+  background: #8ef8d9;
+  box-shadow:
+    0 0 10px rgba(143, 248, 217, 0.8),
+    0 0 22px rgba(143, 248, 217, 0.4);
+}
+
+.generation-progress-panel__node {
+  position: absolute;
+  left: 50%;
+  top: var(--orbit-center-y);
+}
+
+.generation-progress-panel__node-core {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1px solid rgba(135, 151, 193, 0.22);
+  background: rgba(18, 23, 42, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.04);
+  transition:
+    background 240ms ease,
+    border-color 240ms ease,
+    box-shadow 240ms ease;
+}
+
+.generation-progress-panel__node-core::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.generation-progress-panel__node-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #8c8ba5;
+}
+
+.generation-progress-panel__node--done .generation-progress-panel__node-core {
+  border-color: rgba(74, 238, 214, 0.4);
+  background: linear-gradient(180deg, rgba(24, 90, 90, 0.94) 0%, rgba(17, 58, 67, 0.92) 100%);
+  box-shadow:
+    inset 0 0 14px rgba(143, 248, 217, 0.14),
+    0 0 18px rgba(74, 238, 214, 0.18);
+}
+
+.generation-progress-panel__node--done .generation-progress-panel__node-core::after {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(74, 238, 214, 0.22) 0%, rgba(74, 238, 214, 0.02) 66%, transparent 74%);
+}
+
+.generation-progress-panel__node--done .generation-progress-panel__node-text {
+  color: #8ff8d9;
+}
+
+.generation-progress-panel__node--pending .generation-progress-panel__node-core {
+  border-color: rgba(135, 151, 193, 0.18);
+  background: rgba(18, 23, 42, 0.82);
+}
+
+.generation-progress-panel__node--pending .generation-progress-panel__node-text {
+  color: #7c7b98;
+}
+
+.generation-progress-panel__node--current .generation-progress-panel__node-core {
+  border-color: rgba(133, 147, 255, 0.78);
+  background: linear-gradient(135deg, rgba(108, 94, 255, 0.96) 0%, rgba(87, 184, 255, 0.88) 100%);
+  box-shadow:
+    0 0 0 12px rgba(108, 94, 255, 0.16),
+    0 0 30px rgba(108, 94, 255, 0.4);
+  animation: generation-progress-node-pulse 1.6s ease-in-out infinite;
+}
+
+.generation-progress-panel__node--current .generation-progress-panel__node-core::after {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(125, 157, 255, 0.32) 0%, rgba(125, 157, 255, 0.02) 66%, transparent 76%);
+}
+
+.generation-progress-panel__node--current .generation-progress-panel__node-text {
+  color: #fff;
+}
+
+.generation-progress-panel__core {
+  position: absolute;
+  left: 50%;
+  top: var(--orbit-center-y);
+  width: 222px;
+  min-height: 222px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  padding: 34px 26px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(100, 90, 255, 0.24), transparent 54%),
+    linear-gradient(180deg, rgba(27, 29, 54, 0.98) 0%, rgba(18, 19, 42, 0.98) 100%);
+  border: 1px solid rgba(112, 122, 255, 0.22);
+  box-shadow:
+    inset 0 0 34px rgba(112, 122, 255, 0.14),
+    0 22px 36px rgba(6, 8, 20, 0.34);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.generation-progress-panel__core::before,
+.generation-progress-panel__core::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.generation-progress-panel__core::before {
+  inset: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.generation-progress-panel__core::after {
+  inset: -14px;
+  background: radial-gradient(circle, rgba(108, 94, 255, 0.16) 0%, rgba(108, 94, 255, 0.02) 62%, transparent 74%);
+}
+
+.generation-progress-panel__core-eyebrow {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 8px;
+  font-size: 18px;
+  letter-spacing: 1.4px;
+  color: #8a91ff;
+}
+
+.generation-progress-panel__core-pct {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 10px;
+  font-size: 68px;
+  line-height: 1;
+  font-weight: 800;
+  color: $text-bright;
+  text-shadow: 0 0 20px rgba(112, 122, 255, 0.28);
+}
+
+.generation-progress-panel__core-stage {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 10px;
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.generation-progress-panel__core-message {
+  position: relative;
+  z-index: 1;
+  max-width: 160px;
+  font-size: $font-size-xs;
+  line-height: 1.5;
+  color: #b3abc9;
+}
+
+.generation-progress-panel__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.generation-progress-panel__metric {
+  min-width: 0;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(14, 18, 34, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 18px rgba(8, 11, 24, 0.16);
+}
+
+.generation-progress-panel__metric-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: $font-size-xs;
+  color: #8280a0;
+}
+
+.generation-progress-panel__metric-value {
+  display: block;
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+@keyframes generation-progress-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes generation-progress-orbit-spin-slow {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes generation-progress-node-pulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+    box-shadow:
+      0 0 0 6px rgba(108, 94, 255, 0.12),
+      0 0 24px rgba(108, 94, 255, 0.26);
+  }
+
+  50% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 12px rgba(108, 94, 255, 0),
+      0 0 28px rgba(108, 94, 255, 0.38);
+  }
+}
+
+.generation-progress-panel.generation-progress-panel--h5 {
+  margin-bottom: 16px;
+  padding: 18px 16px 20px;
+  border-radius: 22px;
+
+  .generation-progress-panel__header {
+    margin-bottom: 12px;
+  }
+
+  .generation-progress-panel__eyebrow {
+    font-size: 18px;
+  }
+
+  .generation-progress-panel__status-chip {
+    width: 80px;
+    height: 80px;
+  }
+
+  .generation-progress-panel__status-text {
+    font-size: 18px;
+  }
+
+  .generation-progress-panel__visual {
+    width: 286px;
+    height: 348px;
+    margin-bottom: 18px;
+  }
+
+  .generation-progress-panel__halo--outer {
+    width: 256px;
+    height: 256px;
+  }
+
+  .generation-progress-panel__halo--inner {
+    width: 176px;
+    height: 176px;
+  }
+
+  .generation-progress-panel__ring--outer {
+    width: 274px;
+    height: 274px;
+  }
+
+  .generation-progress-panel__ring--inner {
+    width: 224px;
+    height: 224px;
+  }
+
+  .generation-progress-panel__scan {
+    width: 10px;
+    height: 138px;
+    margin-left: -5px;
+    margin-top: -138px;
+  }
+
+  .generation-progress-panel__beam-head {
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
+  }
+
+  .generation-progress-panel__node-core {
+    width: 50px;
+    height: 50px;
+  }
+
+  .generation-progress-panel__node-text {
+    font-size: 15px;
+  }
+
+  .generation-progress-panel__node--current .generation-progress-panel__node-core {
+    box-shadow:
+      0 0 0 8px rgba(108, 94, 255, 0.12),
+      0 0 20px rgba(108, 94, 255, 0.3);
+  }
+
+  .generation-progress-panel__core {
+    width: 154px;
+    min-height: 154px;
+    padding: 18px 14px;
+  }
+
+  .generation-progress-panel__core-eyebrow {
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+
+  .generation-progress-panel__core-pct {
+    margin-bottom: 5px;
+    font-size: 42px;
+  }
+
+  .generation-progress-panel__core-stage {
+    margin-bottom: 5px;
+    font-size: 16px;
+  }
+
+  .generation-progress-panel__core-message {
+    max-width: 104px;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .generation-progress-panel__metrics {
+    gap: 8px;
+  }
+
+  .generation-progress-panel__metric {
+    padding: 12px 10px;
+    border-radius: 14px;
+  }
+
+  .generation-progress-panel__metric-label {
+    margin-bottom: 6px;
+    font-size: $font-size-2xs-h5;
+  }
+
+  .generation-progress-panel__metric-value {
+    font-size: $font-size-xs-h5;
+  }
+}

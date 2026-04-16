@@ -93,13 +93,8 @@ jest.mock('../../../components/common/PageScrollContainer', () => ({
   PageScrollContainer: ({ children }) => <div>{children}</div>,
 }));
 
-jest.mock('../../../components/common/PipelineOrbit', () => ({
-  PipelineOrbit: ({ title, stageLabel }) => (
-    <div>
-      <div>{title}</div>
-      <div>{stageLabel}</div>
-    </div>
-  ),
+jest.mock('../../../components/common/GenerationProgressPanel', () => ({
+  GenerationProgressPanel: ({ stageLabel }) => <div>{stageLabel}</div>,
 }));
 
 jest.mock('../../../components/common/PaywallPopup', () => ({
@@ -224,6 +219,7 @@ function buildGameStoreState(overrides = {}) {
     creationSessionError: null,
     creationSessionSubmitting: false,
     creationSessionStreamingReply: null,
+    creationSessionPendingUserMessage: null,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
@@ -273,6 +269,43 @@ describe('Iterate page creation session flow', () => {
     });
   });
 
+  test('starts an iterate session and immediately generates from the first instruction', async () => {
+    mockStartCreationSession.mockResolvedValue({
+      sessionId: 'iter-new',
+      entryMode: 'iterate',
+      sourceGameId: 'game-1',
+      generationTier: 'standard',
+    });
+
+    render(<IteratePage />);
+
+    const initialInput = await screen.findByLabelText('iterate-initial-answer');
+    fireEvent.change(initialInput, { target: { value: 'Make the boost feel stronger' } });
+    fireEvent.click(screen.getByTestId('workspace-generate'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        'Make the boost feel stronger',
+        'Pixel Runner',
+        expect.objectContaining({
+          entryMode: 'iterate',
+          sourceGameId: 'game-1',
+          generationTier: 'standard',
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockGenerateFromCreationSession).toHaveBeenCalledWith(
+        'iter-new',
+        expect.objectContaining({
+          orientation: 'portrait',
+          generationTier: 'standard',
+        }),
+      );
+    });
+  });
+
   test('renders the streaming draft and submits follow-up answers for an active iterate session', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: mockIterateSession,
@@ -291,6 +324,10 @@ describe('Iterate page creation session flow', () => {
 
     fireEvent.change(answerInput, { target: { value: 'Focus on the landing feedback' } });
     fireEvent.click(screen.getByTestId('workspace-send'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('iterate-session-answer').value).toBe('');
+    });
 
     await waitFor(() => {
       expect(mockAnswerCreationSessionQuestion).toHaveBeenCalledWith('Focus on the landing feedback');

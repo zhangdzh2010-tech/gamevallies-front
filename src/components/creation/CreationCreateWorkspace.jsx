@@ -1,7 +1,9 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text, Input, Textarea } from '@tarojs/components';
 import './CreationSession.scss';
+
+const IS_H5 = process.env.TARO_ENV === 'h5';
 
 function formatPreviewDraft(draft) {
   if (draft == null || draft === '') {
@@ -23,6 +25,109 @@ function normalizeMessageContent(content) {
   return String(content || '').trim();
 }
 
+function normalizeComparableText(content) {
+  return String(content || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function messagesOverlap(primaryContent, secondaryContent) {
+  const normalizedPrimary = normalizeComparableText(primaryContent);
+  const normalizedSecondary = normalizeComparableText(secondaryContent);
+
+  if (!normalizedPrimary || !normalizedSecondary) {
+    return false;
+  }
+
+  return normalizedPrimary === normalizedSecondary
+    || normalizedPrimary.includes(normalizedSecondary)
+    || normalizedSecondary.includes(normalizedPrimary);
+}
+
+function messageAlreadyCoversQuestion(messageContent, questionContent, questionDescription) {
+  const normalizedMessage = normalizeComparableText(messageContent);
+  if (!normalizedMessage) {
+    return false;
+  }
+
+  const candidates = [
+    questionContent,
+    [questionContent, questionDescription].filter(Boolean).join(' '),
+    questionDescription,
+  ]
+    .map((item) => normalizeComparableText(item))
+    .filter(Boolean);
+
+  return candidates.some((candidate) => (
+    messagesOverlap(normalizedMessage, candidate)
+  ));
+}
+
+function buildThreadMessage(message, fallbackId) {
+  const content = normalizeMessageContent(message?.content);
+  if (!content) {
+    return null;
+  }
+
+  return {
+    ...message,
+    id: message?.id || fallbackId,
+    role: message?.role || 'assistant',
+    content,
+  };
+}
+
+function pickPreferredThreadMessage(previousMessage, nextMessage) {
+  const previousComparable = normalizeComparableText(previousMessage?.content);
+  const nextComparable = normalizeComparableText(nextMessage?.content);
+
+  if (!previousComparable) {
+    return nextMessage;
+  }
+
+  if (!nextComparable) {
+    return previousMessage;
+  }
+
+  if (
+    nextComparable.length > previousComparable.length
+    && nextComparable.includes(previousComparable)
+  ) {
+    return nextMessage;
+  }
+
+  return previousMessage;
+}
+
+function appendThreadMessage(messages, rawMessage, fallbackId) {
+  const nextMessage = buildThreadMessage(rawMessage, fallbackId);
+  if (!nextMessage) {
+    return messages;
+  }
+
+  const previousMessage = messages[messages.length - 1];
+  if (
+    previousMessage
+    && previousMessage.role === nextMessage.role
+    && messagesOverlap(previousMessage.content, nextMessage.content)
+  ) {
+    const preferredMessage = pickPreferredThreadMessage(previousMessage, nextMessage);
+    if (preferredMessage === previousMessage) {
+      return messages;
+    }
+
+    return [
+      ...messages.slice(0, -1),
+      preferredMessage,
+    ];
+  }
+
+  return [
+    ...messages,
+    nextMessage,
+  ];
+}
+
 function appendStreamingMessage(messages, streamingMessage) {
   const streamingContent = normalizeMessageContent(streamingMessage?.content);
   if (!streamingContent) {
@@ -31,90 +136,90 @@ function appendStreamingMessage(messages, streamingMessage) {
 
   const hasDuplicateAssistantMessage = messages.some((message) => (
     message.role === 'assistant'
-    && normalizeMessageContent(message.content) === streamingContent
+    && messagesOverlap(message.content, streamingContent)
   ));
 
   if (hasDuplicateAssistantMessage) {
     return messages;
   }
 
-  return [
-    ...messages,
-    {
-      id: streamingMessage?.id || 'assistant-stream',
-      role: 'assistant',
-      content: streamingContent,
-      isStreaming: streamingMessage?.isStreaming === true,
-    },
-  ];
+  return appendThreadMessage(messages, {
+    id: streamingMessage?.id || 'assistant-stream',
+    role: 'assistant',
+    content: streamingContent,
+    isStreaming: streamingMessage?.isStreaming === true,
+  }, 'assistant-stream');
 }
 
-function buildThreadMessages(session, introMessage, streamingMessage) {
+function buildThreadMessages(session, introMessage, streamingMessage, pendingUserMessage) {
   const sessionMessages = Array.isArray(session?.messages) ? session.messages : [];
-
-  if (!sessionMessages.length) {
-    const initialMessages = [
-      {
-        id: 'intro-message',
-        role: 'assistant',
-        content: introMessage,
-      },
-    ];
-
-    if (session?.prompt) {
-      initialMessages.push({
-        id: 'initial-prompt',
-        role: 'user',
-        content: session.prompt,
-      });
-    }
-
-    if (session?.currentQuestion?.content) {
-      const questionText = [session.currentQuestion.content, session.currentQuestion.description]
-        .filter(Boolean)
-        .join('\n');
-
-      initialMessages.push({
-        id: 'current-question',
-        role: 'assistant',
-        content: questionText,
-      });
-    }
-
-    return appendStreamingMessage(initialMessages, streamingMessage);
-  }
-
-  const normalizedMessages = sessionMessages.map((message, index) => ({
-    id: message.id || `${message.role || 'message'}-${index}`,
-    role: message.role || 'assistant',
-    content: message.content || '',
-  }));
-
-  const questionText = [session?.currentQuestion?.content, session?.currentQuestion?.description]
+  const questionContent = session?.currentQuestion?.content || '';
+  const questionDescription = session?.currentQuestion?.description || '';
+  const questionText = [questionContent, questionDescription]
     .filter(Boolean)
     .join('\n');
 
-  if (!questionText) {
-    return appendStreamingMessage(normalizedMessages, streamingMessage);
-  }
+  let messages = [];
 
-  const hasSameQuestion = normalizedMessages.some((message) => (
-    message.role === 'assistant'
-    && normalizeMessageContent(message.content) === normalizeMessageContent(questionText)
-  ));
-
-  if (hasSameQuestion) {
-    return appendStreamingMessage(normalizedMessages, streamingMessage);
-  }
-
-  return appendStreamingMessage([
-    ...normalizedMessages,
-    {
-      id: 'current-question',
+  if (!sessionMessages.length) {
+    messages = appendThreadMessage(messages, {
+      id: 'intro-message',
       role: 'assistant',
-      content: questionText,
-    },
-  ], streamingMessage);
+      content: introMessage,
+    }, 'intro-message');
+
+    if (session?.prompt) {
+      messages = appendThreadMessage(messages, {
+        id: 'initial-prompt',
+        role: 'user',
+        content: session.prompt,
+      }, 'initial-prompt');
+    }
+
+    if (questionText) {
+      messages = appendThreadMessage(messages, {
+        id: 'current-question',
+        role: 'assistant',
+        content: questionText,
+      }, 'current-question');
+    }
+  } else {
+    messages = sessionMessages.reduce((threadMessages, message, index) => (
+      appendThreadMessage(
+        threadMessages,
+        {
+          id: message.id || `${message.role || 'message'}-${index}`,
+          role: message.role || 'assistant',
+          content: message.content || '',
+        },
+        `${message.role || 'message'}-${index}`,
+      )
+    ), []);
+  }
+
+  if (questionText) {
+    const hasSameQuestion = messages.some((message) => (
+      message.role === 'assistant'
+      && messageAlreadyCoversQuestion(message.content, questionContent, questionDescription)
+    ));
+
+    if (!hasSameQuestion) {
+      messages = appendThreadMessage(messages, {
+        id: 'current-question',
+        role: 'assistant',
+        content: questionText,
+      }, 'current-question');
+    }
+  }
+
+  if (pendingUserMessage?.content) {
+    messages = appendThreadMessage(messages, {
+      ...pendingUserMessage,
+      role: 'user',
+    }, pendingUserMessage.id || 'pending-user-message');
+  }
+
+  return appendStreamingMessage(messages, streamingMessage);
 }
 
 function getActionButtonClassName({ tone = 'ghost', disabled = false }) {
@@ -135,6 +240,7 @@ export function CreationCreateWorkspace({
   topContent = null,
   session = null,
   streamingMessage = null,
+  pendingUserMessage = null,
   inputValue = '',
   onInputChange,
   inputPlaceholder = '继续补充你的想法...',
@@ -162,13 +268,48 @@ export function CreationCreateWorkspace({
   previewEmptyText = 'AI 正在整理这一版方向，稍等片刻就会显示在这里。',
   introMessage = '先告诉我你想做什么，我会帮你补齐细节。',
 }) {
-  const threadMessages = buildThreadMessages(session, introMessage, streamingMessage);
+  const threadMessages = buildThreadMessages(
+    session,
+    introMessage,
+    streamingMessage,
+    pendingUserMessage,
+  );
   const previewDraftText = formatPreviewDraft(session?.planDraft);
   const showPreviewPanel = previewExpanded && (previewDraftText || session);
   const threadScrollRef = React.useRef(null);
+  const composerTextareaRef = React.useRef(null);
   const actionCount = [showSkip, showGenerate, showPreview].filter(Boolean).length || 1;
   const latestThreadMessage = threadMessages[threadMessages.length - 1];
   const threadTailSignature = `${threadMessages.length}:${latestThreadMessage?.id || ''}:${latestThreadMessage?.content || ''}`;
+
+  const getComposerMinContentHeight = React.useCallback(() => {
+    if (!IS_H5 || !composerTextareaRef.current || typeof window === 'undefined') {
+      return 0;
+    }
+
+    const inputWrap = composerTextareaRef.current.parentElement;
+    if (!inputWrap) {
+      return 0;
+    }
+
+    const inputWrapStyles = window.getComputedStyle(inputWrap);
+    const wrapMinHeight = parseFloat(inputWrapStyles.minHeight || '0');
+    const paddingTop = parseFloat(inputWrapStyles.paddingTop || '0');
+    const paddingBottom = parseFloat(inputWrapStyles.paddingBottom || '0');
+
+    return Math.max(0, wrapMinHeight - paddingTop - paddingBottom);
+  }, []);
+
+  const syncComposerHeight = React.useCallback(() => {
+    if (!IS_H5 || !composerTextareaRef.current) {
+      return;
+    }
+
+    const element = composerTextareaRef.current;
+    const minContentHeight = getComposerMinContentHeight();
+    element.style.height = '0px';
+    element.style.height = `${Math.max(minContentHeight, element.scrollHeight)}px`;
+  }, [getComposerMinContentHeight]);
 
   React.useEffect(() => {
     const scrollHost = threadScrollRef.current?.root || threadScrollRef.current;
@@ -190,6 +331,19 @@ export function CreationCreateWorkspace({
     scrollToBottom();
     return undefined;
   }, [threadTailSignature, showPreviewPanel, previewDraftText]);
+
+  React.useEffect(() => {
+    syncComposerHeight();
+  }, [inputValue, syncComposerHeight]);
+
+  const handleComposerNativeInput = (event) => {
+    syncComposerHeight();
+    onInputChange?.({
+      detail: {
+        value: event.currentTarget.value,
+      },
+    });
+  };
 
   return (
     <View className="creation-create-workspace">
@@ -279,14 +433,27 @@ export function CreationCreateWorkspace({
           <View className="creation-create-composer">
             <View className="creation-create-composer__row">
               <View className="creation-create-composer__input-wrap">
-                <Input
-                  className="creation-create-composer__input"
-                  placeholder={inputPlaceholder}
-                  placeholderStyle="color: #67627d"
-                  value={inputValue}
-                  onInput={onInputChange}
-                  maxlength={2000}
-                />
+                {IS_H5 ? (
+                  <textarea
+                    ref={composerTextareaRef}
+                    className="creation-create-composer__input creation-create-composer__input--native"
+                    placeholder={inputPlaceholder}
+                    value={inputValue}
+                    onInput={handleComposerNativeInput}
+                    maxLength={2000}
+                    rows={1}
+                  />
+                ) : (
+                  <Textarea
+                    className="creation-create-composer__input"
+                    placeholder={inputPlaceholder}
+                    placeholderStyle="color: #67627d"
+                    value={inputValue}
+                    onInput={onInputChange}
+                    maxlength={2000}
+                    autoHeight
+                  />
+                )}
               </View>
 
               <View

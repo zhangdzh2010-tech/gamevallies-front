@@ -91,13 +91,8 @@ jest.mock('../../../components/common/PageScrollContainer', () => ({
   PageScrollContainer: ({ children }) => <div>{children}</div>,
 }));
 
-jest.mock('../../../components/common/PipelineOrbit', () => ({
-  PipelineOrbit: ({ title, stageLabel }) => (
-    <div>
-      <div>{title}</div>
-      <div>{stageLabel}</div>
-    </div>
-  ),
+jest.mock('../../../components/common/GenerationProgressPanel', () => ({
+  GenerationProgressPanel: ({ stageLabel }) => <div>{stageLabel}</div>,
 }));
 
 jest.mock('../../../components/common/PaywallPopup', () => ({
@@ -217,6 +212,7 @@ function buildGameStoreState(overrides = {}) {
     creationSessionError: null,
     creationSessionSubmitting: false,
     creationSessionStreamingReply: null,
+    creationSessionPendingUserMessage: null,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
     answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
@@ -283,6 +279,10 @@ describe('Fork page creation session flow', () => {
 
     fireEvent.change(answerInput, { target: { value: 'Keep the core puzzle but soften the difficulty curve' } });
     fireEvent.click(screen.getByTestId('workspace-send'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('fork-session-answer').value).toBe('');
+    });
 
     await waitFor(() => {
       expect(mockAnswerCreationSessionQuestion).toHaveBeenCalledWith('Keep the core puzzle but soften the difficulty curve');

@@ -5,7 +5,7 @@ import Taro from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
 import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
-import { PipelineOrbit } from '../../../components/common/PipelineOrbit';
+import { GenerationProgressPanel } from '../../../components/common/GenerationProgressPanel';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import {
   CreationCreateWorkspace,
@@ -133,6 +133,7 @@ export default function GameIteratePage() {
     creationSessionError,
     creationSessionSubmitting,
     creationSessionStreamingReply,
+    creationSessionPendingUserMessage,
     refreshCreationSession,
     startCreationSession,
     answerCreationSessionQuestion,
@@ -448,15 +449,18 @@ export default function GameIteratePage() {
   };
 
   const handleSubmitSessionAnswer = async () => {
-    if (!iterateFeedback.trim()) {
+    const nextAnswer = iterateFeedback.trim();
+    if (!nextAnswer) {
       Taro.showToast({ title: '请先输入这轮优化说明', icon: 'none' });
       return;
     }
 
+    setIterateFeedback('');
+
     try {
-      await answerCreationSessionQuestion(iterateFeedback.trim());
-      setIterateFeedback('');
+      await answerCreationSessionQuestion(nextAnswer);
     } catch (err) {
+      setIterateFeedback((currentValue) => currentValue || nextAnswer);
       Taro.showToast({ title: err?.message || '提交回答失败，请稍后重试', icon: 'none' });
     }
   };
@@ -694,7 +698,13 @@ export default function GameIteratePage() {
   }
 
   if (isIterateTaskActive) {
-    const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
+    const progress = generationProgress || {
+      stages: PIPELINE_STAGES.length ? [PIPELINE_STAGES[0]] : [],
+      stageIndex: 0,
+      pct: 5,
+      stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
+      message: '正在接收你的优化需求',
+    };
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
     const currentStageLabel = progress.stageLabel || '正在优化作品';
 
@@ -703,14 +713,14 @@ export default function GameIteratePage() {
         hideHero
         sections={[
           {
-            key: 'iterate-progress-orbit',
+            key: 'iterate-progress-panel',
             node: (
-              <PipelineOrbit
-                stages={PIPELINE_STAGES}
+              <GenerationProgressPanel
+                stages={progress.stages || PIPELINE_STAGES}
                 currentIndex={progress.stageIndex}
                 progressPct={progress.pct}
-                title="优化进度"
                 stageLabel={currentStageLabel}
+                progressMessage={progress.message}
                 statusLabel={taskStatusLabel}
                 modeLabel="优化流程"
                 coreLabel="AI 优化"
@@ -819,6 +829,7 @@ export default function GameIteratePage() {
       topContent={iterateReferenceCard}
       session={isIterateSessionActive ? creationSession : null}
       streamingMessage={isIterateSessionActive ? creationSessionStreamingReply : null}
+      pendingUserMessage={isIterateSessionActive ? creationSessionPendingUserMessage : null}
       inputValue={iterateFeedback}
       onInputChange={(e) => setIterateFeedback(e?.detail?.value || '')}
       inputPlaceholder={activeIterateInputPlaceholder}
