@@ -5,7 +5,7 @@ import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
-import { PipelineOrbit } from '../../components/common/PipelineOrbit';
+import { GenerationProgressPanel } from '../../components/common/GenerationProgressPanel';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import {
   CreationCreateWorkspace,
@@ -87,6 +87,7 @@ export default function Create() {
     creationSessionError,
     creationSessionSubmitting,
     creationSessionStreamingReply,
+    creationSessionPendingUserMessage,
     startCreationSession,
     answerCreationSessionQuestion,
     skipCreationSessionQuestion,
@@ -318,6 +319,7 @@ export default function Create() {
     }
 
     clearError();
+    setSessionAnswer('');
 
     try {
       await startCreationSession(
@@ -336,17 +338,19 @@ export default function Create() {
   };
 
   const handleSubmitSessionAnswer = async () => {
-    if (!sessionAnswer.trim()) {
+    const nextAnswer = sessionAnswer.trim();
+    if (!nextAnswer) {
       Taro.showToast({ title: '请先回答当前问题', icon: 'none' });
       return;
     }
 
     clearError();
+    setSessionAnswer('');
 
     try {
-      await answerCreationSessionQuestion(sessionAnswer.trim());
-      setSessionAnswer('');
+      await answerCreationSessionQuestion(nextAnswer);
     } catch (err) {
+      setSessionAnswer((currentValue) => (currentValue || nextAnswer));
       Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
     }
   };
@@ -520,6 +524,7 @@ export default function Create() {
       orientationOptions={ORIENTATION_OPTIONS}
       session={isCreateSessionActive ? creationSession : null}
       streamingMessage={isCreateSessionActive ? creationSessionStreamingReply : null}
+      pendingUserMessage={isCreateSessionActive ? creationSessionPendingUserMessage : null}
       inputValue={activeCreateInputValue}
       onInputChange={(e) => {
         const nextValue = e?.detail?.value || '';
@@ -571,20 +576,27 @@ export default function Create() {
   }
 
   if (isGenerating) {
-    const progress = generationProgress || { stageIndex: 0, pct: 5, stageLabel: '准备中...' };
+    const progress = generationProgress || {
+      stages: PIPELINE_STAGES.length ? [PIPELINE_STAGES[0]] : [],
+      stageIndex: 0,
+      pct: 5,
+      stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
+      message: '正在接收你的创作需求',
+    };
 
     return renderCreatePage(
       <CreationSessionShell
         hideHero
         sections={[
           {
-            key: 'create-progress-orbit',
+            key: 'create-progress-panel',
             node: (
-              <PipelineOrbit
-                stages={PIPELINE_STAGES}
+              <GenerationProgressPanel
+                stages={progress.stages || PIPELINE_STAGES}
                 currentIndex={progress.stageIndex}
                 progressPct={progress.pct}
-                title="生成进度"
+                stageLabel={progress.stageLabel}
+                progressMessage={progress.message}
                 modeLabel="创作流程"
                 coreLabel="AI 创作"
               />

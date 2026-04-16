@@ -26,58 +26,38 @@ const STAGE_STALE_WARN_MS = 5 * 60 * 1000;
 const TRACKED_TASKS_LIMIT = 20;
 const SESSION_INIT_POLL_INTERVAL_MS = 2000;
 const SESSION_INIT_MAX_POLLS = 15;
+const SESSION_READY_WAIT_INTERVAL_MS = 200;
+const SESSION_READY_WAIT_TIMEOUT_MS = (SESSION_INIT_POLL_INTERVAL_MS * SESSION_INIT_MAX_POLLS) + 1000;
 const ACTIVE_CREATION_SESSION_STATUSES = new Set(['initializing', 'collecting', 'ready']);
 
 const PIPELINE_STAGES = [
-  { key: 'submitting', label: '提交创作请求', pct: 5 },
-  { key: 'intent_parsing', label: '解析游戏意图', pct: 18 },
-  { key: 'designing', label: '设计游戏参数', pct: 32 },
-  { key: 'template_matching', label: '匹配游戏模板', pct: 46 },
-  { key: 'code_generating', label: '生成游戏代码', pct: 64 },
-  { key: 'qa_checking', label: '质量检查中', pct: 78 },
-  { key: 'runtime_qa', label: '运行时验证', pct: 88 },
-  { key: 'code_review', label: 'AI 代码审查', pct: 94 },
-  { key: 'completed', label: '生成完成', pct: 100 },
+  { key: 'submitting', label: '提交需求', pct: 5 },
+  { key: 'spec_build', label: '梳理方案', pct: 15 },
+  { key: 'runtime_profile_select', label: '匹配合适能力', pct: 30 },
+  { key: 'contract_compose', label: '组装规则与资源', pct: 40 },
+  { key: 'logic_generate', label: '生成内容', pct: 60 },
+  { key: 'contract_qa', label: '质量检查', pct: 76 },
+  { key: 'runtime_simulation_qa', label: '运行验证', pct: 92 },
+  { key: 'completed', label: '完成', pct: 100 },
 ];
+
+const PIPELINE_STAGE_SUMMARIES = {
+  submitting: '正在接收你的创作需求',
+  spec_build: '正在整理玩法目标与核心设定',
+  runtime_profile_select: '正在匹配适合这次创作的能力组合',
+  contract_compose: '正在组装规则、资源与运行约束',
+  logic_generate: '正在生成游戏内容与交互逻辑',
+  contract_qa: '正在检查质量并修正细节',
+  runtime_simulation_qa: '正在验证运行表现与可玩性',
+  completed: '内容已经生成完成',
+};
 
 const STAGE_KEY_ALIASES = {
   started: 'submitting',
   queued: 'submitting',
+  submitted: 'submitting',
+  running: 'submitting',
   submitting: 'submitting',
-  dialogue_slot_extract: 'intent_parsing',
-  'dialogue.slot_extract': 'intent_parsing',
-  dialogue_reply: 'intent_parsing',
-  'dialogue.reply': 'intent_parsing',
-  intent_parse: 'intent_parsing',
-  intent_parsing: 'intent_parsing',
-  designing: 'designing',
-  template_match: 'template_matching',
-  template_matching: 'template_matching',
-  code_generate: 'code_generating',
-  code_generating: 'code_generating',
-  qa_fix: 'qa_checking',
-  qa_checking: 'qa_checking',
-  runtime_qa: 'runtime_qa',
-  code_review: 'code_review',
-  completed: 'completed',
-  succeeded: 'completed',
-};
-
-const DISPLAY_PIPELINE_STAGES = PIPELINE_STAGES.length
-  ? [
-      { key: 'submitting', label: '提交创作请求', pct: 5 },
-      { key: 'spec_build', label: '构建游戏规格', pct: 15 },
-      { key: 'runtime_profile_select', label: '选择运行时模板', pct: 30 },
-      { key: 'contract_compose', label: '组装运行时约束', pct: 40 },
-      { key: 'logic_generate', label: '生成游戏逻辑', pct: 60 },
-      { key: 'contract_qa', label: '合约校验与修复', pct: 76 },
-      { key: 'runtime_simulation_qa', label: '运行时模拟校验', pct: 92 },
-      { key: 'completed', label: '生成完成', pct: 100 },
-    ]
-  : [];
-
-const DISPLAY_STAGE_KEY_ALIASES = {
-  ...STAGE_KEY_ALIASES,
   dialogue_slot_extract: 'submitting',
   'dialogue.slot_extract': 'submitting',
   dialogue_reply: 'submitting',
@@ -206,8 +186,152 @@ function clampProgress(progress, fallback = 5) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function getDisplayStageDefinition(stageKey) {
-  return DISPLAY_PIPELINE_STAGES.find((stage) => stage.key === stageKey) || DISPLAY_PIPELINE_STAGES[0];
+  if (!stageKey) {
+    return PIPELINE_STAGES[0] || null;
+  }
+
+  return PIPELINE_STAGES.find((stage) => stage.key === stageKey) || null;
+}
+
+function prettifyStageKey(stageKey) {
+  return String(stageKey || '')
+    .trim()
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function getResolvedStageAlias(rawKey, task = null) {
+  const normalizedKey = String(rawKey || '').trim().toLowerCase();
+  if (!normalizedKey) {
+    return '';
+  }
+
+  if (normalizedKey === 'targeted_remediation') {
+    return Number(task?.progressPct) >= 90
+      ? 'runtime_simulation_qa'
+      : 'contract_qa';
+  }
+
+  return STAGE_KEY_ALIASES[normalizedKey] || normalizedKey;
+}
+
+function buildDynamicStageDefinition(stageKey, metadata = {}) {
+  if (!stageKey) {
+    return null;
+  }
+
+  const fallbackDefinition = getDisplayStageDefinition(stageKey);
+  const label = fallbackDefinition?.label
+    || String(metadata.label || '').trim()
+    || prettifyStageKey(stageKey)
+    || PIPELINE_STAGES[0]?.label
+    || '处理中';
+  const pctFallback = Number.isFinite(Number(metadata.pct))
+    ? Number(metadata.pct)
+    : (fallbackDefinition?.pct ?? PIPELINE_STAGES[0]?.pct ?? 5);
+
+  return {
+    key: stageKey,
+    label,
+    pct: clampProgress(metadata.pct, pctFallback),
+  };
+}
+
+function upsertDynamicStage(stageMap, orderedStageKeys, stageDefinition) {
+  if (!stageDefinition?.key) {
+    return;
+  }
+
+  if (!stageMap.has(stageDefinition.key)) {
+    orderedStageKeys.push(stageDefinition.key);
+    stageMap.set(stageDefinition.key, stageDefinition);
+    return;
+  }
+
+  const previousDefinition = stageMap.get(stageDefinition.key);
+  stageMap.set(stageDefinition.key, {
+    ...previousDefinition,
+    label: String(stageDefinition.label || '').trim() || previousDefinition?.label || '',
+    pct: Number.isFinite(Number(stageDefinition?.pct))
+      ? stageDefinition.pct
+      : previousDefinition?.pct,
+  });
+}
+
+function shouldUseEventForStageSequence(event) {
+  const eventType = String(event?.eventType || '').trim().toLowerCase();
+  return ['status', 'progress', 'note'].includes(eventType);
+}
+
+function getEventStageAlias(event) {
+  const candidates = [
+    event?.stage,
+    event?.stepKey,
+    event?.detail?.stepKey,
+  ];
+
+  for (const candidate of candidates) {
+    const alias = getResolvedStageAlias(candidate);
+    if (alias) {
+      return alias;
+    }
+  }
+
+  return '';
+}
+
+function buildStageSequence(task, events = []) {
+  const orderedStageKeys = [];
+  const stageMap = new Map();
+  const taskStageKey = getStageAlias(task);
+  const currentTaskStage = buildDynamicStageDefinition(taskStageKey, {
+    label: task?.displayStageLabel,
+    pct: task?.displayStagePct ?? task?.progressPct,
+  });
+
+  events.forEach((event) => {
+    if (!shouldUseEventForStageSequence(event)) {
+      return;
+    }
+
+    const stageKey = getEventStageAlias(event);
+    if (!stageKey) {
+      return;
+    }
+
+    upsertDynamicStage(stageMap, orderedStageKeys, buildDynamicStageDefinition(stageKey, {
+      pct: event?.percentage,
+    }));
+  });
+
+  if (currentTaskStage) {
+    upsertDynamicStage(stageMap, orderedStageKeys, currentTaskStage);
+  }
+
+  if ((task?.status === 'succeeded' || task?.status === 'completed') && taskStageKey !== 'completed') {
+    upsertDynamicStage(stageMap, orderedStageKeys, buildDynamicStageDefinition('completed', {
+      label: '完成',
+      pct: 100,
+    }));
+  }
+
+  if (!orderedStageKeys.length) {
+    if (currentTaskStage) {
+      return [currentTaskStage];
+    }
+
+    const firstStage = PIPELINE_STAGES[0];
+    return firstStage ? [firstStage] : [];
+  }
+
+  return orderedStageKeys
+    .map((stageKey) => stageMap.get(stageKey))
+    .filter(Boolean);
 }
 
 function getFallbackStageAlias(task) {
@@ -221,30 +345,22 @@ function getFallbackStageAlias(task) {
   ].filter(Boolean);
 
   for (const key of keys) {
-    if (key === 'targeted_remediation') {
-      return Number(task?.progressPct) >= 90
-        ? 'runtime_simulation_qa'
-        : 'contract_qa';
-    }
-
-    if (DISPLAY_STAGE_KEY_ALIASES[key]) {
-      return DISPLAY_STAGE_KEY_ALIASES[key];
+    const alias = getResolvedStageAlias(key, task);
+    if (alias) {
+      return alias;
     }
   }
 
-  return DISPLAY_PIPELINE_STAGES[0].key;
+  return PIPELINE_STAGES[0]?.key || 'submitting';
 }
 
 function getStageAlias(task) {
-  if (task?.status === 'succeeded') {
+  if (task?.status === 'succeeded' || task?.status === 'completed') {
     return 'completed';
   }
 
-  if (
-    task?.displayStageKey
-    && DISPLAY_PIPELINE_STAGES.some((stage) => stage.key === task.displayStageKey)
-  ) {
-    return task.displayStageKey;
+  if (task?.displayStageKey) {
+    return getResolvedStageAlias(task.displayStageKey, task);
   }
 
   return getFallbackStageAlias(task);
@@ -258,10 +374,31 @@ function getLatestTaskMessage(events, fallback = '') {
   return latestEvent?.message || fallback;
 }
 
+function getDisplayProgressMessage(task, stageKey, events = [], fallback = '') {
+  if (task?.status === 'canceled' || task?.status === 'cancelled') {
+    return '创作任务已取消';
+  }
+
+  if (task?.status === 'timed_out') {
+    return '创作耗时较长，你可以稍后回来查看结果';
+  }
+
+  if (task?.status === 'failed') {
+    return '这次创作没有顺利完成，我们可以重新再试一次';
+  }
+
+  return PIPELINE_STAGE_SUMMARIES[stageKey]
+    || getLatestTaskMessage(events, task?.progressMessage || fallback);
+}
+
 function buildProgressFromTask(task, events = []) {
   const stageKey = getStageAlias(task);
-  const stageIndex = Math.max(0, DISPLAY_PIPELINE_STAGES.findIndex((stage) => stage.key === stageKey));
-  const stage = getDisplayStageDefinition(stageKey);
+  const stages = buildStageSequence(task, events);
+  const stageIndex = Math.max(0, stages.findIndex((stage) => stage.key === stageKey));
+  const stage = stages[stageIndex] || buildDynamicStageDefinition(stageKey, {
+    label: task?.displayStageLabel,
+    pct: task?.displayStagePct ?? task?.progressPct,
+  }) || PIPELINE_STAGES[0];
   const fallbackPct = task?.status === 'succeeded'
     ? 100
     : clampProgress(task?.displayStagePct, stage.pct);
@@ -277,11 +414,12 @@ function buildProgressFromTask(task, events = []) {
     : task?.status === 'timed_out'
       ? '任务超时'
       : task?.status === 'failed'
-        ? (task?.displayStageLabel || stage.label || '创作失败')
-        : (task?.displayStageLabel || stage.label || fallbackLabel);
-  const message = getLatestTaskMessage(events, task?.progressMessage || stageLabel || fallbackLabel);
+        ? (stage.label || task?.displayStageLabel || '创作失败')
+        : (stage.label || task?.displayStageLabel || fallbackLabel);
+  const message = getDisplayProgressMessage(task, stageKey, events, stageLabel || fallbackLabel);
 
   return {
+    stages,
     stageIndex,
     stageKey,
     stageLabel,
@@ -423,6 +561,22 @@ function normalizeSessionMessageContent(content) {
   return String(content || '').trim();
 }
 
+function buildPendingCreationSessionUserMessage(content, session) {
+  const normalizedContent = normalizeSessionMessageContent(content);
+  if (!normalizedContent) {
+    return null;
+  }
+
+  return {
+    id: `pending-user-${session?.sessionId || 'session'}-${Date.now()}`,
+    role: 'user',
+    content: normalizedContent,
+    createdAt: Date.now(),
+    revision: session?.revision ?? null,
+    isPending: true,
+  };
+}
+
 function getCreationSessionRevision(session) {
   const revision = Number(session?.revision ?? 0);
   return Number.isFinite(revision) ? revision : 0;
@@ -451,6 +605,18 @@ function sessionContainsAssistantReply(session, reply) {
   }
 
   return normalizeSessionMessageContent(getCreationSessionQuestionText(session)) === replyContent;
+}
+
+function sessionContainsUserReply(session, reply) {
+  const replyContent = normalizeSessionMessageContent(reply?.content);
+  if (!replyContent) {
+    return false;
+  }
+
+  return Array.isArray(session?.messages) && session.messages.some((message) => (
+    message?.role === 'user'
+    && normalizeSessionMessageContent(message.content) === replyContent
+  ));
 }
 
 function isStaleCreationSessionSnapshot(previousSession, nextSession) {
@@ -486,6 +652,22 @@ function resolveCreationSessionStreamingReply(previousSession, nextSession, stre
   }
 
   return sessionContainsAssistantReply(nextSession, streamingReply) ? null : streamingReply;
+}
+
+function resolveCreationSessionPendingUserMessage(previousSession, nextSession, pendingUserMessage) {
+  if (!pendingUserMessage) {
+    return null;
+  }
+
+  if (!previousSession?.sessionId || !nextSession?.sessionId) {
+    return null;
+  }
+
+  if (String(previousSession.sessionId) !== String(nextSession.sessionId)) {
+    return null;
+  }
+
+  return sessionContainsUserReply(nextSession, pendingUserMessage) ? null : pendingUserMessage;
 }
 
 function countPromptCharacters(value) {
@@ -822,6 +1004,7 @@ export const useGameStore = create((set, get) => {
   const applyCreationSessionSnapshot = (session, overrides = {}) => {
     const previousSession = get().creationSession;
     const previousStreamingReply = get().creationSessionStreamingReply;
+    const previousPendingUserMessage = get().creationSessionPendingUserMessage;
     const rawNextSession = session || null;
     const nextSession = isStaleCreationSessionSnapshot(previousSession, rawNextSession)
       ? previousSession
@@ -836,6 +1019,9 @@ export const useGameStore = create((set, get) => {
     const nextStreamingReply = isStaleCreationSessionSnapshot(previousSession, rawNextSession)
       ? previousStreamingReply
       : resolveCreationSessionStreamingReply(previousSession, nextSession, previousStreamingReply);
+    const nextPendingUserMessage = isStaleCreationSessionSnapshot(previousSession, rawNextSession)
+      ? previousPendingUserMessage
+      : resolveCreationSessionPendingUserMessage(previousSession, nextSession, previousPendingUserMessage);
 
     set({
       creationSession: nextSession,
@@ -850,6 +1036,7 @@ export const useGameStore = create((set, get) => {
           })
         : null,
       creationSessionStreamingReply: nextStreamingReply,
+      creationSessionPendingUserMessage: nextPendingUserMessage,
       creationSessionStreamConnected: preserveStreamConnection,
       ...overrides,
     });
@@ -916,6 +1103,7 @@ export const useGameStore = create((set, get) => {
               '创作会话初始化失败，请重新开始'
             ),
             creationSessionStreamingReply: null,
+            creationSessionPendingUserMessage: null,
             creationSessionStreamConnected: false,
           }
         );
@@ -930,6 +1118,7 @@ export const useGameStore = create((set, get) => {
           '鍒涗綔浼氳瘽澶勭悊澶辫触锛岃绋嶅悗閲嶈瘯'
         ),
         creationSessionStreamingReply: null,
+        creationSessionPendingUserMessage: null,
       });
     };
 
@@ -1136,6 +1325,45 @@ export const useGameStore = create((set, get) => {
     }, SESSION_INIT_POLL_INTERVAL_MS);
   };
 
+  const waitForCreationSessionReady = async (sessionId, options = {}) => {
+    const targetSessionId = String(sessionId || get().creationSession?.sessionId || '');
+    if (!targetSessionId) {
+      return null;
+    }
+
+    const timeoutMs = Number.isFinite(Number(options.timeoutMs))
+      ? Math.max(0, Number(options.timeoutMs))
+      : SESSION_READY_WAIT_TIMEOUT_MS;
+    const intervalMs = Number.isFinite(Number(options.intervalMs))
+      ? Math.max(50, Number(options.intervalMs))
+      : SESSION_READY_WAIT_INTERVAL_MS;
+    const deadline = Date.now() + timeoutMs;
+    const readMatchingSession = () => {
+      const currentSession = get().creationSession;
+      if (String(currentSession?.sessionId || '') !== targetSessionId) {
+        return null;
+      }
+
+      return currentSession;
+    };
+
+    const currentSession = readMatchingSession();
+    if (currentSession?.status && currentSession.status !== 'initializing') {
+      return currentSession;
+    }
+
+    while (Date.now() < deadline) {
+      await delay(intervalMs);
+
+      const nextSession = readMatchingSession();
+      if (nextSession?.status && nextSession.status !== 'initializing') {
+        return nextSession;
+      }
+    }
+
+    return readMatchingSession();
+  };
+
   return ({
   currentGame: null,
   currentTask: null,
@@ -1158,6 +1386,7 @@ export const useGameStore = create((set, get) => {
   creationSessionRestoring: false,
   creationSessionContext: null,
   creationSessionStreamingReply: null,
+  creationSessionPendingUserMessage: null,
   creationSessionStreamConnected: false,
   startCreationSession: async (prompt, title, options = {}) => {
     if (countPromptCharacters(prompt) < 5) {
@@ -1197,6 +1426,7 @@ export const useGameStore = create((set, get) => {
       creationSessionRestoring: false,
       creationSessionContext: context,
       creationSessionStreamingReply: null,
+      creationSessionPendingUserMessage: null,
       creationSessionStreamConnected: false,
     });
 
@@ -1226,6 +1456,7 @@ export const useGameStore = create((set, get) => {
       creationSessionRestoring: true,
       creationSessionError: null,
       creationSessionStreamingReply: null,
+      creationSessionPendingUserMessage: null,
       creationSessionStreamConnected: false,
     });
 
@@ -1256,6 +1487,7 @@ export const useGameStore = create((set, get) => {
           creationSessionRestoring: false,
           creationSessionError: null,
           creationSessionStreamingReply: null,
+          creationSessionPendingUserMessage: null,
           creationSessionStreamConnected: false,
         });
         return null;
@@ -1266,6 +1498,7 @@ export const useGameStore = create((set, get) => {
         creationSessionRestoring: false,
         creationSessionError: message,
         creationSessionStreamingReply: null,
+        creationSessionPendingUserMessage: null,
         creationSessionStreamConnected: false,
       });
       throw new Error(message);
@@ -1333,8 +1566,13 @@ export const useGameStore = create((set, get) => {
 
   answerCreationSessionQuestion: async (content, options = {}) => {
     const session = get().creationSession;
+    const normalizedContent = normalizeSessionMessageContent(content);
     if (!session?.sessionId) {
       throw new Error('当前没有可回答的创作会话');
+    }
+
+    if (!normalizedContent) {
+      throw new Error('请先回答当前问题');
     }
 
     if (session.status === 'initializing') {
@@ -1343,12 +1581,16 @@ export const useGameStore = create((set, get) => {
       throw new Error(message);
     }
 
-    set({ creationSessionSubmitting: true, creationSessionError: null });
+    set({
+      creationSessionSubmitting: true,
+      creationSessionError: null,
+      creationSessionPendingUserMessage: buildPendingCreationSessionUserMessage(normalizedContent, session),
+    });
 
     try {
       const nextSession = await gameService.appendCreationSessionMessage(
         session.sessionId,
-        content,
+        normalizedContent,
         options.revision ?? session.revision
       );
 
@@ -1372,6 +1614,7 @@ export const useGameStore = create((set, get) => {
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
+        creationSessionPendingUserMessage: null,
       });
       throw new Error(message);
     }
@@ -1426,23 +1669,48 @@ export const useGameStore = create((set, get) => {
     const rawOptions = hasLegacySessionId
       ? (maybeOptions && typeof maybeOptions === 'object' ? maybeOptions : {})
       : (sessionIdOrOptions && typeof sessionIdOrOptions === 'object' ? sessionIdOrOptions : {});
-    const options = {
-      ...(rawOptions || {}),
-      ...((rawOptions?.revision == null && session?.revision != null)
-        ? { revision: session.revision }
-        : {}),
-    };
-    const resolvedSession = session?.sessionId === targetSessionId ? session : null;
+    let resolvedSession = session?.sessionId === targetSessionId ? session : null;
 
     if (!targetSessionId) {
       throw new Error('当前没有可生成的创作会话');
     }
 
     if (resolvedSession?.status === 'initializing') {
-      const message = 'AI 还在整理第一轮问题，请稍等';
-      set({ creationSessionError: message });
+      set({
+        creationSessionSubmitting: true,
+        creationSessionError: null,
+      });
+
+      resolvedSession = await waitForCreationSessionReady(targetSessionId);
+    }
+
+    if (resolvedSession?.status === 'initializing') {
+      const message = 'AI 还在整理第一轮问题，请稍等后再试';
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
       throw new Error(message);
     }
+
+    if (resolvedSession && ['abandoned', 'expired', 'failed'].includes(String(resolvedSession.status || ''))) {
+      const message = deriveCreationSessionErrorMessage(
+        resolvedSession?.metadata?.initError || resolvedSession?.metadata?.lastError || '',
+        '创作会话初始化失败，请重新开始'
+      );
+      set({
+        creationSessionSubmitting: false,
+        creationSessionError: message,
+      });
+      throw new Error(message);
+    }
+
+    const options = {
+      ...(rawOptions || {}),
+      ...((rawOptions?.revision == null && resolvedSession?.revision != null)
+        ? { revision: resolvedSession.revision }
+        : {}),
+    };
 
     clearActiveTaskRuntime();
     clearActiveSessionRuntime();
@@ -1457,12 +1725,14 @@ export const useGameStore = create((set, get) => {
       terminalError: null,
       isGenerating: true,
       generationProgress: {
+        stages: PIPELINE_STAGES[0] ? [PIPELINE_STAGES[0]] : [],
         stageIndex: 0,
-        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
-        stageLabel: DISPLAY_PIPELINE_STAGES[0].label,
-        pct: DISPLAY_PIPELINE_STAGES[0].pct,
+        stageKey: PIPELINE_STAGES[0].key,
+        stageLabel: PIPELINE_STAGES[0].label,
+        message: PIPELINE_STAGE_SUMMARIES[PIPELINE_STAGES[0].key] || PIPELINE_STAGES[0].label,
+        pct: PIPELINE_STAGES[0].pct,
       },
-      latestTaskMessage: DISPLAY_PIPELINE_STAGES[0].label,
+      latestTaskMessage: PIPELINE_STAGE_SUMMARIES[PIPELINE_STAGES[0].key] || PIPELINE_STAGES[0].label,
     });
 
     try {
@@ -1487,6 +1757,7 @@ export const useGameStore = create((set, get) => {
         canPlay: result.canPlay !== false,
         creationSessionSubmitting: false,
         creationSessionStreamingReply: null,
+        creationSessionPendingUserMessage: null,
         creationSessionStreamConnected: false,
         creationSession: resolvedSession
           ? {
@@ -1506,7 +1777,7 @@ export const useGameStore = create((set, get) => {
               taskType: trackedTaskType,
               gameTitle,
               promptPreview,
-              latestMessage: DISPLAY_PIPELINE_STAGES[0].label,
+              latestMessage: PIPELINE_STAGE_SUMMARIES[PIPELINE_STAGES[0].key] || PIPELINE_STAGES[0].label,
             })
           ),
         }));
@@ -1533,6 +1804,7 @@ export const useGameStore = create((set, get) => {
         creationSessionSubmitting: false,
         creationSessionError: message,
         creationSessionStreamingReply: null,
+        creationSessionPendingUserMessage: null,
         creationSessionStreamConnected: false,
         isGenerating: false,
         generationProgress: null,
@@ -1583,6 +1855,7 @@ export const useGameStore = create((set, get) => {
       creationSessionRestoring: false,
       creationSessionContext: null,
       creationSessionStreamingReply: null,
+      creationSessionPendingUserMessage: null,
       creationSessionStreamConnected: false,
     });
   },
@@ -2040,10 +2313,12 @@ export const useGameStore = create((set, get) => {
       currentTaskCursor: 0,
       latestTaskMessage: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',
       generationProgress: {
+        stages: PIPELINE_STAGES[0] ? [PIPELINE_STAGES[0]] : [],
         stageIndex: 0,
-        stageKey: DISPLAY_PIPELINE_STAGES[0].key,
+        stageKey: PIPELINE_STAGES[0].key,
         stageLabel: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',
-        pct: DISPLAY_PIPELINE_STAGES[0].pct,
+        message: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',
+        pct: PIPELINE_STAGES[0].pct,
       },
       generatingGameId: persistedTask.gameId || null,
     });
@@ -2277,6 +2552,7 @@ export const useGameStore = create((set, get) => {
       creationSessionRestoring: false,
       creationSessionContext: null,
       creationSessionStreamingReply: null,
+      creationSessionPendingUserMessage: null,
       creationSessionStreamConnected: false,
     });
   },
@@ -2330,5 +2606,5 @@ function bindUnlockedGameSync() {
 
 bindUnlockedGameSync();
 
-export { DISPLAY_PIPELINE_STAGES as PIPELINE_STAGES };
+export { PIPELINE_STAGES };
 export default useGameStore;

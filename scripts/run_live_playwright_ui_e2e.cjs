@@ -215,6 +215,45 @@ async function waitForHidden(page, selector, timeout = 30000) {
   await page.locator(selector).first().waitFor({ state: 'hidden', timeout });
 }
 
+async function hasSessionQuestionVisible(page) {
+  const questionCardText = page.locator('.creation-question-card .creation-session-card__text').first();
+  if (await questionCardText.isVisible().catch(() => false)) {
+    return true;
+  }
+
+  const conversationCount = await page.locator('.creation-conversation-item').count().catch(() => 0);
+  return conversationCount >= 3;
+}
+
+async function waitForSessionQuestionVisible(page, timeout = 20000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeout) {
+    if (await hasSessionQuestionVisible(page)) {
+      return true;
+    }
+    await sleep(500);
+  }
+
+  return hasSessionQuestionVisible(page);
+}
+
+async function waitForSessionAnswerApplied(page, previousConversationCount, submittedAnswer, timeout = 30000) {
+  const startedAt = Date.now();
+  const expectedValue = String(submittedAnswer || '').trim();
+  const composerInput = page.locator(WORKSPACE_COMPOSER_INPUT_SELECTOR).first();
+
+  while (Date.now() - startedAt < timeout) {
+    const nextConversationCount = await page.locator('.creation-conversation-item').count().catch(() => 0);
+    const nextInputValue = await composerInput.inputValue().catch(() => '');
+    if (nextConversationCount > previousConversationCount || String(nextInputValue || '').trim() !== expectedValue) {
+      return true;
+    }
+    await sleep(500);
+  }
+
+  return false;
+}
+
 async function click(page, selector, options = {}) {
   const locator = page.locator(selector).first();
   await locator.waitFor({ state: 'visible', timeout: options.timeout || 30000 });
@@ -431,14 +470,24 @@ async function maybeAnswerSessionQuestion(page, answer, label) {
   }
 
   const composerInput = page.locator(WORKSPACE_COMPOSER_INPUT_SELECTOR).first();
-  const submitButton = page.locator(WORKSPACE_SEND_SELECTOR).first();
-
-  if (!(await composerInput.isVisible().catch(() => false)) || !(await submitButton.isVisible().catch(() => false))) {
+  if (!(await composerInput.isVisible().catch(() => false))) {
     return { answered: false, reason: 'question_not_visible' };
   }
 
+  const hasQuestion = await waitForSessionQuestionVisible(page, 20000);
+  if (!hasQuestion) {
+    return { answered: false, reason: 'question_not_visible' };
+  }
+
+  const previousConversationCount = await page.locator('.creation-conversation-item').count().catch(() => 0);
   await fill(page, WORKSPACE_COMPOSER_INPUT_SELECTOR, answer, 120000);
+  const submitButton = page.locator(WORKSPACE_SEND_SELECTOR).first();
+  await submitButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => null);
+  if (!(await submitButton.isVisible().catch(() => false))) {
+    return { answered: false, reason: 'submit_not_available' };
+  }
   await submitButton.click({ force: true });
+  await waitForSessionAnswerApplied(page, previousConversationCount, answer, 30000);
   await waitForWorkflowSessionReady(page, label);
   return { answered: true };
 }

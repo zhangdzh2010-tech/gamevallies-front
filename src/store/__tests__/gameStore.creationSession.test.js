@@ -6,6 +6,7 @@ const mockGetCreationSession = jest.fn();
 const mockGetActiveCreationSession = jest.fn();
 const mockGenerateFromCreationSession = jest.fn();
 const mockSubscribeCreationSessionStream = jest.fn();
+const mockGetGenerationTaskEvents = jest.fn(() => Promise.resolve({ items: [], nextCursor: 0, hasMore: false }));
 const mockSessionMessageHandlers = {};
 let mockCreationSessionStreamHandlers = null;
 const mockOnMessage = jest.fn((type, callback) => {
@@ -62,7 +63,7 @@ jest.mock('../../services/game', () => ({
   abandonCreationSession: jest.fn(),
   getGenerationStatus: jest.fn(),
   getGenerationTask: jest.fn(),
-  getGenerationTaskEvents: jest.fn(() => Promise.resolve({ items: [], nextCursor: 0, hasMore: false })),
+  getGenerationTaskEvents: (...args) => mockGetGenerationTaskEvents(...args),
   cancelGenerationTask: jest.fn(),
   forkGame: jest.fn(),
   publishGame: jest.fn(),
@@ -100,6 +101,7 @@ jest.mock('../../utils/gameUnlock', () => ({
   subscribeGameUnlocked: jest.fn(),
 }));
 
+const gameService = require('../../services/game');
 const { useGameStore } = require('../gameStore');
 
 describe('gameStore creation session actions', () => {
@@ -116,6 +118,8 @@ describe('gameStore creation session actions', () => {
       mockCreationSessionStreamHandlers = handlers;
       return jest.fn();
     });
+    mockGetGenerationTaskEvents.mockReset();
+    mockGetGenerationTaskEvents.mockResolvedValue({ items: [], nextCursor: 0, hasMore: false });
 
     useGameStore.setState({
       currentGame: null,
@@ -139,6 +143,7 @@ describe('gameStore creation session actions', () => {
       creationSessionRestoring: false,
       creationSessionContext: null,
       creationSessionStreamingReply: null,
+      creationSessionPendingUserMessage: null,
       creationSessionStreamConnected: false,
     });
   });
@@ -362,6 +367,63 @@ describe('gameStore creation session actions', () => {
     }));
   });
 
+  test('keeps a pending user reply until the backend snapshot includes it', async () => {
+    mockCreateCreationSession.mockResolvedValue({
+      sessionId: 'session-pending',
+      status: 'collecting',
+      revision: 1,
+      prompt: 'make a cooperative puzzle game',
+      title: 'Puzzle Draft',
+      entryMode: 'create',
+      currentQuestion: {
+        content: 'What kind of cooperation should players do?',
+      },
+      messages: [
+        { id: 'message-user-1', role: 'user', content: 'make a cooperative puzzle game' },
+        { id: 'message-assistant-1', role: 'assistant', content: 'What kind of cooperation should players do?' },
+      ],
+    });
+    gameService.appendCreationSessionMessage.mockResolvedValue({
+      sessionId: 'session-pending',
+      status: 'collecting',
+      revision: 2,
+      prompt: 'make a cooperative puzzle game',
+      title: 'Puzzle Draft',
+      entryMode: 'create',
+      currentQuestion: {
+        content: 'What tone should the world have?',
+      },
+      messages: [
+        { id: 'message-user-1', role: 'user', content: 'make a cooperative puzzle game' },
+        { id: 'message-assistant-1', role: 'assistant', content: 'What kind of cooperation should players do?' },
+        { id: 'message-user-2', role: 'user', content: 'Two players operating linked mechanisms together' },
+        { id: 'message-assistant-2', role: 'assistant', content: 'What tone should the world have?' },
+      ],
+    });
+
+    await useGameStore.getState().startCreationSession('make a cooperative puzzle game', 'Puzzle Draft', {
+      entryMode: 'create',
+    });
+
+    const submitPromise = useGameStore.getState().answerCreationSessionQuestion('Two players operating linked mechanisms together');
+
+    expect(useGameStore.getState().creationSessionPendingUserMessage).toEqual(expect.objectContaining({
+      role: 'user',
+      content: 'Two players operating linked mechanisms together',
+      isPending: true,
+    }));
+
+    await submitPromise;
+
+    expect(useGameStore.getState().creationSessionPendingUserMessage).toBeNull();
+    expect(useGameStore.getState().creationSession).toEqual(expect.objectContaining({
+      revision: 2,
+      currentQuestion: expect.objectContaining({
+        content: 'What tone should the world have?',
+      }),
+    }));
+  });
+
   test('getCreationFlowStage reflects session and task state priority', () => {
     useGameStore.setState({
       creationSession: {
@@ -520,6 +582,187 @@ describe('gameStore creation session actions', () => {
     }), expect.objectContaining({
       gameId: 'game-3',
     }));
+  });
+
+  test('generateFromCreationSession waits for initializing sessions before triggering generation', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const beginTaskTracking = jest.fn(() => Promise.resolve());
+
+      useGameStore.setState({
+        currentGame: {
+          id: 'game-init-1',
+          title: 'Init Wait Game',
+        },
+        creationSession: {
+          sessionId: 'session-init-1',
+          status: 'initializing',
+          revision: 2,
+          entryMode: 'iterate',
+          sourceGameId: 'game-init-1',
+          title: 'Init Wait Game',
+          prompt: 'Make movement feel tighter',
+        },
+        trackedTasks: [],
+        _beginTaskTracking: beginTaskTracking,
+      });
+
+      mockGenerateFromCreationSession.mockResolvedValue({
+        gameId: 'game-init-1',
+        title: 'Init Wait Game',
+        status: 'generating',
+        canPlay: true,
+        generationTask: {
+          taskId: 'task-init-1',
+          taskType: 'pipeline_run',
+          status: 'queued',
+          gameId: 'game-init-1',
+        },
+      });
+
+      const generationPromise = useGameStore.getState().generateFromCreationSession({
+        orientation: 'portrait',
+        generationTier: 'standard',
+      });
+
+      await Promise.resolve();
+
+      expect(mockGenerateFromCreationSession).not.toHaveBeenCalled();
+
+      useGameStore.setState((state) => ({
+        creationSession: {
+          ...state.creationSession,
+          status: 'collecting',
+          revision: 4,
+        },
+      }));
+
+      await jest.advanceTimersByTimeAsync(250);
+      await generationPromise;
+
+      expect(mockGenerateFromCreationSession).toHaveBeenCalledWith(
+        'session-init-1',
+        expect.objectContaining({
+          revision: 4,
+          orientation: 'portrait',
+          generationTier: 'standard',
+        }),
+      );
+      expect(beginTaskTracking).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId: 'task-init-1' }),
+        expect.objectContaining({
+          taskMeta: expect.objectContaining({
+            taskType: 'pipeline_iterate',
+            routeGameId: 'game-init-1',
+          }),
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('syncTaskEvents builds a dynamic stage sequence from backend progress events', async () => {
+    mockGetGenerationTaskEvents.mockResolvedValue({
+      items: [
+        {
+          id: 'event-1',
+          eventType: 'status',
+          stage: 'queued',
+          percentage: 0,
+          message: '任务已创建，等待执行',
+          createdAt: '2026-04-15T01:58:14.773Z',
+        },
+        {
+          id: 'event-2',
+          eventType: 'progress',
+          stage: 'spec_build',
+          percentage: 15,
+          message: 'Building structured game spec',
+          createdAt: '2026-04-15T01:58:15.375Z',
+        },
+        {
+          id: 'event-3',
+          eventType: 'progress',
+          stage: 'runtime_profile_select',
+          percentage: 30,
+          message: 'Selecting runtime profile',
+          createdAt: '2026-04-15T01:58:15.484Z',
+        },
+        {
+          id: 'event-4',
+          eventType: 'progress',
+          stage: 'logic_generate',
+          percentage: 60,
+          message: 'Generating runtime-bound game logic',
+          createdAt: '2026-04-15T01:58:15.762Z',
+        },
+      ],
+      nextCursor: 4,
+      hasMore: false,
+    });
+
+    useGameStore.setState({
+      currentGame: {
+        id: 'game-dynamic-1',
+        title: 'Dynamic Stage Game',
+      },
+      currentTask: {
+        taskId: 'task-dynamic-1',
+        taskType: 'pipeline_run',
+        status: 'running',
+        gameId: 'game-dynamic-1',
+        progressPct: 60,
+        displayStageKey: 'logic_generate',
+        displayStageLabel: '生成游戏逻辑',
+        displayStagePct: 60,
+        progressMessage: 'Generating runtime-bound game logic',
+      },
+      generationProgress: null,
+      currentTaskEvents: [],
+      currentTaskCursor: 0,
+    });
+
+    await useGameStore.getState()._syncTaskEvents('task-dynamic-1', { reset: true });
+
+    expect(useGameStore.getState().generationProgress).toEqual(expect.objectContaining({
+      stageKey: 'logic_generate',
+      stageIndex: 3,
+      stageLabel: '生成内容',
+      message: '正在生成游戏内容与交互逻辑',
+    }));
+    expect(useGameStore.getState().generationProgress.stages).toEqual([
+      { key: 'submitting', label: '提交需求', pct: 0 },
+      { key: 'spec_build', label: '梳理方案', pct: 15 },
+      { key: 'runtime_profile_select', label: '匹配合适能力', pct: 30 },
+      { key: 'logic_generate', label: '生成内容', pct: 60 },
+    ]);
+  });
+
+  test('applyTaskUpdate preserves unknown backend display stages instead of forcing fallback keys', async () => {
+    await useGameStore.getState()._applyTaskUpdate({
+      taskId: 'task-unknown-stage',
+      taskType: 'pipeline_run',
+      status: 'running',
+      gameId: 'game-unknown-stage',
+      progressPct: 47,
+      displayStageKey: 'artifact_pack',
+      displayStageLabel: '打包产物',
+      displayStagePct: 47,
+      progressMessage: 'Packing artifacts',
+    });
+
+    expect(useGameStore.getState().generationProgress).toEqual(expect.objectContaining({
+      stageKey: 'artifact_pack',
+      stageIndex: 0,
+      stageLabel: '打包产物',
+      message: 'Packing artifacts',
+      pct: 47,
+    }));
+    expect(useGameStore.getState().generationProgress.stages).toEqual([
+      { key: 'artifact_pack', label: '打包产物', pct: 47 },
+    ]);
   });
 
   test('generateFromCreationSession falls back to the current session revision when callers omit it', async () => {
