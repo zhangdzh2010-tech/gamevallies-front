@@ -2,10 +2,10 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const mockStartCreationSession = jest.fn(() => Promise.resolve({ sessionId: 'fork-new' }));
-const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
-const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
+const mockStartCreationSession = jest.fn(() => Promise.resolve({ sessionId: 'fork-new', generationTier: 'standard' }));
+const mockConfirmEditedPrompt = jest.fn(() => Promise.resolve());
+const mockConfirmCurrentPrompt = jest.fn(() => Promise.resolve());
+const mockConfirmAndGenerate = jest.fn(() => Promise.resolve());
 const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
 const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
@@ -39,18 +39,10 @@ const mockForkSession = {
   sourceGameId: 'source-1',
   status: 'collecting',
   prompt: 'Keep the core loop but swap the art style',
-  planDraft: 'Version the art and keep the loop readable.',
+  expandedPrompt: 'Expanded fork prompt',
   currentQuestion: {
-    content: 'What should remain unchanged?',
-    skippable: true,
+    content: 'Please confirm or edit the prompt.',
   },
-  messages: [
-    {
-      id: 'msg-1',
-      role: 'assistant',
-      content: 'Tell me what to keep and what to change.',
-    },
-  ],
 };
 
 let mockGameStoreState;
@@ -101,32 +93,31 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 
 jest.mock('../../../components/creation', () => ({
   CreationCreateWorkspace: ({
-    topContent,
     session,
-    streamingMessage,
     inputValue,
     onInputChange,
-    onSend,
-    onSkip,
-    onGenerate,
-    onPreview,
-    errorMessage,
+    onPrimaryAction,
+    secondaryActions = [],
+    topContent,
   }) => (
     <div data-testid="workspace">
       {topContent}
-      {streamingMessage?.content ? (
-        <div data-testid="workspace-streaming">{streamingMessage.content}</div>
-      ) : null}
       <textarea
-        aria-label={session ? 'fork-session-answer' : 'fork-initial-answer'}
+        aria-label={session ? 'fork-session-prompt' : 'fork-initial-prompt'}
         value={inputValue}
         onChange={(e) => onInputChange({ detail: { value: e.target.value } })}
       />
-      <button data-testid="workspace-send" type="button" onClick={onSend}>send</button>
-      <button data-testid="workspace-skip" type="button" onClick={onSkip}>skip</button>
-      <button data-testid="workspace-generate" type="button" onClick={onGenerate}>generate</button>
-      <button data-testid="workspace-preview" type="button" onClick={onPreview}>preview</button>
-      {errorMessage ? <div>{errorMessage}</div> : null}
+      <button data-testid="workspace-primary" type="button" onClick={onPrimaryAction}>primary</button>
+      {secondaryActions.map((action) => (
+        <button
+          key={action.key}
+          data-testid={`secondary-${action.key}`}
+          type="button"
+          onClick={action.onClick}
+        >
+          {action.label}
+        </button>
+      ))}
     </div>
   ),
   CreationReferenceCard: ({ title, description }) => (
@@ -166,8 +157,6 @@ jest.mock('../../../components/creation', () => ({
       <div>{description}</div>
     </div>
   ),
-  canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
-  isCreationSessionQuestioning: jest.fn((status) => ['collecting', 'ready'].includes(status)),
 }));
 
 jest.mock('../../../services/game', () => ({
@@ -197,6 +186,14 @@ jest.mock('../../../utils/storage', () => ({
   },
 }));
 
+jest.mock('../../../utils/runtime', () => ({
+  isH5Runtime: jest.fn(() => true),
+}));
+
+jest.mock('../../../utils/systemInfo', () => ({
+  getSafeSystemInfo: jest.fn(() => ({ windowHeight: 720 })),
+}));
+
 const ForkPage = require('../fork/index').default;
 
 function buildGameStoreState(overrides = {}) {
@@ -209,15 +206,19 @@ function buildGameStoreState(overrides = {}) {
     error: '',
     terminalError: null,
     creationSession: null,
+    creationSessionUiState: {
+      isInitializing: false,
+      isAwaitingPromptConfirmation: false,
+      canGenerate: false,
+      canEditPrompt: false,
+    },
     creationSessionError: null,
     creationSessionSubmitting: false,
-    creationSessionStreamingReply: null,
-    creationSessionPendingUserMessage: null,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
-    answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
-    skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
-    generateFromCreationSession: mockGenerateFromCreationSession,
+    confirmEditedPrompt: mockConfirmEditedPrompt,
+    confirmCurrentPrompt: mockConfirmCurrentPrompt,
+    confirmAndGenerate: mockConfirmAndGenerate,
     abandonCreationSession: mockAbandonCreationSession,
     resetCreationSessionState: mockResetCreationSessionState,
     ...overrides,
@@ -234,19 +235,19 @@ describe('Fork page creation session flow', () => {
   test('does not auto-start a fork session before the first instruction', async () => {
     render(<ForkPage />);
 
-    expect(await screen.findByLabelText('fork-initial-answer')).toBeTruthy();
+    expect(await screen.findByLabelText('fork-initial-prompt')).toBeTruthy();
     await waitFor(() => {
       expect(mockGetActiveCreationSession).toHaveBeenCalled();
     });
     expect(mockStartCreationSession).not.toHaveBeenCalled();
   });
 
-  test('starts a fork session from the first message', async () => {
+  test('starts a fork session from the first instruction', async () => {
     render(<ForkPage />);
 
-    const initialInput = await screen.findByLabelText('fork-initial-answer');
+    const initialInput = await screen.findByLabelText('fork-initial-prompt');
     fireEvent.change(initialInput, { target: { value: 'Keep the loop and switch to neon visuals' } });
-    fireEvent.click(screen.getByTestId('workspace-send'));
+    fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -261,31 +262,52 @@ describe('Fork page creation session flow', () => {
     });
   });
 
-  test('renders the streaming draft and submits follow-up answers for an active fork session', async () => {
+  test('confirms an edited fork prompt for an active session', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: mockForkSession,
-      creationSessionStreamingReply: {
-        id: 'fork-draft-1',
-        role: 'assistant',
-        content: 'Live streamed fork draft',
-        isStreaming: true,
+      creationSessionUiState: {
+        isInitializing: false,
+        isAwaitingPromptConfirmation: true,
+        canGenerate: true,
+        canEditPrompt: true,
       },
     });
 
     render(<ForkPage />);
 
-    const answerInput = await screen.findByLabelText('fork-session-answer');
-    expect(screen.getByTestId('workspace-streaming').textContent).toBe('Live streamed fork draft');
-
-    fireEvent.change(answerInput, { target: { value: 'Keep the core puzzle but soften the difficulty curve' } });
-    fireEvent.click(screen.getByTestId('workspace-send'));
+    const promptInput = await screen.findByLabelText('fork-session-prompt');
+    fireEvent.change(promptInput, { target: { value: 'Expanded fork prompt with clearer art direction' } });
+    fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
-      expect(screen.getByLabelText('fork-session-answer').value).toBe('');
+      expect(mockConfirmEditedPrompt).toHaveBeenCalledWith('Expanded fork prompt with clearer art direction');
+    });
+  });
+
+  test('direct generate from the first instruction chains through confirmAndGenerate', async () => {
+    render(<ForkPage />);
+
+    const initialInput = await screen.findByLabelText('fork-initial-prompt');
+    fireEvent.change(initialInput, { target: { value: 'Keep the puzzle loop but add sci-fi art' } });
+    fireEvent.click(screen.getByTestId('secondary-generate-fork-directly'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        'Keep the puzzle loop but add sci-fi art',
+        'Source Game',
+        expect.objectContaining({
+          entryMode: 'fork',
+          sourceGameId: 'source-1',
+          generationTier: 'standard',
+        }),
+      );
     });
 
     await waitFor(() => {
-      expect(mockAnswerCreationSessionQuestion).toHaveBeenCalledWith('Keep the core puzzle but soften the difficulty curve');
+      expect(mockConfirmAndGenerate).toHaveBeenCalledWith(expect.objectContaining({
+        editedPrompt: '',
+        generationTier: 'standard',
+      }));
     });
   });
 

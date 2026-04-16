@@ -400,6 +400,7 @@ export function normalizeCreationSessionSnapshot(raw) {
     entryMode: raw.entryMode || raw.mode || 'create',
     streamPath: raw.streamPath || raw.eventsPath || '',
     initialPrompt: raw.initialPrompt || raw.prompt || raw.description || '',
+    expandedPrompt: raw.expandedPrompt || raw.promptExpanded || raw.expanded_prompt || null,
     titleDraft: raw.titleDraft || raw.title || raw.sessionTitle || '',
     title: raw.title || raw.titleDraft || raw.sessionTitle || '',
     prompt: raw.prompt || raw.description || raw.initialPrompt || '',
@@ -460,6 +461,26 @@ export async function getCreationSession(sessionId) {
   return normalizeCreationSessionSnapshot(response);
 }
 
+function getCreationSessionRevisionValue(input, explicitRevision) {
+  if (explicitRevision != null) {
+    return explicitRevision;
+  }
+
+  if (input && typeof input === 'object') {
+    return input.revision;
+  }
+
+  return null;
+}
+
+function getCreationSessionIdValue(input) {
+  if (input && typeof input === 'object') {
+    return input.sessionId || input.id || '';
+  }
+
+  return String(input || '').trim();
+}
+
 export async function appendCreationSessionMessage(sessionId, content, revision) {
   const response = await post(
     `/api/v1/games/creation-sessions/${sessionId}/messages`,
@@ -475,6 +496,10 @@ export async function appendCreationSessionMessage(sessionId, content, revision)
   return normalizeCreationSessionSnapshot(response);
 }
 
+export async function confirmEditedPrompt(sessionId, content, revision) {
+  return appendCreationSessionMessage(sessionId, content, revision);
+}
+
 export async function skipCreationSessionQuestion(sessionId, revision) {
   const response = await post(
     `/api/v1/games/creation-sessions/${sessionId}/skip`,
@@ -487,6 +512,10 @@ export async function skipCreationSessionQuestion(sessionId, revision) {
   );
 
   return normalizeCreationSessionSnapshot(response);
+}
+
+export async function confirmCurrentPrompt(sessionId, revision) {
+  return skipCreationSessionQuestion(sessionId, revision);
 }
 
 export async function generateFromCreationSession(sessionId, options = {}) {
@@ -522,6 +551,38 @@ export async function generateFromCreationSession(sessionId, options = {}) {
     requireSubscription: false,
     generationTask,
   };
+}
+
+export async function confirmAndGenerate(sessionOrId, editedPrompt = '', options = {}) {
+  const normalizedPrompt = String(editedPrompt || '').trim();
+  const sessionId = getCreationSessionIdValue(sessionOrId);
+  if (!sessionId) {
+    throw new Error('missing creation session id');
+  }
+
+  const currentSession = sessionOrId && typeof sessionOrId === 'object'
+    ? sessionOrId
+    : await getCreationSession(sessionId);
+  const revision = getCreationSessionRevisionValue(currentSession, options.revision);
+  const currentExpandedPrompt = String(currentSession?.expandedPrompt || '').trim();
+  const hasPromptChanges = Boolean(
+    normalizedPrompt && normalizedPrompt !== currentExpandedPrompt
+  );
+
+  const latestSession = currentSession?.status === 'collecting'
+    ? (
+      hasPromptChanges
+        ? await confirmEditedPrompt(sessionId, normalizedPrompt, revision)
+        : await confirmCurrentPrompt(sessionId, revision)
+    )
+    : hasPromptChanges
+      ? await confirmEditedPrompt(sessionId, normalizedPrompt, revision)
+      : currentSession;
+
+  return generateFromCreationSession(sessionId, {
+    ...options,
+    revision: latestSession?.revision ?? revision,
+  });
 }
 
 export async function abandonCreationSession(sessionId) {
@@ -620,8 +681,11 @@ export default {
   getActiveCreationSession,
   getCreationSession,
   appendCreationSessionMessage,
+  confirmEditedPrompt,
   skipCreationSessionQuestion,
+  confirmCurrentPrompt,
   generateFromCreationSession,
+  confirmAndGenerate,
   abandonCreationSession,
   getGameTypes,
   getGame,

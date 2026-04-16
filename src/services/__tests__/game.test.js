@@ -1,8 +1,9 @@
 /* eslint-env jest */
-import { post } from '../api';
+import { get, post } from '../api';
 import {
   abandonCreationSession,
   buildCreationSessionStreamUrl,
+  confirmAndGenerate,
   createCreationSession,
   generateFromCreationSession,
   generateGame,
@@ -142,6 +143,33 @@ describe('creation session follow-up endpoints', () => {
     await abandonCreationSession('session-12');
 
     expect(post).toHaveBeenCalledWith('/api/v1/games/creation-sessions/session-12/abandon', {});
+  });
+
+  test('confirmAndGenerate refreshes string session ids and skips reconfirming ready prompts', async () => {
+    get.mockResolvedValue({
+      sessionId: 'session-ready',
+      status: 'ready',
+      revision: 7,
+      expandedPrompt: 'Expanded prompt draft',
+    });
+    post.mockResolvedValue({
+      generatedGameId: 'game-ready',
+      generationTaskId: 'task-ready',
+      title: 'Ready Draft',
+      status: 'generating',
+    });
+
+    await confirmAndGenerate('session-ready', 'Expanded prompt draft');
+
+    expect(get).toHaveBeenCalledWith('/api/v1/games/creation-sessions/session-ready');
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith(
+      '/api/v1/games/creation-sessions/session-ready/generate',
+      { revision: 7 },
+      expect.objectContaining({
+        timeout: 90000,
+      })
+    );
   });
 });
 

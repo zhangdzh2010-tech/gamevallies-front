@@ -2,10 +2,11 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockStartCreationSession = jest.fn(() => Promise.resolve());
-const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
+const mockStartCreationSession = jest.fn(() => Promise.resolve({ sessionId: 'create-1', generationTier: 'standard' }));
+const mockConfirmEditedPrompt = jest.fn(() => Promise.resolve());
+const mockConfirmCurrentPrompt = jest.fn(() => Promise.resolve());
+const mockConfirmAndGenerate = jest.fn(() => Promise.resolve());
+const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockRestoreActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockResetCreationSessionState = jest.fn();
 const mockRestorePersistedTask = jest.fn(() => Promise.resolve(true));
@@ -67,20 +68,30 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 
 jest.mock('../../../components/creation', () => ({
   CreationCreateWorkspace: ({
+    showSettings = true,
     session,
     inputValue,
     onInputChange,
-    onSend,
-    pendingUserMessage,
+    onPrimaryAction,
+    secondaryActions = [],
   }) => (
-    <div data-testid="workspace">
-      {pendingUserMessage?.content ? <div data-testid="pending-message">{pendingUserMessage.content}</div> : null}
+    <div data-testid="workspace" data-show-settings={String(showSettings)}>
       <textarea
-        aria-label={session ? 'create-session-answer' : 'create-initial-answer'}
+        aria-label={session ? 'create-session-prompt' : 'create-initial-prompt'}
         value={inputValue}
         onChange={(e) => onInputChange({ detail: { value: e.target.value } })}
       />
-      <button data-testid="workspace-send" type="button" onClick={onSend}>send</button>
+      <button data-testid="workspace-primary" type="button" onClick={onPrimaryAction}>primary</button>
+      {secondaryActions.map((action) => (
+        <button
+          key={action.key}
+          data-testid={`secondary-${action.key}`}
+          type="button"
+          onClick={action.onClick}
+        >
+          {action.label}
+        </button>
+      ))}
     </div>
   ),
   CreationResultCoverCard: () => <div>result-cover</div>,
@@ -89,8 +100,6 @@ jest.mock('../../../components/creation', () => ({
     <div>{(sections || []).map((section) => <div key={section.key}>{section.node}</div>)}</div>
   ),
   CreationStateCard: () => <div>state-card</div>,
-  canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
-  isCreationSessionQuestioning: jest.fn((status) => ['collecting', 'ready'].includes(status)),
 }));
 
 jest.mock('../../../store/gameStore', () => ({
@@ -142,13 +151,10 @@ const mockCreateSession = {
   entryMode: 'create',
   status: 'collecting',
   prompt: 'Build a physics puzzle game',
+  expandedPrompt: 'Expanded prompt draft',
   currentQuestion: {
-    content: 'What should the main challenge feel like?',
-    skippable: true,
+    content: 'Please confirm or edit the prompt.',
   },
-  messages: [
-    { id: 'msg-1', role: 'assistant', content: 'Tell me what kind of game you want.' },
-  ],
 };
 
 const CreatePage = require('../index').default;
@@ -169,15 +175,20 @@ function buildGameStoreState(overrides = {}) {
     consumeCreateEntryIntent: mockConsumeCreateEntryIntent,
     resetCreateSession: mockResetCreateSession,
     setCreateEntryIntent: mockSetCreateEntryIntent,
-    creationSession: mockCreateSession,
+    creationSession: null,
+    creationSessionUiState: {
+      isInitializing: false,
+      isAwaitingPromptConfirmation: false,
+      canGenerate: false,
+      canEditPrompt: false,
+    },
     creationSessionError: null,
     creationSessionSubmitting: false,
-    creationSessionStreamingReply: null,
-    creationSessionPendingUserMessage: null,
     startCreationSession: mockStartCreationSession,
-    answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
-    skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
-    generateFromCreationSession: mockGenerateFromCreationSession,
+    confirmEditedPrompt: mockConfirmEditedPrompt,
+    confirmCurrentPrompt: mockConfirmCurrentPrompt,
+    confirmAndGenerate: mockConfirmAndGenerate,
+    abandonCreationSession: mockAbandonCreationSession,
     restoreActiveCreationSession: mockRestoreActiveCreationSession,
     resetCreationSessionState: mockResetCreationSessionState,
     ...overrides,
@@ -190,19 +201,86 @@ describe('Create page creation session flow', () => {
     mockGameStoreState = buildGameStoreState();
   });
 
-  test('clears the active answer input immediately after send', async () => {
+  test('starts a creation session from the first prompt', async () => {
     render(<CreatePage />);
 
-    const answerInput = await screen.findByLabelText('create-session-answer');
-    fireEvent.change(answerInput, { target: { value: 'Make the pressure come from timed chain reactions' } });
-    fireEvent.click(screen.getByTestId('workspace-send'));
+    const initialInput = await screen.findByLabelText('create-initial-prompt');
+    fireEvent.change(initialInput, { target: { value: 'Make a funny office stealth game' } });
+    fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
-      expect(screen.getByLabelText('create-session-answer').value).toBe('');
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        'Make a funny office stealth game',
+        '',
+        expect.objectContaining({
+          entryMode: 'create',
+          generationTier: 'standard',
+        }),
+      );
+    });
+  });
+
+  test('confirms an edited prompt for an active session', async () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSession: mockCreateSession,
+      creationSessionUiState: {
+        isInitializing: false,
+        isAwaitingPromptConfirmation: true,
+        canGenerate: true,
+        canEditPrompt: true,
+      },
+    });
+
+    render(<CreatePage />);
+
+    const promptInput = await screen.findByLabelText('create-session-prompt');
+    fireEvent.change(promptInput, { target: { value: 'Expanded prompt draft with more traps' } });
+    fireEvent.click(screen.getByTestId('workspace-primary'));
+
+    await waitFor(() => {
+      expect(mockConfirmEditedPrompt).toHaveBeenCalledWith('Expanded prompt draft with more traps');
+    });
+  });
+
+  test('hides title and orientation settings once the prompt-confirmation session starts', async () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSession: mockCreateSession,
+      creationSessionUiState: {
+        isInitializing: false,
+        isAwaitingPromptConfirmation: true,
+        canGenerate: true,
+        canEditPrompt: true,
+      },
+    });
+
+    render(<CreatePage />);
+
+    expect((await screen.findByTestId('workspace')).dataset.showSettings).toBe('false');
+  });
+
+  test('supports direct generate from the initial entry prompt', async () => {
+    render(<CreatePage />);
+
+    const initialInput = await screen.findByLabelText('create-initial-prompt');
+    fireEvent.change(initialInput, { target: { value: 'Make a boss-rush rhythm game' } });
+    fireEvent.click(screen.getByTestId('secondary-generate-create-directly'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        'Make a boss-rush rhythm game',
+        '',
+        expect.objectContaining({
+          entryMode: 'create',
+          generationTier: 'standard',
+        }),
+      );
     });
 
     await waitFor(() => {
-      expect(mockAnswerCreationSessionQuestion).toHaveBeenCalledWith('Make the pressure come from timed chain reactions');
+      expect(mockConfirmAndGenerate).toHaveBeenCalledWith(expect.objectContaining({
+        editedPrompt: '',
+        generationTier: 'standard',
+      }));
     });
   });
 });

@@ -2,10 +2,10 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-const mockStartCreationSession = jest.fn(() => Promise.resolve({ sessionId: 'iter-new' }));
-const mockGenerateFromCreationSession = jest.fn(() => Promise.resolve());
-const mockAnswerCreationSessionQuestion = jest.fn(() => Promise.resolve());
-const mockSkipCreationSessionQuestion = jest.fn(() => Promise.resolve());
+const mockStartCreationSession = jest.fn(() => Promise.resolve({ sessionId: 'iter-new', generationTier: 'standard' }));
+const mockConfirmEditedPrompt = jest.fn(() => Promise.resolve());
+const mockConfirmCurrentPrompt = jest.fn(() => Promise.resolve());
+const mockConfirmAndGenerate = jest.fn(() => Promise.resolve());
 const mockRefreshCreationSession = jest.fn(() => Promise.resolve());
 const mockAbandonCreationSession = jest.fn(() => Promise.resolve());
 const mockRestorePersistedTask = jest.fn(() => Promise.resolve(true));
@@ -38,18 +38,10 @@ const mockIterateSession = {
   sourceGameId: 'game-1',
   status: 'collecting',
   prompt: 'Make the loop faster',
-  planDraft: 'Speed up the pacing and feedback.',
+  expandedPrompt: 'Expanded iterate prompt',
   currentQuestion: {
-    content: 'Which part should feel faster?',
-    skippable: true,
+    content: 'Please confirm or edit the prompt.',
   },
-  messages: [
-    {
-      id: 'msg-1',
-      role: 'assistant',
-      content: 'Tell me what you want to improve first.',
-    },
-  ],
 };
 
 let mockGameStoreState;
@@ -103,32 +95,31 @@ jest.mock('../../../components/common/PaywallPopup', () => ({
 
 jest.mock('../../../components/creation', () => ({
   CreationCreateWorkspace: ({
-    topContent,
     session,
-    streamingMessage,
     inputValue,
     onInputChange,
-    onSend,
-    onSkip,
-    onGenerate,
-    onPreview,
-    errorMessage,
+    onPrimaryAction,
+    secondaryActions = [],
+    topContent,
   }) => (
     <div data-testid="workspace">
       {topContent}
-      {streamingMessage?.content ? (
-        <div data-testid="workspace-streaming">{streamingMessage.content}</div>
-      ) : null}
       <textarea
-        aria-label={session ? 'iterate-session-answer' : 'iterate-initial-answer'}
+        aria-label={session ? 'iterate-session-prompt' : 'iterate-initial-prompt'}
         value={inputValue}
         onChange={(e) => onInputChange({ detail: { value: e.target.value } })}
       />
-      <button data-testid="workspace-send" type="button" onClick={onSend}>send</button>
-      <button data-testid="workspace-skip" type="button" onClick={onSkip}>skip</button>
-      <button data-testid="workspace-generate" type="button" onClick={onGenerate}>generate</button>
-      <button data-testid="workspace-preview" type="button" onClick={onPreview}>preview</button>
-      {errorMessage ? <div>{errorMessage}</div> : null}
+      <button data-testid="workspace-primary" type="button" onClick={onPrimaryAction}>primary</button>
+      {secondaryActions.map((action) => (
+        <button
+          key={action.key}
+          data-testid={`secondary-${action.key}`}
+          type="button"
+          onClick={action.onClick}
+        >
+          {action.label}
+        </button>
+      ))}
     </div>
   ),
   CreationReferenceCard: ({ title, description }) => (
@@ -168,8 +159,6 @@ jest.mock('../../../components/creation', () => ({
       <div>{description}</div>
     </div>
   ),
-  canGenerateCreationSession: jest.fn((status) => ['collecting', 'ready'].includes(status)),
-  isCreationSessionQuestioning: jest.fn((status) => ['collecting', 'ready'].includes(status)),
 }));
 
 jest.mock('../../../services/game', () => ({
@@ -216,15 +205,19 @@ function buildGameStoreState(overrides = {}) {
     terminalError: null,
     canPlay: true,
     creationSession: null,
+    creationSessionUiState: {
+      isInitializing: false,
+      isAwaitingPromptConfirmation: false,
+      canGenerate: false,
+      canEditPrompt: false,
+    },
     creationSessionError: null,
     creationSessionSubmitting: false,
-    creationSessionStreamingReply: null,
-    creationSessionPendingUserMessage: null,
     refreshCreationSession: mockRefreshCreationSession,
     startCreationSession: mockStartCreationSession,
-    answerCreationSessionQuestion: mockAnswerCreationSessionQuestion,
-    skipCreationSessionQuestion: mockSkipCreationSessionQuestion,
-    generateFromCreationSession: mockGenerateFromCreationSession,
+    confirmEditedPrompt: mockConfirmEditedPrompt,
+    confirmCurrentPrompt: mockConfirmCurrentPrompt,
+    confirmAndGenerate: mockConfirmAndGenerate,
     abandonCreationSession: mockAbandonCreationSession,
     resetCreationSessionState: mockResetCreationSessionState,
     setCurrentGame: mockSetCurrentGame,
@@ -242,19 +235,19 @@ describe('Iterate page creation session flow', () => {
   test('does not auto-start an iterate session before the first instruction', async () => {
     render(<IteratePage />);
 
-    expect(await screen.findByLabelText('iterate-initial-answer')).toBeTruthy();
+    expect(await screen.findByLabelText('iterate-initial-prompt')).toBeTruthy();
     await waitFor(() => {
       expect(mockGetActiveCreationSession).toHaveBeenCalled();
     });
     expect(mockStartCreationSession).not.toHaveBeenCalled();
   });
 
-  test('starts an iterate session from the first message', async () => {
+  test('starts an iterate session from the first instruction', async () => {
     render(<IteratePage />);
 
-    const initialInput = await screen.findByLabelText('iterate-initial-answer');
+    const initialInput = await screen.findByLabelText('iterate-initial-prompt');
     fireEvent.change(initialInput, { target: { value: 'Tighten the jump timing' } });
-    fireEvent.click(screen.getByTestId('workspace-send'));
+    fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -269,19 +262,34 @@ describe('Iterate page creation session flow', () => {
     });
   });
 
-  test('starts an iterate session and immediately generates from the first instruction', async () => {
-    mockStartCreationSession.mockResolvedValue({
-      sessionId: 'iter-new',
-      entryMode: 'iterate',
-      sourceGameId: 'game-1',
-      generationTier: 'standard',
+  test('confirms an edited iterate prompt for an active session', async () => {
+    mockGameStoreState = buildGameStoreState({
+      creationSession: mockIterateSession,
+      creationSessionUiState: {
+        isInitializing: false,
+        isAwaitingPromptConfirmation: true,
+        canGenerate: true,
+        canEditPrompt: true,
+      },
     });
 
     render(<IteratePage />);
 
-    const initialInput = await screen.findByLabelText('iterate-initial-answer');
+    const promptInput = await screen.findByLabelText('iterate-session-prompt');
+    fireEvent.change(promptInput, { target: { value: 'Expanded iterate prompt with tighter controls' } });
+    fireEvent.click(screen.getByTestId('workspace-primary'));
+
+    await waitFor(() => {
+      expect(mockConfirmEditedPrompt).toHaveBeenCalledWith('Expanded iterate prompt with tighter controls');
+    });
+  });
+
+  test('direct generate from the first instruction chains through confirmAndGenerate', async () => {
+    render(<IteratePage />);
+
+    const initialInput = await screen.findByLabelText('iterate-initial-prompt');
     fireEvent.change(initialInput, { target: { value: 'Make the boost feel stronger' } });
-    fireEvent.click(screen.getByTestId('workspace-generate'));
+    fireEvent.click(screen.getByTestId('secondary-generate-iterate-directly'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -296,41 +304,10 @@ describe('Iterate page creation session flow', () => {
     });
 
     await waitFor(() => {
-      expect(mockGenerateFromCreationSession).toHaveBeenCalledWith(
-        'iter-new',
-        expect.objectContaining({
-          orientation: 'portrait',
-          generationTier: 'standard',
-        }),
-      );
-    });
-  });
-
-  test('renders the streaming draft and submits follow-up answers for an active iterate session', async () => {
-    mockGameStoreState = buildGameStoreState({
-      creationSession: mockIterateSession,
-      creationSessionStreamingReply: {
-        id: 'draft-1',
-        role: 'assistant',
-        content: 'Live streamed plan draft',
-        isStreaming: true,
-      },
-    });
-
-    render(<IteratePage />);
-
-    const answerInput = await screen.findByLabelText('iterate-session-answer');
-    expect(screen.getByTestId('workspace-streaming').textContent).toBe('Live streamed plan draft');
-
-    fireEvent.change(answerInput, { target: { value: 'Focus on the landing feedback' } });
-    fireEvent.click(screen.getByTestId('workspace-send'));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('iterate-session-answer').value).toBe('');
-    });
-
-    await waitFor(() => {
-      expect(mockAnswerCreationSessionQuestion).toHaveBeenCalledWith('Focus on the landing feedback');
+      expect(mockConfirmAndGenerate).toHaveBeenCalledWith(expect.objectContaining({
+        editedPrompt: '',
+        generationTier: 'standard',
+      }));
     });
   });
 

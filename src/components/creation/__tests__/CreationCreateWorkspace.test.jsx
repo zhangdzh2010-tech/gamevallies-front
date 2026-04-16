@@ -35,54 +35,7 @@ jest.mock('@tarojs/components', () => {
 });
 
 describe('CreationCreateWorkspace', () => {
-  test('does not duplicate the current AI question when the latest assistant message already covers it', () => {
-    render(
-      <CreationCreateWorkspace
-        showSettings={false}
-        session={{
-          messages: [
-            { id: 'user-1', role: 'user', content: '背景是现代都市海战。' },
-            { id: 'assistant-1', role: 'assistant', content: '我先确认一个关键点：你想把它放在什么情境、世界观或题材里？' },
-          ],
-          currentQuestion: {
-            content: '你想把它放在什么情境、世界观或题材里？',
-          },
-        }}
-        inputValue=""
-        onInputChange={jest.fn()}
-      />
-    );
-
-    expect(screen.getAllByText(/你想把它放在什么情境、世界观或题材里？/)).toHaveLength(1);
-  });
-
-  test('collapses duplicate assistant follow-up messages and renders the optimistic user reply once', () => {
-    render(
-      <CreationCreateWorkspace
-        showSettings={false}
-        session={{
-          messages: [
-            { id: 'user-1', role: 'user', content: 'Modern city naval defense game' },
-            { id: 'assistant-1', role: 'assistant', content: 'I want to confirm one key point: which world or theme should it use?' },
-            { id: 'assistant-2', role: 'assistant', content: 'Which world or theme should it use?' },
-          ],
-        }}
-        pendingUserMessage={{
-          id: 'pending-user-1',
-          role: 'user',
-          content: 'Near-future geopolitics with fictional factions',
-          isPending: true,
-        }}
-        inputValue=""
-        onInputChange={jest.fn()}
-      />
-    );
-
-    expect(screen.getAllByText(/Which world or theme should it use\?/)).toHaveLength(1);
-    expect(screen.getByText('Near-future geopolitics with fictional factions')).toBeTruthy();
-  });
-
-  test('renders a multiline textarea for the game description composer and keeps the title input', () => {
+  test('renders an entry editor and title input before a session exists', () => {
     const { container } = render(
       <CreationCreateWorkspace
         gameName=""
@@ -97,6 +50,48 @@ describe('CreationCreateWorkspace', () => {
     );
 
     expect(container.querySelector('input.creation-config-input')).toBeTruthy();
-    expect(container.querySelector('textarea.creation-create-composer__input')).toBeTruthy();
+    expect(container.querySelector('textarea.creation-create-editor__input')).toBeTruthy();
+    expect(screen.getByText('你的初始想法')).toBeTruthy();
+  });
+
+  test('renders a prompt editor with session helper text when the session is collecting', () => {
+    render(
+      <CreationCreateWorkspace
+        showSettings={false}
+        session={{
+          sessionId: 'session-1',
+          status: 'collecting',
+          initialPrompt: 'Make a funny office stealth game',
+          expandedPrompt: 'Expanded prompt draft',
+          currentQuestion: {
+            content: 'Please confirm or edit the prompt.',
+          },
+        }}
+        inputValue="Expanded prompt draft"
+        onInputChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('AI 整理后的提示词')).toBeTruthy();
+    expect(screen.getByText('Please confirm or edit the prompt.')).toBeTruthy();
+    expect(screen.getByText('最初输入')).toBeTruthy();
+  });
+
+  test('renders the loading card when the session is initializing', () => {
+    render(
+      <CreationCreateWorkspace
+        showSettings={false}
+        session={{
+          sessionId: 'session-init',
+          status: 'initializing',
+          initialPrompt: 'Make a co-op puzzle game',
+        }}
+        inputValue=""
+        onInputChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('正在整理并扩写你的想法')).toBeTruthy();
+    expect(screen.queryByText('AI 整理后的提示词')).toBeNull();
   });
 });
