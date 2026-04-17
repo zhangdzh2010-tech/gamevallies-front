@@ -1038,4 +1038,23 @@ describe('gameStore creation session actions', () => {
     expect(result).toBe(null);
     expect(useGameStore.getState().creationSession).toBe(null);
   });
+
+  test('maps upstream model provider failures to a friendly task error', async () => {
+    await useGameStore.getState()._handleTaskTerminal({
+      taskId: 'task-failed-1',
+      taskType: 'pipeline_run',
+      gameId: 'game-failed-1',
+      status: 'failed',
+      failureFamily: 'code_generation',
+      failedStage: 'logic_generate',
+      terminalError: {
+        message: "Full LLM generation failed: Client error '403 Forbidden' for url 'https://ark.cn-beijing.volces.com/api/v1/chat/completions'",
+      },
+    });
+
+    expect(useGameStore.getState().error).toBe('AI 生成服务暂时不可用，请稍后重试');
+    expect(useGameStore.getState().terminalError).toEqual(expect.objectContaining({
+      message: expect.stringContaining('403 Forbidden'),
+    }));
+  });
 });

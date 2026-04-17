@@ -453,7 +453,52 @@ function deriveTaskErrorMessage(task) {
     return '创作超时，请稍后到“我的作品”里查看结果';
   }
 
-  return task.terminalError?.message || '创作失败，请稍后重试';
+  const source = String(task.terminalError?.message || task.errorMessage || '').trim();
+  const failureFamily = String(task.failureFamily || '').trim().toLowerCase();
+  const failedStage = String(task.failedStage || '').trim().toLowerCase();
+
+  if (!source) {
+    if (failureFamily === 'code_generation' || failedStage === 'logic_generate') {
+      return 'AI 生成内容时出了点问题，请稍后重试';
+    }
+    return '创作失败，请稍后重试';
+  }
+
+  if (
+    /full llm generation failed|chat\/completions|ark\.cn-|model provider|provider/i.test(source)
+    && /403|401|429|forbidden|unauthorized|rate.?limit|5\d{2}|server error|internal server/i.test(source)
+  ) {
+    return 'AI 生成服务暂时不可用，请稍后重试';
+  }
+
+  if (/full llm generation failed|chat\/completions|ark\.cn-|model provider|provider/i.test(source)) {
+    return 'AI 生成阶段遇到问题，请稍后重试';
+  }
+
+  if (/request:fail timeout|timeout|timed out|超时/i.test(source)) {
+    return '创作超时，请稍后到“我的作品”里查看结果';
+  }
+
+  if (/network|request:fail|econn|enotfound|enetunreach|网络/i.test(source)) {
+    return '当前网络不稳定，请稍后重试';
+  }
+
+  if (/server error|internal server|HTTP 5\d{2}|服务器/i.test(source)) {
+    return '服务器暂时出了点问题，请稍后再试';
+  }
+
+  if (/rate.?limit|too many|频繁|429/i.test(source)) {
+    return '当前生成服务较忙，请稍后再试';
+  }
+
+  if (!/[\u4e00-\u9fa5]/.test(source)) {
+    if (failureFamily === 'code_generation' || failedStage === 'logic_generate') {
+      return 'AI 生成内容时出了点问题，请稍后重试';
+    }
+    return '创作失败，请稍后重试';
+  }
+
+  return source;
 }
 
 function deriveCreationSessionErrorMessage(error, fallback = '创作会话处理失败，请稍后重试') {

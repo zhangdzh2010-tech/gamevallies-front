@@ -8,8 +8,8 @@ const ENV_PATH = path.join(BACKEND_ROOT, '.env.deploy');
 const CHROME_EXECUTABLE = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const MOBILE_DEVICE = devices['iPhone 13'];
 const WORKSPACE_TITLE_INPUT_SELECTOR = '.creation-config-input-wrap input, .creation-create-settings__field--name input, input.creation-config-input, input.form-input, input.create-entry__name-input, input.weui-input';
-const WORKSPACE_COMPOSER_INPUT_SELECTOR = '.creation-create-composer__input-wrap input, .creation-create-composer__input input, input.creation-create-composer__input, textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea.form-textarea, textarea.create-entry__textarea, textarea';
-const WORKSPACE_SEND_SELECTOR = '.creation-create-composer__send:not(.creation-create-composer__send--disabled), .creation-session-actions__button--ghost:not(.creation-session-actions__button--disabled)';
+const WORKSPACE_COMPOSER_INPUT_SELECTOR = '.creation-create-editor__input--native, textarea.creation-create-editor__input, .creation-create-composer__input-wrap input, .creation-create-composer__input input, input.creation-create-composer__input, textarea.creation-answer-composer__textarea, textarea.iterate-textarea, textarea.form-textarea, textarea.create-entry__textarea, textarea';
+const WORKSPACE_ACTION_SELECTOR = '.creation-create-composer__action:not(.creation-create-composer__action--disabled), .creation-session-actions__button:not(.creation-session-actions__button--disabled), .form-actions .action-btn.play-btn, .iterate-submit-btn, .iterate-primary-btn, .fork-submit-btn';
 const WORKSPACE_PRIMARY_ACTION_SELECTOR = '.creation-create-composer__action--primary:not(.creation-create-composer__action--disabled), .creation-session-actions__button--primary:not(.creation-session-actions__button--disabled), .form-actions .action-btn.play-btn, .iterate-submit-btn, .iterate-primary-btn, .fork-submit-btn';
 const WORKSPACE_LANDSCAPE_SELECTOR = '.creation-create-orientation__option:nth-child(2), .orientation-option:nth-child(2), .create-entry__orientation-option:nth-child(2)';
 const PROFILE_TAB_PATTERNS = {
@@ -254,6 +254,14 @@ async function waitForSessionAnswerApplied(page, previousConversationCount, subm
   return false;
 }
 
+async function clickWorkflowActionByText(page, pattern, timeout = 30000) {
+  const locator = page.locator(WORKSPACE_ACTION_SELECTOR).filter({ hasText: pattern }).first();
+  await locator.waitFor({ state: 'visible', timeout });
+  const text = ((await locator.textContent().catch(() => '')) || '').trim();
+  await locator.click({ force: true });
+  return { text };
+}
+
 async function click(page, selector, options = {}) {
   const locator = page.locator(selector).first();
   await locator.waitFor({ state: 'visible', timeout: options.timeout || 30000 });
@@ -299,7 +307,8 @@ async function waitForWorkflowSessionReady(page, label) {
     ),
     page.waitForFunction(
       () => Boolean(
-        document.querySelector('.progress-panel')
+        document.querySelector('.generation-progress-panel')
+        || document.querySelector('.progress-panel')
       ),
       null,
       { timeout: 180000 },
@@ -307,6 +316,35 @@ async function waitForWorkflowSessionReady(page, label) {
   ]).catch((error) => {
     throw new Error(`Timed out waiting for ${label} session ready state: ${error.message}`);
   });
+}
+
+async function waitForGenerationProgress(page, label, timeout = 45000) {
+  const progressRoot = page.locator('.generation-progress-panel, .progress-panel').first();
+  await progressRoot.waitFor({ state: 'visible', timeout }).catch(async (error) => {
+    const url = page.url();
+    const visibleActions = await page.locator(WORKSPACE_ACTION_SELECTOR).evaluateAll(
+      (nodes) => nodes
+        .map((node) => (node.textContent || '').trim())
+        .filter(Boolean)
+    ).catch(() => []);
+    throw new Error(
+      `Did not enter ${label} generation progress state after clicking generate: ${error.message}; `
+      + `url=${url}; visibleActions=${JSON.stringify(visibleActions)}`
+    );
+  });
+
+  const stageLabel = ((await page.locator(
+    '.generation-progress-panel__core-stage, .progress-panel__stage'
+  ).first().textContent().catch(() => '')) || '').trim();
+  const progressMessage = ((await page.locator(
+    '.generation-progress-panel__core-message, .progress-panel__message'
+  ).first().textContent().catch(() => '')) || '').trim();
+
+  return {
+    entered: true,
+    stageLabel,
+    progressMessage,
+  };
 }
 
 async function waitForCreateCompletion(page) {
@@ -474,22 +512,26 @@ async function maybeAnswerSessionQuestion(page, answer, label) {
     return { answered: false, reason: 'question_not_visible' };
   }
 
-  const hasQuestion = await waitForSessionQuestionVisible(page, 20000);
-  if (!hasQuestion) {
-    return { answered: false, reason: 'question_not_visible' };
+  const confirmButton = page.locator(WORKSPACE_ACTION_SELECTOR).filter({ hasText: /确认并保存提示词|确认.*提示词|保存提示词/i }).first();
+  await confirmButton.waitFor({ state: 'visible', timeout: 20000 }).catch(() => null);
+  if (!(await confirmButton.isVisible().catch(() => false))) {
+    return { answered: false, reason: 'confirm_not_available' };
   }
 
   const previousConversationCount = await page.locator('.creation-conversation-item').count().catch(() => 0);
-  await fill(page, WORKSPACE_COMPOSER_INPUT_SELECTOR, answer, 120000);
-  const submitButton = page.locator(WORKSPACE_SEND_SELECTOR).first();
-  await submitButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => null);
-  if (!(await submitButton.isVisible().catch(() => false))) {
-    return { answered: false, reason: 'submit_not_available' };
+  const existingValue = await composerInput.inputValue().catch(() => '');
+  const normalizedAnswer = String(answer || '').trim();
+  const nextValue = existingValue && !existingValue.includes(normalizedAnswer)
+    ? `${existingValue.trim()}\n\nAdditional note: ${normalizedAnswer}`
+    : normalizedAnswer;
+  await fill(page, WORKSPACE_COMPOSER_INPUT_SELECTOR, nextValue, 120000);
+  if (!(await confirmButton.isVisible().catch(() => false))) {
+    return { answered: false, reason: 'confirm_not_available' };
   }
-  await submitButton.click({ force: true });
-  await waitForSessionAnswerApplied(page, previousConversationCount, answer, 30000);
+  await confirmButton.click({ force: true });
+  await waitForSessionAnswerApplied(page, previousConversationCount, nextValue, 30000);
   await waitForWorkflowSessionReady(page, label);
-  return { answered: true };
+  return { answered: true, appendedAnswer: normalizedAnswer };
 }
 
 async function clickPrimaryWorkflowAction(page, label, timeout = 120000) {
@@ -593,15 +635,16 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
       }
     }
 
-    const freshTitleInput = authorPage.locator(WORKSPACE_TITLE_INPUT_SELECTOR).first();
-    if (await freshTitleInput.isVisible().catch(() => false)) {
-      await fill(authorPage, WORKSPACE_TITLE_INPUT_SELECTOR, title);
-      await fill(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.prompt);
-      await click(authorPage, WORKSPACE_SEND_SELECTOR);
-      await waitForWorkflowSessionReady(authorPage, 'create');
-    }
-    result.create.sessionAnswer = await maybeAnswerSessionQuestion(authorPage, caseConfig.createAnswer || caseConfig.prompt, 'create');
-    result.create.generateAction = await clickPrimaryWorkflowAction(authorPage, 'create', 120000);
+      const freshTitleInput = authorPage.locator(WORKSPACE_TITLE_INPUT_SELECTOR).first();
+      if (await freshTitleInput.isVisible().catch(() => false)) {
+        await fill(authorPage, WORKSPACE_TITLE_INPUT_SELECTOR, title);
+        await fill(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.prompt);
+        await clickWorkflowActionByText(authorPage, /开始整理/i, 120000);
+        await waitForWorkflowSessionReady(authorPage, 'create');
+      }
+      result.create.sessionAnswer = await maybeAnswerSessionQuestion(authorPage, caseConfig.createAnswer || caseConfig.prompt, 'create');
+      result.create.generateAction = await clickWorkflowActionByText(authorPage, /开始生成|直接生成/i, 120000);
+      result.create.progressEntry = await waitForGenerationProgress(authorPage, 'create');
 
     console.log(`[${caseIndex}] capturing created game`);
     let sourceState = await waitForNewMyGame(
@@ -640,10 +683,11 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
     await gotoMiniPage(authorPage, baseUrl, `/pages/game/iterate/index?gameId=${sourceGame.id}`);
     await waitForVisible(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, 120000);
     await fill(authorPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.iterateFeedback, 120000);
-    await click(authorPage, WORKSPACE_SEND_SELECTOR, { timeout: 120000 });
+    await clickWorkflowActionByText(authorPage, /开始整理/i, 120000);
     await waitForWorkflowSessionReady(authorPage, 'iterate');
     result.iterate.sessionAnswer = await maybeAnswerSessionQuestion(authorPage, caseConfig.iterateFeedback, 'iterate');
-    result.iterate.generateAction = await clickPrimaryWorkflowAction(authorPage, 'iterate', 120000);
+    result.iterate.generateAction = await clickWorkflowActionByText(authorPage, /开始生成|直接生成/i, 120000);
+    result.iterate.progressEntry = await waitForGenerationProgress(authorPage, 'iterate');
 
     console.log(`[${caseIndex}] checking iterate publish state`);
     let iterateState = await waitForNewMyGame(
@@ -718,10 +762,11 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
     await waitForHash(forkerPage, '/pages/game/fork/index', 30000);
     await waitForVisible(forkerPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, 120000);
     await fill(forkerPage, WORKSPACE_COMPOSER_INPUT_SELECTOR, caseConfig.forkPrompt, 120000);
-    await click(forkerPage, WORKSPACE_SEND_SELECTOR, { timeout: 120000 });
+    await clickWorkflowActionByText(forkerPage, /开始整理/i, 120000);
     await waitForWorkflowSessionReady(forkerPage, 'fork');
     result.fork.sessionAnswer = await maybeAnswerSessionQuestion(forkerPage, caseConfig.forkPrompt, 'fork');
-    result.fork.generateAction = await clickPrimaryWorkflowAction(forkerPage, 'fork', 120000);
+    result.fork.generateAction = await clickWorkflowActionByText(forkerPage, /开始生成|直接生成/i, 120000);
+    result.fork.progressEntry = await waitForGenerationProgress(forkerPage, 'fork');
 
     console.log(`[${caseIndex}] waiting for forked game to appear`);
     const forkState = await waitForNewMyGame(

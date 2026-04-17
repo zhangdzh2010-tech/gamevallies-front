@@ -106,7 +106,7 @@ export default function Create() {
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `create-container${isH5 ? ' create-container--h5' : ''}${isWeapp ? ' create-container--weapp' : ''}`;
-  const entryErrorMessage = creationSessionError || terminalError?.message || error || '';
+  const entryErrorMessage = creationSessionError || error || terminalError?.message || '';
 
   const openTaskCenter = () => {
     openProfilePageWithTab('tasks');
