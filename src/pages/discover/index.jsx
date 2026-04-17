@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Image, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { GameCard } from '../../components/common/GameCard';
@@ -16,34 +16,15 @@ import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
 import { buildGameDetailPath } from '../../utils/share';
-import { Storage } from '../../utils/storage';
-import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../utils/profileDisplay';
 import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Scroll';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
-const GAME_EMOJIS = ['\ud83c\udfae', '\ud83d\ude80', '\ud83c\udfb2', '\ud83c\udfaf', '\ud83c\udf1f', '\u26a1', '\ud83e\udde9', '\ud83d\udd79\ufe0f'];
-const TAB_RECOMMENDED = '\u63a8\u8350\u5173\u6ce8';
-const TAB_LATEST = '\u6700\u65b0\u52a8\u6001';
-
-function formatMetric(value) {
-  const num = Number(value) || 0;
-
-  if (num >= 100000) {
-    return `${Math.round(num / 10000)}w+`;
-  }
-
-  if (num >= 10000) {
-    return `${(num / 10000).toFixed(1)}w`;
-  }
-
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}k`;
-  }
-
-  return String(num);
-}
+const GAME_EMOJIS = ['🎮', '🚀', '🎲', '🎯', '🌟', '⚡', '🧩', '🕹️'];
+const PAGE_LIMIT = 10;
+const HOME_PAGE_URL = '/pages/index/index';
+const FRIENDS_REDIRECT_URL = '/pages/discover/index';
 
 function normalizeGame(game, index) {
   return {
@@ -56,15 +37,6 @@ function normalizeGame(game, index) {
     viewerHasBookmarked: game.viewerHasBookmarked === true,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
-    author: getSafeDisplayText([
-      game.author?.displayName,
-      game.author?.nickname,
-      game.author?.username,
-      game.authorName,
-      game.creatorName,
-      typeof game.author === 'string' ? game.author : '',
-    ], '\u521b\u4f5c\u8005'),
-    isHot: (game.plays || game.playCount || 0) > 5000,
   };
 }
 
@@ -79,138 +51,61 @@ function buildPosterColumns(games, desiredColumnCount = 3) {
   return columns;
 }
 
-export default function FollowPage() {
+export default function FriendsPage() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
-  const currentUser = Storage.getUser() || {};
-  const currentUserId = currentUser?.id ? String(currentUser.id) : '';
   const loggedIn = isLoggedIn();
-  const [activeTab, setActiveTab] = useState(TAB_RECOMMENDED);
-  const [topCreators, setTopCreators] = useState([]);
-  const [followedGames, setFollowedGames] = useState([]);
+  const [friendGames, setFriendGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(loggedIn);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const openGame = useGamePlayerStore((s) => s.openGame);
-
-  const tabs = [TAB_RECOMMENDED, TAB_LATEST];
-  const topCreatorIdsSignature = topCreators.map((creator) => String(creator?.id || '')).join(',');
-
-  const updateCreatorFollowState = useCallback((creatorId, nextState) => {
-    const normalizedCreatorId = creatorId ? String(creatorId) : '';
-    if (!normalizedCreatorId) {
-      return;
-    }
-
-    setTopCreators((prev) => prev.map((creator) => (
-      String(creator.id) === normalizedCreatorId
-        ? { ...creator, ...nextState }
-        : creator
-    )));
-  }, []);
+  const prevLoggedInRef = useRef(loggedIn);
 
   const fetchData = useCallback(async (pageNum = 1, append = false) => {
-    if (!append) setLoading(true);
-    try {
-      const shouldLoadFollowingFeed = activeTab === TAB_LATEST;
-      const [creatorsRes, gamesRes] = await Promise.all([
-        pageNum === 1 && activeTab === TAB_RECOMMENDED ? feedService.getTrendingCreators(10) : Promise.resolve(null),
-        shouldLoadFollowingFeed
-          ? (loggedIn ? feedService.getFollowingFeed(pageNum, 10) : Promise.resolve({ items: [], hasMore: false }))
-          : feedService.getLatest(pageNum, 10),
-      ]);
+    if (!append) {
+      setLoading(true);
+    }
 
-      if (creatorsRes) {
-        const creators = Array.isArray(creatorsRes) ? creatorsRes : (creatorsRes?.items || []);
-        setTopCreators(creators.map((creator) => ({
-          ...creator,
-          isFollowing: creator.isFollowing === true || creator.following === true || creator.viewerHasFollowed === true,
-          followLoading: false,
-        })));
+    try {
+      if (!loggedIn) {
+        setFriendGames([]);
+        setHasMore(false);
+        return;
       }
 
+      const gamesRes = await feedService.getFollowingFeed(pageNum, PAGE_LIMIT);
       const items = mergeBookmarkedFlags((gamesRes?.items || []).map(normalizeGame));
-      setFollowedGames((prev) => (append ? [...prev, ...items] : items));
-      setHasMore(gamesRes?.hasMore ?? items.length >= 10);
+      setFriendGames((prev) => (append ? [...prev, ...items] : items));
+      setHasMore(gamesRes?.hasMore ?? items.length >= PAGE_LIMIT);
     } catch (error) {
-      console.error('fetchData error:', error);
+      console.error('fetch friends feed error:', error);
       Taro.showToast({
-        title: '\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5',
+        title: '加载朋友作品失败，请重试',
         icon: 'none',
       });
     } finally {
       setLoading(false);
     }
-  }, [activeTab, loggedIn]);
+  }, [loggedIn]);
 
   useEffect(() => {
     setPage(1);
-    setHasMore(true);
+    setHasMore(loggedIn);
     fetchData(1);
-  }, [fetchData]);
+  }, [fetchData, loggedIn]);
 
-  // #27 页面重新显示时（如登录后返回），自动刷新数据
-  const prevLoggedInRef = useRef(loggedIn);
   useDidShow(() => {
-    setFollowedGames((prev) => mergeBookmarkedFlags(prev));
+    setFriendGames((prev) => mergeBookmarkedFlags(prev));
 
-    // 检测登录状态变化，登录后自动刷新当前 tab 数据
     const nowLoggedIn = isLoggedIn();
     if (!prevLoggedInRef.current && nowLoggedIn) {
-      fetchData(1);
+      void fetchData(1);
     }
     prevLoggedInRef.current = nowLoggedIn;
   });
-
-  useEffect(() => {
-    if (!isLoggedIn() || topCreators.length === 0) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const syncFollowStates = async () => {
-      const results = await Promise.all(topCreators.map(async (creator) => {
-        const creatorId = creator?.id ? String(creator.id) : '';
-        if (!creatorId || creatorId === currentUserId) {
-          return [creatorId, false];
-        }
-
-        try {
-          const following = await socialService.checkFollowStatus(creatorId);
-          return [creatorId, Boolean(following)];
-        } catch {
-          return [creatorId, creator.isFollowing === true];
-        }
-      }));
-
-      if (cancelled) {
-        return;
-      }
-
-      const followMap = new Map(results.filter(([creatorId]) => creatorId));
-      setTopCreators((prev) => prev.map((creator) => {
-        const creatorId = creator?.id ? String(creator.id) : '';
-        if (!followMap.has(creatorId)) {
-          return creator;
-        }
-
-        return {
-          ...creator,
-          isFollowing: followMap.get(creatorId) === true,
-          followLoading: false,
-        };
-      }));
-    };
-
-    syncFollowStates();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUserId, topCreatorIdsSignature]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -224,13 +119,16 @@ export default function FollowPage() {
   }, [isH5]);
 
   const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (!loggedIn || isLoadingMore || !hasMore) {
+      return;
+    }
+
     setIsLoadingMore(true);
     const nextPage = page + 1;
     await fetchData(nextPage, true);
     setPage(nextPage);
     setIsLoadingMore(false);
-  }, [fetchData, hasMore, isLoadingMore, page]);
+  }, [fetchData, hasMore, isLoadingMore, loggedIn, page]);
 
   useEffect(() => {
     if (!isH5) {
@@ -255,7 +153,7 @@ export default function FollowPage() {
 
         const remaining = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight);
         if (remaining <= threshold) {
-          handleLoadMore();
+          void handleLoadMore();
         }
       };
 
@@ -282,15 +180,7 @@ export default function FollowPage() {
     }
 
     resetH5PageScrollTop();
-  }, [activeTab, isH5]);
-
-  const handleTabChange = (tab) => {
-    if (tab === activeTab) {
-      return;
-    }
-
-    setActiveTab(tab);
-  };
+  }, [isH5, loggedIn]);
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
@@ -301,7 +191,7 @@ export default function FollowPage() {
       return;
     }
 
-    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` }).catch(() => {});
   };
 
   const handleComment = (game) => {
@@ -322,7 +212,7 @@ export default function FollowPage() {
         ? Number(result.likes)
         : Math.max(0, (Number(targetGame.likes) || 0) + (nextLiked ? 1 : -1));
 
-      setFollowedGames((prev) => prev.map((game) => (
+      setFriendGames((prev) => prev.map((game) => (
         game.id === targetGame.id
           ? { ...game, likes: nextLikes, viewerHasLiked: nextLiked }
           : game
@@ -331,7 +221,7 @@ export default function FollowPage() {
       return { liked: nextLiked, likes: nextLikes };
     } catch (error) {
       Taro.showToast({
-        title: error?.message || '\u70b9\u8d5e\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5',
+        title: error?.message || '点赞失败，请重试',
         icon: 'none',
       });
       throw error;
@@ -342,298 +232,126 @@ export default function FollowPage() {
     const nextBookmarked = !targetGame.viewerHasBookmarked;
     const nextBookmarks = Math.max(0, (Number(targetGame.bookmarks) || 0) + (nextBookmarked ? 1 : -1));
     setGameBookmarked(targetGame, nextBookmarked);
-    setFollowedGames((prev) => prev.map((game) => (
+    setFriendGames((prev) => prev.map((game) => (
       game.id === targetGame.id
         ? { ...game, viewerHasBookmarked: nextBookmarked, bookmarks: nextBookmarks }
         : game
     )));
     Taro.showToast({
-      title: nextBookmarked ? '\u5df2\u6536\u85cf' : '\u5df2\u53d6\u6d88\u6536\u85cf',
+      title: nextBookmarked ? '已收藏' : '已取消收藏',
       icon: 'none',
     });
     return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
-  const handleToggleCreatorFollow = async (creator, event) => {
-    event?.stopPropagation?.();
-
-    const creatorId = creator?.id ? String(creator.id) : '';
-    if (!creatorId) {
-      return;
-    }
-
-    if (creatorId === currentUserId) {
-      Taro.showToast({
-        title: '不能关注自己',
-        icon: 'none',
-      });
-      return;
-    }
-
-    if (creator.followLoading) {
-      return;
-    }
-
-    if (!isLoggedIn()) {
-      setPostLoginRedirect('/pages/discover/index');
-      Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
-      return;
-    }
-
-    const nextFollowing = !creator.isFollowing;
-    updateCreatorFollowState(creatorId, { followLoading: true });
-
-    try {
-      if (creator.isFollowing) {
-        await socialService.unfollowUser(creatorId);
-      } else {
-        await socialService.followUser(creatorId);
-      }
-
-      updateCreatorFollowState(creatorId, {
-        isFollowing: nextFollowing,
-        followLoading: false,
-      });
-      Taro.showToast({
-        title: nextFollowing ? '已关注创作者' : '已取消关注',
-        icon: 'none',
-      });
-    } catch (error) {
-      updateCreatorFollowState(creatorId, { followLoading: false });
-      Taro.showToast({
-        title: error?.message || (creator.isFollowing ? '取消关注失败' : '关注失败'),
-        icon: 'none',
-      });
-    }
+  const openLogin = () => {
+    setPostLoginRedirect(FRIENDS_REDIRECT_URL);
+    Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
   };
 
-  const posterColumns = buildPosterColumns(followedGames);
+  const openHome = () => {
+    Taro.switchTab({ url: HOME_PAGE_URL }).catch(() => {
+      Taro.navigateTo({ url: HOME_PAGE_URL }).catch(() => {});
+    });
+  };
 
-  const heroTitle = activeTab === TAB_RECOMMENDED
-    ? '发现下一批值得关注的创作者'
-    : (loggedIn ? '追踪你关注创作者的最新作品' : '登录后建立你的专属关注流');
-  const heroDesc = activeTab === TAB_RECOMMENDED
-    ? '从热门创作者和最新灵感里快速找到更适合你的风格方向。'
-    : (loggedIn
-      ? '这里会持续更新你关注创作者的新作品、迭代和动态。'
-      : '登录后就能在这里看到关注创作者的最新发布与更新。');
-  const discoverStats = [
+  const posterColumns = buildPosterColumns(friendGames);
+  const friendStats = [
     {
-      key: 'creators',
-      label: activeTab === TAB_RECOMMENDED ? '推荐创作者' : '关注作者',
-      value: activeTab === TAB_RECOMMENDED ? `${topCreators.length}` : (loggedIn ? 'Live' : '--'),
+      key: 'works',
+      label: '朋友作品',
+      value: `${friendGames.length}`,
     },
     {
-      key: 'games',
-      label: activeTab === TAB_RECOMMENDED ? '灵感作品' : '最新动态',
-      value: `${followedGames.length}`,
+      key: 'sync',
+      label: '更新状态',
+      value: loggedIn ? '实时同步' : '待登录',
     },
     {
-      key: 'status',
-      label: '浏览状态',
-      value: activeTab === TAB_RECOMMENDED ? '探索中' : (loggedIn ? '已同步' : '待登录'),
+      key: 'view',
+      label: '当前视图',
+      value: loggedIn ? '朋友' : '游客',
     },
   ];
+  const heroTitle = loggedIn ? '朋友们最近在做这些作品' : '登录后查看朋友们的最新作品';
+  const heroDesc = loggedIn
+    ? '这里只展示你已关注创作者最近发布和更新的作品，方便你直接追踪熟悉的人。'
+    : '登录后，这里会变成你的朋友作品流，只看你已经关注的朋友和创作者。';
 
   return (
     <View className={`follow-page${isH5 ? ' follow-page--h5' : ''}${isWeapp ? ' follow-page--weapp' : ''}`}>
       <AppTopBar />
       <View className="follow-shell">
-
-      <View className="follow-stage">
-        <View className="follow-stage__copy">
-          <Text className="follow-stage__eyebrow">Creator Radar</Text>
-          <Text className="follow-stage__title">{heroTitle}</Text>
-          <Text className="follow-stage__desc">{heroDesc}</Text>
-        </View>
-        <View className="follow-stage__metrics">
-          {discoverStats.map((stat) => (
-            <View key={stat.key} className="follow-stage__metric">
-              <Text className="follow-stage__metric-label">{stat.label}</Text>
-              <Text className="follow-stage__metric-value">{stat.value}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View className="follow-header">
-        <View className="follow-header__copy">
-          <Text className="header-kicker">Discover</Text>
-          <Text className="header-title">{'\u5173\u6ce8'}</Text>
-        </View>
-        <View className="header-tabs">
-          {tabs.map((tab) => (
-            <Text
-              key={tab}
-              className={`header-tab ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => handleTabChange(tab)}
-            >
-              {tab}
-            </Text>
-          ))}
-        </View>
-      </View>
-
-      <PageScrollContainer
-        className="follow-content"
-        refresherEnabled
-        refresherTriggered={refreshing}
-        onRefresherRefresh={handleRefresh}
-        onScrollToLower={handleLoadMore}
-        lowerThreshold={300}
-      >
-        {activeTab === TAB_RECOMMENDED && (
-          <>
-            <View className="section">
-              <View className="section-head section-head--split">
-                <View className="section-head__copy">
-                  <Text className="section-kicker">Top Creators</Text>
-                  <Text className="section-title">{'\u70ed\u95e8\u521b\u4f5c\u8005'}</Text>
-                </View>
-                <Text className="section-meta">{`${topCreators.length} 位`}</Text>
+        <View className="follow-stage">
+          <View className="follow-stage__copy">
+            <Text className="follow-stage__eyebrow">Friends Feed</Text>
+            <Text className="follow-stage__title">{heroTitle}</Text>
+            <Text className="follow-stage__desc">{heroDesc}</Text>
+          </View>
+          <View className="follow-stage__metrics">
+            {friendStats.map((stat) => (
+              <View key={stat.key} className="follow-stage__metric">
+                <Text className="follow-stage__metric-label">{stat.label}</Text>
+                <Text className="follow-stage__metric-value">{stat.value}</Text>
               </View>
-              <ScrollView className="creators-scroll" scrollX>
-                <View className="creators-list">
-                  {topCreators.map((creator, index) => {
-                    const creatorName = getSafeDisplayText([
-                      creator.displayName,
-                      creator.nickname,
-                      creator.username,
-                      creator.name,
-                    ], '\u521b\u4f5c\u8005');
-                    const creatorAvatarRaw = creator.avatarUrl || creator.avatar || '';
-                    const creatorAvatarSrc = normalizeAvatarSource(creatorAvatarRaw);
-                    const creatorAvatarFallback = getAvatarFallback(creatorAvatarRaw, creatorName, '\u521b');
-                    const isOwnCreator = Boolean(currentUserId && String(creator.id || '') === currentUserId);
-                    const followButtonText = creator.followLoading
-                      ? '处理中...'
-                      : creator.isFollowing
-                        ? '已关注'
-                        : isOwnCreator
-                          ? '自己'
-                          : '\u5173\u6ce8';
+            ))}
+          </View>
+        </View>
 
-                    return (
-                      <View key={creator.id} className="creator-card">
-                        <View className="creator-rank">{String(index + 1).padStart(2, '0')}</View>
-                        <View className="creator-avatar">
-                          {creatorAvatarSrc ? (
-                            <Image className="avatar-img" src={creatorAvatarSrc} mode="aspectFill" />
-                          ) : (
-                            <Text className="avatar-text">{creatorAvatarFallback}</Text>
-                          )}
-                        </View>
-                        <Text className="creator-name">
-                          {creatorName}
-                        </Text>
-                        <View className="creator-meta-row">
-                          <Text className="creator-meta">
-                            {`${creator.gameCount || creator.works || 0} \u4f5c\u54c1`}
-                          </Text>
-                          <Text className="creator-meta-dot" />
-                          <Text className="creator-meta">
-                            {`${formatMetric(creator.followerCount || creator.followers || 0)} 粉丝`}
-                          </Text>
-                        </View>
-                        <View
-                          className={`follow-btn${creator.isFollowing ? ' is-following' : ''}${creator.followLoading ? ' is-loading' : ''}${isOwnCreator ? ' disabled' : ''}`}
-                          onClick={(event) => handleToggleCreatorFollow(creator, event)}
-                        >
-                          <Text className="follow-btn-text">{followButtonText}</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-            </View>
+        <View className="follow-header">
+          <View className="follow-header__copy">
+            <Text className="header-kicker">Friends</Text>
+            <Text className="header-title">朋友</Text>
+          </View>
+        </View>
 
-            <View className="section">
-              <View className="section-head section-head--split">
-                <View className="section-head__copy">
-                  <Text className="section-kicker">Curated Feed</Text>
-                  <Text className="section-title">{'\u4f60\u53ef\u80fd\u559c\u6b22'}</Text>
-                </View>
-                <Text className="section-meta">{`${followedGames.length} 款`}</Text>
-              </View>
-              {loading ? (
-                <View className="empty-state">
-                  <Text className="empty-text">{'\u52a0\u8f7d\u4e2d...'}</Text>
-                </View>
-              ) : (
-                <View className="waterfall">
-                  {posterColumns.map((column, columnIndex) => (
-                    <View key={`recommended-col-${columnIndex}`} className="waterfall-col">
-                      {column.map((game) => (
-                        <View key={game.id} className="waterfall-item">
-                          <GameCard
-                            game={game}
-                            variant="home-showcase"
-                            onPlay={handlePlay}
-                            onComment={handleComment}
-                            onOpenDetail={handleOpenDetail}
-                            showDetailEntry
-                            onToggleLike={handleToggleLike}
-                            onToggleBookmark={handleToggleBookmark}
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </>
-        )}
-
-        {activeTab === TAB_LATEST && (
+        <PageScrollContainer
+          className="follow-content"
+          refresherEnabled
+          refresherTriggered={refreshing}
+          onRefresherRefresh={handleRefresh}
+          onScrollToLower={handleLoadMore}
+          lowerThreshold={300}
+        >
           <View className="section">
             <View className="section-head section-head--split">
               <View className="section-head__copy">
-                <Text className="section-kicker">Following Feed</Text>
-                <Text className="section-title">{loggedIn ? '关注动态' : '登录后查看关注动态'}</Text>
+                <Text className="section-kicker">Friends Works</Text>
+                <Text className="section-title">{loggedIn ? '朋友作品' : '登录后查看朋友作品'}</Text>
               </View>
-              <Text className="section-meta">{loggedIn ? `${followedGames.length} 条` : '未登录'}</Text>
+              <Text className="section-meta">{loggedIn ? `${friendGames.length} 款` : '未登录'}</Text>
             </View>
+
             {loading ? (
               <View className="empty-state">
-                <Text className="empty-text">{'\u52a0\u8f7d\u4e2d...'}</Text>
+                <Text className="empty-text">加载中...</Text>
               </View>
-            ) : followedGames.length === 0 ? (
+            ) : !loggedIn ? (
               <View className="empty-state">
-                <Text className="empty-icon">{'\u2728'}</Text>
-                <Text className="empty-title">
-                  {loggedIn ? '\u8fd8\u6ca1\u6709\u5173\u6ce8\u7684\u521b\u4f5c\u8005' : '\u767b\u5f55\u540e\u67e5\u770b\u5173\u6ce8\u52a8\u6001'}
-                </Text>
+                <Text className="empty-icon">👋</Text>
+                <Text className="empty-title">登录后查看朋友作品</Text>
                 <Text className="empty-text">
-                  {loggedIn
-                    ? '\u5173\u6ce8\u521b\u4f5c\u8005\u540e\uff0c\u8fd9\u91cc\u4f1a\u663e\u793a\u4ed6\u4eec\u7684\u6700\u65b0\u4f5c\u54c1'
-                    : '\u767b\u5f55\u540e\uff0c\u8fd9\u91cc\u4f1a\u5c55\u793a\u4f60\u5173\u6ce8\u521b\u4f5c\u8005\u7684\u6700\u65b0\u4f5c\u54c1'}
+                  这里会展示你已关注朋友最近发布和更新的作品，方便你第一时间追更。
                 </Text>
-                {!loggedIn ? (
-                  <View
-                    className="empty-action"
-                    onClick={() => {
-                      setPostLoginRedirect('/pages/discover/index');
-                      Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
-                    }}
-                  >
-                    <Text>{'\u53bb\u767b\u5f55'}</Text>
-                  </View>
-                ) : (
-                  /* #28 已登录但无关注时，引导用户去推荐 Tab 发现创作者 */
-                  <View
-                    className="empty-action"
-                    onClick={() => setActiveTab(TAB_RECOMMENDED)}
-                  >
-                    <Text>去发现创作者</Text>
-                  </View>
-                )}
+                <View className="empty-action" onClick={openLogin}>
+                  <Text>去登录</Text>
+                </View>
+              </View>
+            ) : friendGames.length === 0 ? (
+              <View className="empty-state">
+                <Text className="empty-icon">✨</Text>
+                <Text className="empty-title">还没有朋友作品</Text>
+                <Text className="empty-text">
+                  先去首页逛逛并关注你感兴趣的创作者，这里就会自动汇总他们的作品。
+                </Text>
+                <View className="empty-action" onClick={openHome}>
+                  <Text>去首页看看</Text>
+                </View>
               </View>
             ) : (
               <View className="waterfall">
                 {posterColumns.map((column, columnIndex) => (
-                  <View key={`latest-col-${columnIndex}`} className="waterfall-col">
+                  <View key={`friends-col-${columnIndex}`} className="waterfall-col">
                     {column.map((game) => (
                       <View key={game.id} className="waterfall-item">
                         <GameCard
@@ -653,22 +371,21 @@ export default function FollowPage() {
               </View>
             )}
           </View>
-        )}
 
-        {isLoadingMore && (
-          <View className="load-more">
-            <Text className="load-more-text">{'\u52a0\u8f7d\u4e2d...'}</Text>
-          </View>
-        )}
+          {isLoadingMore && (
+            <View className="load-more">
+              <Text className="load-more-text">加载中...</Text>
+            </View>
+          )}
 
-        {!hasMore && followedGames.length > 0 && (
-          <View className="load-more">
-            <Text className="load-more-end">{'\u2014 \u5df2\u7ecf\u5230\u5e95\u4e86 \u2014'}</Text>
-          </View>
-        )}
+          {!hasMore && friendGames.length > 0 && (
+            <View className="load-more">
+              <Text className="load-more-end">- 已经到底了 -</Text>
+            </View>
+          )}
 
-        <View className="bottom-spacer" />
-      </PageScrollContainer>
+          <View className="bottom-spacer" />
+        </PageScrollContainer>
       </View>
 
       <CustomTabBar activeIndex={1} />

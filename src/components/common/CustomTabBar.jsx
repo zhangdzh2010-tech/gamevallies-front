@@ -6,7 +6,7 @@ import './CustomTabBar.scss';
 
 const TABS = [
   { label: '首页', path: '/pages/index/index' },
-  { label: '发现', path: '/pages/discover/index' },
+  { label: '朋友', path: '/pages/discover/index' },
   { label: '', path: '/pages/create/index', isCreate: true },
   { label: '消息', path: '/pages/message/index' },
   { label: '我的', path: '/pages/profile/index' },

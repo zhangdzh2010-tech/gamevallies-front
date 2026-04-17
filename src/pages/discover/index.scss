@@ -5,501 +5,8 @@
   flex-direction: column;
   height: 100vh;
   max-width: 100vw;
-  background: $bg;
-  color: $text;
   overflow: hidden;
-
-  // Header with inline tabs
-  .follow-header {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px;
-    background: rgba(17, 17, 24, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(37, 37, 53, 0.5);
-    z-index: 100;
-
-    .header-title {
-      font-size: 36px;
-      font-weight: 700;
-      color: $text;
-    }
-
-    .header-tabs {
-      display: flex;
-      gap: 10px;
-
-      .header-tab {
-        @include game-tab-chip();
-        cursor: pointer;
-
-        &.active {
-          @include game-tab-chip($active: true);
-        }
-
-        &:active {
-          transform: scale(0.98);
-        }
-      }
-    }
-  }
-
-  // Scrollable content
-  .follow-content {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  // Section
-  .section {
-    padding: 0 20px;
-
-    .section-head {
-      padding: 20px 0 12px;
-
-      .section-title {
-        font-size: 30px;
-        font-weight: 700;
-        color: $text;
-      }
-    }
-  }
-
-  // Creators horizontal scroll
-  .creators-scroll {
-    margin: 0 -20px;
-    padding: 0;
-  }
-
-  .creators-list {
-    display: flex;
-    gap: 12px;
-    padding: 4px 20px 16px;
-    white-space: nowrap;
-
-    .creator-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px 16px;
-      @include game-surface-card($radius: 18px);
-      min-width: 150px;
-      cursor: pointer;
-      transition: transform $transition-fast, border-color $transition-fast, box-shadow $transition-fast;
-
-      &:active {
-        border-color: rgba(110, 86, 255, 0.3);
-        transform: scale(0.98);
-      }
-
-      .creator-avatar {
-        width: 68px;
-        height: 68px;
-        border-radius: 50%;
-        background: $brand-gradient;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 10px;
-        overflow: hidden;
-
-        .avatar-img {
-          width: 68px;
-          height: 68px;
-          border-radius: 50%;
-        }
-
-        .avatar-text {
-          font-size: 30px;
-          color: white;
-          font-weight: 600;
-        }
-      }
-
-      .creator-name {
-        font-size: $font-size-xs;
-        font-weight: 600;
-        color: $text;
-        margin-bottom: 4px;
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .creator-meta {
-        font-size: $font-size-2xs;
-        color: #6b6882;
-        margin-bottom: 12px;
-      }
-
-      .follow-btn {
-        @include game-primary-pill(34px, 0 16px);
-        transition: transform $transition-fast, opacity $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
-
-        &.is-following {
-          background: rgba(109, 105, 132, 0.18);
-          border: 1px solid rgba(120, 116, 147, 0.4);
-          box-shadow: none;
-        }
-
-        &.is-loading,
-        &.disabled {
-          opacity: 0.7;
-        }
-
-        .follow-btn-text {
-          font-size: 14px;
-          color: #fff;
-          font-weight: 700;
-        }
-
-        &:active {
-          transform: scale(0.98);
-        }
-      }
-    }
-  }
-
-  // Waterfall grid (same as homepage)
-  .waterfall {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-
-    .waterfall-col {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-  }
-
-  // Empty state
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 80px 40px;
-
-    .empty-icon {
-      font-size: 60px;
-      margin-bottom: 16px;
-    }
-
-    .empty-title {
-      font-size: $font-size-base;
-      font-weight: 600;
-      color: $text;
-      margin-bottom: 10px;
-    }
-
-    .empty-text {
-      font-size: $font-size-xs;
-      color: #6b6882;
-      text-align: center;
-    }
-
-    .empty-action {
-      margin-top: 20px;
-      @include game-primary-pill(40px, 0 22px);
-
-      &:active {
-        transform: scale(0.98);
-      }
-
-      text {
-        font-size: $font-size-2xs;
-        color: #fff;
-        font-weight: 700;
-      }
-    }
-  }
-
-  // Load more
-  .load-more {
-    text-align: center;
-    padding: 28px;
-
-    .load-more-text {
-      font-size: $font-size-xs;
-      color: $sub;
-    }
-
-    .load-more-end {
-      font-size: $font-size-xs;
-      color: $dim;
-    }
-  }
-
-  .bottom-spacer {
-    height: calc(220px + env(safe-area-inset-bottom));
-  }
-}
-
-.follow-page.follow-page--h5 {
-  .follow-shell {
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
-  }
-
-  display: block;
-  height: auto;
-  min-height: 100vh;
-  overflow: visible;
-
-  .follow-header {
-    padding: 16px 18px;
-
-    .header-title {
-      font-size: 30px;
-    }
-
-    .header-tabs {
-      gap: 8px;
-
-      .header-tab {
-        font-size: $font-size-sm-h5;
-        padding: 9px 12px;
-      }
-    }
-  }
-
-  .follow-content,
-  taro-scroll-view-core.follow-content,
-  taro-scroll-view-core.follow-content .taro-scroll-view__scroll-y {
-    display: block;
-    flex: none;
-    height: auto !important;
-    min-height: 0;
-    overflow: visible !important;
-  }
-
-  .section {
-    padding: 0 16px;
-
-    .section-head {
-      padding: 16px 0 10px;
-
-      .section-title {
-        font-size: 22px;
-      }
-    }
-  }
-
-  .creators-scroll {
-    margin: 0 -16px;
-  }
-
-  .creators-list {
-    gap: 10px;
-    padding: 4px 16px 14px;
-
-    .creator-card {
-      min-width: 132px;
-      padding: 16px 14px;
-      border-radius: 16px;
-
-      .creator-avatar,
-      .creator-avatar .avatar-img {
-        width: 56px;
-        height: 56px;
-      }
-
-      .creator-avatar .avatar-text {
-        font-size: 22px;
-      }
-
-      .creator-name {
-        max-width: 104px;
-        font-size: 17px;
-      }
-
-      .creator-meta {
-        font-size: $font-size-xs-h5;
-        margin-bottom: 10px;
-      }
-
-      .follow-btn {
-        min-height: 32px;
-        padding: 0 14px;
-
-        .follow-btn-text {
-          font-size: $font-size-xs-h5;
-        }
-      }
-    }
-  }
-
-  .waterfall {
-    max-width: 420px;
-    margin: 0 auto;
-    gap: 8px;
-
-    .waterfall-col {
-      gap: 8px;
-    }
-  }
-
-  .empty-state {
-    padding: 64px 24px;
-
-    .empty-icon {
-      font-size: 40px;
-      margin-bottom: 12px;
-    }
-
-    .empty-title {
-      font-size: $font-size-lg-h5;
-      margin-bottom: 8px;
-    }
-
-    .empty-text {
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .empty-action {
-      margin-top: 16px;
-
-      text {
-        font-size: 15px;
-      }
-    }
-  }
-
-  .load-more {
-    padding: 20px;
-
-    .load-more-text,
-    .load-more-end {
-      font-size: 15px;
-    }
-  }
-
-  .bottom-spacer {
-    height: calc(138px + env(safe-area-inset-bottom));
-  }
-}
-
-.follow-page {
-  .waterfall {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    max-width: none;
-    margin: 0;
-
-    .waterfall-col {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .waterfall-item {
-      min-width: 0;
-    }
-  }
-}
-
-.follow-page.follow-page--h5 {
-  .waterfall {
-    gap: 10px;
-
-    .waterfall-col {
-      gap: 10px;
-    }
-  }
-}
-
-.follow-page.follow-page--weapp {
-  .follow-header {
-    .header-title {
-      font-size: 38rpx;
-    }
-
-    .header-tabs {
-      gap: 12rpx;
-
-      .header-tab {
-        font-size: 28rpx;
-        padding: 10rpx 22rpx;
-      }
-    }
-  }
-
-  .section {
-    .section-head {
-      .section-title {
-        font-size: 32rpx;
-      }
-    }
-  }
-
-  .creators-list {
-    .creator-card {
-      min-width: 176rpx;
-
-      .creator-avatar {
-        .avatar-text {
-          font-size: 34rpx;
-        }
-      }
-
-      .creator-name {
-        font-size: 28rpx;
-      }
-
-      .creator-meta {
-        font-size: 24rpx;
-      }
-
-      .follow-btn {
-        padding: 10rpx 24rpx;
-
-        .follow-btn-text {
-          font-size: 22rpx;
-        }
-      }
-    }
-  }
-
-  .empty-state {
-    .empty-title {
-      font-size: 32rpx;
-    }
-
-    .empty-text {
-      font-size: 26rpx;
-    }
-
-    .empty-action {
-      margin-top: 24rpx;
-      padding: 12rpx 28rpx;
-
-      text {
-        font-size: 24rpx;
-      }
-    }
-  }
-
-  .load-more {
-    .load-more-text,
-    .load-more-end {
-      font-size: 24rpx;
-    }
-  }
-}
-
-// 2026 visual refresh
-.follow-page {
+  color: $text;
   background:
     radial-gradient(circle at 16% 8%, rgba(72, 126, 255, 0.16), transparent 20%),
     radial-gradient(circle at 82% 14%, rgba(61, 222, 199, 0.12), transparent 20%),
@@ -515,6 +22,15 @@
     background:
       radial-gradient(circle at 24% 62%, rgba(111, 84, 255, 0.07), transparent 18%),
       radial-gradient(circle at 76% 46%, rgba(58, 224, 190, 0.06), transparent 16%);
+  }
+
+  .follow-shell {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
   .follow-stage,
@@ -569,7 +85,6 @@
     &__metrics {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0;
       overflow: hidden;
       border-radius: 22px;
       border: 1px solid rgba(98, 110, 156, 0.14);
@@ -581,10 +96,6 @@
       min-width: 0;
       min-height: 88px;
       padding: 14px 12px 16px;
-      border-radius: 0;
-      border: none;
-      background: transparent;
-      box-shadow: none;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -636,30 +147,16 @@
 
     .header-title {
       font-size: $font-size-sm;
+      font-weight: 700;
       letter-spacing: -0.2px;
+      color: $text;
     }
+  }
 
-    .header-tabs {
-      gap: 8px;
-    }
-
-    .header-tab {
-      min-height: 38px;
-      padding: 0 14px;
-      border-radius: 999px;
-      background: rgba(18, 20, 34, 0.94);
-      border: 1px solid rgba(102, 112, 155, 0.14);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-      color: #9fa6c6;
-      font-size: 13px;
-      font-weight: 800;
-
-      &.active {
-        background: linear-gradient(135deg, rgba(71, 117, 255, 0.22) 0%, rgba(141, 79, 255, 0.2) 100%);
-        border-color: rgba(124, 136, 255, 0.32);
-        color: #ffffff;
-      }
-    }
+  .follow-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .section {
@@ -692,6 +189,8 @@
 
     .section-title {
       font-size: $font-size-sm;
+      font-weight: 700;
+      color: $text;
     }
 
     .section-meta {
@@ -707,121 +206,72 @@
     }
   }
 
-  .creators-scroll {
-    margin: 0 -18px;
-  }
-
-  .creators-list {
-    gap: 12px;
-    padding: 4px 18px 12px;
-
-    .creator-card {
-      position: relative;
-      align-items: flex-start;
-      min-width: 176px;
-      padding: 18px 16px 16px;
-      border-radius: 22px;
-      border: 1px solid rgba(94, 103, 145, 0.14);
-      background:
-        radial-gradient(circle at top right, rgba(104, 88, 255, 0.14), transparent 30%),
-        linear-gradient(180deg, rgba(15, 17, 28, 0.94) 0%, rgba(9, 10, 18, 0.98) 100%);
-      box-shadow: 0 18px 32px rgba(2, 5, 16, 0.18);
-    }
-
-    .creator-rank {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      min-width: 32px;
-      min-height: 24px;
-      padding: 0 10px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #f4f6ff;
-      font-size: 11px;
-      font-weight: 800;
-      line-height: 1;
-    }
-
-    .creator-avatar {
-      width: 60px;
-      height: 60px;
-      margin-bottom: 12px;
-      box-shadow: 0 14px 24px rgba(4, 6, 16, 0.16);
-
-      .avatar-img {
-        width: 60px;
-        height: 60px;
-      }
-
-      .avatar-text {
-        font-size: $font-size-sm;
-      }
-    }
-
-    .creator-name {
-      max-width: 100%;
-      margin-bottom: 8px;
-      font-size: $font-size-2xs;
-    }
-
-    .creator-meta-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
-      min-width: 0;
-      flex-wrap: wrap;
-    }
-
-    .creator-meta {
-      font-size: 12px;
-      color: #8f97b9;
-    }
-
-    .creator-meta-dot {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.22);
-    }
-
-    .follow-btn {
-      min-height: 36px;
-      padding: 0 16px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #5e7eff 0%, #6e5aff 50%, #3cdfc7 100%);
-      box-shadow: 0 14px 24px rgba(86, 101, 255, 0.22);
-
-      &.is-following {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-      }
-
-      .follow-btn-text {
-        font-size: 13px;
-        font-weight: 800;
-      }
-    }
-  }
-
   .waterfall {
+    display: flex;
+    align-items: flex-start;
     gap: 14px;
   }
 
+  .waterfall-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .waterfall-item {
+    min-width: 0;
+  }
+
   .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 80px 40px;
     border-radius: 28px;
     border: 1px solid rgba(94, 103, 145, 0.14);
     background: linear-gradient(180deg, rgba(15, 16, 28, 0.92) 0%, rgba(8, 9, 16, 0.98) 100%);
     box-shadow: 0 18px 32px rgba(2, 4, 14, 0.16);
+
+    .empty-icon {
+      font-size: 60px;
+      margin-bottom: 16px;
+    }
+
+    .empty-title {
+      font-size: $font-size-base;
+      font-weight: 600;
+      color: $text;
+      margin-bottom: 10px;
+    }
+
+    .empty-text {
+      font-size: $font-size-xs;
+      color: #6b6882;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    .empty-action {
+      margin-top: 20px;
+      @include game-primary-pill(40px, 0 22px);
+
+      &:active {
+        transform: scale(0.98);
+      }
+
+      text {
+        font-size: $font-size-2xs;
+        color: #fff;
+        font-weight: 700;
+      }
+    }
   }
 
   .load-more {
     padding: 24px 18px 0;
+    text-align: center;
 
     .load-more-text,
     .load-more-end {
@@ -836,6 +286,18 @@
 }
 
 .follow-page.follow-page--h5 {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+
+  .follow-shell {
+    width: 100%;
+    max-width: 500px;
+    min-height: 100vh;
+    margin: 0 auto;
+  }
+
   .follow-stage,
   .follow-header {
     margin-left: 14px;
@@ -847,10 +309,6 @@
 
     &__title {
       font-size: $font-size-xl-h5;
-    }
-
-    &__metrics {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     &__metric {
@@ -870,35 +328,112 @@
 
   .follow-header {
     padding: 12px 14px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
 
     .header-title {
       font-size: $font-size-lg-h5;
     }
+  }
 
-    .header-tabs {
-      width: 100%;
-      overflow-x: auto;
-      white-space: nowrap;
-    }
+  .follow-content,
+  taro-scroll-view-core.follow-content,
+  taro-scroll-view-core.follow-content .taro-scroll-view__scroll-y {
+    display: block;
+    flex: none;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible !important;
   }
 
   .section {
     padding: 0 14px;
   }
 
-  .creators-scroll {
-    margin: 0 -14px;
+  .waterfall {
+    max-width: 420px;
+    margin: 0 auto;
+    gap: 10px;
   }
 
-  .creators-list {
-    padding-left: 14px;
-    padding-right: 14px;
+  .waterfall-col {
+    gap: 10px;
+  }
 
-    .creator-card {
-      min-width: 156px;
+  .empty-state {
+    padding: 64px 24px;
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .empty-title {
+      font-size: $font-size-lg-h5;
+      margin-bottom: 8px;
+    }
+
+    .empty-text {
+      font-size: 15px;
+    }
+
+    .empty-action {
+      margin-top: 16px;
+
+      text {
+        font-size: 15px;
+      }
+    }
+  }
+
+  .load-more {
+    padding: 20px;
+
+    .load-more-text,
+    .load-more-end {
+      font-size: 15px;
+    }
+  }
+
+  .bottom-spacer {
+    height: calc(138px + env(safe-area-inset-bottom));
+  }
+}
+
+.follow-page.follow-page--weapp {
+  .follow-header {
+    .header-title {
+      font-size: 38rpx;
+    }
+  }
+
+  .section {
+    .section-title {
+      font-size: 32rpx;
+    }
+  }
+
+  .empty-state {
+    .empty-title {
+      font-size: 32rpx;
+    }
+
+    .empty-text {
+      font-size: 26rpx;
+    }
+
+    .empty-action {
+      margin-top: 24rpx;
+      padding: 12rpx 28rpx;
+
+      text {
+        font-size: 24rpx;
+      }
+    }
+  }
+
+  .load-more {
+    .load-more-text,
+    .load-more-end {
+      font-size: 24rpx;
     }
   }
 }

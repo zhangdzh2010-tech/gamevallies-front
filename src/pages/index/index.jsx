@@ -56,24 +56,6 @@ function normalizeGame(game, index) {
   };
 }
 
-function formatMetric(value) {
-  const num = Number(value) || 0;
-
-  if (num >= 100000) {
-    return `${Math.round(num / 10000)}w+`;
-  }
-
-  if (num >= 10000) {
-    return `${(num / 10000).toFixed(1)}w`;
-  }
-
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}k`;
-  }
-
-  return String(num);
-}
-
 export default function Home() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
@@ -363,47 +345,16 @@ export default function Home() {
 
   const activeTypeLabel = gameTypeTabs.find((tab) => tab.key === activeType)?.label || '全部';
   const heroGames = games.slice(0, 3);
-  const spotlightGame = heroGames[0] || null;
   const posterColumns = [[], [], []];
   games.forEach((game, index) => {
     posterColumns[index % 3].push(game);
   });
   const [leftPosterGames, middlePosterGames, rightPosterGames] = posterColumns;
-  const totalPlays = games.reduce((sum, game) => sum + (Number(game.plays) || 0), 0);
-  const uniqueAuthorCount = new Set(games.map((game) => game.author).filter(Boolean)).size;
-  const insightCards = [
-    {
-      key: 'channel',
-      tone: 'violet',
-      label: '当前频道',
-      value: activeType === 'all' ? '全部灵感' : activeTypeLabel,
-      hint: spotlightGame ? `从 ${activeTypeLabel} 风格开始创作` : '先把灵感变成第一版可玩稿',
-    },
-    {
-      key: 'heat',
-      tone: 'cyan',
-      label: '热度累计',
-      value: games.length > 0 ? formatMetric(totalPlays) : '加载中',
-      hint: spotlightGame ? `${spotlightGame.title} 正在升温` : '热门灵感会持续滚动更新',
-    },
-    {
-      key: 'creators',
-      tone: 'amber',
-      label: '创作者样本',
-      value: `${Math.max(uniqueAuthorCount, games.length > 0 ? 1 : 0)}`,
-      hint: games.length > 0 ? `当前已展示 ${games.length} 款作品` : '等第一批内容出现后这里会亮起来',
-    },
-  ];
   const heroBadges = heroGames.map((game, index) => ({
     id: game.id,
     tag: index === 0 ? '灵感推荐' : index === 1 ? '轻量上手' : '正在升温',
     title: game.title,
   }));
-  const fallbackBadges = [
-    { id: 'fallback-1', tag: 'Idea', title: '把世界观、角色和规则一次讲清' },
-    { id: 'fallback-2', tag: 'Prototype', title: '先做出可玩的第一版，再补细节' },
-    { id: 'fallback-3', tag: 'Prompt', title: '用几个关键句就把视觉和玩法点亮' },
-  ];
 
   const feedContent = (
     <>
@@ -459,30 +410,22 @@ export default function Home() {
               </View>
             </View>
 
-            <View className="challenge-mini-stack">
-              {(heroBadges.length > 0 ? heroBadges : fallbackBadges).map((badge, index) => (
-                <View
-                  key={badge.id}
-                  className={`challenge-mini-card challenge-mini-card--${index === 0 ? 'primary' : 'secondary'}`}
-                >
-                  <Text className="challenge-mini-card__tag">{badge.tag}</Text>
-                  <Text className="challenge-mini-card__title">{badge.title}</Text>
-                </View>
-              ))}
-            </View>
+            {heroBadges.length > 0 ? (
+              <View className="challenge-mini-stack">
+                {heroBadges.map((badge, index) => (
+                  <View
+                    key={badge.id}
+                    className={`challenge-mini-card challenge-mini-card--${index === 0 ? 'primary' : 'secondary'}`}
+                  >
+                    <Text className="challenge-mini-card__tag">{badge.tag}</Text>
+                    <Text className="challenge-mini-card__title">{badge.title}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
 
-        <View className="home-insight-grid">
-          {insightCards.map((card) => (
-            <View key={card.key} className={`home-insight-card home-insight-card--${card.tone}`}>
-              <View className={`home-insight-card__icon home-insight-card__icon--${card.key}`} />
-              <Text className="home-insight-card__label">{card.label}</Text>
-              <Text className="home-insight-card__value">{card.value}</Text>
-              <Text className="home-insight-card__hint">{card.hint}</Text>
-            </View>
-          ))}
-        </View>
       </View>
 
       <ScrollView className="type-tabs-scroll" scrollX showScrollbar={false}>
