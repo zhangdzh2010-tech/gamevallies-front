@@ -376,85 +376,6 @@
     }
   }
 
-  .home-insight-grid {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-bottom: 18px;
-  }
-
-  .home-insight-card {
-    min-width: 0;
-    padding: 14px 14px 16px;
-    border-radius: 22px;
-    border: 1px solid rgba(87, 97, 137, 0.16);
-    background: linear-gradient(180deg, rgba(15, 17, 28, 0.92) 0%, rgba(9, 10, 18, 0.98) 100%);
-    box-shadow: 0 18px 30px rgba(2, 4, 14, 0.2);
-
-    &--violet {
-      background:
-        radial-gradient(circle at top right, rgba(129, 114, 255, 0.16), transparent 40%),
-        linear-gradient(180deg, rgba(15, 17, 28, 0.92) 0%, rgba(9, 10, 18, 0.98) 100%);
-    }
-
-    &--cyan {
-      background:
-        radial-gradient(circle at top right, rgba(86, 198, 255, 0.18), transparent 40%),
-        linear-gradient(180deg, rgba(15, 17, 28, 0.92) 0%, rgba(9, 10, 18, 0.98) 100%);
-    }
-
-    &--amber {
-      background:
-        radial-gradient(circle at top right, rgba(255, 187, 74, 0.18), transparent 40%),
-        linear-gradient(180deg, rgba(15, 17, 28, 0.92) 0%, rgba(9, 10, 18, 0.98) 100%);
-    }
-
-    &__icon {
-      width: 22px;
-      height: 22px;
-      margin-bottom: 12px;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: contain;
-
-      &--channel {
-        background-image: url('../../images/ui-icons/sparkles.svg');
-      }
-
-      &--heat {
-        background-image: url('../../images/ui-icons/award.svg');
-      }
-
-      &--creators {
-        background-image: url('../../images/ui-icons/users.svg');
-      }
-    }
-
-    &__label {
-      display: block;
-      color: rgba(165, 169, 194, 0.72);
-      font-size: 11px;
-      line-height: 1.2;
-      margin-bottom: 8px;
-    }
-
-    &__value {
-      display: block;
-      color: #eef4ff;
-      font-size: 22px;
-      font-weight: 800;
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-
-    &__hint {
-      display: block;
-      color: rgba(206, 211, 234, 0.76);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-  }
-
   .type-tabs-scroll {
     margin-bottom: 12px;
     width: 100%;
@@ -706,10 +627,6 @@
         width: min(150px, 100%);
         padding: 10px 12px;
       }
-    }
-
-    .home-insight-grid {
-      grid-template-columns: 1fr;
     }
 
     .poster-waterfall {

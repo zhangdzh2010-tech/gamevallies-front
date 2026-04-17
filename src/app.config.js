@@ -37,7 +37,7 @@ export default {
       },
       {
         pagePath: 'pages/discover/index',
-        text: '发现',
+        text: '朋友',
         iconPath: 'images/tab-discover.png',
         selectedIconPath: 'images/tab-discover-active.png',
       },

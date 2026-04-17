@@ -1,46 +1,11 @@
 import { get, post } from './api';
 import { isH5Runtime } from '../utils/runtime';
 
-// ═══════════════════════════════════════════
-// Mock data — 后端接口就绪后删除此文件顶部的 mock 拦截
-// ═══════════════════════════════════════════
-const USE_MOCK = false;
 const MOBILE_H5_USER_AGENT_RE = /android|webos|iphone|ipad|ipod|mobile|phone|windows phone|harmonyos/i;
 
-const MOCK_PLANS = [
-  {
-    id: 'plan_monthly_basic',
-    name: '基础月卡',
-    price: 990,
-    priceDisplay: '9.9',
-    currency: 'CNY',
-    period: 'monthly',
-    periodLabel: '月',
-    quota: 10,
-    quotaLabel: '10次/月',
-    features: ['每月10次创建', 'AI迭代优化', '优先生成'],
-    recommended: false,
-    badge: null,
-  },
-  {
-    id: 'plan_monthly_pro',
-    name: '专业月卡',
-    price: 1990,
-    priceDisplay: '19.9',
-    currency: 'CNY',
-    period: 'monthly',
-    periodLabel: '月',
-    quota: 30,
-    quotaLabel: '30次/月',
-    features: ['每月30次创建', '无限AI迭代', '优先生成', '专属客服'],
-    recommended: true,
-    badge: '推荐',
-  },
-];
-
-const MOCK_QUOTA = {
-  freeQuota: 3,
-  totalFreeQuota: 5,
+const EMPTY_QUOTA = {
+  freeQuota: 0,
+  totalFreeQuota: 0,
   subscription: {
     active: false,
     planId: null,
@@ -48,34 +13,20 @@ const MOCK_QUOTA = {
     expiresAt: null,
     usedThisPeriod: 0,
     quotaThisPeriod: 0,
+    autoRenew: false,
+    remaining: 0,
+    totalRemaining: 0,
   },
 };
-
-const MOCK_SUBSCRIPTION_STATUS = {
-  active: false,
-  planId: null,
-  planName: null,
-  expiresAt: null,
-  usedThisPeriod: 0,
-  quotaThisPeriod: 0,
-  autoRenew: false,
-};
-
-const MOCK_ORDER = {
-  orderId: 'order_mock_' + Date.now(),
-  payment: {
-    provider: 'alipay',
-    flow: 'wap',
-    payUrl: 'https://openapi.alipay.com/gateway.do?mockOrderId=' + Date.now(),
-  },
-};
-
-const MOCK_UNLOCK = { unlocked: true, canPlay: true, quotaRemaining: 29 };
-const MOCK_SUBSCRIBER_COUNT = 1234;
 
 function normalizeQuotaResponse(data) {
   if (!data || typeof data !== 'object') {
-    return { ...MOCK_QUOTA };
+    return {
+      ...EMPTY_QUOTA,
+      subscription: {
+        ...EMPTY_QUOTA.subscription,
+      },
+    };
   }
 
   const rawFreeQuota = Number(data.freeQuota ?? 0) || 0;
@@ -86,7 +37,7 @@ function normalizeQuotaResponse(data) {
   const totalFreeQuota = Number(
     hasExplicitTotalFreeQuota
       ? explicitTotalFreeQuota
-      : (hasExplicitRemaining || data.freeQuotaUsed !== undefined || data.usedFreeQuota !== undefined ? rawFreeQuota : rawFreeQuota)
+      : rawFreeQuota
   ) || 0;
   const freeQuotaRemaining = Number(
     hasExplicitRemaining
@@ -134,42 +85,16 @@ function resolveAlipayProvider() {
   return MOBILE_H5_USER_AGENT_RE.test(userAgent) ? 'alipay_wap' : 'alipay_page';
 }
 
-// ═══════════════════════════════════════════
-// API Functions
-// ═══════════════════════════════════════════
-
-/**
- * 获取用户配额信息
- */
 export async function getQuota() {
-  if (USE_MOCK) {
-    await delay(300);
-    return { ...MOCK_QUOTA };
-  }
   const data = await get('/api/v1/users/quota');
   return normalizeQuotaResponse(data);
 }
 
-/**
- * 获取订阅套餐列表
- */
 export async function getPlans() {
-  if (USE_MOCK) {
-    await delay(300);
-    return { plans: [...MOCK_PLANS], subscriberCount: MOCK_SUBSCRIBER_COUNT };
-  }
   return get('/api/v1/subscription/plans');
 }
 
-/**
- * 创建订阅订单（调起支付宝支付）
- */
 export async function createOrder(planId, gameId) {
-  if (USE_MOCK) {
-    await delay(500);
-    return { ...MOCK_ORDER };
-  }
-
   const provider = resolveAlipayProvider();
   if (!provider) {
     throw new Error('当前环境暂不支持支付宝支付，请在 H5 页面完成订阅');
@@ -190,46 +115,16 @@ export async function createOrder(planId, gameId) {
   );
 }
 
-/**
- * 查询订阅状态
- */
 export async function getSubscriptionStatus() {
-  if (USE_MOCK) {
-    await delay(200);
-    return { ...MOCK_SUBSCRIPTION_STATUS };
-  }
   return get('/api/v1/subscription/status');
 }
 
-/**
- * 查询订阅订单状态
- */
 export async function getOrderStatus(orderId) {
-  if (USE_MOCK) {
-    await delay(200);
-    return {
-      ...MOCK_SUBSCRIPTION_STATUS,
-      orderId,
-      status: 'paid',
-      subscriptionActive: true,
-    };
-  }
   return get(`/api/v1/subscription/orders/${orderId}`);
 }
 
-/**
- * 解锁游戏
- */
 export async function unlockGame(gameId) {
-  if (USE_MOCK) {
-    await delay(300);
-    return { ...MOCK_UNLOCK };
-  }
   return post(`/api/v1/games/${gameId}/unlock`);
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default {
