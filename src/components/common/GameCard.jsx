@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text, Image } from '@tarojs/components';
 import { getSafeGameImage } from '../../utils/media';
+import { getSafeDisplayText } from '../../utils/profileDisplay';
 import './GameCard.scss';
 
 const HOT_LABEL = '热门';
@@ -30,6 +31,18 @@ function getBookmarkCount(game) {
   ) || 0;
 }
 
+function getGameAuthorName(game) {
+  return getSafeDisplayText([
+    game.authorDisplayName,
+    game.author?.displayName,
+    game.author?.nickname,
+    game.author?.username,
+    game.authorName,
+    game.creatorName,
+    typeof game.author === 'string' ? game.author : '',
+  ], '');
+}
+
 export const GameCard = ({
   game,
   onPlay,
@@ -40,6 +53,7 @@ export const GameCard = ({
   variant = 'default',
   showDetailEntry = false,
   badgeLabel,
+  showAuthorInInfo = false,
 }) => {
   const [isLiked, setIsLiked] = useState(Boolean(game.viewerHasLiked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked));
@@ -63,6 +77,7 @@ export const GameCard = ({
 
   const thumbnailUrl = getSafeGameImage(game);
   const hasThumbnail = Boolean(thumbnailUrl);
+  const infoAuthorName = showAuthorInInfo ? getGameAuthorName(game) : '';
   const rootClassName = [
     'game-card',
     hasThumbnail ? 'game-card--with-thumbnail' : '',
@@ -220,6 +235,7 @@ export const GameCard = ({
 
       <View className="game-info">
         <Text className="game-title">{game.title}</Text>
+        {infoAuthorName ? <Text className="game-subtitle">{infoAuthorName}</Text> : null}
       </View>
     </View>
   );
