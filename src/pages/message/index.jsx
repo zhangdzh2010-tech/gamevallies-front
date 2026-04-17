@@ -62,7 +62,9 @@ function getActionText(message) {
 
 function getTimeText(message) {
   const time = message.createdAt || message.timestamp || message.time || '';
-  if (!time) return '';
+  if (!time) {
+    return '';
+  }
 
   if (typeof time === 'string' && !time.includes('T') && !time.includes('-')) {
     return time;
@@ -101,10 +103,21 @@ export default function Message() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const resetLoggedOutView = useCallback(() => {
+    setMessages([]);
+    setPage(1);
+    setHasMore(false);
+    setLoading(false);
+    setLoadingMore(false);
+    setRefreshing(false);
+  }, []);
+
   const loadMessages = useCallback(async (pageNum, isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
+      } else if (pageNum === 1) {
+        setLoading(true);
       }
 
       const result = await socialService.getNotifications(pageNum, 50);
@@ -131,23 +144,21 @@ export default function Message() {
 
   useEffect(() => {
     if (!loggedIn) {
-      setMessages([]);
-      setLoading(false);
+      resetLoggedOutView();
       return;
     }
 
-    loadMessages(1);
-  }, [loadMessages, loggedIn]);
+    void loadMessages(1);
+  }, [loadMessages, loggedIn, resetLoggedOutView]);
 
   useDidShow(() => {
     if (!loggedIn) {
-      setMessages([]);
-      setLoading(false);
+      resetLoggedOutView();
       return;
     }
 
     if (!loading) {
-      loadMessages(1, true);
+      void loadMessages(1, true);
     }
   });
 
@@ -156,9 +167,12 @@ export default function Message() {
   }, [isH5]);
 
   const handleLoadMore = useCallback(() => {
-    if (!loggedIn || loadingMore || !hasMore || refreshing) return;
+    if (!loggedIn || loadingMore || !hasMore || refreshing) {
+      return;
+    }
+
     setLoadingMore(true);
-    loadMessages(page + 1);
+    void loadMessages(page + 1);
   }, [hasMore, loadMessages, loadingMore, loggedIn, page, refreshing]);
 
   useEffect(() => {
@@ -240,7 +254,6 @@ export default function Message() {
             : item
         )));
       } catch {
-        // #26 标记已读失败时给出轻量提示
         Taro.showToast({ title: '标记已读失败', icon: 'none', duration: 1500 });
       }
     }
@@ -248,8 +261,7 @@ export default function Message() {
     const gameId = message.gameId || message.targetId;
     if (gameId) {
       Taro.navigateTo({ url: `/pages/game/detail/index?id=${gameId}` }).catch(() => {
-        // #25 导航失败时提示用户，避免死路
-        Taro.showToast({ title: '该作品已不存在或暂不可用', icon: 'none' });
+        Taro.showToast({ title: '该作品暂时不可用', icon: 'none' });
       });
     }
   };
@@ -261,117 +273,88 @@ export default function Message() {
 
   const isUnread = (message) => !(message.isRead || message.read);
   const unreadCount = messages.filter(isUnread).length;
-  const messageStats = [
-    { key: 'unread', label: '未读消息', value: `${unreadCount}` },
-    { key: 'total', label: '全部通知', value: `${messages.length}` },
-    { key: 'state', label: '收件状态', value: loggedIn ? '已同步' : '待登录' },
-  ];
 
   return (
     <View className={`messages-page${isH5 ? ' messages-page--h5' : ''}${isWeapp ? ' messages-page--weapp' : ''}`}>
       <AppTopBar />
       <View className="messages-shell">
-
-      <View className="messages-stage">
-        <View className="messages-stage__copy">
-          <Text className="messages-stage__eyebrow">Inbox Center</Text>
-          <Text className="messages-stage__title">{loggedIn ? '把互动、提醒和进展都收拢在这里' : '登录后查看你的互动通知'}</Text>
-          <Text className="messages-stage__desc">
-            {loggedIn
-              ? '点赞、评论、关注和系统提醒会持续聚合到消息中心，方便你快速处理。'
-              : '登录后这里会展示别人对你的点赞、评论、关注以及系统通知。'}
-          </Text>
-        </View>
-        <View className="messages-stage__metrics">
-          {messageStats.map((stat) => (
-            <View key={stat.key} className="messages-stage__metric">
-              <Text className="messages-stage__metric-label">{stat.label}</Text>
-              <Text className="messages-stage__metric-value">{stat.value}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View className="messages-header">
-        <View className="header-content">
-          <Text className="header-kicker">Notifications</Text>
+        <View className="messages-toolbar">
           <View className="header-main">
             <Text className="header-title">消息</Text>
             {unreadCount > 0 ? <View className="unread-badge">{unreadCount}</View> : null}
           </View>
-        </View>
-        {loggedIn && unreadCount > 0 ? (
-          <View className="mark-all-read" onClick={handleMarkAllRead}>
-            <Text className="mark-all-read-text">全部已读</Text>
-          </View>
-        ) : null}
-      </View>
-
-      <PageScrollContainer
-        className="messages-list"
-        refresherEnabled
-        refresherTriggered={refreshing}
-        onRefresherRefresh={handlePullDownRefresh}
-        lowerThreshold={100}
-        onScrollToLower={handleLoadMore}
-      >
-        {loading ? (
-          <View className="empty-state">
-            <Text className="empty-text">加载中...</Text>
-          </View>
-        ) : !loggedIn ? (
-          <View className="empty-state">
-            <View className="empty-icon" />
-            <Text className="empty-text">登录后查看消息通知</Text>
-            <Text className="empty-desc">你的点赞、评论、关注提醒和系统通知会统一收纳在这里。</Text>
-            <View className="empty-action" onClick={openLogin}>
-              <Text>去登录</Text>
+          {loggedIn && unreadCount > 0 ? (
+            <View className="mark-all-read" onClick={handleMarkAllRead}>
+              <Text className="mark-all-read-text">全部已读</Text>
             </View>
-          </View>
-        ) : messages.length === 0 ? (
-          <View className="empty-state">
-            <View className="empty-icon" />
-            <Text className="empty-text">暂无消息</Text>
-            <Text className="empty-desc">当有人点赞、评论、关注你时，会在这里显示。</Text>
-          </View>
-        ) : (
-          <View className="notifications">
-            {messages.map((message) => (
-              <View
-                key={message.id}
-                className={`notification-item ${isUnread(message) ? 'unread' : ''}`}
-                onClick={() => handleMessageClick(message)}
-              >
-                <View className="notification-left">
-                  <View className={`notification-icon notification-icon--${getNotificationIconType(message.type)}`} />
-                  {isUnread(message) ? <View className="unread-dot" /> : null}
-                </View>
+          ) : null}
+        </View>
 
-                <View className="notification-content">
-                  <View className="notification-header">
-                    <View className="notification-heading">
-                      <Text className={`notification-tag notification-tag--${getNotificationIconType(message.type)}`}>
-                        {getNotificationLabel(message.type)}
-                      </Text>
-                      <Text className="actor-name">{getActorName(message)}</Text>
-                    </View>
-                    <Text className="notification-time">{getTimeText(message)}</Text>
+        <PageScrollContainer
+          className="messages-list"
+          refresherEnabled
+          refresherTriggered={refreshing}
+          onRefresherRefresh={handlePullDownRefresh}
+          lowerThreshold={100}
+          onScrollToLower={handleLoadMore}
+        >
+          {loading ? (
+            <View className="empty-state">
+              <Text className="empty-text">加载中...</Text>
+            </View>
+          ) : !loggedIn ? (
+            <View className="empty-state">
+              <View className="empty-icon" />
+              <Text className="empty-text">登录后查看消息通知</Text>
+              <Text className="empty-desc">你的点赞、评论、关注提醒和系统通知都会在这里。</Text>
+              <View className="empty-action" onClick={openLogin}>
+                <Text>去登录</Text>
+              </View>
+            </View>
+          ) : messages.length === 0 ? (
+            <View className="empty-state">
+              <View className="empty-icon" />
+              <Text className="empty-text">暂无消息</Text>
+              <Text className="empty-desc">当有人点赞、评论、关注你时，会在这里显示。</Text>
+            </View>
+          ) : (
+            <View className="notifications">
+              {messages.map((message) => (
+                <View
+                  key={message.id}
+                  className={`notification-item ${isUnread(message) ? 'unread' : ''}`}
+                  onClick={() => handleMessageClick(message)}
+                >
+                  <View className="notification-left">
+                    <View className={`notification-icon notification-icon--${getNotificationIconType(message.type)}`} />
+                    {isUnread(message) ? <View className="unread-dot" /> : null}
                   </View>
-                  <Text className="notification-action">{getActionText(message)}</Text>
+
+                  <View className="notification-content">
+                    <View className="notification-header">
+                      <View className="notification-heading">
+                        <Text className={`notification-tag notification-tag--${getNotificationIconType(message.type)}`}>
+                          {getNotificationLabel(message.type)}
+                        </Text>
+                        <Text className="actor-name">{getActorName(message)}</Text>
+                      </View>
+                      <Text className="notification-time">{getTimeText(message)}</Text>
+                    </View>
+                    <Text className="notification-action">{getActionText(message)}</Text>
+                  </View>
+
+                  <View className="notification-arrow" />
                 </View>
+              ))}
 
-                <View className="notification-arrow" />
-              </View>
-            ))}
-
-            {loadingMore ? (
-              <View className="load-more-container">
-                <Text className="load-more-btn">加载中...</Text>
-              </View>
-            ) : null}
-          </View>
-        )}
-      </PageScrollContainer>
+              {loadingMore ? (
+                <View className="load-more-container">
+                  <Text className="load-more-btn">加载中...</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </PageScrollContainer>
       </View>
 
       <CustomTabBar activeIndex={3} />

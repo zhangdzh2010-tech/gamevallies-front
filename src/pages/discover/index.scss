@@ -33,177 +33,25 @@
     min-height: 0;
   }
 
-  .follow-stage,
-  .follow-header,
-  .follow-content {
-    position: relative;
-    z-index: 1;
-  }
-
-  .follow-stage {
-    margin: 12px 18px 0;
-    padding: 18px 18px 20px;
-    border-radius: 28px;
-    border: 1px solid rgba(106, 119, 171, 0.18);
-    background:
-      radial-gradient(circle at top right, rgba(96, 122, 255, 0.16), transparent 30%),
-      linear-gradient(135deg, rgba(14, 16, 28, 0.96) 0%, rgba(9, 10, 18, 0.98) 100%);
-    box-shadow: 0 24px 40px rgba(2, 5, 16, 0.24);
-
-    &__copy {
-      margin-bottom: 14px;
-    }
-
-    &__eyebrow {
-      display: block;
-      margin-bottom: 8px;
-      color: rgba(134, 148, 206, 0.84);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-    }
-
-    &__title {
-      display: block;
-      margin-bottom: 10px;
-      color: #f5f7ff;
-      font-size: $font-size-base;
-      font-weight: 800;
-      line-height: 1.14;
-      letter-spacing: -0.3px;
-    }
-
-    &__desc {
-      display: block;
-      max-width: 560px;
-      color: rgba(201, 208, 233, 0.76);
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    &__metrics {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      overflow: hidden;
-      border-radius: 22px;
-      border: 1px solid rgba(98, 110, 156, 0.14);
-      background: rgba(9, 12, 22, 0.72);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    }
-
-    &__metric {
-      min-width: 0;
-      min-height: 88px;
-      padding: 14px 12px 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-
-      & + .follow-stage__metric {
-        border-left: 1px solid rgba(255, 255, 255, 0.06);
-      }
-    }
-
-    &__metric-label {
-      display: block;
-      margin-bottom: 8px;
-      color: rgba(140, 146, 176, 0.78);
-      font-size: 11px;
-      line-height: 1.2;
-    }
-
-    &__metric-value {
-      display: block;
-      color: #ffffff;
-      font-size: $font-size-2xs;
-      font-weight: 800;
-      line-height: 1;
-    }
-  }
-
-  .follow-header {
-    margin: 14px 18px 0;
-    padding: 14px 16px;
-    border-radius: 24px;
-    border: 1px solid rgba(94, 103, 145, 0.14);
-    background: rgba(12, 14, 24, 0.88);
-    box-shadow: 0 18px 30px rgba(2, 5, 16, 0.16);
-    backdrop-filter: blur(12px);
-
-    &__copy {
-      min-width: 0;
-    }
-
-    .header-kicker {
-      display: block;
-      margin-bottom: 6px;
-      color: rgba(131, 143, 193, 0.82);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .header-title {
-      font-size: $font-size-sm;
-      font-weight: 700;
-      letter-spacing: -0.2px;
-      color: $text;
-    }
-  }
-
   .follow-content {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    position: relative;
+    z-index: 1;
   }
 
-  .section {
-    padding: 0 18px;
+  .friends-feed {
+    padding: 18px 18px 0;
   }
 
-  .section-head {
-    padding: 20px 0 14px;
-
-    &--split {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    &__copy {
-      min-width: 0;
-    }
-
-    .section-kicker {
-      display: block;
-      margin-bottom: 6px;
-      color: rgba(124, 133, 179, 0.8);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .section-title {
-      font-size: $font-size-sm;
-      font-weight: 700;
-      color: $text;
-    }
-
-    .section-meta {
-      flex-shrink: 0;
-      padding: 9px 12px;
-      border-radius: 16px;
-      background: rgba(12, 14, 24, 0.84);
-      border: 1px solid rgba(102, 112, 155, 0.14);
-      color: #eef4ff;
-      font-size: 13px;
-      font-weight: 800;
-      line-height: 1;
-    }
+  .friends-feed__title {
+    color: #f5f7ff;
+    display: block;
+    font-size: $font-size-base;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 14px;
   }
 
   .waterfall {
@@ -228,14 +76,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 80px 40px;
+    padding: 72px 32px;
     border-radius: 28px;
     border: 1px solid rgba(94, 103, 145, 0.14);
     background: linear-gradient(180deg, rgba(15, 16, 28, 0.92) 0%, rgba(8, 9, 16, 0.98) 100%);
     box-shadow: 0 18px 32px rgba(2, 4, 14, 0.16);
 
     .empty-icon {
-      font-size: 60px;
+      font-size: 54px;
       margin-bottom: 16px;
     }
 
@@ -298,42 +146,6 @@
     margin: 0 auto;
   }
 
-  .follow-stage,
-  .follow-header {
-    margin-left: 14px;
-    margin-right: 14px;
-  }
-
-  .follow-stage {
-    padding: 16px;
-
-    &__title {
-      font-size: $font-size-xl-h5;
-    }
-
-    &__metric {
-      min-height: 74px;
-      padding: 12px 10px 14px;
-    }
-
-    &__metric-label {
-      margin-bottom: 6px;
-      font-size: 10px;
-    }
-
-    &__metric-value {
-      font-size: $font-size-base-h5;
-    }
-  }
-
-  .follow-header {
-    padding: 12px 14px;
-
-    .header-title {
-      font-size: $font-size-lg-h5;
-    }
-  }
-
   .follow-content,
   taro-scroll-view-core.follow-content,
   taro-scroll-view-core.follow-content .taro-scroll-view__scroll-y {
@@ -344,8 +156,13 @@
     overflow: visible !important;
   }
 
-  .section {
-    padding: 0 14px;
+  .friends-feed {
+    padding: 14px 14px 0;
+  }
+
+  .friends-feed__title {
+    font-size: $font-size-xl-h5;
+    margin-bottom: 12px;
   }
 
   .waterfall {
@@ -359,7 +176,7 @@
   }
 
   .empty-state {
-    padding: 64px 24px;
+    padding: 56px 22px;
 
     .empty-icon {
       font-size: 40px;
@@ -399,16 +216,8 @@
 }
 
 .follow-page.follow-page--weapp {
-  .follow-header {
-    .header-title {
-      font-size: 38rpx;
-    }
-  }
-
-  .section {
-    .section-title {
-      font-size: 32rpx;
-    }
+  .friends-feed__title {
+    font-size: 34rpx;
   }
 
   .empty-state {

@@ -10,6 +10,12 @@ const mockSwitchTab = jest.fn(() => Promise.resolve());
 const mockShowToast = jest.fn();
 const mockIsLoggedIn = jest.fn(() => true);
 const mockSetPostLoginRedirect = jest.fn();
+const mockGameCard = jest.fn(({ game, showAuthorInInfo }) => (
+  <div data-testid={`friend-game-${game.id}`} data-show-author={showAuthorInInfo ? 'yes' : 'no'}>
+    <span>{game.title}</span>
+    {showAuthorInInfo ? <span>{game.author}</span> : null}
+  </div>
+));
 
 jest.mock('@tarojs/components', () => require('../../../test-utils/taroComponentsMock'));
 
@@ -53,7 +59,7 @@ jest.mock('../../../components/common/PageScrollContainer', () => ({
 }));
 
 jest.mock('../../../components/common/GameCard', () => ({
-  GameCard: ({ game }) => <div data-testid={`friend-game-${game.id}`}>{game.title}</div>,
+  GameCard: (props) => mockGameCard(props),
 }));
 
 jest.mock('../../../services/feed', () => ({
@@ -113,6 +119,7 @@ function mockFeedGame(overrides = {}) {
     commentCount: 1,
     viewerHasLiked: false,
     viewerHasBookmarked: false,
+    author: { displayName: '作者甲' },
     ...overrides,
   };
 }
@@ -123,14 +130,14 @@ describe('Discover friends feed', () => {
     mockIsLoggedIn.mockReturnValue(true);
     mockGetFollowingFeed.mockResolvedValue({
       items: [
-        mockFeedGame({ id: 'game-1', title: '朋友的新作品' }),
-        mockFeedGame({ id: 'game-2', title: '朋友的迭代作品' }),
+        mockFeedGame({ id: 'game-1', title: '朋友的新作品', author: { displayName: '作者甲' } }),
+        mockFeedGame({ id: 'game-2', title: '朋友的迭代作品', author: { displayName: '作者乙' } }),
       ],
       hasMore: false,
     });
   });
 
-  test('loads followed friends games for logged in users', async () => {
+  test('loads followed friends games with a simple feed layout', async () => {
     render(<FriendsPage />);
 
     await waitFor(() => {
@@ -139,8 +146,12 @@ describe('Discover friends feed', () => {
 
     expect(await screen.findByTestId('friend-game-game-1')).toBeTruthy();
     expect(screen.getByTestId('friend-game-game-2')).toBeTruthy();
-    expect(screen.getByText('朋友们最近在做这些作品')).toBeTruthy();
-    expect(screen.getAllByText('朋友作品').length).toBeGreaterThan(0);
+    expect(screen.getByText('朋友作品')).toBeTruthy();
+    expect(screen.queryByText('Friends Feed')).toBeNull();
+    expect(screen.queryByText('朋友们最近在做这些作品')).toBeNull();
+    expect(screen.getByText('作者甲')).toBeTruthy();
+    expect(screen.getByText('作者乙')).toBeTruthy();
+    expect(screen.getByTestId('friend-game-game-1').getAttribute('data-show-author')).toBe('yes');
   });
 
   test('shows login guide when the viewer is not logged in', async () => {
@@ -149,8 +160,8 @@ describe('Discover friends feed', () => {
     render(<FriendsPage />);
 
     expect(mockGetFollowingFeed).not.toHaveBeenCalled();
-    expect(await screen.findByText('登录后查看朋友们的最新作品')).toBeTruthy();
-    expect(screen.getAllByText('登录后查看朋友作品').length).toBeGreaterThan(0);
+    expect(await screen.findByText('登录后查看朋友作品')).toBeTruthy();
+    expect(screen.getByText('这里只展示你已关注创作者最近发布和更新的作品。')).toBeTruthy();
 
     fireEvent.click(screen.getByText('去登录'));
 

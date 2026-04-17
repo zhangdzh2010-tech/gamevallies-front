@@ -344,6 +344,10 @@ export default function Home() {
   };
 
   const activeTypeLabel = gameTypeTabs.find((tab) => tab.key === activeType)?.label || '全部';
+  const feedSectionEyebrow = activeType === 'all' ? 'TOP PICKS' : activeTypeLabel;
+  const feedSectionTitle = activeType === 'all'
+    ? '这批作品，个个能打'
+    : `${activeTypeLabel}里最能打的在这`;
   const heroGames = games.slice(0, 3);
   const posterColumns = [[], [], []];
   games.forEach((game, index) => {
@@ -446,8 +450,8 @@ export default function Home() {
 
       <View className="feed-section-header">
         <View className="feed-section-header__copy">
-          <Text className="feed-section-header__eyebrow">{activeType === 'all' ? 'CURATED FEED' : activeTypeLabel}</Text>
-          <Text className="feed-section-header__title">今天先看这些可玩灵感</Text>
+          <Text className="feed-section-header__eyebrow">{feedSectionEyebrow}</Text>
+          <Text className="feed-section-header__title">{feedSectionTitle}</Text>
         </View>
         <View className="feed-section-header__meta" onClick={handleRefresh}>
           <Text className="feed-section-header__meta-value">{games.length > 0 ? `${games.length} 款` : '刷新'}</Text>
