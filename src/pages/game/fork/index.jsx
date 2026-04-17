@@ -724,7 +724,7 @@ export default function GameForkPage() {
       secondaryActions={forkWorkspaceSecondaryActions}
       errorMessage={getUserFacingForkError(
         (creationSession?.entryMode === 'fork'
-          ? (creationSessionError || terminalError?.message || error || '')
+          ? (creationSessionError || error || terminalError?.message || '')
           : '')
         || pageError
         || ''

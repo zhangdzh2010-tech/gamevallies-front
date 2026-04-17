@@ -661,7 +661,7 @@ export default function GameIteratePage() {
 
   const iterateWorkspaceError = getUserFacingIterateError(
     (creationSession?.entryMode === 'iterate'
-      ? (creationSessionError || terminalError?.message || error || '')
+      ? (creationSessionError || error || terminalError?.message || '')
       : '')
     || pageError
     || ''
