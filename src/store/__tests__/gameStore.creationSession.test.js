@@ -782,15 +782,17 @@ describe('gameStore creation session actions', () => {
 
     expect(useGameStore.getState().generationProgress).toEqual(expect.objectContaining({
       stageKey: 'logic_generate',
-      stageIndex: 3,
+      displayStageKey: 'generating',
+      stageIndex: 2,
       stageLabel: '生成内容',
       message: '正在生成游戏内容与交互逻辑',
     }));
     expect(useGameStore.getState().generationProgress.stages).toEqual([
-      { key: 'submitting', label: '提交需求', pct: 0 },
-      { key: 'spec_build', label: '梳理方案', pct: 15 },
-      { key: 'runtime_profile_select', label: '匹配合适能力', pct: 30 },
-      { key: 'logic_generate', label: '生成内容', pct: 60 },
+      { key: 'submitting', label: '提交需求', pct: 5 },
+      { key: 'planning', label: '梳理方案', pct: 30 },
+      { key: 'generating', label: '生成内容', pct: 60 },
+      { key: 'qa', label: '质量检查', pct: 92 },
+      { key: 'completed', label: '完成', pct: 100 },
     ]);
   });
 
@@ -809,13 +811,18 @@ describe('gameStore creation session actions', () => {
 
     expect(useGameStore.getState().generationProgress).toEqual(expect.objectContaining({
       stageKey: 'artifact_pack',
-      stageIndex: 0,
+      displayStageKey: 'generating',
+      stageIndex: 2,
       stageLabel: '打包产物',
       message: 'Packing artifacts',
       pct: 47,
     }));
     expect(useGameStore.getState().generationProgress.stages).toEqual([
-      { key: 'artifact_pack', label: '打包产物', pct: 47 },
+      { key: 'submitting', label: '提交需求', pct: 5 },
+      { key: 'planning', label: '梳理方案', pct: 30 },
+      { key: 'generating', label: '生成内容', pct: 60 },
+      { key: 'qa', label: '质量检查', pct: 92 },
+      { key: 'completed', label: '完成', pct: 100 },
     ]);
   });
 
