@@ -311,6 +311,56 @@ describe('Iterate page creation session flow', () => {
     });
   });
 
+  test('shows iterate progress immediately after generate before task tracking is attached', async () => {
+    mockGameStoreState = buildGameStoreState({
+      isGenerating: true,
+      generationProgress: {
+        stages: [{ key: 'submitting', label: 'Submitting', pct: 5 }],
+        stageIndex: 0,
+        pct: 5,
+        stageLabel: 'Submitting',
+        message: 'Preparing iterate run',
+      },
+      creationSession: {
+        ...mockIterateSession,
+        status: 'generating',
+      },
+    });
+
+    render(<IteratePage />);
+
+    expect(await screen.findByText('Submitting')).toBeTruthy();
+    expect(screen.queryByTestId('workspace')).toBeNull();
+  });
+
+  test('keeps showing iterate progress when the tracked task game id switches to the generated game', async () => {
+    mockGameStoreState = buildGameStoreState({
+      isGenerating: true,
+      generationProgress: {
+        stages: [{ key: 'generating', label: 'Generating', pct: 60 }],
+        stageIndex: 0,
+        pct: 60,
+        stageLabel: 'Generating',
+        message: 'Generating the updated version',
+      },
+      creationSession: {
+        ...mockIterateSession,
+        status: 'generating',
+      },
+      currentTask: {
+        taskId: 'iterate-task-1',
+        taskType: 'pipeline_iterate',
+        gameId: 'generated-game-2',
+        status: 'running',
+      },
+    });
+
+    render(<IteratePage />);
+
+    expect(await screen.findByText('Generating')).toBeTruthy();
+    expect(screen.queryByTestId('workspace')).toBeNull();
+  });
+
   test('shows the resume scene for a matching active iterate session restored from the backend', async () => {
     mockGetActiveCreationSession.mockResolvedValueOnce({
       sessionId: 'resume-iter-1',
