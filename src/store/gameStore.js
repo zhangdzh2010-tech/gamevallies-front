@@ -32,6 +32,14 @@ const ACTIVE_CREATION_SESSION_STATUSES = new Set(['initializing', 'collecting', 
 
 const PIPELINE_STAGES = [
   { key: 'submitting', label: '提交需求', pct: 5 },
+  { key: 'planning', label: '梳理方案', pct: 30 },
+  { key: 'generating', label: '生成内容', pct: 60 },
+  { key: 'qa', label: '质量检查', pct: 92 },
+  { key: 'completed', label: '完成', pct: 100 },
+];
+
+const DETAILED_PIPELINE_STAGES = [
+  { key: 'submitting', label: '提交需求', pct: 5 },
   { key: 'spec_build', label: '梳理方案', pct: 15 },
   { key: 'runtime_profile_select', label: '匹配合适能力', pct: 30 },
   { key: 'contract_compose', label: '组装规则与资源', pct: 40 },
@@ -52,6 +60,17 @@ const PIPELINE_STAGE_SUMMARIES = {
   completed: '内容已经生成完成',
 };
 
+const DISPLAY_STAGE_ALIASES = {
+  submitting: 'submitting',
+  spec_build: 'planning',
+  runtime_profile_select: 'planning',
+  contract_compose: 'generating',
+  logic_generate: 'generating',
+  contract_qa: 'qa',
+  runtime_simulation_qa: 'qa',
+  completed: 'completed',
+};
+
 const STAGE_KEY_ALIASES = {
   started: 'submitting',
   queued: 'submitting',
@@ -65,12 +84,14 @@ const STAGE_KEY_ALIASES = {
   intent_parse: 'submitting',
   intent_parsing: 'submitting',
   request_normalized: 'submitting',
+  understanding: 'spec_build',
   spec_build: 'spec_build',
   runtime_profile_select: 'runtime_profile_select',
   template_match: 'runtime_profile_select',
   template_matching: 'runtime_profile_select',
   designing: 'contract_compose',
   contract_compose: 'contract_compose',
+  generating: 'logic_generate',
   logic_generate: 'logic_generate',
   code_generate: 'logic_generate',
   code_generating: 'logic_generate',
@@ -78,9 +99,11 @@ const STAGE_KEY_ALIASES = {
   qa_fix: 'contract_qa',
   qa_checking: 'contract_qa',
   targeted_remediation: 'contract_qa',
+  validating: 'runtime_simulation_qa',
   runtime_simulation_qa: 'runtime_simulation_qa',
   runtime_qa: 'runtime_simulation_qa',
   code_review: 'runtime_simulation_qa',
+  finalizing: 'completed',
   completed: 'completed',
   succeeded: 'completed',
 };
@@ -206,6 +229,14 @@ function getDisplayStageDefinition(stageKey) {
   return PIPELINE_STAGES.find((stage) => stage.key === stageKey) || null;
 }
 
+function getDetailedStageDefinition(stageKey) {
+  if (!stageKey) {
+    return DETAILED_PIPELINE_STAGES[0] || null;
+  }
+
+  return DETAILED_PIPELINE_STAGES.find((stage) => stage.key === stageKey) || null;
+}
+
 function prettifyStageKey(stageKey) {
   return String(stageKey || '')
     .trim()
@@ -233,15 +264,15 @@ function buildDynamicStageDefinition(stageKey, metadata = {}) {
     return null;
   }
 
-  const fallbackDefinition = getDisplayStageDefinition(stageKey);
+  const fallbackDefinition = getDetailedStageDefinition(stageKey);
   const label = fallbackDefinition?.label
     || String(metadata.label || '').trim()
     || prettifyStageKey(stageKey)
-    || PIPELINE_STAGES[0]?.label
+    || DETAILED_PIPELINE_STAGES[0]?.label
     || '处理中';
   const pctFallback = Number.isFinite(Number(metadata.pct))
     ? Number(metadata.pct)
-    : (fallbackDefinition?.pct ?? PIPELINE_STAGES[0]?.pct ?? 5);
+    : (fallbackDefinition?.pct ?? DETAILED_PIPELINE_STAGES[0]?.pct ?? 5);
 
   return {
     key: stageKey,
@@ -250,96 +281,28 @@ function buildDynamicStageDefinition(stageKey, metadata = {}) {
   };
 }
 
-function upsertDynamicStage(stageMap, orderedStageKeys, stageDefinition) {
-  if (!stageDefinition?.key) {
-    return;
+function getDisplayStageKey(stageKey, task = null) {
+  const normalizedStageKey = String(stageKey || '').trim();
+  if (!normalizedStageKey) {
+    return PIPELINE_STAGES[0]?.key || 'submitting';
   }
 
-  if (!stageMap.has(stageDefinition.key)) {
-    orderedStageKeys.push(stageDefinition.key);
-    stageMap.set(stageDefinition.key, stageDefinition);
-    return;
+  const mappedKey = DISPLAY_STAGE_ALIASES[normalizedStageKey];
+  if (mappedKey) {
+    return mappedKey;
   }
 
-  const previousDefinition = stageMap.get(stageDefinition.key);
-  stageMap.set(stageDefinition.key, {
-    ...previousDefinition,
-    label: String(stageDefinition.label || '').trim() || previousDefinition?.label || '',
-    pct: Number.isFinite(Number(stageDefinition?.pct))
-      ? stageDefinition.pct
-      : previousDefinition?.pct,
-  });
-}
-
-function shouldUseEventForStageSequence(event) {
-  const eventType = String(event?.eventType || '').trim().toLowerCase();
-  return ['status', 'progress', 'note'].includes(eventType);
-}
-
-function getEventStageAlias(event) {
-  const candidates = [
-    event?.stage,
-    event?.stepKey,
-    event?.detail?.stepKey,
-  ];
-
-  for (const candidate of candidates) {
-    const alias = getResolvedStageAlias(candidate);
-    if (alias) {
-      return alias;
-    }
+  if (task?.status === 'succeeded' || task?.status === 'completed') {
+    return 'completed';
   }
 
-  return '';
+  const progress = clampProgress(task?.displayStagePct ?? task?.progressPct, 0);
+  const inferredStage = PIPELINE_STAGES.find((stage) => progress <= stage.pct);
+  return inferredStage?.key || PIPELINE_STAGES[PIPELINE_STAGES.length - 1]?.key || 'completed';
 }
 
 function buildStageSequence(task, events = []) {
-  const orderedStageKeys = [];
-  const stageMap = new Map();
-  const taskStageKey = getStageAlias(task);
-  const currentTaskStage = buildDynamicStageDefinition(taskStageKey, {
-    label: task?.displayStageLabel,
-    pct: task?.displayStagePct ?? task?.progressPct,
-  });
-
-  events.forEach((event) => {
-    if (!shouldUseEventForStageSequence(event)) {
-      return;
-    }
-
-    const stageKey = getEventStageAlias(event);
-    if (!stageKey) {
-      return;
-    }
-
-    upsertDynamicStage(stageMap, orderedStageKeys, buildDynamicStageDefinition(stageKey, {
-      pct: event?.percentage,
-    }));
-  });
-
-  if (currentTaskStage) {
-    upsertDynamicStage(stageMap, orderedStageKeys, currentTaskStage);
-  }
-
-  if ((task?.status === 'succeeded' || task?.status === 'completed') && taskStageKey !== 'completed') {
-    upsertDynamicStage(stageMap, orderedStageKeys, buildDynamicStageDefinition('completed', {
-      label: '完成',
-      pct: 100,
-    }));
-  }
-
-  if (!orderedStageKeys.length) {
-    if (currentTaskStage) {
-      return [currentTaskStage];
-    }
-
-    const firstStage = PIPELINE_STAGES[0];
-    return firstStage ? [firstStage] : [];
-  }
-
-  return orderedStageKeys
-    .map((stageKey) => stageMap.get(stageKey))
-    .filter(Boolean);
+  return PIPELINE_STAGES;
 }
 
 function getFallbackStageAlias(task) {
@@ -359,7 +322,7 @@ function getFallbackStageAlias(task) {
     }
   }
 
-  return PIPELINE_STAGES[0]?.key || 'submitting';
+  return DETAILED_PIPELINE_STAGES[0]?.key || 'submitting';
 }
 
 function getStageAlias(task) {
@@ -401,35 +364,42 @@ function getDisplayProgressMessage(task, stageKey, events = [], fallback = '') {
 
 function buildProgressFromTask(task, events = []) {
   const stageKey = getStageAlias(task);
+  const displayStageKey = getDisplayStageKey(stageKey, task);
   const stages = buildStageSequence(task, events);
-  const stageIndex = Math.max(0, stages.findIndex((stage) => stage.key === stageKey));
-  const stage = stages[stageIndex] || buildDynamicStageDefinition(stageKey, {
+  const stageIndex = Math.max(0, stages.findIndex((stage) => stage.key === displayStageKey));
+  const displayStage = stages[stageIndex] || getDisplayStageDefinition(displayStageKey) || PIPELINE_STAGES[0];
+  const detailedStage = buildDynamicStageDefinition(stageKey, {
     label: task?.displayStageLabel,
     pct: task?.displayStagePct ?? task?.progressPct,
-  }) || PIPELINE_STAGES[0];
+  }) || DETAILED_PIPELINE_STAGES[0];
   const fallbackPct = task?.status === 'succeeded'
     ? 100
-    : clampProgress(task?.displayStagePct, stage.pct);
+    : clampProgress(task?.displayStagePct ?? task?.progressPct, detailedStage?.pct ?? displayStage?.pct);
   const fallbackLabel = task?.status === 'canceled' || task?.status === 'cancelled'
     ? '已取消创作任务'
     : task?.status === 'timed_out'
       ? '任务超时'
       : task?.status === 'failed'
         ? '创作失败'
-        : stage.label;
+        : displayStage?.label;
+  const isMappedDisplayStage = Boolean(DISPLAY_STAGE_ALIASES[stageKey]);
+  const defaultStageLabel = isMappedDisplayStage
+    ? (displayStage?.label || fallbackLabel)
+    : (String(task?.displayStageLabel || '').trim() || detailedStage?.label || displayStage?.label || fallbackLabel);
   const stageLabel = task?.status === 'canceled' || task?.status === 'cancelled'
     ? '已取消创作任务'
     : task?.status === 'timed_out'
       ? '任务超时'
       : task?.status === 'failed'
-        ? (stage.label || task?.displayStageLabel || '创作失败')
-        : (stage.label || task?.displayStageLabel || fallbackLabel);
+        ? (String(task?.displayStageLabel || '').trim() || detailedStage?.label || displayStage?.label || '创作失败')
+        : defaultStageLabel;
   const message = getDisplayProgressMessage(task, stageKey, events, stageLabel || fallbackLabel);
 
   return {
     stages,
     stageIndex,
     stageKey,
+    displayStageKey,
     stageLabel,
     message,
     pct: clampProgress(task?.progressPct, fallbackPct),
@@ -1912,7 +1882,7 @@ export const useGameStore = create((set, get) => {
       terminalError: null,
       isGenerating: true,
       generationProgress: {
-        stages: PIPELINE_STAGES[0] ? [PIPELINE_STAGES[0]] : [],
+        stages: PIPELINE_STAGES,
         stageIndex: 0,
         stageKey: PIPELINE_STAGES[0].key,
         stageLabel: PIPELINE_STAGES[0].label,
@@ -2516,7 +2486,7 @@ export const useGameStore = create((set, get) => {
       currentTaskCursor: 0,
       latestTaskMessage: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',
       generationProgress: {
-        stages: PIPELINE_STAGES[0] ? [PIPELINE_STAGES[0]] : [],
+        stages: PIPELINE_STAGES,
         stageIndex: 0,
         stageKey: PIPELINE_STAGES[0].key,
         stageLabel: '姝ｅ湪鎭㈠鍒涗綔浠诲姟...',

@@ -617,7 +617,7 @@ export default function Create() {
 
   if (isGenerating) {
     const progress = generationProgress || {
-      stages: PIPELINE_STAGES.length ? [PIPELINE_STAGES[0]] : [],
+      stages: PIPELINE_STAGES,
       stageIndex: 0,
       pct: 5,
       stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
