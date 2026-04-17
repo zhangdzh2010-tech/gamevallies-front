@@ -157,12 +157,29 @@ export default function GameIteratePage() {
   const containerClassName = `iterate-page${isWeapp ? ' iterate-page--weapp' : ''}${isH5 ? ' iterate-page--h5' : ''}`;
 
   const activeIterateTask = currentTask?.taskType === 'pipeline_iterate' ? currentTask : null;
+  const currentIterateSourceGameId = String(currentGame?.id || gameId || '');
+  const isCurrentIterateSession = Boolean(
+    creationSession?.entryMode === 'iterate'
+    && (
+      !currentIterateSourceGameId
+      || String(creationSession.sourceGameId || '') === currentIterateSourceGameId
+    )
+  );
   const isIterateTaskActive = Boolean(
     isGenerating
-    && activeIterateTask
-    && (!gameId || !activeIterateTask.gameId || String(activeIterateTask.gameId) === String(gameId))
+    && (
+      (
+        isCurrentIterateSession
+        && (creationSession?.status === 'generating' || generationProgress)
+      )
+      || (
+        activeIterateTask
+        && taskId
+        && String(activeIterateTask.taskId || '') === String(taskId)
+      )
+    )
   );
-  const isIterateSessionActive = creationSession?.entryMode === 'iterate' && creationSession?.status !== 'generating';
+  const isIterateSessionActive = isCurrentIterateSession && creationSession?.status !== 'generating';
   const canStartIterateSession = Boolean(iterateFeedback.trim());
 
   useEffect(() => {
