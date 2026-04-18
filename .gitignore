@@ -50,10 +50,16 @@ tmp/skill-staging/
 tmp/test-artifacts/*
 !tmp/test-artifacts/.gitkeep
 !tmp/test-artifacts/README.md
+# Ad-hoc probes and Playwright UI artifacts saved at repo root
+tmp_*
+tmp_*/
 android/local.properties
 ios/App/Pods
 ios/App/Podfile.lock
 ios/App/App.xcworkspace/xcuserdata
+
+# Claude / Cursor local project config
+.claude/
 
 # Environment (development)
 .env.development
