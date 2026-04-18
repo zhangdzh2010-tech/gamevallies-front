@@ -63,8 +63,11 @@ const useGamePlayerStore = create((set) => ({
     const gameId = opts.gameId || '';
     const gameOrientation = getGameOrientation(opts, 'portrait');
 
-    if (isOwnGame && !canPlay) {
-      Taro.showToast({ title: '订阅后可试玩', icon: 'none' });
+    if (!canPlay) {
+      Taro.showToast({
+        title: isOwnGame ? '订阅后可试玩' : '订阅后可解锁',
+        icon: 'none',
+      });
       useQuotaStore.getState().openPaywall({
         gameId,
         gameUrl: url,

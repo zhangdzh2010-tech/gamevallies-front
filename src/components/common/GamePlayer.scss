@@ -175,6 +175,24 @@
             color: $sub;
           }
         }
+
+        &.minimize-btn {
+          padding: 6px 12px;
+          background: rgba(110, 86, 255, 0.14);
+          border: 1px solid rgba(110, 86, 255, 0.32);
+
+          .fs-icon {
+            font-size: $font-size-sm;
+            color: #c8bfff;
+          }
+        }
+      }
+
+      .player-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
       }
     }
 

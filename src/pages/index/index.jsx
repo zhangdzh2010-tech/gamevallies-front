@@ -7,6 +7,7 @@ import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { FloatingPlayer } from '../../components/common/FloatingPlayer';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import { SkeletonFeedGrid } from '../../components/common/Skeleton';
 import { openCreatePageWithAuth } from '../../utils/authNavigation';
 import * as feedService from '../../services/feed';
 import * as socialService from '../../services/social';
@@ -14,7 +15,7 @@ import useGamePlayerStore from '../../stores/gamePlayer';
 import useQuotaStore from '../../stores/quotaStore';
 import { Storage } from '../../utils/storage';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
-import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
+import { mergeBookmarkedFlags, setGameBookmarked, syncBookmarkWithBackend } from '../../utils/bookmarks';
 import {
   buildGameTypeTabs,
   fetchGameTypeOptions,
@@ -31,6 +32,7 @@ import './index.scss';
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6', '#06b6d4', '#ec4899'];
 const GAME_EMOJIS = ['🎮', '🧩', '✨', '🚀', '🎯', '🎨', '🤖', '🪐', '🏆', '🔥'];
 const PAGE_LIMIT = 10;
+const FEED_CACHE_TTL_MS = 60 * 1000;
 
 function normalizeGame(game, index) {
   return {
@@ -42,6 +44,8 @@ function normalizeGame(game, index) {
     gameType: normalizeGameTypeKey(game.type || game.gameType || game.category || ''),
     viewerHasLiked: game.viewerHasLiked === true || game.liked === true,
     viewerHasBookmarked: game.viewerHasBookmarked === true,
+    canPlay: game.canPlay !== false,
+    requireSubscription: game.requireSubscription === true || game.canPlay === false,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
     author: getSafeDisplayText([
@@ -70,6 +74,23 @@ export default function Home() {
   const [loadError, setLoadError] = useState(false);
   const [activeType, setActiveType] = useState('all');
   const [gameTypeTabs, setGameTypeTabs] = useState(() => buildGameTypeTabs());
+  // Per-type in-memory cache keeps user-switched feeds instant. Entries older than
+  // FEED_CACHE_TTL_MS are treated as stale and refreshed in the background while
+  // the cached items are rendered immediately to avoid the snap-to-loading flicker.
+  const feedCacheRef = useRef(new Map());
+
+  const setCachedFeed = useCallback((typeKey, data) => {
+    feedCacheRef.current.set(typeKey, {
+      ...data,
+      timestamp: Date.now(),
+    });
+  }, []);
+
+  const getCachedFeed = useCallback((typeKey) => {
+    const entry = feedCacheRef.current.get(typeKey);
+    if (!entry) return null;
+    return entry;
+  }, []);
 
   const fetchGames = useCallback(async (pageNum, append = false, typeKey = 'all') => {
     if (!append) {
@@ -82,8 +103,17 @@ export default function Home() {
         ? await feedService.getTrending(pageNum, PAGE_LIMIT)
         : await feedService.getGamesByType(typeKey, pageNum, PAGE_LIMIT);
       const items = mergeBookmarkedFlags((result?.items || []).map(normalizeGame));
-      setGames((prev) => (append ? [...prev, ...items] : items));
-      setHasMore(result?.hasMore ?? items.length >= PAGE_LIMIT);
+      const nextHasMore = result?.hasMore ?? items.length >= PAGE_LIMIT;
+      setGames((prev) => {
+        const nextItems = append ? [...prev, ...items] : items;
+        setCachedFeed(typeKey, {
+          items: nextItems,
+          page: pageNum,
+          hasMore: nextHasMore,
+        });
+        return nextItems;
+      });
+      setHasMore(nextHasMore);
     } catch (error) {
       console.error('fetchGames error:', error);
       setLoadError(true);
@@ -95,7 +125,7 @@ export default function Home() {
     } finally {
       setLoadingGames(false);
     }
-  }, []);
+  }, [setCachedFeed]);
 
   useEffect(() => {
     fetchGames(1, false, 'all');
@@ -264,8 +294,6 @@ export default function Home() {
     }
 
     setActiveType(typeKey);
-    setPage(1);
-    setHasMore(true);
 
     // #1 切换类型时滚回顶部
     if (isH5) {
@@ -274,14 +302,50 @@ export default function Home() {
       Taro.pageScrollTo({ scrollTop: 0, duration: 200 }).catch(() => {});
     }
 
+    const cached = getCachedFeed(typeKey);
+    const isFresh = cached && Date.now() - cached.timestamp < FEED_CACHE_TTL_MS;
+
+    if (cached) {
+      // Render cached items immediately so the tab switch feels instant even on slow networks.
+      setGames(mergeBookmarkedFlags(cached.items || []));
+      setPage(cached.page || 1);
+      setHasMore(Boolean(cached.hasMore));
+      setLoadingGames(false);
+      setLoadError(false);
+
+      if (isFresh) {
+        return;
+      }
+
+      // Stale cache: revalidate in the background without flashing the loading state.
+      fetchGames(1, false, typeKey).catch(() => {});
+      return;
+    }
+
+    setPage(1);
+    setHasMore(true);
     await fetchGames(1, false, typeKey);
   };
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
+      const orientation = getGameOrientation(game);
+      if (game.canPlay === false) {
+        useQuotaStore.getState().openPaywall({
+          gameId: game.id,
+          gameUrl: game.gameUrl,
+          gameTitle: game.title,
+          gameCover: getGameCoverUrl(game),
+          gameOrientation: orientation,
+          resumePlay: true,
+        });
+        return;
+      }
+
       openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
-        orientation: getGameOrientation(game),
+        canPlay: game.canPlay !== false,
+        orientation,
       });
       return;
     }
@@ -336,6 +400,7 @@ export default function Home() {
       title: nextBookmarked ? '已加入收藏' : '已取消收藏',
       icon: 'none',
     });
+    syncBookmarkWithBackend(targetGame, nextBookmarked).catch(() => {});
     return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
@@ -349,9 +414,34 @@ export default function Home() {
     ? '这批作品，个个能打'
     : `${activeTypeLabel}里最能打的在这`;
   const heroGames = games.slice(0, 3);
+  // Real masonry distribution: greedily place each card into the currently shortest
+  // column using an estimated pixel height. Falls back to round-robin when items
+  // have identical weight so output stays deterministic.
   const posterColumns = [[], [], []];
-  games.forEach((game, index) => {
-    posterColumns[index % 3].push(game);
+  const posterColumnHeights = [0, 0, 0];
+  const estimateCardHeight = (game) => {
+    // Image area is fixed aspect-ratio (11:15) relative to column width; using a
+    // nominal column width of 100 so the relative ordering is what matters.
+    const imageHeight = Math.round(100 * (15 / 11));
+    const titleChars = (game?.title || '').length;
+    // Chinese characters wrap faster than latin glyphs; cap to 2 visible lines.
+    const titleLines = Math.min(2, Math.max(1, Math.ceil(titleChars / 12)));
+    const titleHeight = titleLines * 22 + 28; // line-height + info padding
+    const subtitleHeight = game?.author?.username ? 20 : 0;
+    return imageHeight + titleHeight + subtitleHeight;
+  };
+  games.forEach((game) => {
+    const weight = estimateCardHeight(game);
+    let targetIndex = 0;
+    let shortest = posterColumnHeights[0];
+    for (let i = 1; i < posterColumnHeights.length; i += 1) {
+      if (posterColumnHeights[i] < shortest) {
+        shortest = posterColumnHeights[i];
+        targetIndex = i;
+      }
+    }
+    posterColumns[targetIndex].push(game);
+    posterColumnHeights[targetIndex] += weight;
   });
   const [leftPosterGames, middlePosterGames, rightPosterGames] = posterColumns;
   const heroBadges = heroGames.map((game, index) => ({
@@ -460,9 +550,7 @@ export default function Home() {
       </View>
 
       {loadingGames ? (
-        <View className="loading-state">
-          <Text className="loading-text">加载中...</Text>
-        </View>
+        <SkeletonFeedGrid rows={4} columns={3} />
       ) : loadError ? (
         <View className="loading-state">
           <Text className="loading-text">加载失败</Text>

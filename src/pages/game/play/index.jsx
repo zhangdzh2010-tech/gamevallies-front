@@ -5,7 +5,7 @@ import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/
 import * as gameService from '../../../services/game';
 import * as socialService from '../../../services/social';
 import useGamePlayerStore, { resolveGameUrl } from '../../../stores/gamePlayer';
-import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
+import { isGameBookmarked, setGameBookmarked, syncBookmarkWithBackend } from '../../../utils/bookmarks';
 import { buildGameWebShellUrl } from '../../../utils/gameWebShell';
 import { getGameCoverUrl } from '../../../utils/media';
 import { navigateBackOrHome } from '../../../utils/navigation';
@@ -284,6 +284,10 @@ export default function GamePlay() {
       },
       syncPayload.bookmarked,
     );
+    syncBookmarkWithBackend(
+      { ...baseGame, id: activeGameId },
+      syncPayload.bookmarked,
+    ).catch(() => {});
     setIsBookmarked(syncPayload.bookmarked);
     setBookmarkCount(nextBookmarkCount);
     setGameMeta((prev) => (

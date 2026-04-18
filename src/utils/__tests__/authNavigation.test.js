@@ -52,6 +52,7 @@ jest.mock('../../store/gameStore', () => ({
 }));
 
 const POST_LOGIN_REDIRECT_KEY = 'gamevallies_post_login_redirect';
+const LOGIN_HINT_KEY = 'gamevallies_login_hint';
 const CREATE_ENTRY_INTENT_KEY = 'gamevallies_create_entry_intent';
 const ITERATE_ENTRY_GAME_KEY = 'gamevallies_iterate_entry_game';
 
@@ -105,12 +106,8 @@ describe('authNavigation user journey', () => {
     expect(mockStorageState[POST_LOGIN_REDIRECT_KEY]).toBe(
       '/pages/game/iterate/index?gameId=game-1&taskId=task-7'
     );
-    expect(mockTaro.showToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: '请先登录后再创作', icon: 'none' })
-    );
-
-    jest.advanceTimersByTime(300);
-
+    expect(mockStorageState[LOGIN_HINT_KEY]).toBe('请先登录后再创作');
+    expect(mockTaro.showToast).not.toHaveBeenCalled();
     expect(mockTaro.navigateTo).toHaveBeenCalledWith({ url: LOGIN_PAGE_URL });
   });
 

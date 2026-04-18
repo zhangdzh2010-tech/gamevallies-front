@@ -85,7 +85,7 @@ function unlockScreenOrientation() {
   }
 }
 
-export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', onClose }) {
+export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', minimized = false, onClose, onMinimize }) {
   const isH5 = isH5Runtime();
   const statusBarHeight = process.env.TARO_ENV === 'weapp' ? getSafeStatusBarHeight() : 0;
   const [fullscreen, setFullscreen] = useState(false);
@@ -176,8 +176,15 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', o
 
   if (!displayUrl) return null;
 
+  const overlayStyle = minimized
+    ? { display: 'none', pointerEvents: 'none' }
+    : undefined;
+
   return (
-    <View className={`game-player-overlay${isH5 ? ' game-player-overlay--h5' : ''}${visible ? ' visible' : ''}`}>
+    <View
+      className={`game-player-overlay${isH5 ? ' game-player-overlay--h5' : ''}${visible ? ' visible' : ''}${minimized ? ' minimized' : ''}`}
+      style={overlayStyle}
+    >
       <View className="game-player-backdrop" onClick={onClose} />
       <View
         ref={panelRef}
@@ -189,11 +196,21 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', o
             <Text className="back-text">Close</Text>
           </View>
           <Text className="player-title">{displayTitle}</Text>
-          <View
-            className="player-btn fullscreen-btn"
-            onClick={handleToggleFullscreen}
-          >
-            <Text className="fs-icon">{fullscreen ? 'Exit' : 'Full'}</Text>
+          <View className="player-header-actions">
+            {onMinimize ? (
+              <View
+                className="player-btn minimize-btn"
+                onClick={onMinimize}
+              >
+                <Text className="fs-icon">Min</Text>
+              </View>
+            ) : null}
+            <View
+              className="player-btn fullscreen-btn"
+              onClick={handleToggleFullscreen}
+            >
+              <Text className="fs-icon">{fullscreen ? 'Exit' : 'Full'}</Text>
+            </View>
           </View>
         </View>
 
@@ -224,6 +241,17 @@ export function GlobalGamePlayer() {
   const gameUrl = useGamePlayerStore((s) => s.gameUrl);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
   const gameOrientation = useGamePlayerStore((s) => s.gameOrientation);
+  const minimized = useGamePlayerStore((s) => s.minimized);
   const closeGame = useGamePlayerStore((s) => s.closeGame);
-  return <GamePlayer gameUrl={gameUrl} gameTitle={gameTitle} gameOrientation={gameOrientation} onClose={closeGame} />;
+  const minimizeGame = useGamePlayerStore((s) => s.minimizeGame);
+  return (
+    <GamePlayer
+      gameUrl={gameUrl}
+      gameTitle={gameTitle}
+      gameOrientation={gameOrientation}
+      minimized={minimized}
+      onClose={closeGame}
+      onMinimize={minimizeGame}
+    />
+  );
 }

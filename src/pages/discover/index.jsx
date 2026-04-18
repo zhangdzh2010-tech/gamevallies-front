@@ -8,11 +8,13 @@ import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { FloatingPlayer } from '../../components/common/FloatingPlayer';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import { SkeletonListRow } from '../../components/common/Skeleton';
 import * as feedService from '../../services/feed';
 import * as socialService from '../../services/social';
 import useGamePlayerStore from '../../stores/gamePlayer';
+import useQuotaStore from '../../stores/quotaStore';
 import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
-import { mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
+import { mergeBookmarkedFlags, setGameBookmarked, syncBookmarkWithBackend } from '../../utils/bookmarks';
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
@@ -37,6 +39,8 @@ function normalizeGame(game, index) {
     bookmarks: game.bookmarks || game.bookmarkCount || game.favoriteCount || game.favorites || 0,
     viewerHasLiked: game.viewerHasLiked === true || game.liked === true,
     viewerHasBookmarked: game.viewerHasBookmarked === true,
+    canPlay: game.canPlay !== false,
+    requireSubscription: game.requireSubscription === true || game.canPlay === false,
     emoji: game.emoji || GAME_EMOJIS[index % GAME_EMOJIS.length],
     color: game.color || GAME_COLORS[index % GAME_COLORS.length],
     author: getSafeDisplayText([
@@ -195,9 +199,23 @@ export default function FriendsPage() {
 
   const handlePlay = (game) => {
     if (game.gameUrl) {
+      const orientation = getGameOrientation(game);
+      if (game.canPlay === false) {
+        useQuotaStore.getState().openPaywall({
+          gameId: game.id,
+          gameUrl: game.gameUrl,
+          gameTitle: game.title,
+          gameCover: getGameCoverUrl(game),
+          gameOrientation: orientation,
+          resumePlay: true,
+        });
+        return;
+      }
+
       openGame(game.gameUrl, game.title, getGameCoverUrl(game), {
         gameId: game.id,
-        orientation: getGameOrientation(game),
+        canPlay: game.canPlay !== false,
+        orientation,
       });
       return;
     }
@@ -252,6 +270,7 @@ export default function FriendsPage() {
       title: nextBookmarked ? '已收藏' : '已取消收藏',
       icon: 'none',
     });
+    syncBookmarkWithBackend(targetGame, nextBookmarked).catch(() => {});
     return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
@@ -284,9 +303,7 @@ export default function FriendsPage() {
             <Text className="friends-feed__title">朋友作品</Text>
 
             {loading ? (
-              <View className="empty-state">
-                <Text className="empty-text">加载中...</Text>
-              </View>
+              <SkeletonListRow rows={4} />
             ) : !loggedIn ? (
               <View className="empty-state">
                 <Text className="empty-icon">👋</Text>

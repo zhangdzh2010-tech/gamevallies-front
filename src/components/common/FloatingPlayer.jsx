@@ -6,7 +6,6 @@ import useGamePlayerStore from '../../stores/gamePlayer';
 import './FloatingPlayer.scss';
 
 export function FloatingPlayer() {
-  const isWeapp = process.env.TARO_ENV === 'weapp';
   const minimized = useGamePlayerStore((s) => s.minimized);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
   const gameCover = useGamePlayerStore((s) => s.gameCover);
@@ -22,7 +21,7 @@ export function FloatingPlayer() {
     }
   }, [gameUrl]);
 
-  if (!isWeapp || !minimized || !gameUrl) return null;
+  if (!minimized || !gameUrl) return null;
 
   const handleBallClick = () => {
     setExpanded(true);

@@ -116,7 +116,21 @@ jest.mock('../../../stores/gamePlayer', () => ({
 
 jest.mock('../../../stores/quotaStore', () => ({
   __esModule: true,
-  default: jest.fn((selector) => selector({ openPaywall: mockOpenPaywall })),
+  default: jest.fn((selector) => selector({
+    openPaywall: mockOpenPaywall,
+    freeQuota: 3,
+    totalFreeQuota: 5,
+    subscription: {
+      active: false,
+      planId: null,
+      planName: null,
+      expiresAt: null,
+      usedThisPeriod: 0,
+      quotaThisPeriod: 0,
+    },
+    fetchQuota: jest.fn(() => Promise.resolve()),
+    loading: false,
+  })),
 }));
 
 jest.mock('../../../utils/authNavigation', () => ({

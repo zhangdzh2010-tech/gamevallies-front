@@ -10,9 +10,11 @@ import { Storage } from '../../utils/storage';
 import { ENV } from '../../config/env';
 import {
   consumePersistedProfileActiveTab,
+  getLastViewedProfileTab,
   openCreatePageWithAuth,
   openIteratePageWithAuth,
   openTaskCreatePageWithAuth,
+  setLastViewedProfileTab,
 } from '../../utils/authNavigation';
 import * as authService from '../../services/auth';
 import * as gameService from '../../services/game';
@@ -23,12 +25,21 @@ import useQuotaStore from '../../stores/quotaStore';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import { buildGameDetailPath } from '../../utils/share';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { getBookmarkedGames, mergeBookmarkedFlags, setGameBookmarked } from '../../utils/bookmarks';
+import {
+  getBookmarkedGames,
+  hydrateBookmarksFromBackend,
+  loadMoreBookmarksFromBackend,
+  mergeBookmarkedFlags,
+  setGameBookmarked,
+  syncBookmarkWithBackend,
+} from '../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../utils/gameUnlock';
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
 import { getQuotaSummary } from '../../utils/quotaSummary';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
+import { toastError, toastInfo } from '../../utils/feedback';
+import { SkeletonListRow } from '../../components/common/Skeleton';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
@@ -301,6 +312,15 @@ function formatTaskTime(timestamp) {
 }
 
 
+function getActiveTaskStageLabel(progressPct) {
+  const pct = Number(progressPct) || 0;
+  if (pct < 10) return '提交需求';
+  if (pct < 35) return '梳理方案';
+  if (pct < 70) return '生成内容';
+  if (pct < 95) return '质量检查';
+  return '即将完成';
+}
+
 function ProfileTaskCard({ task, onResume, onCancel, onDelete }) {
   const isActive = isActiveTaskStatus(task.status);
   const isFailed = isFailedTaskStatus(task.status);
@@ -308,6 +328,8 @@ function ProfileTaskCard({ task, onResume, onCancel, onDelete }) {
   const failureDetail = isFailed ? getTaskStatusDetail(task) : '';
   const detailMessage = !isFailed && isTerminal ? getTaskStatusDetail(task) : '';
   const taskCardMessage = getTaskCardMessage(task);
+  const progressPct = Math.max(0, Math.min(100, Number(task.progressPct) || 0));
+  const activeStageLabel = isActive ? getActiveTaskStageLabel(progressPct) : '';
 
   return (
     <View className="profile-task-card">
@@ -315,6 +337,7 @@ function ProfileTaskCard({ task, onResume, onCancel, onDelete }) {
         <View className="profile-task-card__meta">
           <Text className="profile-task-card__type">{TASK_TYPE_LABELS[task.taskType] || '创作任务'}</Text>
           <Text className={`profile-task-card__status profile-task-card__status--${task.status}`}>
+            <Text className={`profile-task-card__status-dot profile-task-card__status-dot--${task.status}`} />
             {TASK_STATUS_LABELS[task.status] || task.status}
           </Text>
         </View>
@@ -341,16 +364,22 @@ function ProfileTaskCard({ task, onResume, onCancel, onDelete }) {
 
       {isActive ? (
         <View className="profile-task-card__progress">
-          <View className="profile-task-card__progress-bg">
-            <View className="profile-task-card__progress-fill" style={{ width: `${task.progressPct || 0}%` }} />
+          <View className="profile-task-card__progress-meta">
+            <Text className="profile-task-card__progress-stage">{activeStageLabel}</Text>
+            <Text className="profile-task-card__progress-text">{progressPct}%</Text>
           </View>
-          <Text className="profile-task-card__progress-text">{task.progressPct || 0}%</Text>
+          <View className="profile-task-card__progress-bg">
+            <View
+              className="profile-task-card__progress-fill profile-task-card__progress-fill--active"
+              style={{ width: `${progressPct}%` }}
+            />
+          </View>
         </View>
       ) : null}
 
       <View className="profile-task-card__actions">
         <View className="profile-task-card__btn profile-task-card__btn--primary" onClick={() => onResume(task)}>
-          <Text>继续查看</Text>
+          <Text>{isFailed ? '重新尝试' : '继续查看'}</Text>
         </View>
         {isActive ? (
           <View className="profile-task-card__btn profile-task-card__btn--danger" onClick={() => onCancel(task)}>
@@ -574,7 +603,7 @@ function EditProfileModal({ profile, onClose, onSave }) {
           }
         } catch (e) {
           console.error('Avatar upload failed:', e);
-          Taro.showToast({ title: '头像上传失败', icon: 'none' });
+          toastError(e, '头像上传失败');
           setAvatar(resolveAvatarValue({
             avatar: profile.avatar,
             avatarUrl: profile.avatarUrl,
@@ -590,7 +619,7 @@ function EditProfileModal({ profile, onClose, onSave }) {
   const handleSave = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      Taro.showToast({ title: '请输入昵称', icon: 'none' });
+      toastInfo('请输入昵称');
       return;
     }
     setSaving(true);
@@ -625,7 +654,7 @@ function EditProfileModal({ profile, onClose, onSave }) {
       Taro.showToast({ title: '保存成功', icon: 'success' });
     } catch (e) {
       console.error('updateProfile failed:', e);
-      Taro.showToast({ title: '保存失败，请重试', icon: 'none' });
+      toastError(e, '保存失败，请重试');
     } finally {
       setSaving(false);
     }
@@ -717,7 +746,12 @@ export default function Profile() {
   const subscription = useQuotaStore((s) => s.subscription);
   const subscriptionActive = useQuotaStore((s) => s.subscription.active);
   const fetchQuota = useQuotaStore((s) => s.fetchQuota);
-  const [activeTab, setActiveTab] = useState('works');
+  const [activeTab, setActiveTab] = useState(() => getLastViewedProfileTab() || 'works');
+
+  const updateActiveTab = (tab) => {
+    setActiveTab(tab);
+    setLastViewedProfileTab(tab);
+  };
   const [profile, setProfile] = useState({
     name: '', avatar: '👤', avatarUrl: '', bio: '',
     followers: 0, following: 0, totalLikes: 0, mutualFollows: 0,
@@ -725,6 +759,10 @@ export default function Profile() {
 
   const [allGames, setAllGames] = useState([]);
   const [bookmarkedGames, setBookmarkedGames] = useState(() => getBookmarkedGames());
+  const [bookmarkPage, setBookmarkPage] = useState(1);
+  const [bookmarkHasMore, setBookmarkHasMore] = useState(false);
+  const [bookmarkRefreshing, setBookmarkRefreshing] = useState(false);
+  const [bookmarkLoadingMore, setBookmarkLoadingMore] = useState(false);
   const [loadingGames, setLoadingGames] = useState(false);
   const [moreGame, setMoreGame] = useState(null);
   const [settingsGame, setSettingsGame] = useState(null);
@@ -742,9 +780,63 @@ export default function Profile() {
   const draftGames = displayGames.filter((g) => DRAFT_STATUSES.includes(g.status));
   const likedGames = displayGames.filter((g) => g.viewerHasLiked);
 
-  const refreshBookmarkedGames = () => {
+  const refreshBookmarkedGames = ({ silent = true } = {}) => {
     setBookmarkedGames(getBookmarkedGames());
     setAllGames((prev) => mergeBookmarkedFlags(prev));
+
+    if (!silent) {
+      setBookmarkRefreshing(true);
+    }
+
+    // Opportunistically pull the authoritative bookmark list from the backend so
+    // the tab reflects bookmarks added from other devices. Failures fall back to
+    // local cache silently via the util layer.
+    hydrateBookmarksFromBackend({ page: 1, limit: 20 })
+      .then(({ items, hasMore, synced }) => {
+        if (!synced) {
+          setBookmarkHasMore(false);
+          return;
+        }
+        setBookmarkedGames(items);
+        setBookmarkPage(1);
+        setBookmarkHasMore(Boolean(hasMore));
+        setAllGames((prev) => mergeBookmarkedFlags(prev));
+      })
+      .catch(() => {})
+      .finally(() => {
+        setBookmarkRefreshing(false);
+      });
+  };
+
+  const handleLoadMoreBookmarks = async () => {
+    if (bookmarkLoadingMore || !bookmarkHasMore) {
+      return;
+    }
+    setBookmarkLoadingMore(true);
+    try {
+      const nextPage = bookmarkPage + 1;
+      const { items, hasMore, synced } = await loadMoreBookmarksFromBackend(nextPage, 20);
+      if (synced && items.length > 0) {
+        setBookmarkedGames((prev) => {
+          const existingIds = new Set(prev.map((g) => String(g.id)));
+          const merged = [...prev];
+          items.forEach((item) => {
+            if (!existingIds.has(String(item.id))) {
+              merged.push(item);
+            }
+          });
+          return merged;
+        });
+        setBookmarkPage(nextPage);
+        setBookmarkHasMore(Boolean(hasMore));
+      } else {
+        setBookmarkHasMore(false);
+      }
+    } catch (error) {
+      toastError(error, '加载更多收藏失败');
+    } finally {
+      setBookmarkLoadingMore(false);
+    }
   };
 
   const syncStoredProfile = () => {
@@ -823,9 +915,9 @@ export default function Profile() {
     refreshTrackedTasks().catch(() => {});
     refreshProfilePage();
 
-    const nextActiveTab = consumePersistedProfileActiveTab();
-    if (nextActiveTab) {
-      setActiveTab(nextActiveTab);
+    const intentTab = consumePersistedProfileActiveTab();
+    if (intentTab) {
+      updateActiveTab(intentTab);
     }
   });
 
@@ -896,7 +988,7 @@ export default function Profile() {
 
       return { liked: nextLiked, likes: nextLikes };
     } catch (error) {
-      Taro.showToast({ title: error?.message || '点赞失败，请重试', icon: 'none' });
+      toastError(error, '点赞失败，请重试');
       throw error;
     }
   };
@@ -922,6 +1014,7 @@ export default function Profile() {
     )));
 
     Taro.showToast({ title: nextBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
+    syncBookmarkWithBackend(targetGame, nextBookmarked).catch(() => {});
     return { bookmarked: nextBookmarked, bookmarks: nextBookmarks };
   };
 
@@ -972,7 +1065,7 @@ export default function Profile() {
 
       Taro.showToast({ title: nextStatus === 'review' ? '已提交审核' : '发布成功', icon: 'success' });
     } catch (error) {
-      Taro.showToast({ title: error?.message || '发布失败，请重试', icon: 'none' });
+      toastError(error, '发布失败，请重试');
     }
   };
 
@@ -988,8 +1081,8 @@ export default function Profile() {
             await gameService.deleteGame(game.id);
             setAllGames((prev) => prev.filter((g) => g.id !== game.id));
             Taro.showToast({ title: '删除成功', icon: 'success' });
-          } catch {
-            Taro.showToast({ title: '删除失败，请重试', icon: 'none' });
+          } catch (error) {
+            toastError(error, '删除失败，请重试');
           }
         }
       },
@@ -1006,8 +1099,8 @@ export default function Profile() {
       await gameService.updateGameSettings(settingsGame.id, settings);
       setAllGames((prev) => prev.map((g) => g.id === settingsGame.id ? { ...g, ...settings } : g));
       Taro.showToast({ title: '设置已保存', icon: 'success' });
-    } catch {
-      Taro.showToast({ title: '保存失败', icon: 'none' });
+    } catch (error) {
+      toastError(error, '保存失败');
     }
     setSettingsGame(null);
   };
@@ -1047,7 +1140,7 @@ export default function Profile() {
           Taro.showToast({ title: '任务已取消', icon: 'success' });
           refreshTrackedTasks().catch(() => {});
         } catch (error) {
-          Taro.showToast({ title: error?.message || '取消失败，请重试', icon: 'none' });
+          toastError(error, '取消失败，请重试');
         }
       },
     });
@@ -1070,14 +1163,14 @@ export default function Profile() {
   };
 
   const handleTabClick = (tab) => {
-    setActiveTab(tab.key);
+    updateActiveTab(tab.key);
   };
 
   const canShowPublishButton = (game) => ['ready', 'draft'].includes(game?.status);
 
   const renderGameList = (games, emptyIconClass, emptyText, showCreate = true, showMore = true) => {
     if (loadingGames) {
-      return <View className="empty-state"><Text className="empty-text">加载中...</Text></View>;
+      return <SkeletonListRow rows={3} />;
     }
     if (!games.length) {
       return (
@@ -1317,7 +1410,36 @@ export default function Profile() {
           {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的游戏作品')}
           {activeTab === 'drafts'    && renderGameList(draftGames, 'empty-icon--drafts', '还没有草稿作品')}
           {activeTab === 'liked'     && renderGameList(likedGames, 'empty-icon--liked', '你还没有点赞过游戏', false, false)}
-          {activeTab === 'bookmarks' && renderGameList(normalizedBookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
+          {activeTab === 'bookmarks' && (
+            <>
+              {normalizedBookmarkedGames.length > 0 && (
+                <View
+                  className={`bookmarks-refresh-bar${bookmarkRefreshing ? ' is-refreshing' : ''}`}
+                  onClick={() => !bookmarkRefreshing && refreshBookmarkedGames({ silent: false })}
+                >
+                  <Text className="bookmarks-refresh-bar__text">
+                    {bookmarkRefreshing ? '正在刷新…' : '点击刷新收藏列表'}
+                  </Text>
+                </View>
+              )}
+              {renderGameList(normalizedBookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
+              {bookmarkHasMore && normalizedBookmarkedGames.length > 0 && (
+                <View
+                  className={`bookmarks-load-more${bookmarkLoadingMore ? ' is-loading' : ''}`}
+                  onClick={handleLoadMoreBookmarks}
+                >
+                  <Text className="bookmarks-load-more__text">
+                    {bookmarkLoadingMore ? '加载中…' : '加载更多收藏'}
+                  </Text>
+                </View>
+              )}
+              {!bookmarkHasMore && normalizedBookmarkedGames.length > 0 && (
+                <View className="bookmarks-load-more bookmarks-load-more--end">
+                  <Text className="bookmarks-load-more__text">- 已显示全部收藏 -</Text>
+                </View>
+              )}
+            </>
+          )}
           {activeTab === 'tasks'     && renderTaskPanel()}
         </View>
 

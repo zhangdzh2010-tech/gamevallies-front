@@ -1,4 +1,4 @@
-import { get } from './api';
+import { get, post, del } from './api';
 
 
 /**
@@ -146,6 +146,36 @@ limit = 10)
   });
 }
 
+/**
+ * Get the current user's bookmarked games list.
+ */
+export async function getBookmarkList(page = 1, limit = 20) {
+  return get('/api/v1/feed/favorites', {
+    data: { page, limit }
+  });
+}
+
+/**
+ * Add a bookmark for the given game.
+ */
+export async function addBookmark(gameId) {
+  return post('/api/v1/feed/favorites', { gameId });
+}
+
+/**
+ * Remove a bookmark for the given game.
+ */
+export async function removeBookmark(gameId) {
+  return del(`/api/v1/feed/favorites/${encodeURIComponent(gameId)}`);
+}
+
+/**
+ * Fetch bookmark status for a batch of games.
+ */
+export async function getBookmarkStatusBatch(gameIds) {
+  return post('/api/v1/feed/favorites/status/batch', { gameIds });
+}
+
 export default {
   getTrending,
   getLatest,
@@ -157,5 +187,9 @@ export default {
   getTrendingCreators,
   getChallengeGames,
   getFeaturedGames,
-  getCreatorGames
+  getCreatorGames,
+  getBookmarkList,
+  addBookmark,
+  removeBookmark,
+  getBookmarkStatusBatch
 };

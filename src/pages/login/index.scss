@@ -59,6 +59,20 @@
       }
     }
 
+    .login-hint-banner {
+      margin: -48px 0 32px;
+      padding: 14px 18px;
+      background: rgba(110, 86, 255, 0.12);
+      border: 1px solid rgba(110, 86, 255, 0.28);
+      border-radius: 14px;
+
+      &__text {
+        color: #c8bfff;
+        font-size: $font-size-sm;
+        line-height: 1.5;
+      }
+    }
+
     .login-tabs {
       display: flex;
       margin-bottom: 32px;
@@ -304,6 +318,16 @@
           transform: none;
         }
       }
+    }
+
+    .wechat-login-hint {
+      display: block;
+      font-size: 22px;
+      color: #8a839c;
+      text-align: center;
+      line-height: 1.5;
+      margin: 12px 0 0;
+      padding: 0 8px;
     }
   }
 }
