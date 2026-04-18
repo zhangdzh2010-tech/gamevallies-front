@@ -42,6 +42,7 @@ jest.mock('@tarojs/taro', () => {
 jest.mock('../../../utils/authNavigation', () => ({
   handleLoginBackNavigation: mockHandleLoginBackNavigation,
   navigateAfterLogin: mockNavigateAfterLogin,
+  consumeLoginHint: jest.fn(() => ''),
 }));
 
 jest.mock('../../../utils/runtime', () => ({

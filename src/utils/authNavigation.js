@@ -24,12 +24,16 @@ const TAB_BAR_PAGES = new Set([
 
 const POST_LOGIN_REDIRECT_KEY =
   ENV.STORAGE_KEYS.POST_LOGIN_REDIRECT || 'gamevallies_post_login_redirect';
+const LOGIN_HINT_KEY =
+  ENV.STORAGE_KEYS.LOGIN_HINT || 'gamevallies_login_hint';
 const CREATE_ENTRY_INTENT_KEY =
   ENV.STORAGE_KEYS.CREATE_ENTRY_INTENT || 'gamevallies_create_entry_intent';
 const ITERATE_ENTRY_GAME_KEY =
   ENV.STORAGE_KEYS.ITERATE_ENTRY_GAME || 'gamevallies_iterate_entry_game';
 const PROFILE_ACTIVE_TAB_KEY =
   ENV.STORAGE_KEYS.PROFILE_ACTIVE_TAB || 'gamevallies_profile_active_tab';
+const PROFILE_LAST_TAB_KEY =
+  ENV.STORAGE_KEYS.PROFILE_LAST_TAB || 'gamevallies_profile_last_tab';
 const CREATE_ENTRY_INTENT_MAX_AGE_MS = 30 * 60 * 1000;
 const ITERATE_ENTRY_GAME_MAX_AGE_MS = 30 * 60 * 1000;
 const PROFILE_SUB_TABS = new Set(['works', 'drafts', 'liked', 'bookmarks', 'tasks']);
@@ -233,6 +237,33 @@ export function consumePersistedProfileActiveTab() {
   return activeTab;
 }
 
+/**
+ * Sticky "last visited" profile tab. Unlike the consume-once intent above,
+ * this value is read-only persistent and updated whenever the user manually
+ * switches tabs so the page restores the last viewed section on re-entry.
+ */
+export function setLastViewedProfileTab(tab) {
+  const normalizedTab = normalizeProfileActiveTab(tab);
+  if (!normalizedTab) {
+    return;
+  }
+
+  try {
+    Taro.setStorageSync(PROFILE_LAST_TAB_KEY, normalizedTab);
+  } catch (error) {
+    console.warn('Failed to persist last viewed profile tab:', error);
+  }
+}
+
+export function getLastViewedProfileTab() {
+  try {
+    return normalizeProfileActiveTab(Taro.getStorageSync(PROFILE_LAST_TAB_KEY));
+  } catch (error) {
+    console.warn('Failed to read last viewed profile tab:', error);
+    return '';
+  }
+}
+
 function getPageRoute(page) {
   return page?.route ? `/${page.route}` : '';
 }
@@ -346,12 +377,40 @@ function prepareCreateEntry(options = {}) {
   setCreateEntryIntent(gameStore, { mode: 'fresh' });
 }
 
-function promptLoginAndGo(redirectUrl) {
+function promptLoginAndGo(redirectUrl, hint = '请先登录后再创作') {
   setPostLoginRedirect(redirectUrl);
-  Taro.showToast({ title: '请先登录后再创作', icon: 'none' });
-  setTimeout(() => {
-    navigateToLogin();
-  }, 300);
+  setLoginHint(hint);
+  navigateToLogin();
+}
+
+export function setLoginHint(hint) {
+  if (!hint) {
+    try {
+      Taro.removeStorageSync(LOGIN_HINT_KEY);
+    } catch (error) {
+      console.warn('Failed to clear login hint:', error);
+    }
+    return;
+  }
+
+  try {
+    Taro.setStorageSync(LOGIN_HINT_KEY, String(hint));
+  } catch (error) {
+    console.warn('Failed to save login hint:', error);
+  }
+}
+
+export function consumeLoginHint() {
+  try {
+    const hint = Taro.getStorageSync(LOGIN_HINT_KEY) || '';
+    if (hint) {
+      Taro.removeStorageSync(LOGIN_HINT_KEY);
+    }
+    return hint;
+  } catch (error) {
+    console.warn('Failed to read login hint:', error);
+    return '';
+  }
 }
 
 export function isLoggedIn() {

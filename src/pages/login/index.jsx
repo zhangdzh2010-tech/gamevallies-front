@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import * as authService from '../../services/auth';
-import { handleLoginBackNavigation, navigateAfterLogin } from '../../utils/authNavigation';
+import { consumeLoginHint, handleLoginBackNavigation, navigateAfterLogin } from '../../utils/authNavigation';
 import { isH5Runtime, isWechatBrowserRuntime } from '../../utils/runtime';
 import './index.scss';
 
@@ -43,6 +43,7 @@ export default function Login() {
   const [loadingAction, setLoadingAction] = useState(null);
   const [wechatNickname, setWechatNickname] = useState('');
   const [wechatAvatarUrl, setWechatAvatarUrl] = useState('');
+  const [loginHint, setLoginHintState] = useState('');
   const timerRef = useRef(null);
   const h5WechatAuthHandledRef = useRef(false);
 
@@ -53,6 +54,13 @@ export default function Login() {
         timerRef.current = null;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const hint = consumeLoginHint();
+    if (hint) {
+      setLoginHintState(hint);
+    }
   }, []);
 
   useEffect(() => {
@@ -97,9 +105,7 @@ export default function Login() {
   const isBusy = loadingAction !== null;
 
   const finishLogin = () => {
-    setTimeout(() => {
-      navigateAfterLogin('/pages/index/index');
-    }, 800);
+    navigateAfterLogin('/pages/index/index');
   };
 
   const handleChooseAvatar = (event) => {
@@ -242,9 +248,13 @@ export default function Login() {
 
   const passwordBtnText = loadingAction === 'password' ? '登录中...' : '登录';
   const smsBtnText = loadingAction === 'sms' ? '登录中...' : '登录';
+  const wechatProfileComplete = Boolean(wechatNickname.trim()) && Boolean(wechatAvatarUrl.trim());
+  const wechatWeappDisabled = isWeapp && !wechatProfileComplete;
   const wechatBtnText = loadingAction === 'wechat'
-    ? (isH5 ? '授权中...' : '登录中...')
-    : (isH5 ? '微信授权登录' : '微信一键登录');
+    ? (isH5 ? '跳转微信授权中...' : '登录中...')
+    : (isH5
+      ? '微信授权登录'
+      : (wechatWeappDisabled ? '请先完善微信资料' : '微信登录'));
 
   return (
     <View className={`login-container${isWeapp ? ' login-container--weapp' : ''}${isH5 ? ' login-container--h5' : ''}`}>
@@ -258,6 +268,12 @@ export default function Login() {
           <Text className="logo">智了空间</Text>
           <Text className="tagline">AI 驱动的全民游戏创作平台</Text>
         </View>
+
+        {loginHint ? (
+          <View className="login-hint-banner">
+            <Text className="login-hint-banner__text">{loginHint}</Text>
+          </View>
+        ) : null}
 
         <View className="login-tabs">
           <View
@@ -371,8 +387,8 @@ export default function Login() {
             {isWeapp && (
           <View className="wechat-profile-card">
             <View className="wechat-profile-card__header">
-              <Text className="wechat-profile-card__title">完善微信资料</Text>
-              <Text className="wechat-profile-card__desc">登录前先选择头像并填写昵称</Text>
+              <Text className="wechat-profile-card__title">完善微信资料 · 步骤 1/2</Text>
+              <Text className="wechat-profile-card__desc">先选择头像并填写昵称，才能进入下一步登录</Text>
             </View>
 
             <View className="wechat-profile-card__row">
@@ -402,18 +418,26 @@ export default function Login() {
             </View>
 
             <Text className="wechat-profile-card__tip">
-              微信小程序已不再直接返回真实头像和昵称，需要由用户主动选择后再同步到账户资料。
+              微信小程序不再自动返回真实头像和昵称，需要你主动选择后再同步到账户资料。这一步不会泄露你的微信原始信息。
             </Text>
           </View>
         )}
 
+            {isWeapp && !wechatProfileComplete && (
+              <Text className="wechat-login-hint">完善头像与昵称后，按钮即可点亮，再点一次完成登录</Text>
+            )}
+
             <View
-              className={`wechat-btn ${isBusy && loadingAction !== 'wechat' ? 'is-disabled' : ''}`}
+              className={`wechat-btn ${(isBusy && loadingAction !== 'wechat') || wechatWeappDisabled ? 'is-disabled' : ''}`}
               onClick={handleWechatLogin}
-              style={{ pointerEvents: isBusy ? 'none' : 'auto' }}
+              style={{ pointerEvents: isBusy || wechatWeappDisabled ? 'none' : 'auto' }}
             >
               <Text>{wechatBtnText}</Text>
             </View>
+
+            {isH5 && loadingAction !== 'wechat' && (
+              <Text className="wechat-login-hint">点击后将跳转至微信完成授权，完成后会自动返回当前页面</Text>
+            )}
           </>
         )}
       </View>

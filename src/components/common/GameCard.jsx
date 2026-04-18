@@ -57,6 +57,8 @@ export const GameCard = ({
 }) => {
   const [isLiked, setIsLiked] = useState(Boolean(game.viewerHasLiked));
   const [isBookmarked, setIsBookmarked] = useState(Boolean(game.viewerHasBookmarked));
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [likeCount, setLikeCount] = useState(Number(game.likes) || 0);
   const [bookmarkCount, setBookmarkCount] = useState(getBookmarkCount(game));
   const [likeLoading, setLikeLoading] = useState(false);
@@ -77,6 +79,13 @@ export const GameCard = ({
 
   const thumbnailUrl = getSafeGameImage(game);
   const hasThumbnail = Boolean(thumbnailUrl);
+
+  // Reset image state whenever the source URL changes so a new game card doesn't
+  // render with the previous card's loaded/errored state.
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [thumbnailUrl]);
   const infoAuthorName = showAuthorInInfo ? getGameAuthorName(game) : '';
   const rootClassName = [
     'game-card',
@@ -178,7 +187,27 @@ export const GameCard = ({
     <View className={rootClassName} onClick={handlePlay}>
       <View className="game-preview">
         <Text className="game-emoji">{game.emoji}</Text>
-        {hasThumbnail && <Image className="game-thumbnail" src={thumbnailUrl} mode="aspectFill" />}
+        {hasThumbnail && !imageError && (
+          <>
+            {!imageLoaded && (
+              <View className="game-thumbnail-placeholder game-thumbnail-placeholder--loading" />
+            )}
+            <Image
+              className={`game-thumbnail${imageLoaded ? ' is-loaded' : ''}`}
+              src={thumbnailUrl}
+              mode="aspectFill"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+              lazyLoad
+            />
+          </>
+        )}
+        {hasThumbnail && imageError && (
+          <View className="game-thumbnail-placeholder game-thumbnail-placeholder--error">
+            <Text className="game-thumbnail-placeholder__icon">📷</Text>
+            <Text className="game-thumbnail-placeholder__text">封面加载失败</Text>
+          </View>
+        )}
 
         {showTopMetricBadge ? (
           <View className={`top-metric-badge top-metric-badge--minimal${isHotMetricBadge ? ' is-hot' : ''}`}>

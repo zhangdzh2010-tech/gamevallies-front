@@ -8,7 +8,7 @@ import {
   buildGameWebShellHash,
   parseGameWebShellParams,
 } from '../../../utils/gameWebShell';
-import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
+import { isGameBookmarked, setGameBookmarked, syncBookmarkWithBackend } from '../../../utils/bookmarks';
 import { getGameOrientation } from '../../../utils/gameOrientation';
 import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../../utils/profileDisplay';
 import './index.scss';
@@ -534,6 +534,7 @@ export default function GameWebShellPage() {
     const nextBookmarkCount = Math.max(0, bookmarkCount + (nextBookmarked ? 1 : -1));
 
     setGameBookmarked(baseGame, nextBookmarked);
+    syncBookmarkWithBackend(baseGame, nextBookmarked).catch(() => {});
     setIsBookmarked(nextBookmarked);
     setBookmarkCount(nextBookmarkCount);
     setGameMeta((prev) => (

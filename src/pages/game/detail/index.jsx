@@ -17,7 +17,7 @@ import {
   openIteratePageWithAuth,
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
-import { isGameBookmarked, setGameBookmarked } from '../../../utils/bookmarks';
+import { isGameBookmarked, setGameBookmarked, syncBookmarkWithBackend } from '../../../utils/bookmarks';
 import { subscribeGameUnlocked } from '../../../utils/gameUnlock';
 import { getGameCoverUrl } from '../../../utils/media';
 import { getGameOrientation } from '../../../utils/gameOrientation';
@@ -686,6 +686,11 @@ export default function GameDetail() {
     setIsBookmarked(nextBookmarked);
     setGame((prev) => (prev ? { ...prev, viewerHasBookmarked: nextBookmarked } : prev));
     Taro.showToast({ title: nextBookmarked ? '已加入收藏' : '已取消收藏', icon: 'none' });
+
+    // Fire-and-forget backend sync. On failure the util marks the remote as
+    // unavailable so we silently fall back to local-only storage without
+    // disturbing the optimistic UI update.
+    syncBookmarkWithBackend(game, nextBookmarked).catch(() => {});
   };
 
   const handleOpenCommentComposer = () => {

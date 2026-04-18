@@ -22,6 +22,7 @@ import {
 } from '../../store/gameStore';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import useQuotaStore from '../../stores/quotaStore';
+import { getQuotaSummary } from '../../utils/quotaSummary';
 import {
   consumePersistedCreateEntryIntent,
   ensureCreateAccess,
@@ -35,6 +36,7 @@ import { getGameOrientation } from '../../utils/gameOrientation';
 import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
+import { toastError, toastInfo } from '../../utils/feedback';
 import './index.scss';
 
 const ORIENTATION_OPTIONS = [
@@ -95,6 +97,11 @@ export default function Create() {
   } = useGameStore();
   const openGame = useGamePlayerStore((s) => s.openGame);
   const openPaywall = useQuotaStore((s) => s.openPaywall);
+  const freeQuota = useQuotaStore((s) => s.freeQuota);
+  const totalFreeQuota = useQuotaStore((s) => s.totalFreeQuota);
+  const quotaSubscription = useQuotaStore((s) => s.subscription);
+  const fetchQuota = useQuotaStore((s) => s.fetchQuota);
+  const quotaLoading = useQuotaStore((s) => s.loading);
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [sessionPromptDraft, setSessionPromptDraft] = useState('');
@@ -158,6 +165,12 @@ export default function Create() {
   useDidShow(() => {
     if (isLoggedIn()) {
       authRedirectingRef.current = false;
+      // Refresh quota on page enter so the banner and gate reflect latest state.
+      try {
+        fetchQuota(false)?.catch?.(() => {});
+      } catch (err) {
+        // Non-fatal; banner will simply fall back to zero state.
+      }
       return;
     }
 
@@ -173,21 +186,25 @@ export default function Create() {
     authRedirectingRef.current = false;
   });
 
-  useEffect(() => {
-    if (!isGenerating || currentTask?.taskType !== 'pipeline_iterate' || !currentTask?.taskId) {
+  // NOTE: pipeline_iterate tasks are routed directly by openTaskCreatePageWithAuth /
+  // openIteratePageWithAuth at the entry points (profile task center, iterate entry, etc.),
+  // so we no longer need a mid-flight redirect on the create page. If an iterate task is
+  // still detected after restoration we simply hand it off once via useDidShow below.
+  const iterateRedirectGuardRef = useRef(false);
+
+  useDidShow(() => {
+    if (iterateRedirectGuardRef.current) {
+      return;
+    }
+    if (currentTask?.taskType !== 'pipeline_iterate' || !currentTask?.taskId) {
       return;
     }
 
+    iterateRedirectGuardRef.current = true;
     openIteratePageWithAuth(currentGame, currentTask.gameId || currentGame?.id || null, {
       taskId: currentTask.taskId,
     });
-  }, [
-    currentGame,
-    currentTask?.gameId,
-    currentTask?.taskId,
-    currentTask?.taskType,
-    isGenerating,
-  ]);
+  });
 
   useDidShow(() => {
     if (!isLoggedIn() || createEntryIntent || isGenerating || currentTask?.taskId || isRestoringEntry) {
@@ -209,7 +226,7 @@ export default function Create() {
     restorePersistedTask(activeTaskSnapshot)
       .then((restored) => {
         if (!restored) {
-          Taro.showToast({ title: '恢复创作任务失败', icon: 'none' });
+          toastError('恢复创作任务失败', '恢复创作任务失败');
         }
       })
       .finally(() => {
@@ -268,7 +285,7 @@ export default function Create() {
         try {
           const restored = await restorePersistedTask({ taskId, gameId });
           if (!restored && !cancelled) {
-            Taro.showToast({ title: '恢复创作任务失败，请重试', icon: 'none' });
+            toastError('恢复创作任务失败，请重试', '恢复创作任务失败，请重试');
           }
         } finally {
           if (!cancelled) {
@@ -314,7 +331,7 @@ export default function Create() {
           await cancelCurrentTask();
           Taro.showToast({ title: '任务已取消', icon: 'success' });
         } catch (err) {
-          Taro.showToast({ title: err?.message || '取消失败，请重试', icon: 'none' });
+          toastError(err, '取消失败，请重试');
         }
       },
     });
@@ -322,7 +339,7 @@ export default function Create() {
 
   const handleStartCreateSession = async () => {
     if (!prompt.trim() || prompt.trim().length < 5) {
-      Taro.showToast({ title: '请输入更完整的游戏描述', icon: 'none' });
+      toastInfo('请输入更完整的游戏描述');
       return;
     }
 
@@ -340,14 +357,14 @@ export default function Create() {
         },
       );
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
+      toastError(getUserFacingCreateError(err?.message, '创作会话'), '创作会话启动失败');
     }
   };
 
   const handleConfirmEditedCreatePrompt = async () => {
     const nextPromptDraft = sessionPromptDraft.trim();
     if (!nextPromptDraft) {
-      Taro.showToast({ title: '请先完善提示词', icon: 'none' });
+      toastInfo('请先完善提示词');
       return;
     }
 
@@ -356,7 +373,7 @@ export default function Create() {
     try {
       await confirmEditedPrompt(nextPromptDraft);
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
+      toastError(getUserFacingCreateError(err?.message, '创作会话'), '保存提示词失败');
     }
   };
 
@@ -364,7 +381,7 @@ export default function Create() {
     try {
       await confirmCurrentPrompt();
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
+      toastError(getUserFacingCreateError(err?.message, '创作会话'), '保存提示词失败');
     }
   };
 
@@ -391,7 +408,7 @@ export default function Create() {
     }
 
     if (!canSendEntryPrompt) {
-      Taro.showToast({ title: '请先把想法说完整一点', icon: 'none' });
+      toastInfo('请先把想法说完整一点');
       return null;
     }
 
@@ -404,15 +421,6 @@ export default function Create() {
         generationTier: 'standard',
       },
     );
-  };
-
-  const handleCreateWorkspacePrimaryAction = async () => {
-    if (isCreateSessionActive) {
-      await handleConfirmEditedCreatePrompt();
-      return;
-    }
-
-    await handleStartCreateSession();
   };
 
   const handleCreateWorkspaceGenerate = async () => {
@@ -431,7 +439,7 @@ export default function Create() {
         ...(gameName.trim() ? { title: gameName.trim() } : {}),
       });
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创建游戏'), icon: 'none' });
+      toastError(getUserFacingCreateError(err?.message, '创建游戏'), '创建游戏失败');
     }
   };
 
@@ -443,7 +451,7 @@ export default function Create() {
       resetCreateSession();
       resetLocalCreateState();
     } catch (err) {
-      Taro.showToast({ title: getUserFacingCreateError(err?.message, '创作会话'), icon: 'none' });
+      toastError(getUserFacingCreateError(err?.message, '创作会话'), '重置创作会话失败');
     }
   };
 
@@ -498,54 +506,155 @@ export default function Create() {
     </View>
   );
 
+  // ------- Primary-button state machine -------
+  // A. No session            → Primary: 开始整理     Secondary: [直接生成]
+  // B. Session + hasChanges  → Primary: 确认修改     Secondary: [保存并生成, 重新开始]
+  // C. Session + noChanges   → Primary: 开始生成     Secondary: [重新开始]
+  const createFlowState = (() => {
+    if (!isCreateSessionActive) return 'entry';
+    if (hasCreatePromptChanges) return 'draft-editing';
+    return 'ready-to-generate';
+  })();
+
+  const quotaSummary = getQuotaSummary({
+    freeQuota,
+    totalFreeQuota,
+    subscription: quotaSubscription,
+  });
+  const hasActiveSubscription = Boolean(quotaSubscription?.active);
+  const isOutOfQuota = !hasActiveSubscription && quotaSummary.totalRemaining <= 0;
+  const openCreationPaywall = () => openPaywall({});
+
+  const createPrimaryConfig = (() => {
+    if (createFlowState === 'entry') {
+      if (isOutOfQuota) {
+        return {
+          label: '订阅后解锁创作',
+          onClick: openCreationPaywall,
+          disabled: false,
+        };
+      }
+
+      return {
+        label: '开始整理提示词',
+        onClick: handleStartCreateSession,
+        disabled: creationSessionSubmitting || !canSendEntryPrompt,
+      };
+    }
+
+    if (createFlowState === 'draft-editing') {
+      return {
+        label: '确认修改并保存提示词',
+        onClick: handleConfirmEditedCreatePrompt,
+        disabled: creationSessionSubmitting || !canEditCreatePrompt,
+      };
+    }
+
+    if (isOutOfQuota) {
+      return {
+        label: '订阅后解锁生成',
+        onClick: openCreationPaywall,
+        disabled: false,
+      };
+    }
+
+    return {
+      label: '开始生成',
+      onClick: handleCreateWorkspaceGenerate,
+      disabled: creationSessionSubmitting
+        || (!canGenerateCreateSession && !canConfirmCurrentCreatePrompt),
+    };
+  })();
+
   const createWorkspaceSecondaryActions = (() => {
-    if (!isCreateSessionActive) {
+    if (createFlowState === 'entry') {
       return [
         {
           key: 'generate-create-directly',
           label: '直接生成',
-          tone: 'primary',
+          tone: 'ghost',
           onClick: handleCreateWorkspaceGenerate,
           disabled: creationSessionSubmitting || !canSendEntryPrompt,
         },
       ];
     }
 
-    const actions = [];
-
-    if (canConfirmCurrentCreatePrompt) {
-      actions.push({
-        key: 'confirm-current-prompt',
-        label: '直接使用当前提示词',
-        onClick: handleConfirmCurrentCreatePrompt,
-        disabled: creationSessionSubmitting,
-      });
+    if (createFlowState === 'draft-editing') {
+      return [
+        {
+          key: 'save-and-generate',
+          label: '保存并开始生成',
+          tone: 'primary',
+          onClick: handleCreateWorkspaceGenerate,
+          disabled: creationSessionSubmitting,
+        },
+        {
+          key: 'restart-create-session',
+          label: '重新开始',
+          tone: 'danger',
+          onClick: handleRestartCreateSession,
+          disabled: creationSessionSubmitting,
+        },
+      ];
     }
 
-    if (canGenerateCreateSession) {
-      actions.push({
-        key: 'confirm-and-generate',
-        label: creationSession?.status === 'ready' ? '开始生成' : '直接生成',
-        tone: 'primary',
-        onClick: handleCreateWorkspaceGenerate,
+    return [
+      {
+        key: 'restart-create-session',
+        label: '重新开始',
+        tone: 'danger',
+        onClick: handleRestartCreateSession,
         disabled: creationSessionSubmitting,
-      });
-    }
-
-    actions.push({
-      key: 'restart-create-session',
-      label: '重新开始',
-      tone: 'danger',
-      onClick: handleRestartCreateSession,
-      disabled: creationSessionSubmitting,
-    });
-
-    return actions;
+      },
+    ];
   })();
+
+  const quotaBannerCopy = (() => {
+    if (quotaLoading && !hasActiveSubscription && quotaSummary.totalRemaining === 0) {
+      return { tone: 'neutral', text: '正在核对你的创作额度…' };
+    }
+
+    if (hasActiveSubscription) {
+      const remaining = Number.isFinite(quotaSummary.subscriptionRemaining)
+        ? quotaSummary.subscriptionRemaining
+        : 0;
+      return {
+        tone: 'success',
+        text: `会员创作额度：本周期还可创作 ${remaining} 次`,
+      };
+    }
+
+    if (quotaSummary.freeRemaining > 0) {
+      return {
+        tone: 'neutral',
+        text: `还有 ${quotaSummary.freeRemaining} 次免费创作，生成后自动扣减`,
+      };
+    }
+
+    return {
+      tone: 'warning',
+      text: '免费额度已用完，订阅后即可继续创作',
+    };
+  })();
+
+  const quotaBanner = (
+    <View className={`create-quota-banner create-quota-banner--${quotaBannerCopy.tone}`}>
+      <Text className="create-quota-banner__text">{quotaBannerCopy.text}</Text>
+      {isOutOfQuota ? (
+        <View
+          className="create-quota-banner__action"
+          onClick={openCreationPaywall}
+        >
+          <Text className="create-quota-banner__action-text">查看订阅</Text>
+        </View>
+      ) : null}
+    </View>
+  );
 
   const createWorkspace = (
     <CreationCreateWorkspace
       showSettings={!isCreateSessionActive}
+      topContent={quotaBanner}
       gameName={gameName}
       onGameNameChange={(e) => setGameName(e?.detail?.value || '')}
       orientation={orientation}
@@ -562,12 +671,9 @@ export default function Create() {
         setPrompt(nextValue);
       }}
       inputPlaceholder={activeCreateInputPlaceholder}
-      onPrimaryAction={handleCreateWorkspacePrimaryAction}
-      primaryActionLabel={isCreateSessionActive ? '确认并保存提示词' : '开始整理提示词'}
-      primaryActionDisabled={
-        creationSessionSubmitting
-        || (isCreateSessionActive ? !canEditCreatePrompt || !hasCreatePromptChanges : !canSendEntryPrompt)
-      }
+      onPrimaryAction={createPrimaryConfig.onClick}
+      primaryActionLabel={createPrimaryConfig.label}
+      primaryActionDisabled={createPrimaryConfig.disabled}
       secondaryActions={createWorkspaceSecondaryActions}
       errorMessage={entryErrorMessage}
       isSubmitting={creationSessionSubmitting}

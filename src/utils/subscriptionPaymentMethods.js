@@ -1,5 +1,3 @@
-export const DEFAULT_SUBSCRIPTION_PAYMENT_METHOD = 'alipay';
-
 export const SUBSCRIPTION_PAYMENT_OPTIONS = [
   {
     id: 'alipay',
@@ -17,13 +15,20 @@ export const SUBSCRIPTION_PAYMENT_OPTIONS = [
     label: '微信支付',
     shortLabel: '微信',
     statusLabel: '暂不可用',
-    description: '当前暂不支持微信支付。',
+    description: '即将支持，当前请使用支付宝完成支付。',
     actionLabel: '微信支付暂不可用',
     loadingLabel: '微信支付暂不可用',
     available: false,
     iconText: '微',
   },
 ];
+
+function getDefaultAvailablePaymentMethod() {
+  const firstAvailable = SUBSCRIPTION_PAYMENT_OPTIONS.find((option) => option.available);
+  return firstAvailable ? firstAvailable.id : SUBSCRIPTION_PAYMENT_OPTIONS[0]?.id || 'alipay';
+}
+
+export const DEFAULT_SUBSCRIPTION_PAYMENT_METHOD = getDefaultAvailablePaymentMethod();
 
 export function normalizeSubscriptionPaymentMethod(value) {
   return SUBSCRIPTION_PAYMENT_OPTIONS.some((option) => option.id === value)

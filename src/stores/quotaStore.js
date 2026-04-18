@@ -11,6 +11,7 @@ import {
   resolveSubscriptionPaymentAction,
 } from '../utils/paymentRuntime';
 import { isH5Runtime } from '../utils/runtime';
+import { toastError, toastInfo, toastSuccess } from '../utils/feedback';
 import { storage } from '../utils/storage';
 import {
   DEFAULT_SUBSCRIPTION_PAYMENT_METHOD,
@@ -402,7 +403,7 @@ const useQuotaStore = create((set, get) => ({
         stage: 'create_order',
         lastError: getErrorMessage(error),
       });
-      Taro.showToast({ title: getPaymentFailureMessage('create_order', error), icon: 'none' });
+      toastError(getPaymentFailureMessage('create_order', error));
       return false;
     }
 
@@ -425,7 +426,7 @@ const useQuotaStore = create((set, get) => ({
 
     if (!paymentAction) {
       set({ subscribing: false, subscribingPlanId: null });
-      Taro.showToast({ title: getPaymentFailureMessage('invalid_payment'), icon: 'none' });
+      toastError(getPaymentFailureMessage('invalid_payment'));
       return false;
     }
 
@@ -450,7 +451,7 @@ const useQuotaStore = create((set, get) => ({
           pendingPlayContext,
           lastError: getErrorMessage(error),
         });
-        Taro.showToast({ title: error?.message || '无法打开支付宝支付，请稍后重试', icon: 'none' });
+        toastError(error, '无法打开支付宝支付，请稍后重试');
         return false;
       }
 
@@ -462,7 +463,7 @@ const useQuotaStore = create((set, get) => ({
         subscribingPlanId: null,
       });
 
-      Taro.showToast({ title: '正在打开支付宝，请支付完成后返回', icon: 'none' });
+      toastInfo('正在打开支付宝，请支付完成后返回');
       return true;
     }
 
@@ -474,7 +475,7 @@ const useQuotaStore = create((set, get) => ({
       pendingPlayContext,
       lastError: getPaymentActionFailureMessage(paymentAction),
     });
-    Taro.showToast({ title: getPaymentActionFailureMessage(paymentAction), icon: 'none' });
+    toastError(getPaymentActionFailureMessage(paymentAction));
     return false;
   },
 
@@ -520,7 +521,7 @@ const useQuotaStore = create((set, get) => ({
       });
 
       if (!silent) {
-        Taro.showToast({ title: getOrderFailureMessage(orderStatus), icon: 'none' });
+        toastError(getOrderFailureMessage(orderStatus));
       }
 
       return false;
@@ -555,7 +556,7 @@ const useQuotaStore = create((set, get) => ({
       });
 
       if (!silent) {
-        Taro.showToast({ title: '订阅成功', icon: 'success' });
+        toastSuccess('订阅成功');
       }
 
       return true;
@@ -572,10 +573,7 @@ const useQuotaStore = create((set, get) => ({
       });
 
       if (!silent) {
-        Taro.showToast({
-          title: error?.message || '订阅已生效，请重新进入作品确认权益',
-          icon: 'none',
-        });
+        toastError(error, '订阅已生效，请重新进入作品确认权益');
       }
 
       return true;
