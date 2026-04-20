@@ -72,21 +72,21 @@ export function CreationCreateWorkspace({
   onInputChange,
   inputPlaceholder = '继续补充你的想法...',
   onPrimaryAction,
-  primaryActionLabel = '开始整理',
+  primaryActionLabel = '让 AI 整理一下',
   primaryActionDisabled = false,
   secondaryActions = [],
   errorMessage = '',
   isSubmitting = false,
   workspaceTitle = '说说你的想法',
-  workspaceHint = '先输入一句话，AI 会先扩写成一版完整提示词，再由你确认。',
-  introMessage = '先告诉我你想做什么，我会先帮你整理出一版完整提示词。',
+  workspaceHint = '先说一句话，AI 会帮你补成一版完整方向，你改改就能开始做。',
+  introMessage = '先告诉我你想做什么，我会整理出一版完整方向。',
   helperText = '',
-  loadingTitle = '正在整理并扩写你的想法',
-  loadingDescription = '通常只要几秒，AI 会先生成一版可编辑的提示词。',
+  loadingTitle = 'AI 正在把你的想法补成完整方向',
+  loadingDescription = '通常只要几秒，AI 会整理出一版你可以改的方向。',
   initialLabel = '你的初始想法',
   initialHint = '先描述玩法、主题或你想实现的感觉，越自然越好。',
-  draftLabel = 'AI 整理后的提示词',
-  draftHint = '你可以直接修改这段提示词；确认后才会真正开始生成。',
+  draftLabel = 'AI 整理出的方向',
+  draftHint = '你可以继续改这段方向，改完就能开始做。',
 }) {
   const hasSession = Boolean(session?.sessionId);
   const isInitializing = session?.status === 'initializing';
@@ -179,7 +179,7 @@ export function CreationCreateWorkspace({
         <View className="creation-session-card creation-create-settings">
           <View className="creation-create-settings__grid">
             <View className="creation-create-settings__field creation-create-settings__field--orientation">
-              <Text className="creation-create-settings__label">展示方向</Text>
+              <Text className="creation-create-settings__label">屏幕方向</Text>
               <View className="creation-create-orientation">
                 {orientationOptions.map((option) => {
                   const isActive = orientation === option.value;

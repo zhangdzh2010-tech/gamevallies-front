@@ -35,6 +35,7 @@ import { getGameOrientation } from '../../../utils/gameOrientation';
 import { getGameTypeLabel } from '../../../utils/gameTypes';
 import { getGameCoverUrl } from '../../../utils/media';
 import { isH5Runtime } from '../../../utils/runtime';
+import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
 import { buildGameDetailPath } from '../../../utils/share';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
@@ -66,15 +67,15 @@ function getUserFacingIterateError(rawError) {
   }
 
   if (/作品已经生成完成|加载结果失败|我的作品/i.test(source)) {
-    return '作品已经生成完成，请到“我的作品”查看';
+    return '作品已经生成完成，请到"我的作品"查看';
   }
 
   if (/canceled|cancelled|已取消/i.test(source)) {
-    return '优化任务已取消';
+    return '这次优化已取消';
   }
 
   if (/timeout|timed out|超时/i.test(source)) {
-    return '优化阶段处理超时，请稍后重试';
+    return '这次优化等了太久，请稍后再试';
   }
 
   return source;
@@ -478,14 +479,14 @@ export default function GameIteratePage() {
   const handleConfirmEditedIteratePrompt = async () => {
     const nextPromptDraft = sessionPromptDraft.trim();
     if (!nextPromptDraft) {
-      Taro.showToast({ title: '请先完善提示词', icon: 'none' });
+      Taro.showToast({ title: '请先把这一版方向写完整', icon: 'none' });
       return;
     }
 
     try {
       await confirmEditedPrompt(nextPromptDraft);
     } catch (err) {
-      Taro.showToast({ title: err?.message || '确认提示词失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: err?.message || '保存这版方向失败，请稍后重试', icon: 'none' });
     }
   };
 
@@ -561,7 +562,7 @@ export default function GameIteratePage() {
     try {
       await confirmCurrentPrompt();
     } catch (err) {
-      Taro.showToast({ title: err?.message || '确认当前提示词失败，请稍后重试', icon: 'none' });
+      Taro.showToast({ title: err?.message || '使用当前这版失败，请稍后重试', icon: 'none' });
     }
   };
 
@@ -592,7 +593,7 @@ export default function GameIteratePage() {
   const canEditIteratePrompt = Boolean(isIterateSessionActive && creationSessionUiState?.canEditPrompt);
   const canGenerateIterateSession = Boolean(isIterateSessionActive && creationSessionUiState?.canGenerate);
   const activeIterateInputPlaceholder = isIterateSessionActive
-    ? '在这里修改这一轮优化提示词...'
+    ? '在这里继续改这一轮优化的方向...'
     : '继续补充你这轮最想优化的部分...';
 
   const ensureIterateSession = async () => {
@@ -669,7 +670,7 @@ export default function GameIteratePage() {
 
   const renderIteratePage = (content, { workspaceLayout = false } = {}) => (
     <View className={containerClassName}>
-      <AppTopBar showBack rightText="任务" onRightClick={() => openProfilePageWithTab('tasks')} />
+      <AppTopBar showBack rightText="我的创作" onRightClick={() => openProfilePageWithTab('tasks')} />
       <PageScrollContainer
         className={`iterate-scroll${workspaceLayout ? ' iterate-scroll--workspace' : ''}`}
         style={scrollContainerStyle}
@@ -688,19 +689,19 @@ export default function GameIteratePage() {
   if (isBootstrapping) {
     return renderIteratePage(
       <CreationSessionShell
-        eyebrow="加载优化上下文"
+        eyebrow="正在准备"
         title="正在加载优化页面"
         subtitle="马上带你回到这款游戏的当前版本。"
         statusLabel="当前状态"
-        statusValue="准备中"
+        statusValue="正在准备"
         sections={[
           {
             key: 'iterate-bootstrapping',
             node: (
               <CreationStateCard
                 eyebrow="稍等一下"
-                title="正在准备作品和任务数据"
-                description="系统会先同步当前作品、版本信息和可能存在的进行中任务。"
+                title="正在准备作品数据"
+                description="我们会先把这款作品的当前版本和你没做完的创作一起拿回来。"
                 loading
               />
             ),
@@ -715,7 +716,7 @@ export default function GameIteratePage() {
       stages: PIPELINE_STAGES,
       stageIndex: 0,
       pct: 5,
-      stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
+      stageLabel: PIPELINE_STAGES[0]?.label || '收到想法',
       message: '正在接收你的优化需求',
     };
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
@@ -735,7 +736,7 @@ export default function GameIteratePage() {
                 stageLabel={currentStageLabel}
                 progressMessage={progress.message}
                 statusLabel={taskStatusLabel}
-                modeLabel="优化流程"
+                modeLabel="AI 正在优化"
                 coreLabel="AI 优化"
               />
             ),
@@ -744,12 +745,12 @@ export default function GameIteratePage() {
             key: 'iterate-progress-actions',
             node: (
               <CreationSessionActions
-                title="任务操作"
-                hint="如果这轮方向不对，可以先取消任务，再重新发起新的优化会话。"
+                title="本轮操作"
+                hint="如果这次方向跑偏，可以先停掉，再说一次你想怎么改。"
                 actions={[
                   {
                     key: 'cancel-iterate-task',
-                    label: '取消任务',
+                    label: '先停下',
                     tone: 'danger',
                     onClick: handleCancelTask,
                   },
@@ -761,9 +762,9 @@ export default function GameIteratePage() {
             key: 'iterate-progress-notice',
             node: (
               <CreationStateCard
-                eyebrow="同步说明"
-                title="任务记录会自动同步到个人中心"
-                description="完成后你可以先试玩新版本，再决定是否继续下一轮优化。"
+                eyebrow="小贴士"
+                title="这次优化会自动保存到个人中心"
+                description="完成后你可以先试玩新版本，再看要不要再改一版。"
               />
             ),
           },
@@ -779,7 +780,7 @@ export default function GameIteratePage() {
         title="还没有可优化的作品"
         subtitle="请从“我的作品”里选择一款已经生成完成的游戏进入优化。"
         statusLabel="当前状态"
-        statusValue="缺少底稿"
+        statusValue="没有选作品"
         sections={[
           {
             key: 'iterate-missing-game',
@@ -787,8 +788,8 @@ export default function GameIteratePage() {
               <CreationStateCard
                 tone="danger"
                 eyebrow="需要先选作品"
-                title="当前入口没有挂上作品数据"
-                description={pageError || '请从“我的作品”里选择一款已生成完成的游戏，再继续优化。'}
+                title="这次进来没带上具体作品"
+                description={pageError || '请从"我的作品"里选择一款已生成完成的游戏，再继续优化。'}
               />
             ),
           },
@@ -797,7 +798,7 @@ export default function GameIteratePage() {
             node: (
               <CreationSessionActions
                 title="下一步"
-                hint="回到作品列表后，从目标作品的优化入口重新进入。"
+                hint='回到作品列表，点你想修改的那款作品上的"优化"按钮。'
                 actions={[
                   {
                     key: 'go-profile-works',
@@ -829,10 +830,10 @@ export default function GameIteratePage() {
 
   const iterateReferenceCard = (
     <CreationReferenceCard
-      eyebrow="当前底稿"
+      eyebrow="基于这一版"
       title={currentGame?.title || '未命名作品'}
       badge="这次优化会基于这一版继续生成"
-      description={currentGame?.description || '这一版作品会作为本轮优化的起点。'}
+      description={sanitizeUserIdea(currentGame?.description) || '这一版作品会作为本轮优化的起点。'}
       metadata={metadataItems}
     />
   );
@@ -855,7 +856,7 @@ export default function GameIteratePage() {
     if (canConfirmCurrentIteratePrompt) {
       actions.push({
         key: 'confirm-current-iterate-prompt',
-        label: '直接使用当前提示词',
+        label: '直接用这一版',
         onClick: handleConfirmCurrentIteratePrompt,
         disabled: creationSessionSubmitting,
       });
@@ -898,7 +899,7 @@ export default function GameIteratePage() {
       }}
       inputPlaceholder={activeIterateInputPlaceholder}
       onPrimaryAction={handleIterateWorkspacePrimaryAction}
-      primaryActionLabel={isIterateSessionActive ? '确认并保存提示词' : '开始整理优化提示词'}
+      primaryActionLabel={isIterateSessionActive ? '确认这版方向' : '让 AI 整理一下方向'}
       primaryActionDisabled={
         creationSessionSubmitting
         || (isIterateSessionActive ? !canEditIteratePrompt || !hasIteratePromptChanges : !canStartIterateSession)
@@ -906,22 +907,22 @@ export default function GameIteratePage() {
       secondaryActions={iterateWorkspaceSecondaryActions}
       errorMessage={iterateWorkspaceError}
       isSubmitting={creationSessionSubmitting}
-      workspaceTitle={isIterateSessionActive ? '确认这轮优化提示词' : '说说这轮想怎么优化'}
+      workspaceTitle={isIterateSessionActive ? '确认这一版要改的方向' : '说说这轮想怎么改'}
       workspaceHint={isIterateSessionActive
-        ? 'AI 已经整理出一版优化提示词。你可以先修改确认，再开始真正生成。'
-        : '先描述这一轮最想优化的地方，AI 会先扩写成一版提示词，再由你确认。'}
-      introMessage="先告诉我这轮最想优化哪里，我会先帮你整理出一版完整提示词。"
+        ? 'AI 根据你说的，整理出下面这段方向。你可以改改，觉得合适就开始。'
+        : '先描述这一轮最想改的地方，AI 会帮你补成一版完整方向，你改改就能开始。'}
+      introMessage="先告诉我这轮最想改哪里，我会整理出一版完整方向。"
       helperText={isIterateSessionActive
-        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这版优化提示词。')
+        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这一版方向。')
         : ''}
-      loadingTitle="正在整理并扩写这一轮优化方向"
-      loadingDescription="完成后你会先看到一版可编辑提示词，确认后才会真正开始优化生成。"
-      initialLabel="这轮优化方向"
-      initialHint="可以描述你想调整的节奏、手感、美术或目标用户体验。"
-      draftLabel="优化提示词"
+      loadingTitle="AI 正在把你说的想法补成完整方向"
+      loadingDescription="通常只要几秒，AI 会整理出一版你可以改的方向。"
+      initialLabel="这轮想改的方向"
+      initialHint="可以描述你想调整的节奏、手感、美术或想让它更适合谁玩。"
+      draftLabel="AI 整理出的方向"
       draftHint={creationSession?.status === 'ready'
-        ? '这版提示词已经确认。你仍然可以继续修改并再次保存。'
-        : '你可以直接修改这段提示词，也可以直接使用当前版本。'}
+        ? '这版方向已经确认。你仍然可以继续改，再次保存。'
+        : '你可以继续改这段方向，也可以直接用现在这一版。'}
     />
   );
 
@@ -936,7 +937,7 @@ export default function GameIteratePage() {
               <CreationStateCard
                 tone={canPlay ? 'success' : 'warning'}
                 centered
-                eyebrow={canPlay ? '已就绪' : '待解锁'}
+                eyebrow={canPlay ? '搞定' : '待解锁'}
                 title={currentGame?.title || '优化后的作品'}
                 description={canPlay
                   ? '现在可以直接试玩这版结果，也可以继续追加新的优化方向。'
@@ -949,7 +950,7 @@ export default function GameIteratePage() {
             node: (
               <CreationSessionActions
                 title="下一步"
-                hint="如果这版已经接近你想要的效果，可以先试玩；如果还想继续改，可以直接开始下一轮。"
+                hint="如果这版已经接近你想要的效果，可以先试玩；如果还想继续改，可以直接再改一版。"
                 actions={[
                   canPlay
                     ? {

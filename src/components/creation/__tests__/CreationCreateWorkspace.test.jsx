@@ -72,7 +72,7 @@ describe('CreationCreateWorkspace', () => {
       />
     );
 
-    expect(screen.getByText('AI 整理后的提示词')).toBeTruthy();
+    expect(screen.getByText('AI 整理出的方向')).toBeTruthy();
     expect(screen.getByText('Please confirm or edit the prompt.')).toBeTruthy();
     expect(screen.getByText('最初输入')).toBeTruthy();
   });
@@ -91,7 +91,7 @@ describe('CreationCreateWorkspace', () => {
       />
     );
 
-    expect(screen.getByText('正在整理并扩写你的想法')).toBeTruthy();
-    expect(screen.queryByText('AI 整理后的提示词')).toBeNull();
+    expect(screen.getByText('AI 正在把你的想法补成完整方向')).toBeTruthy();
+    expect(screen.queryByText('AI 整理出的方向')).toBeNull();
   });
 });

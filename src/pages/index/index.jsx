@@ -409,10 +409,10 @@ export default function Home() {
   };
 
   const activeTypeLabel = gameTypeTabs.find((tab) => tab.key === activeType)?.label || '全部';
-  const feedSectionEyebrow = activeType === 'all' ? 'TOP PICKS' : activeTypeLabel;
+  const feedSectionEyebrow = activeType === 'all' ? '精选推荐' : activeTypeLabel;
   const feedSectionTitle = activeType === 'all'
-    ? '这批作品，个个能打'
-    : `${activeTypeLabel}里最能打的在这`;
+    ? '这一批值得一玩'
+    : `${activeTypeLabel}里的精选作品`;
   const heroGames = games.slice(0, 3);
   // Real masonry distribution: greedily place each card into the currently shortest
   // column using an estimated pixel height. Falls back to round-robin when items
@@ -458,12 +458,12 @@ export default function Home() {
             <View className="home-ribbon__brand-icon" />
           </View>
           <View className="home-ribbon__center">
-            <Text className="home-ribbon__eyebrow">AI Game Atelier</Text>
+            <Text className="home-ribbon__eyebrow">AI 游戏工坊</Text>
             <Text className="home-ribbon__title">{activeType === 'all' ? '灵感剧场' : activeTypeLabel}</Text>
           </View>
           <View className="home-ribbon__pulse">
             <View className="home-ribbon__pulse-dot" />
-            <Text className="home-ribbon__pulse-text">Live</Text>
+            <Text className="home-ribbon__pulse-text">在创作</Text>
           </View>
         </View>
 
@@ -473,16 +473,16 @@ export default function Home() {
             <View className="challenge-header-row">
               <View className="challenge-kicker-wrap">
                 <View className="challenge-kicker-dot" />
-                <Text className="challenge-kicker">AI创作</Text>
+                <Text className="challenge-kicker">AI 创作</Text>
               </View>
               <View className="challenge-floating-tag">
-                <Text className="challenge-floating-tag__text">构想 Idea</Text>
+                <Text className="challenge-floating-tag__text">新想法</Text>
               </View>
             </View>
 
             <Text className="challenge-title">把脑海里的想法，马上做出来</Text>
             <Text className="challenge-desc">
-              用 AI 把灵感、规则和画面快速组装成可玩的作品，让首页先像一张情绪海报，再把内容顺着节奏铺开。
+              用 AI 把脑子里的点子、玩法和画面一起做成游戏，几分钟就能做出能玩的第一版。
             </Text>
 
             <View className="challenge-footer-row">
@@ -544,8 +544,8 @@ export default function Home() {
           <Text className="feed-section-header__title">{feedSectionTitle}</Text>
         </View>
         <View className="feed-section-header__meta" onClick={handleRefresh}>
-          <Text className="feed-section-header__meta-value">{games.length > 0 ? `${games.length} 款` : '刷新'}</Text>
-          <Text className="feed-section-header__meta-label">{games.length > 0 ? '本屏内容' : '重新加载'}</Text>
+          <Text className="feed-section-header__meta-value">{games.length > 0 ? `共 ${games.length} 款` : '刷新'}</Text>
+          <Text className="feed-section-header__meta-label">{games.length > 0 ? '点击刷新' : '重新加载'}</Text>
         </View>
       </View>
 
@@ -560,7 +560,7 @@ export default function Home() {
         </View>
       ) : games.length === 0 ? (
         <View className="loading-state loading-state--empty">
-          <Text className="loading-text">还没有灵感内容，点击上方 Banner 先做第一款作品吧。</Text>
+          <Text className="loading-text">还没有作品。点击上方"现在开始"，做你的第一款作品。</Text>
         </View>
       ) : (
         <View className="poster-waterfall">

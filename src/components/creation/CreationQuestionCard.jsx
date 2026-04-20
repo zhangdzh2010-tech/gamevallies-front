@@ -7,7 +7,7 @@ export function CreationQuestionCard({
   title = '当前问题',
   hint = '每次只问一个最值得确认的问题。',
   question,
-  emptyText = '当前没有需要追问的问题，可以直接进入生成。',
+  emptyText = '没有需要继续确认的问题，可以直接开始做了。',
 }) {
   return (
     <View className="creation-session-card creation-question-card">

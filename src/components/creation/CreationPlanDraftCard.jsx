@@ -20,10 +20,10 @@ function formatStructuredValue(value) {
 }
 
 export function CreationPlanDraftCard({
-  title = '方案草稿',
-  hint = '这是系统当前整理出的理解，你可以继续补充或纠偏。',
+  title = '当前方向',
+  hint = '这是 AI 目前整理出的方向，你可以继续补充或改。',
   draft,
-  emptyText = '系统还在整理本轮方案草稿。',
+  emptyText = 'AI 还在整理，稍等一下。',
 }) {
   const draftText = formatStructuredValue(draft);
 

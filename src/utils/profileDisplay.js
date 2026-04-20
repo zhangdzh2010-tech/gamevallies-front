@@ -52,6 +52,13 @@ export function isSuspiciousProfileText(value) {
     return true;
   }
 
+  // H.7.1 - 兜底裸 WeChat openid / unionid 前缀（如 wx_vw-sxsiex8 / wxopenid_xxx）
+  // 只要以 wx_ / wxopenid_ / wxunionid_ / openid_ / unionid_ / oauth_ 开头，
+  // 后接的全是 ASCII 字母数字下划线连字符点号，就视为系统占位昵称。
+  if (/^(wx_|wxopenid_|wxunionid_|openid_|unionid_|oauth_)[A-Za-z0-9_.\-]+$/.test(trimmed)) {
+    return true;
+  }
+
   return false;
 }
 

@@ -16,10 +16,10 @@ function getRoleLabel(role) {
 }
 
 export function CreationConversationList({
-  title = '最近对话',
-  hint = '保留最近几轮上下文，方便回看。',
+  title = '最近几轮',
+  hint = '留下最近几轮记录，方便你回看。',
   messages = [],
-  emptyText = '当前还没有会话内容。',
+  emptyText = '还没有聊过，直接在下面写下你的想法就行。',
 }) {
   return (
     <View className="creation-session-card">

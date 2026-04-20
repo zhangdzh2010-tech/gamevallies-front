@@ -784,14 +784,14 @@ describe('gameStore creation session actions', () => {
       stageKey: 'logic_generate',
       displayStageKey: 'generating',
       stageIndex: 2,
-      stageLabel: '生成内容',
-      message: '正在生成游戏内容与交互逻辑',
+      stageLabel: '搭建游戏',
+      message: '正在把玩法一步步写出来',
     }));
     expect(useGameStore.getState().generationProgress.stages).toEqual([
-      { key: 'submitting', label: '提交需求', pct: 5 },
-      { key: 'planning', label: '梳理方案', pct: 30 },
-      { key: 'generating', label: '生成内容', pct: 60 },
-      { key: 'qa', label: '质量检查', pct: 92 },
+      { key: 'submitting', label: '收到想法', pct: 5 },
+      { key: 'planning', label: '整理玩法想法', pct: 30 },
+      { key: 'generating', label: '搭建游戏', pct: 60 },
+      { key: 'qa', label: '自检一下手感', pct: 92 },
       { key: 'completed', label: '完成', pct: 100 },
     ]);
   });
@@ -818,10 +818,10 @@ describe('gameStore creation session actions', () => {
       pct: 47,
     }));
     expect(useGameStore.getState().generationProgress.stages).toEqual([
-      { key: 'submitting', label: '提交需求', pct: 5 },
-      { key: 'planning', label: '梳理方案', pct: 30 },
-      { key: 'generating', label: '生成内容', pct: 60 },
-      { key: 'qa', label: '质量检查', pct: 92 },
+      { key: 'submitting', label: '收到想法', pct: 5 },
+      { key: 'planning', label: '整理玩法想法', pct: 30 },
+      { key: 'generating', label: '搭建游戏', pct: 60 },
+      { key: 'qa', label: '自检一下手感', pct: 92 },
       { key: 'completed', label: '完成', pct: 100 },
     ]);
   });
