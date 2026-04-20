@@ -314,10 +314,10 @@ function formatTaskTime(timestamp) {
 
 function getActiveTaskStageLabel(progressPct) {
   const pct = Number(progressPct) || 0;
-  if (pct < 10) return '提交需求';
-  if (pct < 35) return '梳理方案';
-  if (pct < 70) return '生成内容';
-  if (pct < 95) return '质量检查';
+  if (pct < 10) return '收到想法';
+  if (pct < 35) return '整理玩法想法';
+  if (pct < 70) return '搭建游戏';
+  if (pct < 95) return '自检一下手感';
   return '即将完成';
 }
 
@@ -423,15 +423,15 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       iconKey: 'optimize',
       tone: 'optimize',
       label: '优化游戏',
-      desc: '继续完善玩法、文案和交互体验',
+      desc: '继续改玩法、文字和手感',
       onClick: onOptimize,
     },
     {
       key: 'settings',
       iconKey: 'settings',
       tone: 'settings',
-      label: '权限设置',
-      desc: '管理可见范围、评论和复刻权限',
+      label: '可见性和评论',
+      desc: '管理谁能看、谁能复刻',
       onClick: onSettings,
     },
     {
@@ -500,8 +500,8 @@ function VisibilityModal({ game, onClose, onSave }) {
       <View className="visibility-modal" onClick={(e) => e.stopPropagation()}>
         <View className="visibility-modal__header">
           <View className="visibility-modal__copy">
-            <Text className="modal-title">权限设置</Text>
-            <Text className="modal-subtitle">管理谁可以看到这款作品，以及评论和复刻权限。</Text>
+            <Text className="modal-title">可见性和评论</Text>
+            <Text className="modal-subtitle">管理谁可以看到这款作品，以及是否允许评论和复刻。</Text>
           </View>
           <View className="modal-close-btn" onClick={onClose}>
             <Text>×</Text>
@@ -1295,13 +1295,13 @@ export default function Profile() {
     { key: 'drafts',    label: '草稿', count: draftGames.length },
     { key: 'liked',     label: '点赞', count: likedGames.length || null },
     { key: 'bookmarks', label: '收藏', count: normalizedBookmarkedGames.length || null },
-    { key: 'tasks',     label: '任务', count: trackedTasks.length || null },
+    { key: 'tasks',     label: '未完成', count: trackedTasks.length || null },
   ];
 
   const stats = [
     { value: formatNumber(profile.totalLikes), label: '获赞' },
     { value: formatNumber(profile.following), label: '关注' },
-    { value: formatNumber(trackedTasks.length), label: '分析' },
+    { value: formatNumber(trackedTasks.length), label: '未完成' },
     { value: formatNumber(normalizedBookmarkedGames.length), label: '收藏' },
   ];
   const quotaSummary = getQuotaSummary({ freeQuota, totalFreeQuota, subscription });

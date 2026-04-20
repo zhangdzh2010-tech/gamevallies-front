@@ -6,7 +6,7 @@ import './CreationSession.scss';
 export function CreationSessionShell({
   eyebrow = '开始创作',
   title = '和 AI 一起把想法说清楚',
-  subtitle = '先把方向聊明白，再决定继续补充还是直接进入生成。',
+  subtitle = '先把方向聊明白，再决定继续补充还是直接开做。',
   statusLabel = '',
   statusValue = '',
   sections = [],

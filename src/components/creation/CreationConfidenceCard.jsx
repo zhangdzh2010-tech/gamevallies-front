@@ -30,11 +30,11 @@ function toMetaItems(confidenceSummary, questionStrategy) {
 }
 
 export function CreationConfidenceCard({
-  title = '理解与追问',
-  hint = '帮助用户理解系统目前已经掌握了什么，以及为什么继续追问。',
+  title = 'AI 听懂了什么',
+  hint = '下面是 AI 目前理解到的要点，以及它想继续问你的原因。',
   confidenceSummary,
   questionStrategy,
-  emptyText = '当前还没有可展示的理解摘要。',
+  emptyText = 'AI 还在整理，稍等一下。',
 }) {
   const items = toMetaItems(confidenceSummary, questionStrategy);
 

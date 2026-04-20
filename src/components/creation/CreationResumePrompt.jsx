@@ -5,9 +5,9 @@ import { CreationSessionActions } from './CreationSessionActions';
 
 export function CreationResumePrompt({
   title = '上次未完成的创作',
-  hint = '检测到一条仍在进行中的会话。',
+  hint = '你上次的创作还没结束。',
   prompt = '继续这轮创作，或者换一个新方向重新开始。',
-  description = '继续会回到上次的方案和追问；重新开始会结束旧会话，再按你这次的新方向整理。',
+  description = '继续会回到上次的方向和追问；重新开始会丢掉那一轮，按你这次的新方向整理。',
   continueLabel = '继续上次创作',
   restartLabel = '开始新的创作',
   submitting = false,

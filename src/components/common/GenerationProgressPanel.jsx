@@ -44,7 +44,7 @@ export function GenerationProgressPanel({
   stageLabel = '',
   progressMessage = '',
   statusLabel = '',
-  modeLabel = '创作流程',
+  modeLabel = 'AI 正在创作',
   coreLabel = 'AI 创作',
 }) {
   const isH5 = isH5Runtime();
@@ -52,8 +52,8 @@ export function GenerationProgressPanel({
   const stageCount = safeStages.length || 1;
   const activeIndex = clampIndex(currentIndex, Math.max(stageCount - 1, 0));
   const pct = clampPercent(progressPct);
-  const activeStageLabel = stageLabel || safeStages[activeIndex]?.label || '处理中';
-  const activeStatusLabel = statusLabel || '执行中';
+  const activeStageLabel = stageLabel || safeStages[activeIndex]?.label || '正在处理';
+  const activeStatusLabel = statusLabel || 'AI 正在做';
   const orbitRadiusX = isH5 ? (stageCount >= 8 ? 108 : 116) : (stageCount >= 8 ? 144 : 154);
   const orbitRadiusY = isH5 ? (stageCount >= 8 ? 82 : 96) : (stageCount >= 8 ? 110 : 122);
 
@@ -107,23 +107,19 @@ export function GenerationProgressPanel({
           <Text className="generation-progress-panel__core-pct">{pct}%</Text>
           <Text className="generation-progress-panel__core-stage">{activeStageLabel}</Text>
           <Text className="generation-progress-panel__core-message">
-            {progressMessage || '请稍候'}
+            {progressMessage || '正在做，请等一下'}
           </Text>
         </View>
       </View>
 
       <View className="generation-progress-panel__metrics">
         <View className="generation-progress-panel__metric">
-          <Text className="generation-progress-panel__metric-label">阶段</Text>
+          <Text className="generation-progress-panel__metric-label">当前步骤</Text>
           <Text className="generation-progress-panel__metric-value">{`${activeIndex + 1}/${stageCount}`}</Text>
         </View>
         <View className="generation-progress-panel__metric">
-          <Text className="generation-progress-panel__metric-label">进度</Text>
+          <Text className="generation-progress-panel__metric-label">完成度</Text>
           <Text className="generation-progress-panel__metric-value">{`${pct}%`}</Text>
-        </View>
-        <View className="generation-progress-panel__metric">
-          <Text className="generation-progress-panel__metric-label">状态</Text>
-          <Text className="generation-progress-panel__metric-value">{activeStatusLabel}</Text>
         </View>
       </View>
     </View>

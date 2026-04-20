@@ -14,23 +14,23 @@ export function getCreationSessionNotice(status, entryMode = 'create', session =
       : '创作';
 
   if (status === 'initializing') {
-    return `AI 正在整理这一轮${modeLabel}想法，通常几秒内就会给出第一版提示词。`;
+    return `AI 正在整理这一轮${modeLabel}的想法，通常几秒内就会给出第一版方向。`;
   }
 
   if (status === 'collecting') {
-    return `AI 已经整理出一版可编辑提示词。你可以先修改确认，再开始这轮${modeLabel}。`;
+    return `AI 已经整理出一版可以改的方向。你可以先改一改再确认，然后开始这次${modeLabel}。`;
   }
 
   if (status === 'ready') {
-    return `当前提示词已经确认，可以直接开始${modeLabel}；如果还想调整，也可以继续编辑后再次确认。`;
+    return `这版方向已经确认，可以直接开始${modeLabel}；想再调整的话也可以继续改，再次确认就行。`;
   }
 
   if (status === 'failed') {
-    return `这轮${modeLabel}会话遇到了异常，建议重新开始，避免沿用不完整的上下文。`;
+    return `这次${modeLabel}过程中出了点问题，建议重新开始，避免接着用不完整的方向。`;
   }
 
   if (status === 'expired') {
-    return `这轮${modeLabel}会话已经过期，请重新开始，系统会按最新输入重新整理方向。`;
+    return `这次${modeLabel}已经过期了，请重新开始，AI 会按你最新的想法重新整理方向。`;
   }
 
   if (status === 'abandoned') {
@@ -38,13 +38,13 @@ export function getCreationSessionNotice(status, entryMode = 'create', session =
 
     if (initError) {
       if (/timeout|超时/i.test(initError)) {
-        return `${modeLabel}会话初始化超时了，请重新开始。`;
+        return `这次${modeLabel}启动超时了，请重新开始。`;
       }
 
       return initError;
     }
 
-    return `这轮${modeLabel}会话已经结束，如需继续请重新发起新的会话。`;
+    return `这次${modeLabel}已经结束，如需继续请重新开始一次。`;
   }
 
   return '';

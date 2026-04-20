@@ -29,6 +29,7 @@ import {
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
 import { isH5Runtime } from '../../../utils/runtime';
+import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
 import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
@@ -68,11 +69,11 @@ function getUserFacingForkError(rawError) {
   }
 
   if (/canceled|cancelled|已取消/i.test(source)) {
-    return '复刻任务已取消';
+    return '这次复刻已取消';
   }
 
   if (/timeout|timed out|超时/i.test(source)) {
-    return '复刻阶段处理超时，请稍后重试';
+    return '这次复刻等了太久，请稍后再试';
   }
 
   return source;
@@ -263,14 +264,14 @@ export default function GameForkPage() {
   const handleConfirmEditedForkPrompt = async () => {
     const nextPromptDraft = sessionPromptDraft.trim();
     if (!nextPromptDraft) {
-      Taro.showToast({ title: '请先完善提示词', icon: 'none' });
+      Taro.showToast({ title: '请先把这一版方向写完整', icon: 'none' });
       return;
     }
 
     try {
       await confirmEditedPrompt(nextPromptDraft);
     } catch (error) {
-      Taro.showToast({ title: error?.message || '确认提示词失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '保存这版方向失败，请重试', icon: 'none' });
     }
   };
 
@@ -346,7 +347,7 @@ export default function GameForkPage() {
     try {
       await confirmCurrentPrompt();
     } catch (error) {
-      Taro.showToast({ title: error?.message || '确认当前提示词失败，请重试', icon: 'none' });
+      Taro.showToast({ title: error?.message || '使用当前这版失败，请重试', icon: 'none' });
     }
   };
 
@@ -386,7 +387,7 @@ export default function GameForkPage() {
   const canEditForkPrompt = Boolean(isForkSessionActive && creationSessionUiState?.canEditPrompt);
   const canGenerateForkSession = Boolean(isForkSessionActive && creationSessionUiState?.canGenerate);
   const activeForkInputPlaceholder = isForkSessionActive
-    ? '在这里修改这次复刻提示词...'
+    ? '在这里继续改这次复刻的方向...'
     : '继续补充你想保留和改变的部分...';
 
   const ensureForkSession = async () => {
@@ -480,11 +481,11 @@ export default function GameForkPage() {
   if (isLoading) {
     return renderForkPage(
       <CreationSessionShell
-        eyebrow="加载复刻上下文"
+        eyebrow="正在准备"
         title="正在准备复刻页面"
         subtitle="马上展示这款作品的当前信息。"
         statusLabel="当前状态"
-        statusValue="准备中"
+        statusValue="正在准备"
         sections={[
           {
             key: 'fork-loading',
@@ -492,7 +493,7 @@ export default function GameForkPage() {
               <CreationStateCard
                 eyebrow="稍等一下"
                 title="正在加载作品详情"
-                description="系统会先确认原作品信息、作者权限和可复刻状态。"
+                description="我们先确认一下原作品的信息和作者是否开放了复刻。"
                 loading
               />
             ),
@@ -505,20 +506,41 @@ export default function GameForkPage() {
   if (!sourceGame) {
     return renderForkPage(
       <CreationSessionShell
-        eyebrow="暂时无法继续"
-        title="暂时无法复刻这款作品"
-        subtitle="请返回详情页后重新进入，或稍后再试。"
+        eyebrow="没找到这款作品"
+        title="没找到这款作品"
+        subtitle="可能链接过期了，或者这款作品暂时下线了。"
         statusLabel="当前状态"
-        statusValue="加载失败"
+        statusValue="没找到"
         sections={[
           {
             key: 'fork-missing-source',
             node: (
               <CreationStateCard
                 tone="danger"
-                eyebrow="原作缺失"
-                title="没有拿到作品数据"
-                description={pageError || '请返回作品详情页后重试。'}
+                eyebrow="没找到这款作品"
+                title="原作品信息没拿到"
+                description={pageError || '可以回到作品列表，或者从你自己的"我的作品"里选一款继续改。'}
+              />
+            ),
+          },
+          {
+            key: 'fork-missing-actions',
+            node: (
+              <CreationSessionActions
+                title="下一步"
+                actions={[
+                  {
+                    key: 'fork-missing-go-home',
+                    label: '回到首页',
+                    tone: 'primary',
+                    onClick: () => Taro.switchTab({ url: '/pages/index/index' }).catch(() => Taro.redirectTo({ url: '/pages/index/index' })),
+                  },
+                  {
+                    key: 'fork-missing-go-profile',
+                    label: '去我的作品',
+                    onClick: () => Taro.switchTab({ url: '/pages/profile/index' }).catch(() => Taro.redirectTo({ url: '/pages/profile/index' })),
+                  },
+                ]}
               />
             ),
           },
@@ -532,7 +554,7 @@ export default function GameForkPage() {
       stages: PIPELINE_STAGES,
       stageIndex: 0,
       pct: 5,
-      stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
+      stageLabel: PIPELINE_STAGES[0]?.label || '收到想法',
       message: '正在接收你的复刻需求',
     };
     const taskStatusLabel = TASK_STATUS_LABELS[currentTask?.status] || '执行中';
@@ -552,7 +574,7 @@ export default function GameForkPage() {
                 stageLabel={currentStageLabel}
                 progressMessage={progress.message}
                 statusLabel={taskStatusLabel}
-                modeLabel="复刻流程"
+                modeLabel="AI 正在复刻"
                 coreLabel="AI 复刻"
               />
             ),
@@ -561,12 +583,12 @@ export default function GameForkPage() {
             key: 'fork-progress-actions',
             node: (
               <CreationSessionActions
-                title="任务操作"
-                hint="如果这轮方向不对，可以先取消任务，再重新发起新的复刻会话。"
+                title="本轮操作"
+                hint="如果这次方向跑偏，可以先停掉，再说一遍你想怎么改。"
                 actions={[
                   {
                     key: 'cancel-fork-task',
-                    label: '取消任务',
+                    label: '先停下',
                     tone: 'danger',
                     onClick: handleCancelTask,
                   },
@@ -578,8 +600,8 @@ export default function GameForkPage() {
             key: 'fork-progress-notice',
             node: (
               <CreationStateCard
-                eyebrow="同步说明"
-                title="新的版本生成后会自动进入你的创作链路"
+                eyebrow="小贴士"
+                title="复刻出来的新版本会自动放进你的作品里"
                 description="完成后你可以继续优化这版新作品，或者回到详情页查看结果。"
               />
             ),
@@ -600,7 +622,7 @@ export default function GameForkPage() {
               <CreationStateCard
                 tone="success"
                 centered
-                eyebrow="已就绪"
+                eyebrow="搞定"
                 title={currentGame?.title || '新版本作品'}
                 description="现在可以继续打磨、验证玩法，或者进入详情页查看。"
               />
@@ -611,7 +633,7 @@ export default function GameForkPage() {
             node: (
               <CreationSessionActions
                 title="下一步"
-                hint="你可以继续把这版作品迭代下去。"
+                hint="你可以继续在这版上接着改。"
                 actions={[
                   {
                     key: 'continue-iterate-fork-result',
@@ -643,13 +665,13 @@ export default function GameForkPage() {
 
   const sourceReferenceCard = (
     <CreationReferenceCard
-      eyebrow="原作品参考"
+      eyebrow="基于这款作品"
       title={sourceGame?.title || '未命名游戏'}
       badge={authorName}
-      description={sourceGame?.description || '你可以基于这版作品做出全新的方向。'}
+      description={sanitizeUserIdea(sourceGame?.description) || '你可以基于这版作品做出全新的方向。'}
       metadata={[
-        { label: '题材归属', value: isOwnGame ? '这是你的作品' : '来自社区作品' },
-        { label: '复刻权限', value: canForkGame ? '允许复刻' : '当前不可复刻' },
+        { label: '来源', value: isOwnGame ? '这是你的作品' : '社区作品' },
+        { label: '作者设置', value: canForkGame ? '可以复刻' : '暂不开放' },
       ]}
       metrics={statItems}
     />
@@ -673,7 +695,7 @@ export default function GameForkPage() {
     if (canConfirmCurrentForkPrompt) {
       actions.push({
         key: 'confirm-current-fork-prompt',
-        label: '直接使用当前提示词',
+        label: '直接用这一版',
         onClick: handleConfirmCurrentForkPrompt,
         disabled: creationSessionSubmitting,
       });
@@ -716,7 +738,7 @@ export default function GameForkPage() {
       }}
       inputPlaceholder={activeForkInputPlaceholder}
       onPrimaryAction={handleForkWorkspacePrimaryAction}
-      primaryActionLabel={isForkSessionActive ? '确认并保存提示词' : '开始整理复刻提示词'}
+      primaryActionLabel={isForkSessionActive ? '确认这版方向' : '让 AI 整理一下方向'}
       primaryActionDisabled={
         creationSessionSubmitting
         || (isForkSessionActive ? !canEditForkPrompt || !hasForkPromptChanges : !canStartForkSession)
@@ -730,22 +752,22 @@ export default function GameForkPage() {
         || ''
       )}
       isSubmitting={creationSessionSubmitting}
-      workspaceTitle={isForkSessionActive ? '确认这次复刻提示词' : '说说这次想怎么改'}
+      workspaceTitle={isForkSessionActive ? '确认这次复刻的方向' : '说说这次想怎么改'}
       workspaceHint={isForkSessionActive
-        ? 'AI 已经整理出一版复刻提示词。你可以先修改确认，再开始真正生成。'
-        : '先描述你想保留什么、改变什么，AI 会先扩写成一版提示词，再由你确认。'}
-      introMessage="先告诉我你想保留什么、改变什么，我会先帮你整理出一版完整提示词。"
+        ? 'AI 根据你说的，整理出下面这段方向。你可以改改，觉得合适就开始。'
+        : '先说说你想保留什么、改掉什么，AI 会帮你补成一版完整方向，你改改就能开始。'}
+      introMessage="先告诉我你想保留什么、改掉什么，我会整理出一版完整方向。"
       helperText={isForkSessionActive
-        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这版复刻提示词。')
+        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这一版方向。')
         : ''}
-      loadingTitle="正在整理并扩写这次复刻方向"
-      loadingDescription="完成后你会先看到一版可编辑提示词，确认后才会真正开始生成。"
+      loadingTitle="AI 正在把你说的想法补成完整方向"
+      loadingDescription="通常只要几秒，AI 会整理出一版你可以改的方向。"
       initialLabel="复刻方向"
-      initialHint="可以描述你想保留的核心、想改变的体验、风格或目标玩家。"
-      draftLabel="复刻提示词"
+      initialHint="可以描述你想保留的核心、想改变的体验、风格或想让它更适合谁玩。"
+      draftLabel="AI 整理出的复刻方向"
       draftHint={creationSession?.status === 'ready'
-        ? '这版提示词已经确认。你仍然可以继续修改并再次保存。'
-        : '你可以直接修改这段提示词，也可以直接使用当前版本。'}
+        ? '这版方向已经确认。你仍然可以继续改，再次保存。'
+        : '你可以继续改这段方向，也可以直接用现在这一版。'}
     />
   );
 
@@ -753,22 +775,22 @@ export default function GameForkPage() {
     return renderForkPage(
       <>
         <CreationSessionShell
-          eyebrow="当前不可复刻"
-          title={isOwnGame ? '这是你自己的作品' : '作者暂未开放复刻'}
-          subtitle={isOwnGame ? '对自己的作品直接走优化链路会更合适。' : '这款作品目前不能基于原作生成新版本。'}
+          eyebrow={isOwnGame ? '这是你的作品' : '暂时无法开始'}
+          title={isOwnGame ? '直接去优化这款作品就好' : '作者暂未开放复刻'}
+          subtitle={isOwnGame ? '自己的作品不需要复刻，直接优化就能改。' : '这款作品目前不能基于原作生成新版本。'}
           statusLabel="当前状态"
-          statusValue="不可开始"
+          statusValue="暂时无法开始"
           sections={[
             {
               key: 'fork-blocked',
               node: (
                 <CreationStateCard
                   tone="danger"
-                  eyebrow="无法发起"
-                  title={isOwnGame ? '请直接去优化你的作品' : '当前没有复刻权限'}
+                  eyebrow="暂时无法开始"
+                  title={isOwnGame ? '去"我的作品"里直接优化' : '作者暂时没开放复刻'}
                   description={isOwnGame
-                    ? '你已经拥有这款作品，直接优化会更顺手，也能保留完整的创作链路。'
-                    : pageError || '如需开放复刻，需要原作者允许该作品被复刻。'}
+                    ? '你已经拥有这款作品，直接"优化"就可以继续改，更顺手。'
+                    : pageError || '这款作品的作者暂时没有开放复刻，你可以试试别的作品。'}
                 />
               ),
             },
@@ -777,7 +799,7 @@ export default function GameForkPage() {
               node: (
                 <CreationSessionActions
                   title="下一步"
-                  hint="直接去优化这款作品，会更符合你的创作链路。"
+                  hint='对自己的作品来说，直接去"优化"会更合适。'
                   actions={[
                     {
                       key: 'go-iterate-own-game',

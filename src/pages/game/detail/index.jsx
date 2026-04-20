@@ -26,6 +26,7 @@ import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
 import { isH5Runtime } from '../../../utils/runtime';
+import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
 import { ENV } from '../../../config/env';
 import './index.scss';
 
@@ -336,7 +337,7 @@ export default function GameDetail() {
   const authorAvatarFallback = getAvatarFallback(authorAvatar, authorDisplayName);
   const continueCreateLabel = isOwnGame
     ? '继续优化'
-    : (canForkGame ? '复刻后继续创作' : '作者未开放复刻权限');
+    : (canForkGame ? '基于这款接着创作' : '作者还没开放复刻');
   const continueCreateDisabled = Boolean(game) && !isOwnGame && !canForkGame;
   const requiresSubscriptionToPlay = game?.canPlay === false && !isOwnGame;
   const canPlayCurrentGame = Boolean(game?.gameUrl) && (game?.canPlay !== false || isOwnGame);
@@ -715,7 +716,7 @@ export default function GameDetail() {
     }
 
     if (!canForkGame) {
-      Taro.showToast({ title: '作者未开放复刻权限', icon: 'none' });
+      Taro.showToast({ title: '作者还没开放复刻', icon: 'none' });
       return;
     }
 
@@ -835,7 +836,7 @@ export default function GameDetail() {
           <View className="detail-content">
           <View className="title-section">
             <Text className="title">{game.title}</Text>
-            <Text className="description">{game.description}</Text>
+            <Text className="description">{sanitizeUserIdea(game.description)}</Text>
           </View>
 
           <View className="author-row">
@@ -900,7 +901,7 @@ export default function GameDetail() {
               <View className="btn-copy">
                 <Text className="btn-text">{requiresSubscriptionToPlay ? '订阅后试玩' : '立即试玩'}</Text>
                 <Text className="btn-subtext">
-                  {requiresSubscriptionToPlay ? '开通后自动解锁当前作品' : '沉浸体验这个小游戏'}
+                  {requiresSubscriptionToPlay ? '开通后自动解锁当前作品' : '马上玩一下'}
                 </Text>
               </View>
             </View>
@@ -923,7 +924,7 @@ export default function GameDetail() {
                 <View className="icon-symbol icon-symbol--fork" />
                 <View className="icon-copy">
                   <Text className="icon-value">{isOwnGame ? '继续优化' : '复刻后继续创作'}</Text>
-                  <Text className="icon-label">{isOwnGame ? '继续完善玩法与体验' : (canForkGame ? '基于当前玩法继续创作' : '作者未开放复刻权限')}</Text>
+                  <Text className="icon-label">{isOwnGame ? '继续改玩法和手感' : (canForkGame ? '在他的作品上接着改' : '作者暂未开放复刻')}</Text>
                 </View>
               </View>
             </View>

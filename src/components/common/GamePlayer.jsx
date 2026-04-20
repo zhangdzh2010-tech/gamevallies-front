@@ -103,7 +103,7 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', m
     if (gameUrl) {
       if (exitTimer.current) clearTimeout(exitTimer.current);
       setDisplayUrl(gameUrl);
-      setDisplayTitle(gameTitle || 'Game');
+      setDisplayTitle(gameTitle || '游戏试玩');
       setLoading(true);
       setFullscreen(isLandscapeGame);
       setTimeout(() => setVisible(true), 20);
@@ -193,7 +193,7 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', m
         <View className="player-header" style={{ paddingTop: `${statusBarHeight}px` }}>
           <View className="player-btn back-btn" onClick={onClose}>
             <View className="back-arrow" />
-            <Text className="back-text">Close</Text>
+            <Text className="back-text">关闭</Text>
           </View>
           <Text className="player-title">{displayTitle}</Text>
           <View className="player-header-actions">
@@ -202,21 +202,21 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', m
                 className="player-btn minimize-btn"
                 onClick={onMinimize}
               >
-                <Text className="fs-icon">Min</Text>
+                <Text className="fs-icon">收起</Text>
               </View>
             ) : null}
             <View
               className="player-btn fullscreen-btn"
               onClick={handleToggleFullscreen}
             >
-              <Text className="fs-icon">{fullscreen ? 'Exit' : 'Full'}</Text>
+              <Text className="fs-icon">{fullscreen ? '退出' : '全屏'}</Text>
             </View>
           </View>
         </View>
 
         {loading && (
           <View className="player-loading">
-            <Text className="loading-text">Loading game...</Text>
+            <Text className="loading-text">游戏加载中...</Text>
           </View>
         )}
 

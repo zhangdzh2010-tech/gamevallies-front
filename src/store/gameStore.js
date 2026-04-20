@@ -31,33 +31,33 @@ const SESSION_READY_WAIT_TIMEOUT_MS = (SESSION_INIT_POLL_INTERVAL_MS * SESSION_I
 const ACTIVE_CREATION_SESSION_STATUSES = new Set(['initializing', 'collecting', 'ready']);
 
 const PIPELINE_STAGES = [
-  { key: 'submitting', label: '提交需求', pct: 5 },
-  { key: 'planning', label: '梳理方案', pct: 30 },
-  { key: 'generating', label: '生成内容', pct: 60 },
-  { key: 'qa', label: '质量检查', pct: 92 },
+  { key: 'submitting', label: '收到想法', pct: 5 },
+  { key: 'planning', label: '整理玩法想法', pct: 30 },
+  { key: 'generating', label: '搭建游戏', pct: 60 },
+  { key: 'qa', label: '自检一下手感', pct: 92 },
   { key: 'completed', label: '完成', pct: 100 },
 ];
 
 const DETAILED_PIPELINE_STAGES = [
-  { key: 'submitting', label: '提交需求', pct: 5 },
-  { key: 'spec_build', label: '梳理方案', pct: 15 },
-  { key: 'runtime_profile_select', label: '匹配合适能力', pct: 30 },
-  { key: 'contract_compose', label: '组装规则与资源', pct: 40 },
-  { key: 'logic_generate', label: '生成内容', pct: 60 },
-  { key: 'contract_qa', label: '质量检查', pct: 76 },
-  { key: 'runtime_simulation_qa', label: '运行验证', pct: 92 },
+  { key: 'submitting', label: '收到想法', pct: 5 },
+  { key: 'spec_build', label: '想清楚怎么玩', pct: 15 },
+  { key: 'runtime_profile_select', label: '挑一套玩法模板', pct: 30 },
+  { key: 'contract_compose', label: '准备画面和规则', pct: 40 },
+  { key: 'logic_generate', label: '搭建游戏', pct: 60 },
+  { key: 'contract_qa', label: '检查细节', pct: 76 },
+  { key: 'runtime_simulation_qa', label: '试玩一遍', pct: 92 },
   { key: 'completed', label: '完成', pct: 100 },
 ];
 
 const PIPELINE_STAGE_SUMMARIES = {
-  submitting: '正在接收你的创作需求',
-  spec_build: '正在整理玩法目标与核心设定',
-  runtime_profile_select: '正在匹配适合这次创作的能力组合',
-  contract_compose: '正在组装规则、资源与运行约束',
-  logic_generate: '正在生成游戏内容与交互逻辑',
-  contract_qa: '正在检查质量并修正细节',
-  runtime_simulation_qa: '正在验证运行表现与可玩性',
-  completed: '内容已经生成完成',
+  submitting: '正在收下你的想法',
+  spec_build: '正在想清楚玩法和主要设定',
+  runtime_profile_select: '正在挑一套最合适的玩法模板',
+  contract_compose: '正在搭好画面、规则和节奏',
+  logic_generate: '正在把玩法一步步写出来',
+  contract_qa: '正在自检并调整细节',
+  runtime_simulation_qa: '正在试玩一遍，确认能顺畅玩',
+  completed: '你的作品做好了',
 };
 
 const DISPLAY_STAGE_ALIASES = {
@@ -1651,7 +1651,7 @@ export const useGameStore = create((set, get) => {
     }
 
     if (!normalizedContent) {
-      throw new Error('请先完善提示词内容');
+      throw new Error('请先把这一版方向写完整');
     }
 
     if (session.status === 'initializing') {
@@ -1664,7 +1664,7 @@ export const useGameStore = create((set, get) => {
     }
 
     if (session?.status === 'initializing') {
-      const message = 'AI 还在整理提示词，请稍等';
+      const message = 'AI 还在整理方向，请稍等';
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1705,7 +1705,7 @@ export const useGameStore = create((set, get) => {
     } catch (error) {
       const message = isCreationSessionRevisionConflictError(error)
         ? await recoverCreationSessionRevisionConflict(session.sessionId)
-        : deriveCreationSessionErrorMessage(error, '确认提示词失败，请稍后重试');
+        : deriveCreationSessionErrorMessage(error, '保存这版方向失败，请稍后重试');
 
       set({
         creationSessionSubmitting: false,
@@ -1736,7 +1736,7 @@ export const useGameStore = create((set, get) => {
     }
 
     if (session?.status === 'initializing') {
-      const message = 'AI 还在整理提示词，请稍等';
+      const message = 'AI 还在整理方向，请稍等';
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1772,7 +1772,7 @@ export const useGameStore = create((set, get) => {
     } catch (error) {
       const message = isCreationSessionRevisionConflictError(error)
         ? await recoverCreationSessionRevisionConflict(session.sessionId)
-        : deriveCreationSessionErrorMessage(error, '确认当前提示词失败，请稍后重试');
+        : deriveCreationSessionErrorMessage(error, '使用当前这版失败，请稍后重试');
 
       set({
         creationSessionSubmitting: false,
@@ -1814,7 +1814,7 @@ export const useGameStore = create((set, get) => {
     }
 
     if (session?.status === 'initializing') {
-      const message = 'AI 还在整理提示词，请稍等';
+      const message = 'AI 还在整理方向，请稍等';
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,
@@ -1896,7 +1896,7 @@ export const useGameStore = create((set, get) => {
     }
 
     if (resolvedSession?.status === 'collecting') {
-      const message = '请先确认提示词，再开始生成';
+      const message = '请先确认这版方向，再开始生成';
       set({
         creationSessionSubmitting: false,
         creationSessionError: message,

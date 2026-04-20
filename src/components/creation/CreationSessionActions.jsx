@@ -15,15 +15,15 @@ function getButtonClassName(action) {
 
 export function CreationSessionActions({
   actions = [],
-  title = '会话操作',
-  hint = '统一承载回答、跳过、直接生成、重新开始等动作。',
+  title = '本轮操作',
+  hint = '',
 }) {
   return (
     <View className="creation-session-card">
       <View className="creation-session-card__header">
         <View>
           <Text className="creation-session-card__title">{title}</Text>
-          <Text className="creation-session-card__hint">{hint}</Text>
+          {hint ? <Text className="creation-session-card__hint">{hint}</Text> : null}
         </View>
       </View>
 

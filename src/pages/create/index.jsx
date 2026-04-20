@@ -44,7 +44,7 @@ const ORIENTATION_OPTIONS = [
   { value: 'landscape', label: '横屏' },
 ];
 
-function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 整理提示词') {
+function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 整理想法') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
   if (!source) {
     return `${fallbackStageLabel}时遇到问题，请稍后重试`;
@@ -357,14 +357,14 @@ export default function Create() {
         },
       );
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, '创作会话'), '创作会话启动失败');
+      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次创作没能启动，请稍后重试');
     }
   };
 
   const handleConfirmEditedCreatePrompt = async () => {
     const nextPromptDraft = sessionPromptDraft.trim();
     if (!nextPromptDraft) {
-      toastInfo('请先完善提示词');
+      toastInfo('请先把这段方向写完整');
       return;
     }
 
@@ -373,7 +373,7 @@ export default function Create() {
     try {
       await confirmEditedPrompt(nextPromptDraft);
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, '创作会话'), '保存提示词失败');
+      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次方向没能保存，请稍后重试');
     }
   };
 
@@ -381,7 +381,7 @@ export default function Create() {
     try {
       await confirmCurrentPrompt();
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, '创作会话'), '保存提示词失败');
+      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次方向没能保存，请稍后重试');
     }
   };
 
@@ -399,7 +399,7 @@ export default function Create() {
   );
   const activeCreateInputValue = isCreateSessionActive ? sessionPromptDraft : prompt;
   const activeCreateInputPlaceholder = isCreateSessionActive
-    ? '在这里修改 AI 整理后的提示词...'
+    ? '在这里继续改这段方向...'
     : '先说一句你想做的游戏...';
 
   const ensureCreateSession = async () => {
@@ -451,7 +451,7 @@ export default function Create() {
       resetCreateSession();
       resetLocalCreateState();
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, '创作会话'), '重置创作会话失败');
+      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次重新开始没能成功，请稍后重试');
     }
   };
 
@@ -489,7 +489,7 @@ export default function Create() {
     { withGamePlayer = false, withPaywall = false, workspaceLayout = false } = {},
   ) => (
     <View className={containerClassName}>
-      <AppTopBar showBack rightText="任务" onRightClick={openTaskCenter} />
+      <AppTopBar showBack rightText="我的创作" onRightClick={openTaskCenter} />
       <PageScrollContainer
         className={`create-scroll${workspaceLayout ? ' create-scroll--workspace' : ''}`}
         style={scrollContainerStyle}
@@ -536,7 +536,7 @@ export default function Create() {
       }
 
       return {
-        label: '开始整理提示词',
+        label: '让 AI 整理一下',
         onClick: handleStartCreateSession,
         disabled: creationSessionSubmitting || !canSendEntryPrompt,
       };
@@ -544,7 +544,7 @@ export default function Create() {
 
     if (createFlowState === 'draft-editing') {
       return {
-        label: '确认修改并保存提示词',
+        label: '确认这段方向',
         onClick: handleConfirmEditedCreatePrompt,
         disabled: creationSessionSubmitting || !canEditCreatePrompt,
       };
@@ -677,22 +677,22 @@ export default function Create() {
       secondaryActions={createWorkspaceSecondaryActions}
       errorMessage={entryErrorMessage}
       isSubmitting={creationSessionSubmitting}
-      workspaceTitle={isCreateSessionActive ? '确认你的生成提示词' : '说说你的想法'}
+      workspaceTitle={isCreateSessionActive ? '确认这次的创作方向' : '说说你的想法'}
       workspaceHint={isCreateSessionActive
-        ? 'AI 已经整理出一版完整提示词。你可以先修改确认，再开始真正生成。'
-        : '先输入一句话描述你的游戏，AI 会先扩写成一版提示词，再由你确认。'}
-      introMessage="先告诉我你想做什么，我会先帮你整理出一版完整提示词。"
+        ? 'AI 已经帮你整理出了一版完整方向，你可以先改改，再开始正式做。'
+        : '先说一句话，AI 会帮你补成一版完整方向，你改改就能开始做。'}
+      introMessage="先告诉我你想做什么，我会整理出一版完整方向。"
       helperText={isCreateSessionActive
-        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这版提示词。')
+        ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这一版方向。')
         : ''}
-      loadingTitle="正在整理并扩写你的游戏想法"
-      loadingDescription="完成后你会先看到一版可编辑提示词，确认后才会真正开始生成。"
+      loadingTitle="AI 正在把你的想法补成完整方向"
+      loadingDescription="通常只要几秒，AI 会整理出一版你可以改的方向。"
       initialLabel="你的游戏方向"
       initialHint="先描述题材、核心玩法或你想要的体验，越自然越好。"
-      draftLabel="游戏生成提示词"
+      draftLabel="AI 整理出的方向"
       draftHint={creationSession?.status === 'ready'
-        ? '这版提示词已经确认。你仍然可以继续修改并再次保存。'
-        : '你可以直接修改这段提示词，也可以直接使用当前版本。'}
+        ? '这版方向已经确认。你仍然可以继续改，再次保存。'
+        : '你可以继续改这段方向，改完就能开始做。'}
     />
   );
 
@@ -700,18 +700,18 @@ export default function Create() {
     return renderCreatePage(
       <CreationSessionShell
         eyebrow="恢复创作"
-        title="正在回到你刚刚的创作流程"
-        subtitle="系统会优先恢复进行中的任务或最近一轮会话，你不需要重新输入。"
+        title="马上把你带回刚才的创作"
+        subtitle="我们会先接回你之前正在做的那一版，不用重新输入。"
         statusLabel="当前状态"
-        statusValue="恢复中"
+        statusValue="正在接回"
         sections={[
           {
             key: 'create-restoring',
             node: (
               <CreationStateCard
-                eyebrow="正在同步"
-                title="马上回到当前作品或进行中的任务"
-                description="如果刚才已经进入生成阶段，任务中心里的记录也会自动接上。"
+                eyebrow="正在接回"
+                title="马上回到你之前的那一版"
+                description="如果刚才已经开始生成，个人中心里的创作记录也会自动接回来。"
                 loading
               />
             ),
@@ -726,7 +726,7 @@ export default function Create() {
       stages: PIPELINE_STAGES,
       stageIndex: 0,
       pct: 5,
-      stageLabel: PIPELINE_STAGES[0]?.label || '提交需求',
+      stageLabel: PIPELINE_STAGES[0]?.label || '收到想法',
       message: '正在接收你的创作需求',
     };
 
@@ -743,7 +743,7 @@ export default function Create() {
                 progressPct={progress.pct}
                 stageLabel={progress.stageLabel}
                 progressMessage={progress.message}
-                modeLabel="创作流程"
+                modeLabel="AI 正在创作"
                 coreLabel="AI 创作"
               />
             ),
@@ -752,12 +752,12 @@ export default function Create() {
             key: 'create-progress-actions',
             node: (
               <CreationSessionActions
-                title="任务操作"
-                hint="如果这轮方向不对，可以先取消，稍后再重新发起。"
+                title="本轮操作"
+                hint="如果这次方向跑偏了，可以先停掉，再换个方向重试。"
                 actions={[
                   {
                     key: 'cancel-create-task',
-                    label: '取消任务',
+                    label: '先停下',
                     tone: 'danger',
                     onClick: handleCancelTask,
                   },
@@ -769,8 +769,8 @@ export default function Create() {
             key: 'create-progress-notice',
             node: (
               <CreationStateCard
-                eyebrow="同步说明"
-                title="任务记录会自动同步到个人中心"
+                eyebrow="小贴士"
+                title="这次创作会自动保存到个人中心"
                 description="完成后你可以继续试玩、优化，或者直接发布到作品区。"
               />
             ),
@@ -801,7 +801,7 @@ export default function Create() {
             key: 'create-result-cover',
             node: (
               <CreationResultCoverCard
-                badge="已就绪"
+                badge="搞定"
                 title={resultTitle}
                 description={resultDescription}
                 coverUrl={resultCoverUrl}

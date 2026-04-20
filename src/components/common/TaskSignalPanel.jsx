@@ -3,9 +3,9 @@ import { View, Text } from '@tarojs/components';
 import './TaskSignalPanel.scss';
 
 export function TaskSignalPanel({
-  eyebrow = '任务状态',
-  title = '任务信息',
-  statusLabel = '执行中',
+  eyebrow = '当前状态',
+  title = '本轮信息',
+  statusLabel = 'AI 正在做',
   description = '',
   items = [],
 }) {
