@@ -94,4 +94,57 @@ describe('CreationCreateWorkspace', () => {
     expect(screen.getByText('AI 正在把你的想法补成完整方向')).toBeTruthy();
     expect(screen.queryByText('AI 整理出的方向')).toBeNull();
   });
+
+  test('shows the fallback notice when ai-engine used a deterministic expand-prompt fallback', () => {
+    render(
+      <CreationCreateWorkspace
+        showSettings={false}
+        session={{
+          sessionId: 'session-fallback',
+          status: 'collecting',
+          initialPrompt: 'Make a plants vs zombies style game',
+          expandedPrompt: 'Mostly generic boilerplate produced by the fallback.',
+          currentQuestion: {
+            content: 'Please confirm or edit the prompt.',
+          },
+          metadata: {
+            expandFallbackUsed: true,
+            expandFallbackReason: 'low_quality_llm_output',
+          },
+        }}
+        inputValue="Mostly generic boilerplate produced by the fallback."
+        onInputChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('AI 未完整扩写')).toBeTruthy();
+    expect(
+      screen.getByText(/默认模板兜底生成/, { exact: false })
+    ).toBeTruthy();
+  });
+
+  test('does not show the fallback notice when the expansion came straight from the model', () => {
+    render(
+      <CreationCreateWorkspace
+        showSettings={false}
+        session={{
+          sessionId: 'session-ok',
+          status: 'collecting',
+          initialPrompt: 'Make a plants vs zombies style game',
+          expandedPrompt: 'A rich content-packed brief from the LLM.',
+          currentQuestion: {
+            content: 'Please confirm or edit the prompt.',
+          },
+          metadata: {
+            expandFallbackUsed: false,
+            expandFallbackReason: null,
+          },
+        }}
+        inputValue="A rich content-packed brief from the LLM."
+        onInputChange={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText('AI 未完整扩写')).toBeNull();
+  });
 });
