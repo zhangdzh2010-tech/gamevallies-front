@@ -565,6 +565,32 @@
   white-space: pre-wrap;
 }
 
+.creation-create-stage-summary__fallback-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 197, 102, 0.08);
+  border: 1px solid rgba(255, 197, 102, 0.28);
+}
+
+.creation-create-stage-summary__fallback-notice-eyebrow {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: #ffc56a;
+}
+
+.creation-create-stage-summary__fallback-notice-text {
+  display: block;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #f0e6c8;
+  white-space: pre-wrap;
+}
+
 .creation-create-loading-card {
   padding: 28px 24px;
 }
@@ -1549,6 +1575,19 @@
   .creation-create-editor__label,
   .creation-create-stage-summary__meta-label {
     font-size: 12px;
+  }
+
+  .creation-create-stage-summary__fallback-notice {
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+
+  .creation-create-stage-summary__fallback-notice-eyebrow {
+    font-size: 12px;
+  }
+
+  .creation-create-stage-summary__fallback-notice-text {
+    font-size: 13px;
   }
 
   .creation-create-orientation {

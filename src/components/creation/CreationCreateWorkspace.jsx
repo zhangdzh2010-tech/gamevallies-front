@@ -261,6 +261,17 @@ export function CreationCreateWorkspace({
                 </View>
               ) : null}
 
+              {session?.metadata?.expandFallbackUsed && !isInitializing ? (
+                <View className="creation-create-stage-summary__fallback-notice">
+                  <Text className="creation-create-stage-summary__fallback-notice-eyebrow">
+                    AI 未完整扩写
+                  </Text>
+                  <Text className="creation-create-stage-summary__fallback-notice-text">
+                    这一版方向是用默认模板兜底生成的，里面的玩法、场景、角色细节可能比较通用。建议在下方补上具体的玩法机制、敌人或关卡、视觉参考，再开始生成。
+                  </Text>
+                </View>
+              ) : null}
+
               {isInitializing ? (
                 <View className="creation-state-card creation-state-card--centered creation-create-loading-card">
                   <Text className="creation-state-card__eyebrow">AI 正在整理</Text>
