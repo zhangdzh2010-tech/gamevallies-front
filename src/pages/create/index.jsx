@@ -37,6 +37,7 @@ import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
 import { toastError, toastInfo } from '../../utils/feedback';
+import { sanitizeUserIdea } from '../../utils/sanitizeIdea';
 import './index.scss';
 
 const ORIENTATION_OPTIONS = [
@@ -147,7 +148,7 @@ export default function Create() {
 
     const nextDraftKey = `${creationSession.sessionId || ''}:${creationSession.revision ?? ''}`;
     if (promptDraftSyncKeyRef.current !== nextDraftKey) {
-      setSessionPromptDraft(creationSession.expandedPrompt || '');
+      setSessionPromptDraft(sanitizeUserIdea(creationSession.expandedPrompt || ''));
       promptDraftSyncKeyRef.current = nextDraftKey;
     }
   }, [
@@ -387,7 +388,12 @@ export default function Create() {
 
   const canSendEntryPrompt = prompt.trim().length >= 5;
   const isCreateSessionActive = creationSession?.entryMode === 'create' && creationSession?.status !== 'generating';
-  const normalizedExpandedPrompt = String(creationSession?.expandedPrompt || '').trim();
+  // Defensive: the expanded prompt should already be clean prose from
+  // ai-engine + game-service, but historically we've seen old sessions
+  // surface scaffolding like `原始想法：…` / `Game Type:` labels. Run one
+  // final strip before handing the text to the editor so C-end UI never
+  // renders engineering language.
+  const normalizedExpandedPrompt = sanitizeUserIdea(creationSession?.expandedPrompt || '');
   const normalizedDraftPrompt = sessionPromptDraft.trim();
   const hasCreatePromptChanges = Boolean(
     normalizedDraftPrompt && normalizedDraftPrompt !== normalizedExpandedPrompt
