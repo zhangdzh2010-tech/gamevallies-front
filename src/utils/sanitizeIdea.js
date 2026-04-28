@@ -5,7 +5,18 @@
 // never reaches the C-end even if the backend slips up or an old session is
 // rendered from cache.
 //
-// Keep the patterns in lockstep with:
+// Philosophy (2026-04 refactor): the expand-prompt output is now a structured
+// professional prompt with real content under section labels (e.g.
+// "核心玩法：8×8 糖果棋盘…"). We do NOT blanket-strip labeled lines
+// anymore — that would destroy legitimate content. We only drop:
+//   1. Echoed user-idea lines like ``原始想法：…``.
+//   2. Meta-instruction lines (the expand-prompt task bounced back verbatim).
+//   3. Label lines whose VALUE is a placeholder/directive (e.g.
+//      "核心玩法：根据原始想法确定").
+//   4. Legacy tail/prefix scaffolding still present in old
+//      ``games.description`` values.
+//
+// Keep patterns in lockstep with:
 //   - ai-engine     `src/engine/expand_prompt_sanitizer.py`
 //   - game-service  `src/common/sanitize-idea.ts`
 //   - feed-service  `src/common/sanitize-idea.ts`
@@ -27,55 +38,62 @@ const META_INSTRUCTION_LINE_PATTERNS = [
   /^\s*请将以下想法整理成.*$/,
   /^\s*至少(?:要)?覆盖这些要素.*$/,
   /^\s*请覆盖以下要素.*$/,
+  /^\s*任务\s*[:：]\s*接收用户简短游戏描述.*$/,
+  /^\s*要求\s*[:：]\s*$/,
+  /^\s*输出必须覆盖的要素.*$/,
   /^\s*Please\s+turn\s+this\s+brief\s+into\s+a\s+mobile-friendly.*$/i,
   /^\s*Please\s+expand\s+the\s+(?:user\s+)?(?:idea|brief)\s+into.*$/i,
   /^\s*covers?\s+at\s+least\s+these\s+elements.*$/i,
 ];
 
-const LABEL_PREFIXES = [
-  'game type',
-  'core mechanic',
-  'theme',
-  'input method',
-  'win condition',
-  'difficulty ramp',
-  'scoring / rewards',
-  'scoring/rewards',
-  'scoring',
-  'rewards',
-  'visual direction',
-  'special rules or reference inspiration',
-  'special rules',
-  'reference inspiration',
-  '游戏类型',
-  '核心玩法',
-  '核心机制',
-  '主题',
-  '操作方式',
-  '操作方法',
-  '输入方式',
-  '胜利条件',
-  '通关条件',
-  '难度节奏',
-  '难度曲线',
-  '积分',
-  '奖励',
-  '积分 / 奖励',
-  '积分/奖励',
-  '视觉方向',
-  '视觉风格',
-  '视觉',
-  '特殊规则',
-  '特殊规则或参考灵感',
-  '参考灵感',
-  '参考游戏',
+const PLACEHOLDER_VALUE_MARKERS = [
+  '根据原始想法确定',
+  '根据原始想法',
+  '根据用户想法',
+  '根据用户输入',
+  '保留原始想法',
+  '保留用户想法',
+  '提炼玩家最常执行',
+  '提炼玩家最常',
+  '采用适合手机',
+  '采用适合的手机',
+  '明确玩家这一局',
+  '明确玩家一局',
+  '说明难度如何',
+  '说明如何',
+  '补充积分',
+  '补充奖励',
+  '给出匹配题材',
+  '给出匹配',
+  '仅在确有帮助',
+  '仅在有帮助时',
+  '仅在确有帮助时补充',
+  '后续补充',
+  '待定',
+  '待补充',
+  'to be determined',
+  'to be added',
+  'todo',
+  'tbd',
+  'determine based on',
+  'choose the most fitting',
+  'describe the main repeated',
+  'preserve the setting',
+  'use touch-friendly tap',
+  'use touch-friendly',
+  'define a clear round',
+  'explain how the challenge',
+  'add points, streaks',
+  'add points and rewards',
+  'suggest an art direction',
+  'add only when',
 ];
 
-const LABEL_SET = new Set(LABEL_PREFIXES.map((label) => label.toLowerCase()));
+const PLACEHOLDER_LOWERED = PLACEHOLDER_VALUE_MARKERS.map((m) => m.toLowerCase());
 
-function lineStartsWithLabel(line) {
+function splitLabel(line) {
   const stripped = line.trim();
-  if (!stripped) return false;
+  if (!stripped) return null;
   let colonIndex = -1;
   for (let i = 0; i < stripped.length; i += 1) {
     const ch = stripped[i];
@@ -84,20 +102,43 @@ function lineStartsWithLabel(line) {
       break;
     }
   }
-  if (colonIndex <= 0 || colonIndex > 40) return false;
-  const head = stripped.slice(0, colonIndex).trim().toLowerCase();
-  return head.length > 0 && LABEL_SET.has(head);
+  if (colonIndex <= 0 || colonIndex > 40) return null;
+  const label = stripped.slice(0, colonIndex).trim();
+  const value = stripped.slice(colonIndex + 1).trim();
+  if (!label) return null;
+  return { label, value };
+}
+
+function isPlaceholderValue(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return true;
+  const lowered = trimmed.toLowerCase();
+  for (const marker of PLACEHOLDER_LOWERED) {
+    if (lowered.startsWith(marker)) return true;
+  }
+  if (trimmed.length <= 30) {
+    for (const marker of PLACEHOLDER_LOWERED) {
+      if (lowered.includes(marker)) return true;
+    }
+  }
+  return false;
+}
+
+function isPlaceholderOnlyLine(line) {
+  const stripped = line.trim();
+  if (!stripped || stripped.length > 60) return false;
+  return isPlaceholderValue(stripped);
 }
 
 function matchesAny(line, patterns) {
   return patterns.some((pattern) => pattern.test(line));
 }
 
-// Kept for backwards compatibility with older C-end data (game.description
-// blobs that contain the full template appended as a single string).
+// Legacy tail/prefix patterns for old ``games.description`` blobs that still
+// contain the full concatenated template as a single string.
 const LEGACY_TAIL_PATTERNS = [
   /\s*请把这条想法整理成[\s\S]*$/,
-  /\s*(?:\n|^)?\s*(?:Game Type|Core Mechanic|Theme|Input Method|Win Condition|Difficulty Ramp|Scoring\s*\/\s*Rewards|Visual Direction|Special Rules[^:\n]*)\s*[:：][\s\S]*$/i,
+  /\s*(?:\n|^)?\s*(?:Game Type|Core Mechanic|Theme|Input Method|Win Condition|Difficulty Ramp|Scoring\s*\/\s*Rewards|Visual Direction|Special Rules[^:\n]*)\s*[:：]\s*(?:根据原始想法|提炼玩家|保留原始想法|采用适合手机|明确玩家|说明难度|补充积分|给出匹配|仅在确有帮助|determine based on|describe the main|preserve the setting|use touch-friendly|define a clear|explain how the challenge|add points|suggest an art|add only when)[\s\S]*$/i,
 ];
 
 const LEGACY_PREFIX_PATTERNS = [
@@ -107,12 +148,8 @@ const LEGACY_PREFIX_PATTERNS = [
 ];
 
 /**
- * Strip LLM prompt-template scaffolding from a description/brief that will
- * be shown directly to end users.
- *
- * Handles both the legacy single-string tail template (older
- * `game.description` values) and line-based scaffolding that occasionally
- * leaks from `/expand-prompt`. Safe to call on already-clean text.
+ * Strip LLM prompt-template scaffolding from a description/brief shown to the
+ * end user. Preserves valid structured labels (with real content under them).
  *
  * @param {string} raw - The raw description string, possibly polluted.
  * @returns {string} The cleaned, user-facing idea.
@@ -138,7 +175,12 @@ export function sanitizeUserIdea(raw = '') {
     }
     if (matchesAny(line, PREFIX_DROP_LINE_PATTERNS)) continue;
     if (matchesAny(line, META_INSTRUCTION_LINE_PATTERNS)) continue;
-    if (lineStartsWithLabel(line)) continue;
+    const labeled = splitLabel(line);
+    if (labeled !== null) {
+      if (isPlaceholderValue(labeled.value)) continue;
+    } else if (isPlaceholderOnlyLine(line)) {
+      continue;
+    }
     cleaned.push(line);
   }
 

@@ -261,16 +261,39 @@ export function CreationCreateWorkspace({
                 </View>
               ) : null}
 
-              {session?.metadata?.expandFallbackUsed && !isInitializing ? (
-                <View className="creation-create-stage-summary__fallback-notice">
-                  <Text className="creation-create-stage-summary__fallback-notice-eyebrow">
-                    AI 未完整扩写
-                  </Text>
-                  <Text className="creation-create-stage-summary__fallback-notice-text">
-                    这一版方向是用默认模板兜底生成的，里面的玩法、场景、角色细节可能比较通用。建议在下方补上具体的玩法机制、敌人或关卡、视觉参考，再开始生成。
-                  </Text>
-                </View>
-              ) : null}
+              {session?.metadata?.expandFallbackUsed && !isInitializing ? (() => {
+                const reason = String(
+                  session?.metadata?.expandFallbackReason || '',
+                ).toLowerCase();
+                let eyebrow = 'AI 扩写需要补充';
+                let noticeText =
+                  '本次扩写里 AI 没能把玩法、关卡、UI 等细节补全。建议在下方继续描述具体的玩法机制、关卡节奏、画风或参考游戏，再开始生成。';
+                if (
+                  reason.includes('echoed_user_idea') ||
+                  reason.includes('echo')
+                ) {
+                  eyebrow = 'AI 只重复了你的描述';
+                  noticeText =
+                    'AI 基本上原样返回了你输入的想法，没有真正扩写。你可以在下方补充更具体的玩法、关卡或画风细节，也可以点「重新生成」让 AI 再试一次。';
+                } else if (
+                  reason.includes('empty_after_sanitization') ||
+                  reason.includes('low_quality_llm_output')
+                ) {
+                  eyebrow = 'AI 扩写需要补充';
+                  noticeText =
+                    '这一版的扩写结果里有效内容不足，系统已用默认结构做了兜底。建议在下方继续补上具体的玩法机制、关卡节奏、画风或参考游戏，再开始生成。';
+                }
+                return (
+                  <View className="creation-create-stage-summary__fallback-notice">
+                    <Text className="creation-create-stage-summary__fallback-notice-eyebrow">
+                      {eyebrow}
+                    </Text>
+                    <Text className="creation-create-stage-summary__fallback-notice-text">
+                      {noticeText}
+                    </Text>
+                  </View>
+                );
+              })() : null}
 
               {isInitializing ? (
                 <View className="creation-state-card creation-state-card--centered creation-create-loading-card">
