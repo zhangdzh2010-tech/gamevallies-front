@@ -95,7 +95,7 @@ describe('CreationCreateWorkspace', () => {
     expect(screen.queryByText('AI 整理出的方向')).toBeNull();
   });
 
-  test('shows the fallback notice when ai-engine used a deterministic expand-prompt fallback', () => {
+  test('shows the fallback notice with low-quality copy when ai-engine fell back due to an unusable LLM output', () => {
     render(
       <CreationCreateWorkspace
         showSettings={false}
@@ -117,9 +117,37 @@ describe('CreationCreateWorkspace', () => {
       />
     );
 
-    expect(screen.getByText('AI 未完整扩写')).toBeTruthy();
+    expect(screen.getByText('AI 扩写需要补充')).toBeTruthy();
     expect(
-      screen.getByText(/默认模板兜底生成/, { exact: false })
+      screen.getByText(/默认结构做了兜底/, { exact: false })
+    ).toBeTruthy();
+  });
+
+  test('shows echo-specific copy when ai-engine flagged the output as an echo of the user idea', () => {
+    render(
+      <CreationCreateWorkspace
+        showSettings={false}
+        session={{
+          sessionId: 'session-echo',
+          status: 'collecting',
+          initialPrompt: 'Make a plants vs zombies style game',
+          expandedPrompt: 'Make a plants vs zombies style game',
+          currentQuestion: {
+            content: 'Please confirm or edit the prompt.',
+          },
+          metadata: {
+            expandFallbackUsed: true,
+            expandFallbackReason: 'echoed_user_idea',
+          },
+        }}
+        inputValue="Make a plants vs zombies style game"
+        onInputChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('AI 只重复了你的描述')).toBeTruthy();
+    expect(
+      screen.getByText(/原样返回/, { exact: false })
     ).toBeTruthy();
   });
 
@@ -145,6 +173,7 @@ describe('CreationCreateWorkspace', () => {
       />
     );
 
-    expect(screen.queryByText('AI 未完整扩写')).toBeNull();
+    expect(screen.queryByText('AI 扩写需要补充')).toBeNull();
+    expect(screen.queryByText('AI 只重复了你的描述')).toBeNull();
   });
 });
