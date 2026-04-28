@@ -3,12 +3,14 @@ import { get, post } from '../api';
 import {
   abandonCreationSession,
   buildCreationSessionStreamUrl,
+  cancelGenerationTask,
   confirmAndGenerate,
   createCreationSession,
   generateFromCreationSession,
   generateGame,
   normalizeCreationSessionSnapshot,
   normalizeCreationSessionStreamEvent,
+  normalizeGenerationTaskStatus,
   subscribeCreationSessionStream,
 } from '../game';
 
@@ -101,6 +103,43 @@ describe('gameService.createCreationSession', () => {
         timeout: 90000,
       })
     );
+  });
+});
+
+describe('gameService.normalizeGenerationTaskStatus', () => {
+  test('maps legacy terminal task status aliases to the canonical frontend vocabulary', () => {
+    expect(normalizeGenerationTaskStatus('completed')).toBe('succeeded');
+    expect(normalizeGenerationTaskStatus('cancelled')).toBe('canceled');
+    expect(normalizeGenerationTaskStatus('timedout')).toBe('timed_out');
+  });
+
+  test('keeps canonical backend statuses unchanged', () => {
+    expect(normalizeGenerationTaskStatus('queued')).toBe('queued');
+    expect(normalizeGenerationTaskStatus('running')).toBe('running');
+    expect(normalizeGenerationTaskStatus('failed')).toBe('failed');
+    expect(normalizeGenerationTaskStatus('succeeded')).toBe('succeeded');
+    expect(normalizeGenerationTaskStatus('canceled')).toBe('canceled');
+  });
+});
+
+describe('gameService.cancelGenerationTask', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    post.mockResolvedValue({
+      taskId: 'task-1',
+      status: 'cancelled',
+      gameId: 'game-1',
+      taskType: 'pipeline_run',
+    });
+  });
+
+  test('returns a normalized generation task summary', async () => {
+    await expect(cancelGenerationTask('task-1')).resolves.toEqual(expect.objectContaining({
+      taskId: 'task-1',
+      status: 'canceled',
+      gameId: 'game-1',
+    }));
+    expect(post).toHaveBeenCalledWith('/api/v1/games/tasks/task-1/cancel', {});
   });
 });
 

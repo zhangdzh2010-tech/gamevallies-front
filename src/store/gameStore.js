@@ -7,16 +7,7 @@ import { Storage } from '../utils/storage';
 import { subscribeGameUnlocked } from '../utils/gameUnlock';
 
 const COMPLETED_GAME_STATUSES = ['ready', 'draft', 'published', 'review'];
-// Include both frontend vocabulary and schema vocabulary so tasks are recognised
-// as terminal regardless of which variant the backend returns.
-//   Schema uses: "completed" (鈮?succeeded), "cancelled" (UK spelling)
-//   Frontend uses: "succeeded", "canceled" (US spelling), "timed_out"
-const TERMINAL_TASK_STATUSES = new Set([
-  'succeeded', 'completed',          // task finished successfully
-  'failed',                          // task failed
-  'canceled', 'cancelled',           // task was cancelled (both spellings)
-  'timed_out',                       // client-side timeout sentinel
-]);
+const TERMINAL_TASK_STATUSES = new Set(['succeeded', 'failed', 'canceled', 'timed_out']);
 const ACTIVE_GENERATION_TASK_KEY = 'gamevallies_active_generation_task';
 const TRACKED_GENERATION_TASKS_KEY = 'gamevallies_tracked_generation_tasks';
 const ACTIVE_GENERATION_TASK_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -31,11 +22,11 @@ const SESSION_READY_WAIT_TIMEOUT_MS = (SESSION_INIT_POLL_INTERVAL_MS * SESSION_I
 const ACTIVE_CREATION_SESSION_STATUSES = new Set(['initializing', 'collecting', 'ready']);
 
 const PIPELINE_STAGES = [
-  { key: 'submitting', label: '收到想法', pct: 5 },
-  { key: 'planning', label: '整理玩法想法', pct: 30 },
+  { key: 'understanding', label: '理解想法', pct: 15 },
+  { key: 'designing', label: '设计玩法', pct: 35 },
   { key: 'generating', label: '搭建游戏', pct: 60 },
-  { key: 'qa', label: '自检一下手感', pct: 92 },
-  { key: 'completed', label: '完成', pct: 100 },
+  { key: 'validating', label: '检查细节', pct: 85 },
+  { key: 'finalizing', label: '完成', pct: 100 },
 ];
 
 const DETAILED_PIPELINE_STAGES = [
@@ -50,6 +41,11 @@ const DETAILED_PIPELINE_STAGES = [
 ];
 
 const PIPELINE_STAGE_SUMMARIES = {
+  understanding: '正在理解你的游戏想法',
+  designing: '正在整理玩法和画面设计',
+  generating: '正在把玩法一步步写出来',
+  validating: '正在自检并调整细节',
+  finalizing: '你的作品做好了',
   submitting: '正在收下你的想法',
   spec_build: '正在想清楚玩法和主要设定',
   runtime_profile_select: '正在挑一套最合适的玩法模板',
@@ -61,14 +57,19 @@ const PIPELINE_STAGE_SUMMARIES = {
 };
 
 const DISPLAY_STAGE_ALIASES = {
-  submitting: 'submitting',
-  spec_build: 'planning',
-  runtime_profile_select: 'planning',
+  understanding: 'understanding',
+  designing: 'designing',
+  generating: 'generating',
+  validating: 'validating',
+  finalizing: 'finalizing',
+  submitting: 'understanding',
+  spec_build: 'understanding',
+  runtime_profile_select: 'designing',
   contract_compose: 'generating',
   logic_generate: 'generating',
-  contract_qa: 'qa',
-  runtime_simulation_qa: 'qa',
-  completed: 'completed',
+  contract_qa: 'validating',
+  runtime_simulation_qa: 'validating',
+  completed: 'finalizing',
 };
 
 const STAGE_KEY_ALIASES = {
@@ -84,14 +85,14 @@ const STAGE_KEY_ALIASES = {
   intent_parse: 'submitting',
   intent_parsing: 'submitting',
   request_normalized: 'submitting',
-  understanding: 'spec_build',
+  understanding: 'understanding',
   spec_build: 'spec_build',
   runtime_profile_select: 'runtime_profile_select',
   template_match: 'runtime_profile_select',
   template_matching: 'runtime_profile_select',
-  designing: 'contract_compose',
+  designing: 'designing',
   contract_compose: 'contract_compose',
-  generating: 'logic_generate',
+  generating: 'generating',
   logic_generate: 'logic_generate',
   code_generate: 'logic_generate',
   code_generating: 'logic_generate',
@@ -99,13 +100,13 @@ const STAGE_KEY_ALIASES = {
   qa_fix: 'contract_qa',
   qa_checking: 'contract_qa',
   targeted_remediation: 'contract_qa',
-  validating: 'runtime_simulation_qa',
+  validating: 'validating',
   runtime_simulation_qa: 'runtime_simulation_qa',
   runtime_qa: 'runtime_simulation_qa',
   code_review: 'runtime_simulation_qa',
-  finalizing: 'completed',
-  completed: 'completed',
-  succeeded: 'completed',
+  finalizing: 'finalizing',
+  completed: 'finalizing',
+  succeeded: 'finalizing',
 };
 
 let activeTaskPollInterval = null;
@@ -217,6 +218,14 @@ function clampProgress(progress, fallback = 5) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function normalizeTaskStatus(status, fallback = '') {
+  if (typeof gameService.normalizeGenerationTaskStatus === 'function') {
+    return gameService.normalizeGenerationTaskStatus(status, fallback);
+  }
+
+  return String(status || '').trim().toLowerCase() || fallback;
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -284,7 +293,7 @@ function buildDynamicStageDefinition(stageKey, metadata = {}) {
 function getDisplayStageKey(stageKey, task = null) {
   const normalizedStageKey = String(stageKey || '').trim();
   if (!normalizedStageKey) {
-    return PIPELINE_STAGES[0]?.key || 'submitting';
+    return PIPELINE_STAGES[0]?.key || 'understanding';
   }
 
   const mappedKey = DISPLAY_STAGE_ALIASES[normalizedStageKey];
@@ -292,13 +301,14 @@ function getDisplayStageKey(stageKey, task = null) {
     return mappedKey;
   }
 
-  if (task?.status === 'succeeded' || task?.status === 'completed') {
-    return 'completed';
+  const taskStatus = normalizeTaskStatus(task?.status);
+  if (taskStatus === 'succeeded') {
+    return PIPELINE_STAGES[PIPELINE_STAGES.length - 1]?.key || 'finalizing';
   }
 
   const progress = clampProgress(task?.displayStagePct ?? task?.progressPct, 0);
   const inferredStage = PIPELINE_STAGES.find((stage) => progress <= stage.pct);
-  return inferredStage?.key || PIPELINE_STAGES[PIPELINE_STAGES.length - 1]?.key || 'completed';
+  return inferredStage?.key || PIPELINE_STAGES[PIPELINE_STAGES.length - 1]?.key || 'finalizing';
 }
 
 function buildStageSequence(task, events = []) {
@@ -322,12 +332,13 @@ function getFallbackStageAlias(task) {
     }
   }
 
-  return DETAILED_PIPELINE_STAGES[0]?.key || 'submitting';
+  return PIPELINE_STAGES[0]?.key || 'understanding';
 }
 
 function getStageAlias(task) {
-  if (task?.status === 'succeeded' || task?.status === 'completed') {
-    return 'completed';
+  const taskStatus = normalizeTaskStatus(task?.status);
+  if (taskStatus === 'succeeded') {
+    return 'finalizing';
   }
 
   if (task?.displayStageKey) {
@@ -346,15 +357,16 @@ function getLatestTaskMessage(events, fallback = '') {
 }
 
 function getDisplayProgressMessage(task, stageKey, events = [], fallback = '') {
-  if (task?.status === 'canceled' || task?.status === 'cancelled') {
+  const taskStatus = normalizeTaskStatus(task?.status);
+  if (taskStatus === 'canceled') {
     return '创作任务已取消';
   }
 
-  if (task?.status === 'timed_out') {
+  if (taskStatus === 'timed_out') {
     return '创作耗时较长，你可以稍后回来查看结果';
   }
 
-  if (task?.status === 'failed') {
+  if (taskStatus === 'failed') {
     return '这次创作没有顺利完成，我们可以重新再试一次';
   }
 
@@ -363,6 +375,7 @@ function getDisplayProgressMessage(task, stageKey, events = [], fallback = '') {
 }
 
 function buildProgressFromTask(task, events = []) {
+  const taskStatus = normalizeTaskStatus(task?.status);
   const stageKey = getStageAlias(task);
   const displayStageKey = getDisplayStageKey(stageKey, task);
   const stages = buildStageSequence(task, events);
@@ -372,25 +385,25 @@ function buildProgressFromTask(task, events = []) {
     label: task?.displayStageLabel,
     pct: task?.displayStagePct ?? task?.progressPct,
   }) || DETAILED_PIPELINE_STAGES[0];
-  const fallbackPct = task?.status === 'succeeded'
+  const fallbackPct = taskStatus === 'succeeded'
     ? 100
     : clampProgress(task?.displayStagePct ?? task?.progressPct, detailedStage?.pct ?? displayStage?.pct);
-  const fallbackLabel = task?.status === 'canceled' || task?.status === 'cancelled'
+  const fallbackLabel = taskStatus === 'canceled'
     ? '已取消创作任务'
-    : task?.status === 'timed_out'
+    : taskStatus === 'timed_out'
       ? '任务超时'
-      : task?.status === 'failed'
+      : taskStatus === 'failed'
         ? '创作失败'
         : displayStage?.label;
   const isMappedDisplayStage = Boolean(DISPLAY_STAGE_ALIASES[stageKey]);
   const defaultStageLabel = isMappedDisplayStage
     ? (displayStage?.label || fallbackLabel)
     : (String(task?.displayStageLabel || '').trim() || detailedStage?.label || displayStage?.label || fallbackLabel);
-  const stageLabel = task?.status === 'canceled' || task?.status === 'cancelled'
+  const stageLabel = taskStatus === 'canceled'
     ? '已取消创作任务'
-    : task?.status === 'timed_out'
+    : taskStatus === 'timed_out'
       ? '任务超时'
-      : task?.status === 'failed'
+      : taskStatus === 'failed'
         ? (String(task?.displayStageLabel || '').trim() || detailedStage?.label || displayStage?.label || '创作失败')
         : defaultStageLabel;
   const message = getDisplayProgressMessage(task, stageKey, events, stageLabel || fallbackLabel);
@@ -445,11 +458,12 @@ function deriveTaskErrorMessage(task) {
     return '创作失败，请稍后重试';
   }
 
-  if (task.status === 'canceled' || task.status === 'cancelled') {
+  const taskStatus = normalizeTaskStatus(task.status);
+  if (taskStatus === 'canceled') {
     return '已取消创作任务';
   }
 
-  if (task.status === 'timed_out') {
+  if (taskStatus === 'timed_out') {
     return '创作超时，请稍后到“我的作品”里查看结果';
   }
 
@@ -956,7 +970,7 @@ export function setPersistedGenerationTaskSnapshot(snapshot) {
         taskId: snapshot.taskId,
         taskType: snapshot.taskType || 'pipeline_run',
         gameId: snapshot.gameId || '',
-        status: snapshot.status || 'queued',
+        status: normalizeTaskStatus(snapshot.status, 'queued'),
         version: snapshot.version ?? null,
         updatedAt: Date.now(),
       })
@@ -993,7 +1007,7 @@ export function isCompletedGameStatus(status) {
 }
 
 export function isTerminalTaskStatus(status) {
-  return TERMINAL_TASK_STATUSES.has(status);
+  return TERMINAL_TASK_STATUSES.has(normalizeTaskStatus(status));
 }
 
 async function loadGameWithRetry(gameId, attempts = 3) {
@@ -2361,9 +2375,9 @@ export const useGameStore = create((set, get) => {
     const existingTrackedTask = get().trackedTasks.find((item) => item.taskId === task?.taskId);
     const trackedTaskType = existingTrackedTask?.taskType || task?.taskType || 'pipeline_run';
     const trackedTaskGameId = existingTrackedTask?.gameId || task?.gameId || get().generatingGameId;
+    const taskStatus = normalizeTaskStatus(task?.status);
 
-    // Treat both "succeeded" (frontend) and "completed" (schema) as success.
-    if (task?.status === 'succeeded' || task?.status === 'completed') {
+    if (taskStatus === 'succeeded') {
       const doneProgress = buildProgressFromTask(
         { ...task, status: 'succeeded', progressPct: 100 },
         get().currentTaskEvents
@@ -2593,7 +2607,7 @@ export const useGameStore = create((set, get) => {
 
     try {
       const response = await gameService.cancelGenerationTask(task.taskId);
-      const nextStatus = response?.status || 'canceled';
+      const nextStatus = normalizeTaskStatus(response?.status, 'canceled');
       const nextTask = {
         ...task,
         status: nextStatus,

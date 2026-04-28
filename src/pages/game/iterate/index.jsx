@@ -226,7 +226,17 @@ export default function GameIteratePage() {
           return;
         }
 
-        if (String(currentGame?.id || '') === String(gameId)) {
+        const activeGeneratedIterateGameId = creationSession?.entryMode === 'iterate'
+          && creationSession?.status === 'generating'
+          ? creationSession?.gameId
+          : '';
+        const hasGeneratedIterateResultLoaded = Boolean(
+          activeGeneratedIterateGameId
+          && String(currentGame?.id || '') === String(activeGeneratedIterateGameId)
+          && isCompletedGameStatus(currentGame?.status)
+        );
+
+        if (String(currentGame?.id || '') === String(gameId) || hasGeneratedIterateResultLoaded) {
           return;
         }
 
@@ -252,7 +262,11 @@ export default function GameIteratePage() {
     };
   }, [
     currentGame?.id,
+    currentGame?.status,
     currentTask?.status,
+    creationSession?.entryMode,
+    creationSession?.gameId,
+    creationSession?.status,
     gameId,
     restorePersistedTask,
     setCurrentGame,
@@ -307,7 +321,13 @@ export default function GameIteratePage() {
 
     const matchesCurrentIterateSession = creationSession
       && creationSession.entryMode === 'iterate'
-      && String(creationSession.sourceGameId || '') === currentCompletedGameId;
+      && (
+        String(creationSession.sourceGameId || '') === currentCompletedGameId
+        || (
+          creationSession.status === 'generating'
+          && String(creationSession.gameId || '') === currentCompletedGameId
+        )
+      );
 
     if (matchesCurrentIterateSession) {
       iterateSessionBootstrappedGameIdRef.current = currentCompletedGameId;

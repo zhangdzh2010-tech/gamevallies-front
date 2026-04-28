@@ -32,6 +32,17 @@ const mockReadyGame = {
   type: 'casual',
 };
 
+const mockIterateResultGame = {
+  id: 'generated-game-2',
+  title: 'Updated Runner',
+  status: 'ready',
+  description: 'Updated arcade platformer',
+  orientation: 'portrait',
+  gameUrl: 'https://play.example/updated-runner',
+  canPlay: true,
+  type: 'casual',
+};
+
 const mockIterateSession = {
   sessionId: 'iter-1',
   entryMode: 'iterate',
@@ -358,6 +369,24 @@ describe('Iterate page creation session flow', () => {
     render(<IteratePage />);
 
     expect(await screen.findByText('Generating')).toBeTruthy();
+    expect(screen.queryByTestId('workspace')).toBeNull();
+  });
+
+  test('keeps the generated iterate result instead of reloading the source game', async () => {
+    mockGameStoreState = buildGameStoreState({
+      currentGame: mockIterateResultGame,
+      creationSession: {
+        ...mockIterateSession,
+        status: 'generating',
+        gameId: 'generated-game-2',
+      },
+    });
+
+    render(<IteratePage />);
+
+    expect(await screen.findByText('Updated Runner')).toBeTruthy();
+    expect(mockGetGame).not.toHaveBeenCalled();
+    expect(mockResetCreationSessionState).not.toHaveBeenCalled();
     expect(screen.queryByTestId('workspace')).toBeNull();
   });
 

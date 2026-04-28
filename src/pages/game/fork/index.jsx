@@ -21,6 +21,7 @@ import {
   isCompletedGameStatus,
   useGameStore,
 } from '../../../store/gameStore';
+import useGamePlayerStore from '../../../stores/gamePlayer';
 import {
   LOGIN_PAGE_URL,
   buildForkPageUrl,
@@ -28,8 +29,11 @@ import {
   openIteratePageWithAuth,
   setPostLoginRedirect,
 } from '../../../utils/authNavigation';
+import { getGameOrientation } from '../../../utils/gameOrientation';
+import { getGameCoverUrl } from '../../../utils/media';
 import { isH5Runtime } from '../../../utils/runtime';
 import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
+import { buildGameDetailPath } from '../../../utils/share';
 import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
@@ -119,6 +123,7 @@ export default function GameForkPage() {
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
   const containerClassName = `fork-page${isWeapp ? ' fork-page--weapp' : ''}${isH5 ? ' fork-page--h5' : ''}`;
+  const openGame = useGamePlayerStore((state) => state.openGame);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -460,6 +465,30 @@ export default function GameForkPage() {
     }
   };
 
+  const handlePlayForkResult = () => {
+    if (currentGame?.gameUrl) {
+      openGame(currentGame.gameUrl, currentGame.title || '游戏', getGameCoverUrl(currentGame), {
+        canPlay: currentGame?.canPlay !== false,
+        isOwnGame: true,
+        gameId: currentGame.id,
+        orientation: getGameOrientation(currentGame),
+      });
+      return;
+    }
+
+    if (currentGame?.id) {
+      Taro.navigateTo({ url: buildGameDetailPath(currentGame.id, { authorView: 1 }) }).catch(() => {});
+    }
+  };
+
+  const handleOpenForkResultDetail = () => {
+    if (!currentGame?.id) {
+      return;
+    }
+
+    Taro.navigateTo({ url: buildGameDetailPath(currentGame.id, { authorView: 1 }) }).catch(() => {});
+  };
+
   const renderForkPage = (content, { workspaceLayout = false } = {}) => (
     <View className={containerClassName}>
       <AppTopBar showBack />
@@ -636,9 +665,19 @@ export default function GameForkPage() {
                 hint="你可以继续在这版上接着改。"
                 actions={[
                   {
+                    key: 'play-fork-result',
+                    label: '试玩这版',
+                    tone: 'primary',
+                    onClick: handlePlayForkResult,
+                  },
+                  {
+                    key: 'open-fork-result-detail',
+                    label: '查看详情',
+                    onClick: handleOpenForkResultDetail,
+                  },
+                  {
                     key: 'continue-iterate-fork-result',
                     label: '继续优化这版作品',
-                    tone: 'primary',
                     onClick: () => openIteratePageWithAuth(currentGame, currentGame?.id),
                   },
                 ]}

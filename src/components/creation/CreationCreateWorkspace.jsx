@@ -156,7 +156,7 @@ export function CreationCreateWorkspace({
             value={inputValue}
             onInput={handleNativeInput}
             maxLength={4000}
-            rows={fieldMode === 'prompt' ? 8 : 4}
+            rows={fieldMode === 'prompt' ? (hasSession ? 4 : 8) : 4}
           />
         ) : (
           <Textarea
@@ -174,7 +174,7 @@ export function CreationCreateWorkspace({
   );
 
   return (
-    <View className="creation-create-workspace">
+    <View className={`creation-create-workspace${hasSession ? ' creation-create-workspace--session' : ''}`}>
       {showSettings ? (
         <View className="creation-session-card creation-create-settings">
           <View className="creation-create-settings__grid">
