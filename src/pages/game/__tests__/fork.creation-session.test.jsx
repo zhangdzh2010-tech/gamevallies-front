@@ -12,10 +12,15 @@ const mockCancelCurrentTask = jest.fn(() => Promise.resolve());
 const mockResetCreationSessionState = jest.fn();
 const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn(() => Promise.resolve());
+const mockOpenGame = jest.fn();
 const mockOpenIteratePageWithAuth = jest.fn();
 const mockSetPostLoginRedirect = jest.fn();
 const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockGetGame = jest.fn();
+const mockBuildGameDetailPath = jest.fn((id, params = {}) => {
+  const query = new URLSearchParams({ id, ...params }).toString();
+  return `/pages/game/detail/index?${query}`;
+});
 
 const mockSourceGame = {
   id: 'source-1',
@@ -31,6 +36,16 @@ const mockSourceGame = {
     id: 'author-1',
     displayName: 'Author One',
   },
+};
+
+const mockForkResultGame = {
+  id: 'fork-result-1',
+  title: 'Fork Result',
+  status: 'ready',
+  description: 'Forked game result',
+  orientation: 'portrait',
+  gameUrl: 'https://play.example/fork-result',
+  canPlay: true,
 };
 
 const mockForkSession = {
@@ -178,6 +193,23 @@ jest.mock('../../../utils/authNavigation', () => ({
   setPostLoginRedirect: (...args) => mockSetPostLoginRedirect(...args),
 }));
 
+jest.mock('../../../stores/gamePlayer', () => ({
+  __esModule: true,
+  default: jest.fn((selector) => selector({ openGame: mockOpenGame })),
+}));
+
+jest.mock('../../../utils/gameOrientation', () => ({
+  getGameOrientation: jest.fn(() => 'portrait'),
+}));
+
+jest.mock('../../../utils/media', () => ({
+  getGameCoverUrl: jest.fn(() => 'https://img.example/fork-cover.png'),
+}));
+
+jest.mock('../../../utils/share', () => ({
+  buildGameDetailPath: (...args) => mockBuildGameDetailPath(...args),
+}));
+
 jest.mock('../../../utils/storage', () => ({
   Storage: {
     getUser: jest.fn(() => ({
@@ -308,6 +340,38 @@ describe('Fork page creation session flow', () => {
         editedPrompt: '',
         generationTier: 'standard',
       }));
+    });
+  });
+
+  test('offers play and detail exits after a fork result completes', async () => {
+    mockGameStoreState = buildGameStoreState({
+      currentGame: mockForkResultGame,
+      creationSession: {
+        ...mockForkSession,
+        status: 'generating',
+        gameId: 'fork-result-1',
+      },
+    });
+
+    render(<ForkPage />);
+
+    expect(await screen.findByText('Fork Result')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('试玩这版'));
+    expect(mockOpenGame).toHaveBeenCalledWith(
+      'https://play.example/fork-result',
+      'Fork Result',
+      'https://img.example/fork-cover.png',
+      expect.objectContaining({
+        canPlay: true,
+        gameId: 'fork-result-1',
+        orientation: 'portrait',
+      }),
+    );
+
+    fireEvent.click(screen.getByText('查看详情'));
+    expect(mockNavigateTo).toHaveBeenCalledWith({
+      url: '/pages/game/detail/index?id=fork-result-1&authorView=1',
     });
   });
 

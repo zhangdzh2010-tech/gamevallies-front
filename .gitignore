@@ -64,6 +64,13 @@ ios/App/App.xcworkspace/xcuserdata
 # Environment (development)
 .env.development
 
+# Sensitive payment credentials (NEVER commit)
+docs/wechatpay/
+docs/微信支付.zip
+*.pem
+*.p12
+*密钥*
+
 # OS
 Thumbs.db
 desktop.ini

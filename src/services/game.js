@@ -4,6 +4,21 @@ import { normalizeGameOrientation } from '../utils/gameOrientation';
 import { isH5Runtime } from '../utils/runtime';
 import { Storage } from '../utils/storage';
 
+const GENERATION_TASK_STATUS_ALIASES = {
+  completed: 'succeeded',
+  complete: 'succeeded',
+  success: 'succeeded',
+  succeeded: 'succeeded',
+  cancelled: 'canceled',
+  canceled: 'canceled',
+  timeout: 'timed_out',
+  timedout: 'timed_out',
+  timed_out: 'timed_out',
+  queued: 'queued',
+  running: 'running',
+  failed: 'failed',
+};
+
 function mergeTaskPayload(source) {
   if (!source || typeof source !== 'object') {
     return null;
@@ -19,6 +34,11 @@ function mergeTaskPayload(source) {
   };
 }
 
+export function normalizeGenerationTaskStatus(status, fallback = 'queued') {
+  const normalized = String(status || '').trim().toLowerCase();
+  return GENERATION_TASK_STATUS_ALIASES[normalized] || fallback;
+}
+
 function normalizeGenerationTask(task) {
   if (!task || typeof task !== 'object') {
     return null;
@@ -30,7 +50,7 @@ function normalizeGenerationTask(task) {
   return {
     taskId: task.taskId || task.id || '',
     taskType: task.taskType || task.type || '',
-    status: task.status || 'queued',
+    status: normalizeGenerationTaskStatus(task.status),
     region: task.region || '',
     gameId: task.gameId || task.game_id || '',
     version: task.version ?? null,
@@ -638,7 +658,8 @@ export async function getGenerationTaskEvents(taskId, cursor, limit = 50) {
  * Cancel an active generation task
  */
 export async function cancelGenerationTask(taskId) {
-  return post(`/api/v1/games/tasks/${taskId}/cancel`, {});
+  const response = await post(`/api/v1/games/tasks/${taskId}/cancel`, {});
+  return normalizeGenerationTask(response);
 }
 
 /**
@@ -672,6 +693,7 @@ export async function updateGameSettings(gameId, settings) {
 }
 
 export default {
+  normalizeGenerationTaskStatus,
   normalizeCreationSessionSnapshot,
   normalizeCreationSessionStreamEvent,
   supportsCreationSessionEventStream,

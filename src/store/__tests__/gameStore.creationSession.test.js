@@ -9,6 +9,24 @@ const mockConfirmEditedPrompt = jest.fn();
 const mockConfirmCurrentPrompt = jest.fn();
 const mockSubscribeCreationSessionStream = jest.fn();
 const mockGetGenerationTaskEvents = jest.fn(() => Promise.resolve({ items: [], nextCursor: 0, hasMore: false }));
+const mockGenerationTaskStatusAliases = {
+  completed: 'succeeded',
+  complete: 'succeeded',
+  success: 'succeeded',
+  succeeded: 'succeeded',
+  cancelled: 'canceled',
+  canceled: 'canceled',
+  timeout: 'timed_out',
+  timedout: 'timed_out',
+  timed_out: 'timed_out',
+  queued: 'queued',
+  running: 'running',
+  failed: 'failed',
+};
+const mockNormalizeGenerationTaskStatus = jest.fn((status, fallback = 'queued') => {
+  const normalized = String(status || '').trim().toLowerCase();
+  return mockGenerationTaskStatusAliases[normalized] || fallback;
+});
 const mockSessionMessageHandlers = {};
 let mockCreationSessionStreamHandlers = null;
 const mockOnMessage = jest.fn((type, callback) => {
@@ -52,6 +70,7 @@ jest.mock('@tarojs/taro', () => {
 
 jest.mock('../../services/game', () => ({
   normalizeCreationSessionSnapshot: jest.fn((value) => value),
+  normalizeGenerationTaskStatus: mockNormalizeGenerationTaskStatus,
   createCreationSession: (...args) => mockCreateCreationSession(...args),
   getCreationSession: (...args) => mockGetCreationSession(...args),
   getActiveCreationSession: (...args) => mockGetActiveCreationSession(...args),
@@ -106,7 +125,7 @@ jest.mock('../../utils/gameUnlock', () => ({
 }));
 
 const gameService = require('../../services/game');
-const { useGameStore } = require('../gameStore');
+const { useGameStore, isTerminalTaskStatus } = require('../gameStore');
 
 describe('gameStore creation session actions', () => {
   beforeEach(() => {
@@ -158,6 +177,13 @@ describe('gameStore creation session actions', () => {
       creationSessionPendingUserMessage: null,
       creationSessionStreamConnected: false,
     });
+  });
+
+  test('treats legacy generation task status aliases as terminal states', () => {
+    expect(isTerminalTaskStatus('completed')).toBe(true);
+    expect(isTerminalTaskStatus('cancelled')).toBe(true);
+    expect(isTerminalTaskStatus('timedout')).toBe(true);
+    expect(isTerminalTaskStatus('running')).toBe(false);
   });
 
   test('startCreationSession stores session snapshot and context', async () => {
@@ -787,12 +813,12 @@ describe('gameStore creation session actions', () => {
       stageLabel: '搭建游戏',
       message: '正在把玩法一步步写出来',
     }));
-    expect(useGameStore.getState().generationProgress.stages).toEqual([
-      { key: 'submitting', label: '收到想法', pct: 5 },
-      { key: 'planning', label: '整理玩法想法', pct: 30 },
-      { key: 'generating', label: '搭建游戏', pct: 60 },
-      { key: 'qa', label: '自检一下手感', pct: 92 },
-      { key: 'completed', label: '完成', pct: 100 },
+    expect(useGameStore.getState().generationProgress.stages.map(({ key, pct }) => ({ key, pct }))).toEqual([
+      { key: 'understanding', pct: 15 },
+      { key: 'designing', pct: 35 },
+      { key: 'generating', pct: 60 },
+      { key: 'validating', pct: 85 },
+      { key: 'finalizing', pct: 100 },
     ]);
   });
 
@@ -817,13 +843,35 @@ describe('gameStore creation session actions', () => {
       message: 'Packing artifacts',
       pct: 47,
     }));
-    expect(useGameStore.getState().generationProgress.stages).toEqual([
-      { key: 'submitting', label: '收到想法', pct: 5 },
-      { key: 'planning', label: '整理玩法想法', pct: 30 },
-      { key: 'generating', label: '搭建游戏', pct: 60 },
-      { key: 'qa', label: '自检一下手感', pct: 92 },
-      { key: 'completed', label: '完成', pct: 100 },
+    expect(useGameStore.getState().generationProgress.stages.map(({ key, pct }) => ({ key, pct }))).toEqual([
+      { key: 'understanding', pct: 15 },
+      { key: 'designing', pct: 35 },
+      { key: 'generating', pct: 60 },
+      { key: 'validating', pct: 85 },
+      { key: 'finalizing', pct: 100 },
     ]);
+  });
+
+  test('uses backend public display stage keys as the progress contract', async () => {
+    await useGameStore.getState()._applyTaskUpdate({
+      taskId: 'task-public-stage',
+      taskType: 'pipeline_run',
+      status: 'running',
+      gameId: 'game-public-stage',
+      progressPct: 85,
+      displayStageKey: 'validating',
+      displayStageLabel: 'Quality validation',
+      displayStagePct: 85,
+      progressMessage: 'Checking generated game quality',
+    });
+
+    expect(useGameStore.getState().generationProgress).toEqual(expect.objectContaining({
+      stageKey: 'validating',
+      displayStageKey: 'validating',
+      stageIndex: 3,
+      message: '正在自检并调整细节',
+      pct: 85,
+    }));
   });
 
   test('generateFromCreationSession falls back to the current session revision when callers omit it', async () => {

@@ -348,6 +348,10 @@
   min-height: 0;
 }
 
+.creation-create-workspace--session {
+  gap: 12px;
+}
+
 .creation-create-workspace__stack {
   display: flex;
   flex-direction: column;
@@ -634,6 +638,14 @@
 
 .creation-create-editor__field--prompt {
   min-height: 280px;
+}
+
+.creation-create-workspace--session .creation-create-editor__field--prompt {
+  min-height: 156px;
+}
+
+.creation-create-workspace--session .creation-create-editor__input {
+  max-height: 132px;
 }
 
 .creation-create-editor__input {
@@ -1656,6 +1668,14 @@
 
   .creation-create-editor__field--prompt {
     min-height: 224px;
+  }
+
+  .creation-create-workspace--session .creation-create-editor__field--prompt {
+    min-height: 100px;
+  }
+
+  .creation-create-workspace--session .creation-create-editor__input {
+    max-height: 80px;
   }
 
   .creation-create-editor__input {
