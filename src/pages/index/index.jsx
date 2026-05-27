@@ -7,6 +7,7 @@ import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { FloatingPlayer } from '../../components/common/FloatingPlayer';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import { IcpFooter } from '../../components/common/IcpFooter';
 import { SkeletonFeedGrid } from '../../components/common/Skeleton';
 import { openCreatePageWithAuth } from '../../utils/authNavigation';
 import * as feedService from '../../services/feed';
@@ -627,6 +628,7 @@ export default function Home() {
         </View>
       )}
 
+      <IcpFooter />
       <View className="bottom-spacer" />
     </>
   );

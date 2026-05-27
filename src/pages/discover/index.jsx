@@ -8,6 +8,7 @@ import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { FloatingPlayer } from '../../components/common/FloatingPlayer';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import { IcpFooter } from '../../components/common/IcpFooter';
 import { SkeletonListRow } from '../../components/common/Skeleton';
 import * as feedService from '../../services/feed';
 import * as socialService from '../../services/social';
@@ -363,6 +364,7 @@ export default function FriendsPage() {
             </View>
           )}
 
+          <IcpFooter />
           <View className="bottom-spacer" />
         </PageScrollContainer>
       </View>
