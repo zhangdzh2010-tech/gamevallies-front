@@ -4,6 +4,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import { IcpFooter } from '../../components/common/IcpFooter';
 import * as socialService from '../../services/social';
 import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
 import { getH5PageScrollContainer } from '../../utils/h5Scroll';
@@ -354,6 +355,7 @@ export default function Message() {
               ) : null}
             </View>
           )}
+          <IcpFooter />
         </PageScrollContainer>
       </View>
 

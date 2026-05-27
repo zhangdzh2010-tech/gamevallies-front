@@ -6,6 +6,7 @@ import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { GlobalGamePlayer } from '../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import { IcpFooter } from '../../components/common/IcpFooter';
 import { Storage } from '../../utils/storage';
 import { ENV } from '../../config/env';
 import {
@@ -1443,6 +1444,7 @@ export default function Profile() {
           {activeTab === 'tasks'     && renderTaskPanel()}
         </View>
 
+        <IcpFooter />
         <View className="bottom-spacer" />
       </PageScrollContainer>
       </View>
