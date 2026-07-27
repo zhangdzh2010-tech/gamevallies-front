@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import * as gameService from '../services/game';
 import { getWebSocketManager } from '../services/websocket';
+import { decideTaskPollIntervals } from '../utils/taskPollingPolicy';
 import useQuotaStore from '../stores/quotaStore';
 import { Storage } from '../utils/storage';
 import { subscribeGameUnlocked } from '../utils/gameUnlock';
@@ -109,8 +110,9 @@ const STAGE_KEY_ALIASES = {
   succeeded: 'finalizing',
 };
 
-let activeTaskPollInterval = null;
-let activeEventPollInterval = null;
+// 自适应轮询:setTimeout 链式调度,每个周期按 WS 健康状态重新决定间隔
+let activeTaskPollTimer = null;
+let activeEventPollTimer = null;
 let activeTimeoutId = null;
 let activeWebSocketUnsubscribers = [];
 let activeSessionPollInterval = null;
@@ -122,14 +124,14 @@ let lastStageChangedAt = 0;
 let staleStageWarned = false;
 
 function clearActiveTaskRuntime() {
-  if (activeTaskPollInterval) {
-    clearInterval(activeTaskPollInterval);
-    activeTaskPollInterval = null;
+  if (activeTaskPollTimer) {
+    clearTimeout(activeTaskPollTimer);
+    activeTaskPollTimer = null;
   }
 
-  if (activeEventPollInterval) {
-    clearInterval(activeEventPollInterval);
-    activeEventPollInterval = null;
+  if (activeEventPollTimer) {
+    clearTimeout(activeEventPollTimer);
+    activeEventPollTimer = null;
   }
 
   if (activeTimeoutId) {
@@ -2160,7 +2162,35 @@ export const useGameStore = create((set, get) => {
     lastStageChangedAt = Date.now();
     staleStageWarned = false;
 
-    activeTaskPollInterval = setInterval(() => {
+    // 自适应轮询:WS 健康时放缓到慢间隔(仅兜底对账),断开/未连接时用快间隔。
+    // 每个周期调度时重新读取健康状态,恢复健康后下个周期自然放缓。
+    const resolvePollIntervals = () => {
+      const ws = getWebSocketManager();
+      const wsHealthy = Boolean(ws && typeof ws.isHealthy === 'function' && ws.isHealthy());
+      return decideTaskPollIntervals(wsHealthy);
+    };
+
+    const scheduleTaskStatusPoll = () => {
+      if (activeTaskPollTimer) {
+        clearTimeout(activeTaskPollTimer);
+      }
+      activeTaskPollTimer = setTimeout(() => {
+        scheduleTaskStatusPoll();
+        taskPollTick();
+      }, resolvePollIntervals().taskMs);
+    };
+
+    const scheduleTaskEventsPoll = () => {
+      if (activeEventPollTimer) {
+        clearTimeout(activeEventPollTimer);
+      }
+      activeEventPollTimer = setTimeout(() => {
+        scheduleTaskEventsPoll();
+        eventsPollTick();
+      }, resolvePollIntervals().eventsMs);
+    };
+
+    const taskPollTick = () => {
       const currentTask = useGameStore.getState().currentTask;
       if (!currentTask?.taskId || currentTask.taskId !== task.taskId) {
         return;
@@ -2186,15 +2216,38 @@ export const useGameStore = create((set, get) => {
       }
 
       void useGameStore.getState()._syncTask(task.taskId);
-    }, 4000);
+    };
 
-    activeEventPollInterval = setInterval(() => {
+    const eventsPollTick = () => {
       const currentTask = useGameStore.getState().currentTask;
       if (!currentTask?.taskId || currentTask.taskId !== task.taskId) {
         return;
       }
       void useGameStore.getState()._syncTaskEvents(task.taskId);
-    }, 2500);
+    };
+
+    scheduleTaskStatusPoll();
+    scheduleTaskEventsPoll();
+
+    // WS 从健康变断开:立即对账一次,并把待触发的轮询重排为快间隔
+    const wsForStatus = getWebSocketManager();
+    if (wsForStatus && typeof wsForStatus.onStatusChange === 'function') {
+      const wsStatusHandler = (connected) => {
+        if (connected) {
+          return;
+        }
+        const store = useGameStore.getState();
+        if (store.currentTask?.taskId !== task.taskId) {
+          return;
+        }
+        void store._syncTask(task.taskId);
+        void store._syncTaskEvents(task.taskId);
+        scheduleTaskStatusPoll();
+        scheduleTaskEventsPoll();
+      };
+      wsForStatus.onStatusChange(wsStatusHandler);
+      activeWebSocketUnsubscribers.push(() => wsForStatus.offStatusChange(wsStatusHandler));
+    }
 
     activeTimeoutId = setTimeout(() => {
       const store = useGameStore.getState();
