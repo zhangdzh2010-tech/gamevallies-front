@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro';
 import { API_CONFIG } from '../types';
+import { isWsHealthy } from '../utils/taskPollingPolicy';
 
 /**
  * Parse the WS_URL (Socket.IO client format: "http://host/namespace")
@@ -118,11 +119,14 @@ class WebSocketManager {
   _intentionalClose = false;
   _token = '';
   _namespace = '/';
+  // 最近一次收到任意帧(含 engine.io ping)的时间,用于健康判定
+  _lastActivityAt = 0;
 
   messageHandlers = new Map();
   progressHandlers = new Map();
   completeHandlers = new Map();
   globalNotificationHandlers = [];
+  statusChangeHandlers = [];
 
   /**
    * Connect to the Socket.IO server.
@@ -241,6 +245,28 @@ class WebSocketManager {
     return this.isConnected;
   }
 
+  /**
+   * 连接是否健康:已连接且近期(见 WS_HEALTH_WINDOW_MS)收到过帧。
+   * 未连接、连接失败、重连放弃、平台不支持等场景一律返回 false。
+   */
+  isHealthy() {
+    return isWsHealthy({
+      connected: this.isConnected,
+      lastActivityAt: this._lastActivityAt,
+      now: Date.now(),
+    });
+  }
+
+  /** 订阅连接状态变化,回调收到布尔值(true=已连接,false=已断开)。 */
+  onStatusChange(callback) {
+    this.statusChangeHandlers.push(callback);
+  }
+
+  offStatusChange(callback) {
+    const idx = this.statusChangeHandlers.indexOf(callback);
+    if (idx > -1) this.statusChangeHandlers.splice(idx, 1);
+  }
+
   // ─── Internal ──────────────────────────────────────────────────────────────
 
   _bindListeners() {
@@ -255,9 +281,11 @@ class WebSocketManager {
     Taro.onSocketOpen(() => {
       this.isConnected = true;
       this.reconnectCount = 0;
+      this._lastActivityAt = Date.now();
       // Socket.IO CONNECT frame for the configured namespace
       const ns = this._namespace !== '/' ? `${this._namespace},` : '';
       this._sendRaw(`40${ns}`);
+      this._emitStatusChange(true);
     });
 
     Taro.onSocketError((error) => {
@@ -267,6 +295,7 @@ class WebSocketManager {
     Taro.onSocketClose(() => {
       const wasConnected = this.isConnected;
       this.isConnected = false;
+      this._emitStatusChange(false);
       if (!this._intentionalClose) {
         // #9 WebSocket 断连后给用户一个轻量提示
         if (wasConnected && this.reconnectCount === 0) {
@@ -285,10 +314,22 @@ class WebSocketManager {
     } catch (_e) {}
   }
 
+  _emitStatusChange(connected) {
+    this.statusChangeHandlers.forEach((cb) => {
+      try {
+        cb(connected);
+      } catch (_e) {
+        // Ignore handler failures.
+      }
+    });
+  }
+
   _handleMessage(message) {
     try {
       const raw = typeof message.data === 'string' ? message.data : null;
       if (!raw) return;
+
+      this._lastActivityAt = Date.now();
 
       const parsed = parseFrame(raw);
       if (!parsed) return;

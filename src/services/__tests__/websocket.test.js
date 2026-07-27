@@ -7,9 +7,11 @@ jest.mock('@tarojs/taro', () => ({
   onSocketClose: jest.fn(),
   closeSocket: jest.fn(),
   sendSocketMessage: jest.fn(),
+  showToast: jest.fn(),
 }));
 
-const { buildEngineIoWsUrl, parseWsUrl } = require('../websocket');
+const Taro = require('@tarojs/taro');
+const { buildEngineIoWsUrl, parseWsUrl, getWebSocketManager } = require('../websocket');
 
 describe('websocket service helpers', () => {
   test('preserves the /ws prefix for Socket.IO handshakes', () => {
@@ -34,5 +36,37 @@ describe('websocket service helpers', () => {
     expect(buildEngineIoWsUrl('', '')).toBe(
       '/socket.io/?EIO=4&transport=websocket'
     );
+  });
+});
+
+describe('websocket manager health & status change', () => {
+  test('exposes isHealthy and notifies status-change subscribers on open/close', () => {
+    const ws = getWebSocketManager();
+
+    // 初始:未连接 → 不健康(weapp 或连接失败场景走快轮询)
+    expect(ws.isHealthy()).toBe(false);
+
+    const statusChanges = [];
+    const handler = (connected) => statusChanges.push(connected);
+    ws.onStatusChange(handler);
+
+    // 触发 connect 以绑定 Taro socket 监听器
+    ws.connect('token-abc').catch(() => {});
+    const openHandler = Taro.onSocketOpen.mock.calls[0][0];
+    const closeHandler = Taro.onSocketClose.mock.calls[0][0];
+
+    openHandler();
+    expect(ws.getIsConnected()).toBe(true);
+    expect(ws.isHealthy()).toBe(true);
+    expect(statusChanges).toEqual([true]);
+
+    closeHandler();
+    expect(ws.getIsConnected()).toBe(false);
+    expect(ws.isHealthy()).toBe(false);
+    expect(statusChanges).toEqual([true, false]);
+
+    ws.offStatusChange(handler);
+    openHandler();
+    expect(statusChanges).toEqual([true, false]);
   });
 });
