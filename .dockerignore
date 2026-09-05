@@ -7,3 +7,6 @@ coverage
 android
 ios
 *.log
+
+**/.fc-runtime*.json
+**/fc-release*.json
