@@ -1,123 +1,85 @@
-name: 部署前端到火山引擎函数服务
-
+name: Deploy to Alibaba Cloud
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
-
-env:
-  REGION:     ${{ vars.VOLCENGINE_REGION || 'cn-shanghai' }}
-  REGISTRY:   ${{ vars.VOLCENGINE_REGISTRY || 'gamevallies-repo-cn-shanghai.cr.volces.com' }}
-  NAMESPACE:  ${{ vars.VOLCENGINE_REGISTRY_NAMESPACE || 'gamevallies' }}
-  IMAGE_NAME: ${{ vars.IMAGE_NAME || 'gv-frontend' }}
-  FUNC_ID:    ${{ vars.FUNC_ID || 'tsrtwmbw' }}
-  PORT:       ${{ vars.PORT || '8080' }}
-  VPC_ID:     ${{ vars.VOLCENGINE_VPC_ID || '' }}
-  SUBNET_ID:  ${{ vars.VOLCENGINE_SUBNET_ID || '' }}
-  SEC_GROUP:  ${{ vars.VOLCENGINE_SECURITY_GROUP_ID || '' }}
-
+permissions:
+  contents: read
+concurrency:
+  group: aliyun-production-front
+  cancel-in-progress: false
 jobs:
-  build-and-deploy:
-    name: 构建镜像 & 部署 H5
+  verify:
+    if: github.ref == 'refs/heads/main' && vars.ALIYUN_DEPLOY_ENABLED == 'true'
+    uses: ./.github/workflows/ci.yml
+  images:
+    needs: verify
     runs-on: ubuntu-latest
-
+    timeout-minutes: 40
+    env:
+      ACR_REGISTRY: ${{ vars.ACR_REGISTRY }}
+      ACR_NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      PUBLIC_ORIGIN: ${{ vars.PUBLIC_ORIGIN }}
+      GAME_CONTENT_ORIGIN: ${{ vars.GAME_CONTENT_ORIGIN }}
+      GAME_SHELL_ORIGIN: ${{ vars.GAME_SHELL_ORIGIN }}
+      TARO_APP_ENABLE_WECHAT_H5_LOGIN: ${{ vars.TARO_APP_ENABLE_WECHAT_H5_LOGIN }}
+      TARO_APP_WECHAT_OAUTH_APP_ID: ${{ vars.TARO_APP_WECHAT_OAUTH_APP_ID }}
+      TARO_APP_WECHAT_OAUTH_SCOPE: ${{ vars.TARO_APP_WECHAT_OAUTH_SCOPE }}
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 配置 Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # VCR 用户名含 '#'，必须用单引号包裹（见 DEPLOY_RUNBOOK 6.1）
-      - name: 登录 VCR
+      - uses: actions/checkout@v4
+      - name: Validate registry configuration
+        shell: bash
         run: |
-          echo '${{ secrets.VOLCENGINE_REGISTRY_PASSWORD }}' | \
-            docker login ${{ env.REGISTRY }} \
-              -u '${{ secrets.VOLCENGINE_REGISTRY_USERNAME }}' \
-              --password-stdin
-
-      - name: 构建并推送镜像
+          set -euo pipefail
+          : "${ACR_REGISTRY:?Missing ACR_REGISTRY}" "${ACR_NAMESPACE:?Missing ACR_NAMESPACE}"
+          : "${ACR_USERNAME:?Missing ACR_USERNAME}" "${ACR_PASSWORD:?Missing ACR_PASSWORD}"
+          [[ "$ACR_REGISTRY" =~ ^[a-zA-Z0-9.-]+(:[0-9]+)?$ ]]
+          [[ "$ACR_NAMESPACE" =~ ^[a-z0-9_-]+$ ]]
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push immutable release images
+        shell: bash
         run: |
-          IMAGE=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker build --platform linux/amd64 -t $IMAGE .
-          docker push $IMAGE
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-
-      - name: 配置 Python
-        uses: actions/setup-python@v4
+          set -euo pipefail
+          export DOCKER_CONFIG=$(mktemp -d)
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" --username "$ACR_USERNAME" --password-stdin
+          [[ "$PUBLIC_ORIGIN" =~ ^https://[a-zA-Z0-9.-]+(:[0-9]+)?$ ]] || { echo 'Set PUBLIC_ORIGIN to the HTTPS app origin'; exit 2; }
+          [[ "$GAME_CONTENT_ORIGIN" =~ ^https://[a-zA-Z0-9.-]+(:[0-9]+)?$ ]] || { echo 'Set GAME_CONTENT_ORIGIN to the HTTPS game origin'; exit 2; }
+          args=()
+          for service in AUTH GAME SOCIAL FEED AI; do
+            args+=(--build-arg "TARO_APP_${service}_SERVICE_URL=$PUBLIC_ORIGIN")
+          done
+          args+=(--build-arg "TARO_APP_WS_URL=${PUBLIC_ORIGIN/https:/wss:}/ws")
+          args+=(--build-arg "TARO_APP_GAME_CONTENT_URL=$GAME_CONTENT_ORIGIN")
+          args+=(--build-arg "TARO_APP_GAME_SHELL_URL=${GAME_SHELL_ORIGIN:-$PUBLIC_ORIGIN}")
+          args+=(--build-arg TARO_APP_ENABLE_WECHAT_H5_LOGIN --build-arg TARO_APP_WECHAT_OAUTH_APP_ID --build-arg TARO_APP_WECHAT_OAUTH_SCOPE)
+          docker buildx build --platform linux/amd64 "${args[@]}" --tag "$ACR_REGISTRY/$ACR_NAMESPACE/frontend:$GITHUB_SHA" --push .
+  deploy:
+    needs: images
+    # Only a dedicated production ECS runner may use this label.
+    runs-on: [self-hosted, Linux, X64, aliyun-ecs-front]
+    environment: production
+    timeout-minutes: 20
+    env:
+      DEPLOY_ROOT: /opt/gamevallies/front
+      IMAGE_PREFIX: ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_NAMESPACE }}
+      IMAGE_TAG: ${{ github.sha }}
+      ACR_REGISTRY: ${{ vars.ACR_REGISTRY }}
+      ACR_USERNAME: ${{ secrets.ACR_PULL_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PULL_PASSWORD }}
+      GATEWAY_BIND: ${{ vars.GATEWAY_BIND }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          python-version: '3.12'
-
-      - name: 安装 VeFaaS SDK
-        run: pip install volcengine-python-sdk
-
-      # gv-frontend 函数已存在 (ID: tsrtwmbw)，直接 UpdateFunction + Release
-      - name: 更新函数并发布
-        env:
-          VOLCENGINE_ACCESS_KEY: ${{ secrets.VOLCENGINE_ACCESS_KEY }}
-          VOLCENGINE_SECRET_KEY: ${{ secrets.VOLCENGINE_SECRET_KEY }}
-          VCR_USERNAME: ${{ secrets.VOLCENGINE_REGISTRY_USERNAME }}
-          VCR_PASSWORD: ${{ secrets.VOLCENGINE_REGISTRY_PASSWORD }}
+          persist-credentials: false
+      - name: Pull and deploy on ECS
+        shell: bash
         run: |
-          python3 - <<PYEOF
-          import os, sys, time, warnings
-          warnings.filterwarnings("ignore")
-          import volcenginesdkvefaas, volcenginesdkcore
-
-          AK       = os.environ["VOLCENGINE_ACCESS_KEY"]
-          SK       = os.environ["VOLCENGINE_SECRET_KEY"]
-          USERNAME = os.environ["VCR_USERNAME"]
-          PASSWORD = os.environ["VCR_PASSWORD"]
-          IMAGE    = os.environ["IMAGE"]
-          FUNC_ID  = "${{ env.FUNC_ID }}"
-          REGION   = "${{ env.REGION }}"
-          VPC_ID   = "${{ env.VPC_ID }}"
-          SUBNET_ID = "${{ env.SUBNET_ID }}"
-          SEC_GROUP = "${{ env.SEC_GROUP }}"
-
-          cfg = volcenginesdkcore.Configuration()
-          cfg.ak, cfg.sk, cfg.region = AK, SK, REGION
-          api = volcenginesdkvefaas.VEFAASApi(volcenginesdkcore.ApiClient(cfg))
-
-          print(f"更新函数 gv-frontend (id={FUNC_ID}) → {IMAGE}")
-          update_req = volcenginesdkvefaas.UpdateFunctionRequest(
-              id=FUNC_ID,
-              source_type="image",
-              source=IMAGE,
-              source_access_config=volcenginesdkvefaas.SourceAccessConfigForUpdateFunctionInput(
-                  username=USERNAME, password=PASSWORD),
-          )
-          if VPC_ID and SUBNET_ID and SEC_GROUP:
-              update_req.vpc_config = volcenginesdkvefaas.VpcConfigForUpdateFunctionInput(
-                  enable_vpc=True,
-                  vpc_id=VPC_ID,
-                  subnet_ids=[SUBNET_ID],
-                  security_group_ids=[SEC_GROUP],
-              )
-          api.update_function(update_req)
-          print("函数配置已更新，等待镜像缓存就绪...")
-
-          deadline = time.time() + 300
-          cache_status = status = ""
-          while time.time() < deadline:
-              try:
-                  sync = api.get_image_sync_status(
-                      volcenginesdkvefaas.GetImageSyncStatusRequest(function_id=FUNC_ID, source=IMAGE))
-                  status = getattr(sync, "status", "") or ""
-                  cache_status = getattr(sync, "image_cache_status", "") or ""
-                  if cache_status.lower() == "ready" or status.lower() == "succeeded":
-                      print(f"镜像缓存就绪 (status={status})")
-                      break
-                  if status.lower() == "failed":
-                      print("镜像同步失败，请检查 VCR 凭证"); sys.exit(1)
-              except Exception as e:
-                  print(f"  查询异常: {e}")
-              print(f"  等待中... status={status} cache={cache_status}")
-              time.sleep(10)
-          else:
-              print("等待超时 (5 分钟)"); sys.exit(1)
-
-          rel = api.release(volcenginesdkvefaas.ReleaseRequest(function_id=FUNC_ID, revision_number=0))
-          print(f"发布成功 版本={rel.new_revision_number} 状态={rel.status}")
-          PYEOF
+          set -euo pipefail
+          : "${ACR_USERNAME:?Missing ACR_PULL_USERNAME}" "${ACR_PASSWORD:?Missing ACR_PULL_PASSWORD}"
+          export DOCKER_CONFIG=$(mktemp -d)
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$ACR_PASSWORD" | docker login "$ACR_REGISTRY" --username "$ACR_USERNAME" --password-stdin
+          bash scripts/aliyun/deploy.sh

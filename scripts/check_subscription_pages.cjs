@@ -4,7 +4,7 @@ const { chromium, devices } = require('@playwright/test');
 
 const FRONTEND_ROOT = path.resolve(__dirname, '..');
 const BACKEND_ROOT = path.resolve(FRONTEND_ROOT, '..', 'gamevallies-backend');
-const ENV_PATH = path.join(BACKEND_ROOT, '.env.deploy');
+const ENV_PATH = path.join(BACKEND_ROOT, '.env.production');
 const CHROME_EXECUTABLE = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const MOBILE_DEVICE = devices['iPhone 13'];
 
@@ -189,3 +189,4 @@ main().catch((error) => {
   }, null, 2));
   process.exitCode = 1;
 });
+

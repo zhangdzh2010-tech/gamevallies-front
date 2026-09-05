@@ -41,8 +41,8 @@ npm run lint
 常用环境文件：
 
 - `.env`：默认环境配置
-- `.env.deploy`：部署环境配置
-- `.env.deploy.example`：部署配置示例
+- `.env.production`：部署环境配置
+- `.env.production.example`：部署配置示例
 - `.env.development`：本地 watch 模式覆盖配置，可选
 
 主要环境变量定义集中在 [src/config/env.js](src/config/env.js)。
@@ -135,3 +135,8 @@ Jest 配置见 [jest.config.js](jest.config.js)。
 - 文档索引：[docs/README.md](docs/README.md)
 - 代码结构说明：[docs/project-structure.md](docs/project-structure.md)
 - 历史归档资料：[docs/archive/README.md](docs/archive/README.md)
+
+
+## 部署
+
+[阿里云部署与维护](docs/ALIYUN_DEPLOYMENT.md)。

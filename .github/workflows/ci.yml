@@ -1,15 +1,9 @@
-name: Store refactor regression
-
+name: CI
 on:
+  push:
+    branches: [main]
   pull_request:
-    paths:
-      - 'src/store/**'
-      - 'src/pages/create/**'
-      - 'src/components/creation/**'
-      - 'src/components/common/GamePlayer.jsx'
-      - 'package*.json'
-      - 'Dockerfile'
-      - '.github/workflows/store-refactor-tests.yml'
+  workflow_call:
 
 permissions:
   contents: read
@@ -32,3 +26,21 @@ jobs:
           src/components/creation/__tests__/CreationCreateWorkspace.test.jsx
       - name: Build H5 from source
         run: npm run build:h5
+
+  deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n scripts/aliyun/deploy.sh
+      - run: python3 scripts/aliyun/test_deploy.py
+      - name: Validate production Compose
+        env:
+          IMAGE_PREFIX: registry.example.com/gamevallies
+          IMAGE_TAG: test
+          RUNTIME_ENV_FILE: /tmp/runtime.env
+        run: |
+          touch /tmp/runtime.env
+          docker compose -f deploy/aliyun/compose.yml config --quiet
+      - name: Build frontend image without publishing
+        run: docker build --tag gamevallies-frontend:ci .
