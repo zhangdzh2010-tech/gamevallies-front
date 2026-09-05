@@ -72,7 +72,7 @@ describe('CreationCreateWorkspace', () => {
       />
     );
 
-    expect(screen.getByText('AI 整理出的方向')).toBeTruthy();
+    expect(screen.getByText('你的创作描述')).toBeTruthy();
     expect(screen.getByText('Please confirm or edit the prompt.')).toBeTruthy();
     expect(screen.getByText('最初输入')).toBeTruthy();
   });
@@ -91,8 +91,8 @@ describe('CreationCreateWorkspace', () => {
       />
     );
 
-    expect(screen.getByText('AI 正在把你的想法补成完整方向')).toBeTruthy();
-    expect(screen.queryByText('AI 整理出的方向')).toBeNull();
+    expect(screen.getByText('正在保存创作描述')).toBeTruthy();
+    expect(screen.queryByText('你的创作描述')).toBeNull();
   });
 
   test('shows the fallback notice with low-quality copy when ai-engine fell back due to an unusable LLM output', () => {
@@ -177,3 +177,4 @@ describe('CreationCreateWorkspace', () => {
     expect(screen.queryByText('AI 只重复了你的描述')).toBeNull();
   });
 });
+
