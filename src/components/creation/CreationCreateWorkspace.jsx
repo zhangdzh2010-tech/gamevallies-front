@@ -72,20 +72,20 @@ export function CreationCreateWorkspace({
   onInputChange,
   inputPlaceholder = '继续补充你的想法...',
   onPrimaryAction,
-  primaryActionLabel = '让 AI 整理一下',
+  primaryActionLabel = '确认创作描述',
   primaryActionDisabled = false,
   secondaryActions = [],
   errorMessage = '',
   isSubmitting = false,
   workspaceTitle = '说说你的想法',
-  workspaceHint = '先说一句话，AI 会帮你补成一版完整方向，你改改就能开始做。',
-  introMessage = '先告诉我你想做什么，我会整理出一版完整方向。',
+  workspaceHint = '先描述玩法和想要的体验，确认后由 AI 开始生成游戏。',
+  introMessage = '先写下你想做的游戏，确认描述后开始生成。',
   helperText = '',
-  loadingTitle = 'AI 正在把你的想法补成完整方向',
-  loadingDescription = '通常只要几秒，AI 会整理出一版你可以改的方向。',
+  loadingTitle = '正在保存创作描述',
+  loadingDescription = '保存后可以继续修改，确认后再开始生成游戏。',
   initialLabel = '你的初始想法',
   initialHint = '先描述玩法、主题或你想实现的感觉，越自然越好。',
-  draftLabel = 'AI 整理出的方向',
+  draftLabel = '你的创作描述',
   draftHint = '你可以继续改这段方向，改完就能开始做。',
 }) {
   const hasSession = Boolean(session?.sessionId);
@@ -297,7 +297,7 @@ export function CreationCreateWorkspace({
 
               {isInitializing ? (
                 <View className="creation-state-card creation-state-card--centered creation-create-loading-card">
-                  <Text className="creation-state-card__eyebrow">AI 正在整理</Text>
+                  <Text className="creation-state-card__eyebrow">正在保存描述</Text>
                   <Text className="creation-state-card__title">{loadingTitle}</Text>
                   <Text className="creation-state-card__description">{loadingDescription}</Text>
                   <View className="creation-state-card__spinner">
@@ -363,3 +363,4 @@ export function CreationCreateWorkspace({
 }
 
 export default CreationCreateWorkspace;
+
