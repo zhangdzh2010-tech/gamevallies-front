@@ -45,7 +45,7 @@ const ORIENTATION_OPTIONS = [
   { value: 'landscape', label: '横屏' },
 ];
 
-function getUserFacingCreateError(rawError, fallbackStageLabel = 'AI 整理想法') {
+function getUserFacingCreateError(rawError, fallbackStageLabel = '保存创作描述') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
   if (!source) {
     return `${fallbackStageLabel}时遇到问题，请稍后重试`;
@@ -358,7 +358,7 @@ export default function Create() {
         },
       );
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次创作没能启动，请稍后重试');
+      toastError(getUserFacingCreateError(err?.message, '保存创作描述'), '这次创作没能启动，请稍后重试');
     }
   };
 
@@ -374,7 +374,7 @@ export default function Create() {
     try {
       await confirmEditedPrompt(nextPromptDraft);
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次方向没能保存，请稍后重试');
+      toastError(getUserFacingCreateError(err?.message, '保存创作描述'), '这次方向没能保存，请稍后重试');
     }
   };
 
@@ -382,7 +382,7 @@ export default function Create() {
     try {
       await confirmCurrentPrompt();
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次方向没能保存，请稍后重试');
+      toastError(getUserFacingCreateError(err?.message, '保存创作描述'), '这次方向没能保存，请稍后重试');
     }
   };
 
@@ -457,7 +457,7 @@ export default function Create() {
       resetCreateSession();
       resetLocalCreateState();
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, 'AI 整理想法'), '这次重新开始没能成功，请稍后重试');
+      toastError(getUserFacingCreateError(err?.message, '保存创作描述'), '这次重新开始没能成功，请稍后重试');
     }
   };
 
@@ -542,7 +542,7 @@ export default function Create() {
       }
 
       return {
-        label: '让 AI 整理一下',
+        label: '确认创作描述',
         onClick: handleStartCreateSession,
         disabled: creationSessionSubmitting || !canSendEntryPrompt,
       };
@@ -685,17 +685,17 @@ export default function Create() {
       isSubmitting={creationSessionSubmitting}
       workspaceTitle={isCreateSessionActive ? '确认这次的创作方向' : '说说你的想法'}
       workspaceHint={isCreateSessionActive
-        ? 'AI 已经帮你整理出了一版完整方向，你可以先改改，再开始正式做。'
-        : '先说一句话，AI 会帮你补成一版完整方向，你改改就能开始做。'}
-      introMessage="先告诉我你想做什么，我会整理出一版完整方向。"
+        ? '请确认你的创作描述，也可以继续修改，再开始生成。'
+        : '先描述玩法和想要的体验，确认后由 AI 开始生成游戏。'}
+      introMessage="先写下你想做的游戏，确认描述后开始生成。"
       helperText={isCreateSessionActive
         ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这一版方向。')
         : ''}
-      loadingTitle="AI 正在把你的想法补成完整方向"
-      loadingDescription="通常只要几秒，AI 会整理出一版你可以改的方向。"
+      loadingTitle="正在保存创作描述"
+      loadingDescription="保存后可以继续修改，确认后再开始生成游戏。"
       initialLabel="你的游戏方向"
       initialHint="先描述题材、核心玩法或你想要的体验，越自然越好。"
-      draftLabel="AI 整理出的方向"
+      draftLabel="你的创作描述"
       draftHint={creationSession?.status === 'ready'
         ? '这版方向已经确认。你仍然可以继续改，再次保存。'
         : '你可以继续改这段方向，改完就能开始做。'}
@@ -846,3 +846,4 @@ export default function Create() {
 
   return renderCreatePage(createWorkspace, { workspaceLayout: true });
 }
+
