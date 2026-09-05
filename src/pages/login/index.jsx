@@ -266,7 +266,7 @@ export default function Login() {
       <View className="login-content">
         <View className="logo-section">
           <Text className="logo">智了空间</Text>
-          <Text className="tagline">AI 驱动的全民游戏创作平台</Text>
+          <Text className="tagline">让创意成为可交互的作品</Text>
         </View>
 
         {loginHint ? (
@@ -444,3 +444,4 @@ export default function Login() {
     </View>
   );
 }
+

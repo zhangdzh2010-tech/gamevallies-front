@@ -1,3 +1,4 @@
+import CreativeHome from '../../components/creative-web/CreativeHome';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text, ScrollView } from '@tarojs/components';
@@ -61,7 +62,7 @@ function normalizeGame(game, index) {
   };
 }
 
-export default function Home() {
+function LegacyHome() {
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
   const homeRef = useRef(null);
@@ -658,4 +659,9 @@ export default function Home() {
       <PaywallPopup />
     </View>
   );
+}
+
+
+export default function Home() {
+  return isH5Runtime() ? <CreativeHome /> : <LegacyHome />;
 }
