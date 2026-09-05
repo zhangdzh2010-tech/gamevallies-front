@@ -78,11 +78,11 @@ export function CreationCreateWorkspace({
   errorMessage = '',
   isSubmitting = false,
   workspaceTitle = '说说你的想法',
-  workspaceHint = '先描述玩法和想要的体验，确认后由 AI 开始生成游戏。',
-  introMessage = '先写下你想做的游戏，确认描述后开始生成。',
+  workspaceHint = '先描述玩法和想要的体验，确认后由 AI 开始生成作品。',
+  introMessage = '先写下你想做的作品，确认描述后开始生成。',
   helperText = '',
   loadingTitle = '正在保存创作描述',
-  loadingDescription = '保存后可以继续修改，确认后再开始生成游戏。',
+  loadingDescription = '保存后可以继续修改，确认后再开始生成作品。',
   initialLabel = '你的初始想法',
   initialHint = '先描述玩法、主题或你想实现的感觉，越自然越好。',
   draftLabel = '你的创作描述',
@@ -198,11 +198,11 @@ export function CreationCreateWorkspace({
             </View>
 
             <View className="creation-create-settings__field creation-create-settings__field--name">
-              <Text className="creation-create-settings__label">游戏名称</Text>
+              <Text className="creation-create-settings__label">作品名称</Text>
               <View className="creation-config-input-wrap">
                 <Input
                   className="creation-config-input"
-                  placeholder="给你的游戏起个名字（可选）"
+                  placeholder="给你的作品起个名字（可选）"
                   placeholderStyle="color: #55516e"
                   value={gameName}
                   onInput={onGameNameChange}
@@ -267,7 +267,7 @@ export function CreationCreateWorkspace({
                 ).toLowerCase();
                 let eyebrow = 'AI 扩写需要补充';
                 let noticeText =
-                  '本次扩写里 AI 没能把玩法、关卡、UI 等细节补全。建议在下方继续描述具体的玩法机制、关卡节奏、画风或参考游戏，再开始生成。';
+                  '本次扩写里 AI 没能把玩法、关卡、UI 等细节补全。建议在下方继续描述具体的玩法机制、关卡节奏、画风或参考作品，再开始生成。';
                 if (
                   reason.includes('echoed_user_idea') ||
                   reason.includes('echo')
@@ -281,7 +281,7 @@ export function CreationCreateWorkspace({
                 ) {
                   eyebrow = 'AI 扩写需要补充';
                   noticeText =
-                    '这一版的扩写结果里有效内容不足，系统已用默认结构做了兜底。建议在下方继续补上具体的玩法机制、关卡节奏、画风或参考游戏，再开始生成。';
+                    '这一版的扩写结果里有效内容不足，系统已用默认结构做了兜底。建议在下方继续补上具体的玩法机制、关卡节奏、画风或参考作品，再开始生成。';
                 }
                 return (
                   <View className="creation-create-stage-summary__fallback-notice">

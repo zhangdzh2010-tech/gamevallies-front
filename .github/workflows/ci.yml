@@ -24,6 +24,7 @@ jobs:
           src/store/__tests__/gameStore.creationSession.test.js
           src/pages/create/__tests__/create.creation-session.test.jsx
           src/components/creation/__tests__/CreationCreateWorkspace.test.jsx
+          src/components/creative-web/__tests__
       - name: Build H5 from source
         run: npm run build:h5
 

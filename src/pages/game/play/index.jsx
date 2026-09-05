@@ -68,7 +68,7 @@ export default function GamePlay() {
   const shareConfig = getShareConfig(
     {
       id: activeGameId,
-      title: gameMeta?.title || gameTitle || '游戏',
+      title: gameMeta?.title || gameTitle || '作品',
       coverUrl: activeGameCover,
       orientation: activeGameOrientation,
     },
@@ -174,7 +174,7 @@ export default function GamePlay() {
 
         setGameContext({
           gameUrl: resolvedUrl,
-          gameTitle: game?.title || '游戏',
+          gameTitle: game?.title || '作品',
           gameCover: getGameCoverUrl(game),
           gameOrientation: getGameOrientation(game, routeDefaultOrientation),
           gameId: game?.id || routeGameId,
@@ -189,7 +189,7 @@ export default function GamePlay() {
 
         console.error('Failed to load game for play page:', error);
         Taro.showToast({
-          title: '游戏加载失败',
+          title: '作品加载失败',
           icon: 'none',
           duration: 2000,
         });
@@ -217,7 +217,7 @@ export default function GamePlay() {
     const shellUrl = buildGameWebShellUrl({
       gameId: activeGameId,
       gameUrl: sourceGameUrl,
-      title: gameMeta?.title || gameTitle || '游戏',
+      title: gameMeta?.title || gameTitle || '作品',
       coverUrl: activeGameCover,
       orientation: activeGameOrientation,
       accessToken: Storage.getToken(),
@@ -246,7 +246,7 @@ export default function GamePlay() {
 
     Taro.hideLoading({ fail() {} });
     Taro.showToast({
-      title: '游戏加载失败，请重试',
+      title: '作品加载失败，请重试',
       icon: 'none',
       duration: 2000,
     });
@@ -269,7 +269,7 @@ export default function GamePlay() {
       : bookmarkCount;
     const baseGame = gameMeta || {
       id: activeGameId,
-      title: gameTitle || '游戏',
+      title: gameTitle || '作品',
       coverUrl: gameCover || '',
       thumbnailUrl: gameCover || '',
       bookmarks: nextBookmarkCount,
@@ -315,10 +315,11 @@ export default function GamePlay() {
       ) : (
         <View className="game-loading">
           <Text className="game-loading-text">
-            {loading ? '游戏加载中...' : '游戏地址无效'}
+            {loading ? '作品加载中...' : '作品地址无效'}
           </Text>
         </View>
       )}
     </View>
   );
 }
+
