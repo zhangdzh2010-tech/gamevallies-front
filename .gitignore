@@ -74,3 +74,8 @@ docs/微信支付.zip
 # OS
 Thumbs.db
 desktop.ini
+
+# Production configuration stays on ECS
+.env.production
+.env.production.*
+!.env.production.example

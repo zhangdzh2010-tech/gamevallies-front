@@ -3,7 +3,7 @@ const path = require('path');
 
 const FRONTEND_ROOT = path.resolve(__dirname, '..');
 const BACKEND_ROOT = path.resolve(FRONTEND_ROOT, '..', 'gamevallies-backend');
-const ENV_PATH = path.join(BACKEND_ROOT, '.env.deploy');
+const ENV_PATH = path.join(BACKEND_ROOT, '.env.production');
 
 function loadEnv(filePath) {
   const env = {};
@@ -574,3 +574,4 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
