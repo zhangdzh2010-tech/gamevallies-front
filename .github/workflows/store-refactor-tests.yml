@@ -1,0 +1,34 @@
+name: Store refactor regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/store/**'
+      - 'src/pages/create/**'
+      - 'src/components/creation/**'
+      - 'src/components/common/GamePlayer.jsx'
+      - 'package*.json'
+      - 'Dockerfile'
+      - '.github/workflows/store-refactor-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  creation-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --no-audit --no-fund
+      - name: Verify store and creation page regressions
+        run: >-
+          npm test -- --runInBand
+          src/store/__tests__/gameStore.creationSession.test.js
+          src/pages/create/__tests__/create.creation-session.test.jsx
+          src/components/creation/__tests__/CreationCreateWorkspace.test.jsx
+      - name: Build H5 from source
+        run: npm run build:h5
