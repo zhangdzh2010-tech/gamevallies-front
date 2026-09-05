@@ -227,7 +227,8 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', m
             src={displayUrl}
             onLoad={() => setLoading(false)}
             onError={() => setLoading(false)}
-            sandbox="allow-scripts allow-same-origin allow-popups"
+            sandbox="allow-scripts"
+            referrerPolicy="no-referrer"
             allow="autoplay; fullscreen"
           />
         </View>
@@ -255,3 +256,4 @@ export function GlobalGamePlayer() {
     />
   );
 }
+
