@@ -12,8 +12,8 @@ Use the repo script `scripts/run_live_playwright_ui_e2e.cjs` for the normal path
 1. Work from the frontend repo root:
    `d:\Project\gamevallies\gamevallies-frontend`
 2. Confirm the sibling backend env file exists:
-   `d:\Project\gamevallies\gamevallies-backend\.env.deploy`
-3. Confirm `.env.deploy` contains at least:
+   `d:\Project\gamevallies\gamevallies-backend\.env.production`
+3. Confirm `.env.production` contains at least:
    `PUBLIC_API_BASE_URL`
    `ADMIN_TOKEN`
 4. Confirm Chrome exists at:
@@ -92,7 +92,7 @@ node scripts/run_live_playwright_ui_e2e.cjs --start 2 --limit 2
 
 ## Failure Handling
 
-- If the script fails before case execution, check missing Chrome, missing backend `.env.deploy`, invalid `ADMIN_TOKEN`, or missing `@playwright/test`.
+- If the script fails before case execution, check missing Chrome, missing backend `.env.production`, invalid `ADMIN_TOKEN`, or missing `@playwright/test`.
 - If only one case failed, rerun that slice with `--start N --limit 1`. Add `--headed` when debugging navigation or selector issues.
 - Common evidence lives in:
   - final JSON `tmp_playwright_ui_e2e_*.json`
@@ -106,3 +106,4 @@ node scripts/run_live_playwright_ui_e2e.cjs --start 2 --limit 2
 - Do not claim the suite is fully green unless every selected case passed.
 - Prefer rerunning only the failed slice before repeating all cases.
 - Do not clean up created data unless the user asks.
+

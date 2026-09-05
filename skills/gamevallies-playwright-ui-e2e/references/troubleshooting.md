@@ -3,7 +3,7 @@
 ## Immediate setup failures
 
 - Missing backend env file:
-  The script reads `d:\Project\gamevallies\gamevallies-backend\.env.deploy` through a fixed sibling-repo path.
+  The script reads `d:\Project\gamevallies\gamevallies-backend\.env.production` through a fixed sibling-repo path.
 - Missing Chrome executable:
   The script launches `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 - Missing Playwright package:
@@ -33,3 +33,4 @@ Include these fields in the first summary:
 - `iterate.gameId`
 - `fork.gameId`
 - `artifactDir`
+

@@ -18,12 +18,13 @@
 - [billing-system-design.md](billing-system-design.md)
 - [private-message-design.md](private-message-design.md)
 - [h5-to-app-checklist.md](h5-to-app-checklist.md)
-- [LLM_GATEWAY_ASYNC_TASK_DESIGN.md](LLM_GATEWAY_ASYNC_TASK_DESIGN.md)
 
 ## 环境与运维
 
-- [ENV_SYNC_GUIDE.md](ENV_SYNC_GUIDE.md)
 
 ## 归档
 
 - [archive/README.md](archive/README.md)
+
+
+- [阿里云部署与维护](ALIYUN_DEPLOYMENT.md)
