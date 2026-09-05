@@ -18,8 +18,8 @@ export const ACTIVE_CREATION_SESSION_STATUSES = new Set(['initializing', 'collec
 
 export const PIPELINE_STAGES = [
   { key: 'understanding', label: '理解想法', pct: 15 },
-  { key: 'designing', label: '设计玩法', pct: 35 },
-  { key: 'generating', label: '搭建游戏', pct: 60 },
+  { key: 'designing', label: '设计交互', pct: 35 },
+  { key: 'generating', label: '搭建作品', pct: 60 },
   { key: 'validating', label: '检查细节', pct: 85 },
   { key: 'finalizing', label: '完成', pct: 100 },
 ];
@@ -29,25 +29,25 @@ export const DETAILED_PIPELINE_STAGES = [
   { key: 'spec_build', label: '想清楚怎么玩', pct: 15 },
   { key: 'runtime_profile_select', label: '挑一套玩法模板', pct: 30 },
   { key: 'contract_compose', label: '准备画面和规则', pct: 40 },
-  { key: 'logic_generate', label: '搭建游戏', pct: 60 },
+  { key: 'logic_generate', label: '搭建作品', pct: 60 },
   { key: 'contract_qa', label: '检查细节', pct: 76 },
-  { key: 'runtime_simulation_qa', label: '试玩一遍', pct: 92 },
+  { key: 'runtime_simulation_qa', label: '体验一遍', pct: 92 },
   { key: 'completed', label: '完成', pct: 100 },
 ];
 
 export const PIPELINE_STAGE_SUMMARIES = {
-  understanding: '正在理解你的游戏想法',
+  understanding: '正在理解你的作品想法',
   designing: '正在整理玩法和画面设计',
-  generating: '正在把玩法一步步写出来',
+  generating: '正在把交互一步步写出来',
   validating: '正在自检并调整细节',
   finalizing: '你的作品做好了',
   submitting: '正在收下你的想法',
   spec_build: '正在想清楚玩法和主要设定',
   runtime_profile_select: '正在挑一套最合适的玩法模板',
   contract_compose: '正在搭好画面、规则和节奏',
-  logic_generate: '正在把玩法一步步写出来',
+  logic_generate: '正在把交互一步步写出来',
   contract_qa: '正在自检并调整细节',
-  runtime_simulation_qa: '正在试玩一遍，确认能顺畅玩',
+  runtime_simulation_qa: '正在体验一遍，确认能顺畅玩',
   completed: '你的作品做好了',
 };
 

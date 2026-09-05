@@ -320,7 +320,7 @@ export default function GameDetail() {
     setCommentInputFocused(true);
   }, delay);
 
-  const shareConfig = getShareConfig(game || { id: gameId, title: '游戏' });
+  const shareConfig = getShareConfig(game || { id: gameId, title: '作品' });
   const authorId = game?.author?.id || game?.authorId;
   const isOwnGame = Boolean(currentUserId && String(currentUserId) === String(authorId || ''));
   const canForkGame = Boolean(game && !isOwnGame && game.allowFork !== false);
@@ -701,14 +701,14 @@ export default function GameDetail() {
 
   const handleContinueCreate = async () => {
     if (isOwnGame) {
-      // #12 校验游戏是否处于可优化状态
+      // #12 校验作品是否处于可优化状态
       const gameStatus = game?.status;
       if (gameStatus === 'generating') {
-        Taro.showToast({ title: '游戏还在生成中，请稍后再优化', icon: 'none' });
+        Taro.showToast({ title: '作品还在生成中，请稍后再优化', icon: 'none' });
         return;
       }
       if (gameStatus === 'banned') {
-        Taro.showToast({ title: '该游戏已被下架，无法优化', icon: 'none' });
+        Taro.showToast({ title: '该作品已被下架，无法优化', icon: 'none' });
         return;
       }
       openIteratePageWithAuth(game, game?.id);
@@ -795,7 +795,7 @@ export default function GameDetail() {
     return (
       <View className={containerClassName}>
         <View style={{ padding: '40px', textAlign: 'center' }}>
-          <Text style={{ color: '#8b87a3', fontSize: '28px' }}>{loading ? '加载中...' : '游戏不存在'}</Text>
+          <Text style={{ color: '#8b87a3', fontSize: '28px' }}>{loading ? '加载中...' : '作品不存在'}</Text>
         </View>
       </View>
     );
@@ -894,12 +894,12 @@ export default function GameDetail() {
                   });
                   return;
                 }
-                Taro.showToast({ title: '游戏暂不可用', icon: 'none' });
+                Taro.showToast({ title: '作品暂不可用', icon: 'none' });
               }}
             >
               <View className={`btn-icon ${requiresSubscriptionToPlay ? 'btn-icon--lock' : 'btn-icon--play'}`} />
               <View className="btn-copy">
-                <Text className="btn-text">{requiresSubscriptionToPlay ? '订阅后试玩' : '立即试玩'}</Text>
+                <Text className="btn-text">{requiresSubscriptionToPlay ? '订阅后体验' : '立即体验'}</Text>
                 <Text className="btn-subtext">
                   {requiresSubscriptionToPlay ? '开通后自动解锁当前作品' : '马上玩一下'}
                 </Text>
@@ -1041,3 +1041,4 @@ export default function GameDetail() {
     </View>
   );
 }
+

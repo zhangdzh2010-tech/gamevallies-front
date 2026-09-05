@@ -103,7 +103,7 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', m
     if (gameUrl) {
       if (exitTimer.current) clearTimeout(exitTimer.current);
       setDisplayUrl(gameUrl);
-      setDisplayTitle(gameTitle || '游戏试玩');
+      setDisplayTitle(gameTitle || '作品体验');
       setLoading(true);
       setFullscreen(isLandscapeGame);
       setTimeout(() => setVisible(true), 20);
@@ -216,7 +216,7 @@ export function GamePlayer({ gameUrl, gameTitle, gameOrientation = 'portrait', m
 
         {loading && (
           <View className="player-loading">
-            <Text className="loading-text">游戏加载中...</Text>
+            <Text className="loading-text">作品加载中...</Text>
           </View>
         )}
 

@@ -40,6 +40,13 @@ jest.mock('@tarojs/taro', () => {
   };
 });
 
+jest.mock('../../../components/creative-web/CreativeShell', () => ({
+  __esModule: true,
+  default: ({ children }) => <div>{children}</div>,
+  CreativeIcon: () => <span />,
+}));
+jest.mock('../../../components/creative-web/WorkPreview', () => ({ __esModule: true, default: () => <div>preview</div> }));
+
 jest.mock('../../../components/common/AppTopBar', () => ({
   AppTopBar: ({ rightText, onRightClick }) => (
     <button type="button" onClick={onRightClick}>{rightText || 'top-bar'}</button>
@@ -218,9 +225,9 @@ describe('Create page creation session flow', () => {
   test('starts a creation session from the first prompt', async () => {
     render(<CreatePage />);
 
-    const initialInput = await screen.findByLabelText('create-initial-prompt');
+    const initialInput = await screen.findByLabelText('描述你的创意');
     fireEvent.change(initialInput, { target: { value: 'Make a funny office stealth game' } });
-    fireEvent.click(screen.getByTestId('workspace-primary'));
+    fireEvent.click(screen.getByText(/确认创作描述|确认这段方向/));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -247,16 +254,16 @@ describe('Create page creation session flow', () => {
 
     render(<CreatePage />);
 
-    const promptInput = await screen.findByLabelText('create-session-prompt');
+    const promptInput = await screen.findByLabelText('确认或修改创作方向');
     fireEvent.change(promptInput, { target: { value: 'Expanded prompt draft with more traps' } });
-    fireEvent.click(screen.getByTestId('workspace-primary'));
+    fireEvent.click(screen.getByText(/确认创作描述|确认这段方向/));
 
     await waitFor(() => {
       expect(mockConfirmEditedPrompt).toHaveBeenCalledWith('Expanded prompt draft with more traps');
     });
   });
 
-  test('hides title and orientation settings once the prompt-confirmation session starts', async () => {
+  test('locks title and orientation once the prompt-confirmation session starts', async () => {
     mockGameStoreState = buildGameStoreState({
       creationSession: mockCreateSession,
       creationSessionUiState: {
@@ -269,15 +276,16 @@ describe('Create page creation session flow', () => {
 
     render(<CreatePage />);
 
-    expect((await screen.findByTestId('workspace')).dataset.showSettings).toBe('false');
+    expect((await screen.findByLabelText('作品名称')).disabled).toBe(true);
+    expect(screen.getByLabelText('呈现比例').disabled).toBe(true);
   });
 
   test('supports direct generate from the initial entry prompt', async () => {
     render(<CreatePage />);
 
-    const initialInput = await screen.findByLabelText('create-initial-prompt');
+    const initialInput = await screen.findByLabelText('描述你的创意');
     fireEvent.change(initialInput, { target: { value: 'Make a boss-rush rhythm game' } });
-    fireEvent.click(screen.getByTestId('secondary-generate-create-directly'));
+    fireEvent.click(screen.getByText('直接生成'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -298,3 +306,4 @@ describe('Create page creation session flow', () => {
     });
   });
 });
+

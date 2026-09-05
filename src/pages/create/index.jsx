@@ -1,3 +1,5 @@
+import CreativeStudio from '../../components/creative-web/CreativeStudio';
+import { consumeCreativeDraft } from '../../components/creative-web/creativeModel';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
@@ -106,7 +108,7 @@ export default function Create() {
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [sessionPromptDraft, setSessionPromptDraft] = useState('');
-  const [orientation, setOrientation] = useState('portrait');
+  const [orientation, setOrientation] = useState(isH5 ? 'landscape' : 'portrait');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
   const promptDraftSyncKeyRef = useRef('');
@@ -124,7 +126,7 @@ export default function Create() {
     setPrompt('');
     setSessionPromptDraft('');
     setGameName('');
-    setOrientation('portrait');
+    setOrientation(isH5 ? 'landscape' : 'portrait');
     promptDraftSyncKeyRef.current = '';
   };
 
@@ -262,6 +264,10 @@ export default function Create() {
       resetLocalCreateState();
       clearError();
       resetCreateSession({ clearPersistedTask: mode === 'fresh' });
+      if (isH5 && mode === 'fresh') {
+        const draft = consumeCreativeDraft();
+        if (draft) setPrompt(draft.prompt);
+      }
 
       if (mode === 'resume' && gameId) {
         if (!cancelled) {
@@ -340,7 +346,7 @@ export default function Create() {
 
   const handleStartCreateSession = async () => {
     if (!prompt.trim() || prompt.trim().length < 5) {
-      toastInfo('请输入更完整的游戏描述');
+      toastInfo('请输入更完整的创意描述');
       return;
     }
 
@@ -406,7 +412,7 @@ export default function Create() {
   const activeCreateInputValue = isCreateSessionActive ? sessionPromptDraft : prompt;
   const activeCreateInputPlaceholder = isCreateSessionActive
     ? '在这里继续改这段方向...'
-    : '先说一句你想做的游戏...';
+    : '先说一句你想实现的创意...';
 
   const ensureCreateSession = async () => {
     if (isCreateSessionActive && creationSession?.sessionId) {
@@ -445,7 +451,7 @@ export default function Create() {
         ...(gameName.trim() ? { title: gameName.trim() } : {}),
       });
     } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, '创建游戏'), '创建游戏失败');
+      toastError(getUserFacingCreateError(err?.message, '创作作品'), '创作作品失败');
     }
   };
 
@@ -686,21 +692,40 @@ export default function Create() {
       workspaceTitle={isCreateSessionActive ? '确认这次的创作方向' : '说说你的想法'}
       workspaceHint={isCreateSessionActive
         ? '请确认你的创作描述，也可以继续修改，再开始生成。'
-        : '先描述玩法和想要的体验，确认后由 AI 开始生成游戏。'}
-      introMessage="先写下你想做的游戏，确认描述后开始生成。"
+        : '先描述现象、交互方式和想要的体验，确认后由 AI 开始生成作品。'}
+      introMessage="先写下你想实现的创意，确认描述后开始生成。"
       helperText={isCreateSessionActive
         ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这一版方向。')
         : ''}
       loadingTitle="正在保存创作描述"
-      loadingDescription="保存后可以继续修改，确认后再开始生成游戏。"
-      initialLabel="你的游戏方向"
-      initialHint="先描述题材、核心玩法或你想要的体验，越自然越好。"
+      loadingDescription="保存后可以继续修改，确认后再开始生成作品。"
+      initialLabel="你的创意方向"
+      initialHint="先描述题材、交互方式或你想要的体验，越自然越好。"
       draftLabel="你的创作描述"
       draftHint={creationSession?.status === 'ready'
         ? '这版方向已经确认。你仍然可以继续改，再次保存。'
         : '你可以继续改这段方向，改完就能开始做。'}
     />
   );
+
+  if (isH5) {
+    const completed = !isGenerating && currentGame && isCompletedGameStatus(currentGame.status);
+    return <CreativeStudio
+      title={gameName} onTitleChange={setGameName}
+      orientation={orientation} onOrientationChange={setOrientation}
+      input={activeCreateInputValue}
+      onInputChange={value => isCreateSessionActive ? setSessionPromptDraft(value) : setPrompt(value)}
+      session={creationSession} work={currentGame}
+      generating={isGenerating} progress={generationProgress}
+      loading={isRestoringEntry || creationSessionSubmitting}
+      error={entryErrorMessage}
+      primary={completed ? { label: '此版本已完成', disabled: true } : createPrimaryConfig}
+      secondary={completed ? [] : createWorkspaceSecondaryActions}
+      onCancel={currentTask?.taskId ? handleCancelTask : null}
+      onNew={handleNewGame} canPlay={canPlay} onUnlock={handleLockedPlay}
+      quotaText={quotaBannerCopy.text}
+    />;
+  }
 
   if (isRestoringEntry) {
     return renderCreatePage(
