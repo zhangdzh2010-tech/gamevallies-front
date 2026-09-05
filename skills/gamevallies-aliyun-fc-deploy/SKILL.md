@@ -10,7 +10,9 @@ description: 为 GameVallies 前后端规划、改造、发布和排查阿里云
 用户已明确选择阿里云函数计算 FC，不使用 ECS。此决定取代此前 ACR + ECS + Docker Compose 的部署方案。产品是面向桌面 Web 的交互创意平台，覆盖物理、生物、化学和艺术；不新增移动 H5 产品要求。内部 Taro H5 构建名称和 /games API 保留兼容。
 
 作用仓库：`zhangdzh2010-tech/gamevallies-front` 与 `zhangdzh2010-tech/gamevallies-backend`。
-本 skill 是部署规范，不是已经可执行的 FC 发布实现。首次执行须检查两库真实主干、PR、工作流与云端资源状态。当前已有的 `deploy/aliyun/compose.yml`、`scripts/aliyun/deploy.sh` 和 ECS Runner 工作流属于旧方案，不得将其作为 FC 部署命令运行，也不要设置旧 `ALIYUN_DEPLOY_ENABLED=true` 来尝试 FC 发布。
+本 skill 是部署规范。FC 实现位于两库 `deploy/fc/`、`scripts/fc/` 和 `.github/workflows/deploy.yml`，采用官方 Python SDK 4.8.2。首次执行核对真实主干与 PR 合并状态；代码改造不等于已部署。新开关为 `ALIYUN_FC_DEPLOY_ENABLED`，旧 ECS 入口已在 FC 改造分支移除。
+
+当前实现保留 BullMQ 和 AI 后台任务，game-service 与 ai-engine 各使用 1 个 `alwaysAllocateCPU=true` 预留实例且 `disableOndemand=true`，有持续资源成本。尚未迁移为 FC 原生异步任务。发布前维护标记阻止新入队并等待旧任务；不要在未改造任务状态/取消机制前缩到零或增加副本。
 
 不要要求用户购买 ECS、提供 ECS SSH 密钥、安装服务器 Runner，或默认要求 ALB。不重新引入火山引擎部署/维护脚本；业务模型接口及历史对象存储适配应单独盘点，不能因名称包含旧云平台就删除。
 
@@ -19,7 +21,7 @@ description: 为 GameVallies 前后端规划、改造、发布和排查阿里云
 - 两库 `.github/workflows/`、Dockerfile、`deploy/`、服务启动入口与环境变量模板。
 - 后端生成请求、任务队列/消费者、进度通知、文件持久化代码。
 - 前端 API、作品内容域名、SSE/WebSocket 和登录回调配置。
-- 两库 `docs/**/ALIYUN_DEPLOYMENT.md` 作为旧方案背景，出现 ECS 要求时以本 skill 的 FC 决策为准。
+- 两库 `docs/**/ALIYUN_DEPLOYMENT.md` 获取实际字段、发布顺序、回滚边界和部署身份要求。
 
 具体 FC 类型、CLI 组件版本和字段，执行时通过阿里云官方文档核实；不要把旧 FC 服务/函数层级和新 API 配置混写。不凭记忆生成声称可执行的 Serverless Devs 配置。
 
