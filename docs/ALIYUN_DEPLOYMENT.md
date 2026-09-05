@@ -1,5 +1,7 @@
 # 阿里云前端发布
 
+> 部署目标已调整为阿里云函数计算 FC。后续部署遵循 [FC 部署 skill](../skills/gamevallies-aliyun-fc-deploy/SKILL.md)。下文为旧 ECS 实现记录；FC 工作流尚需改造，不要启用旧部署开关来发布 FC。
+
 前端构建为 Nginx 容器，推送 ACR，由 ECS 上标签为 `aliyun-ecs-front` 的专用 Runner 部署。镜像按 Git commit SHA 标记，容器通过 HTTP 检查才记录为当前版本，失败时恢复前一个版本。入口为 `.github/workflows/deploy.yml`；未设 `ALIYUN_DEPLOY_ENABLED=true` 时不会发布。
 
 先按[后端阿里云部署说明](https://github.com/zhangdzh2010-tech/gamevallies-backend/blob/main/docs/deployment/ALIYUN_DEPLOYMENT.md)准备 ACR、同一台 Linux x86_64 ECS、Docker Compose、专用 Runner、ALB、共享网络和 Secrets。本仓库的目标目录为 `/opt/gamevallies/front`，Compose project 为 `gamevallies-front`。前端容器不直接暴露主机端口，由后端 gateway 转发。
