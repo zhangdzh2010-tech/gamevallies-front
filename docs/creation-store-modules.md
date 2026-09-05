@@ -33,6 +33,6 @@ The `Store refactor regression` pull-request workflow runs the existing store an
 creation-page test suites. Run the same suites locally with:
 
 ```sh
-npm ci
+npm install
 npm test -- --runInBand src/store/__tests__/gameStore.creationSession.test.js src/pages/create/__tests__/create.creation-session.test.jsx
 ```
