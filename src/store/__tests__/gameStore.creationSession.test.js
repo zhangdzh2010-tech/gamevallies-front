@@ -810,8 +810,8 @@ describe('gameStore creation session actions', () => {
       stageKey: 'logic_generate',
       displayStageKey: 'generating',
       stageIndex: 2,
-      stageLabel: '搭建游戏',
-      message: '正在把玩法一步步写出来',
+      stageLabel: '搭建作品',
+      message: '正在把交互一步步写出来',
     }));
     expect(useGameStore.getState().generationProgress.stages.map(({ key, pct }) => ({ key, pct }))).toEqual([
       { key: 'understanding', pct: 15 },
@@ -1106,3 +1106,4 @@ describe('gameStore creation session actions', () => {
     }));
   });
 });
+

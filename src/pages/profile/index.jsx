@@ -52,7 +52,7 @@ const DRAFT_STATUSES = ['ready', 'draft', 'generating', 'failed', 'banned'];
 function normalizeGame(game, index) {
   return {
     ...game,
-    title: game.title || `游戏 ${String(game.id || '').slice(0, 6)}`,
+    title: game.title || `作品 ${String(game.id || '').slice(0, 6)}`,
     plays: game.plays || game.playCount || 0,
     likes: game.likes || game.likeCount || 0,
     comments: game.comments || game.commentCount || 0,
@@ -317,7 +317,7 @@ function getActiveTaskStageLabel(progressPct) {
   const pct = Number(progressPct) || 0;
   if (pct < 10) return '收到想法';
   if (pct < 35) return '整理玩法想法';
-  if (pct < 70) return '搭建游戏';
+  if (pct < 70) return '搭建作品';
   if (pct < 95) return '自检一下手感';
   return '即将完成';
 }
@@ -423,7 +423,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       key: 'optimize',
       iconKey: 'optimize',
       tone: 'optimize',
-      label: '优化游戏',
+      label: '优化作品',
       desc: '继续改玩法、文字和手感',
       onClick: onOptimize,
     },
@@ -439,7 +439,7 @@ function MoreMenu({ game, onClose, onShare, onPublish, onOptimize, onDelete, onS
       key: 'delete',
       iconKey: 'delete',
       tone: 'danger',
-      label: '删除游戏',
+      label: '删除作品',
       desc: '删除后不可恢复，请谨慎操作',
       onClick: onDelete,
       danger: true,
@@ -532,7 +532,7 @@ function VisibilityModal({ game, onClose, onSave }) {
           <View className="toggle-row" onClick={() => setAllowComments(!allowComments)}>
             <View className="toggle-info">
               <Text className="toggle-label">允许评论</Text>
-              <Text className="toggle-desc">其他用户可以评论你的游戏</Text>
+              <Text className="toggle-desc">其他用户可以评论你的作品</Text>
             </View>
             <View className={`toggle-switch ${allowComments ? 'on' : ''}`}>
               <View className="toggle-thumb" />
@@ -541,7 +541,7 @@ function VisibilityModal({ game, onClose, onSave }) {
           <View className="toggle-row" onClick={() => setAllowFork(!allowFork)}>
             <View className="toggle-info">
               <Text className="toggle-label">允许复刻</Text>
-              <Text className="toggle-desc">其他用户可以基于你的游戏进行二次创作</Text>
+              <Text className="toggle-desc">其他用户可以基于你的作品进行二次创作</Text>
             </View>
             <View className={`toggle-switch ${allowFork ? 'on' : ''}`}>
               <View className="toggle-thumb" />
@@ -1073,7 +1073,7 @@ export default function Profile() {
   const handleDelete = (game) => {
     setMoreGame(null);
     Taro.showModal({
-      title: '删除游戏',
+      title: '删除作品',
       content: `确定删除《${game.title}》吗？此操作不可撤销。`,
       confirmColor: '#ff5c8a',
       success: async (res) => {
@@ -1408,9 +1408,9 @@ export default function Profile() {
         </View>
 
         <View className="games-section">
-          {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的游戏作品')}
+          {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的作品作品')}
           {activeTab === 'drafts'    && renderGameList(draftGames, 'empty-icon--drafts', '还没有草稿作品')}
-          {activeTab === 'liked'     && renderGameList(likedGames, 'empty-icon--liked', '你还没有点赞过游戏', false, false)}
+          {activeTab === 'liked'     && renderGameList(likedGames, 'empty-icon--liked', '你还没有点赞过作品', false, false)}
           {activeTab === 'bookmarks' && (
             <>
               {normalizedBookmarkedGames.length > 0 && (
@@ -1423,7 +1423,7 @@ export default function Profile() {
                   </Text>
                 </View>
               )}
-              {renderGameList(normalizedBookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的游戏', false, false)}
+              {renderGameList(normalizedBookmarkedGames, 'empty-icon--bookmarks', '还没有收藏的作品', false, false)}
               {bookmarkHasMore && normalizedBookmarkedGames.length > 0 && (
                 <View
                   className={`bookmarks-load-more${bookmarkLoadingMore ? ' is-loading' : ''}`}
@@ -1486,3 +1486,4 @@ export default function Profile() {
     </View>
   );
 }
+

@@ -1,3 +1,4 @@
+import CreativeStudio from '../../../components/creative-web/CreativeStudio';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
@@ -706,12 +707,36 @@ export default function GameIteratePage() {
     </View>
   );
 
+  if (isH5) {
+    const readyToGenerate = isIterateSessionActive && !hasIteratePromptChanges
+      && (canGenerateIterateSession || canConfirmCurrentIteratePrompt);
+    return <CreativeStudio
+      mode="iterate" title={currentGame?.title || ''}
+      orientation={getGameOrientation(currentGame, 'landscape')}
+      input={isIterateSessionActive ? sessionPromptDraft : iterateFeedback}
+      onInputChange={value => isIterateSessionActive ? setSessionPromptDraft(value) : setIterateFeedback(value)}
+      session={isCurrentIterateSession ? creationSession : null} work={currentGame}
+      generating={isGenerating} progress={generationProgress}
+      loading={isBootstrapping || creationSessionSubmitting || resumeDecisionSubmitting}
+      error={iterateWorkspaceError}
+      primary={{
+        label: readyToGenerate ? '按此方向继续创作' : isIterateSessionActive ? '确认修改方向' : '整理创意方向',
+        onClick: readyToGenerate ? handleIterateWorkspaceGenerate : handleIterateWorkspacePrimaryAction,
+        disabled: Boolean(resumeCandidate) || !currentGame?.id || (readyToGenerate ? false : isIterateSessionActive ? !canEditIteratePrompt || !hasIteratePromptChanges : !canStartIterateSession),
+      }}
+      secondary={isIterateSessionActive ? [{ key: 'restart', label: '重新整理方向', onClick: handleRestartIterateSession }] : []}
+      canPlay={currentGame?.canPlay !== false} onUnlock={handleLockedPlay}
+      onCancel={currentTask?.taskId ? handleCancelTask : null}
+      supplemental={resumeCandidate ? <div className="cw-ready"><strong>发现未完成的创作方向</strong><p>继续上次的思路，或开始一轮新的调整。</p><button className="cw-button cw-outline" disabled={resumeDecisionSubmitting} onClick={handleContinueIterateSession}>继续上次创作</button><button className="cw-button cw-outline" disabled={resumeDecisionSubmitting} onClick={handleStartFreshIterateSession}>开启新一轮</button></div> : null}
+    />;
+  }
+
   if (isBootstrapping) {
     return renderIteratePage(
       <CreationSessionShell
         eyebrow="正在准备"
         title="正在加载优化页面"
-        subtitle="马上带你回到这款游戏的当前版本。"
+        subtitle="马上带你回到这件作品的当前版本。"
         statusLabel="当前状态"
         statusValue="正在准备"
         sections={[
@@ -938,7 +963,7 @@ export default function GameIteratePage() {
       loadingTitle="AI 正在把你说的想法补成完整方向"
       loadingDescription="通常只要几秒，AI 会整理出一版你可以改的方向。"
       initialLabel="这轮想改的方向"
-      initialHint="可以描述你想调整的节奏、手感、美术或想让它更适合谁玩。"
+      initialHint="可以描述你想调整的节奏、手感、美术或想让它更适合谁探索。"
       draftLabel="AI 整理出的方向"
       draftHint={creationSession?.status === 'ready'
         ? '这版方向已经确认。你仍然可以继续改，再次保存。'
@@ -1006,3 +1031,4 @@ export default function GameIteratePage() {
 
   return renderIteratePage(iterateWorkspace, { workspaceLayout: true });
 }
+

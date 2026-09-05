@@ -176,7 +176,7 @@ export default function GameForkPage() {
   const authorName = getAuthorName(sourceGame);
 
   const statItems = useMemo(() => ([
-    { label: '试玩', value: formatNumber(sourceGame?.plays) },
+    { label: '体验', value: formatNumber(sourceGame?.plays) },
     { label: '点赞', value: formatNumber(sourceGame?.likes) },
     { label: '复刻', value: formatNumber(sourceGame?.forks) },
   ]), [sourceGame?.forks, sourceGame?.likes, sourceGame?.plays]);
@@ -467,7 +467,7 @@ export default function GameForkPage() {
 
   const handlePlayForkResult = () => {
     if (currentGame?.gameUrl) {
-      openGame(currentGame.gameUrl, currentGame.title || '游戏', getGameCoverUrl(currentGame), {
+      openGame(currentGame.gameUrl, currentGame.title || '作品', getGameCoverUrl(currentGame), {
         canPlay: currentGame?.canPlay !== false,
         isOwnGame: true,
         gameId: currentGame.id,
@@ -666,7 +666,7 @@ export default function GameForkPage() {
                 actions={[
                   {
                     key: 'play-fork-result',
-                    label: '试玩这版',
+                    label: '体验这版',
                     tone: 'primary',
                     onClick: handlePlayForkResult,
                   },
@@ -705,7 +705,7 @@ export default function GameForkPage() {
   const sourceReferenceCard = (
     <CreationReferenceCard
       eyebrow="基于这款作品"
-      title={sourceGame?.title || '未命名游戏'}
+      title={sourceGame?.title || '未命名作品'}
       badge={authorName}
       description={sanitizeUserIdea(sourceGame?.description) || '你可以基于这版作品做出全新的方向。'}
       metadata={[
@@ -859,3 +859,4 @@ export default function GameForkPage() {
 
   return renderForkPage(forkWorkspace, { workspaceLayout: true });
 }
+
