@@ -22,7 +22,7 @@ for f in manifest['functions']:
                 "import fastapi, uvicorn, pymysql; from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(headless=True,args=['--no-sandbox','--disable-dev-shm-usage']); page=b.new_page(); page.set_content('<p>FC ZIP</p>'); assert page.text_content('p')=='FC ZIP'; b.close(); p.stop()"]
         elif f['name'] in ('frontend','gateway','content'):
             command += ['-e','GATEWAY_MODE='+('content' if f['name']=='content' else 'app'),'-e','FC_INTERNAL_TOKEN='+'a'*64]
-            for key in ('GAME_UPSTREAM','USER_UPSTREAM','AI_UPSTREAM','FRONTEND_UPSTREAM'): command += ['-e',key+'=https://example.com']
+            for key in ('GAME_UPSTREAM','USER_UPSTREAM','AI_UPSTREAM','FRONTEND_UPSTREAM','API_UPSTREAM'): command += ['-e',key+'=https://example.com']
             command += ['debian:bookworm-slim','/code/bootstrap','-t']
         else:
             command += ['-e','LD_LIBRARY_PATH=/code/lib','-w','/code/packages/'+f['name'],'debian:bookworm-slim','/code/bin/node','-e',

@@ -11,9 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-b
 RUN mkdir -p /code && cp /usr/sbin/nginx /usr/bin/envsubst /etc/nginx/mime.types /code/
 COPY --from=build /app/dist/h5 /code/html
 COPY 33zqDBay4T.txt /code/html/33zqDBay4T.txt
-COPY nginx.conf /code/frontend.conf
+COPY deploy/fc/frontend.conf.template /code/frontend.template
+COPY deploy/fc/frontend-entrypoint.sh /code/frontend-entrypoint.sh
 COPY deploy/fc/bootstrap-nginx /code/bootstrap
-RUN sed -i 's|/usr/share/nginx/html|/code/html|g' /code/frontend.conf && chmod 755 /code/bootstrap
+RUN chmod 755 /code/bootstrap
 COPY scripts/fc/pack.py /pack.py
 RUN python3 /pack.py frontend
 FROM scratch
