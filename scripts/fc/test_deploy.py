@@ -77,4 +77,8 @@ class ConfigTests(unittest.TestCase):
         client=Mock(); client.get_function.side_effect=[NS(body=NS(state='Active',last_update_status='InProgress')),NS(body=NS(state='Active',last_update_status='Successful'))]
         sleep=Mock(); d.Deployment(client,m,sleep).wait_function('x');sleep.assert_called_once()
 
+    def test_new_function_without_status_fields_is_ready(self):
+        client=Mock(); client.get_function.return_value.body=NS(state=None,last_update_status=None)
+        d.Deployment(client,m,sleep=Mock()).wait_function('frontend')
+
 if __name__=='__main__': unittest.main()
