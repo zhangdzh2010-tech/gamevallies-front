@@ -23,7 +23,7 @@ export function CreativeIcon({ name, ...props }) { return <svg className="cw-ico
 export function creativeNavigate(view) { setCreativeView(view); Taro.switchTab({ url: '/pages/index/index' }); }
 export default function CreativeShell({ children, active = 'home', title = '工作台', studio = false, actions, onNavigate }) {
   const user = Storage.getUser() || {};
-  const quota = useQuotaStore();
+  const quota = useQuotaStore() || {};
   const summary = getQuotaSummary({ freeQuota: quota.freeQuota, totalFreeQuota: quota.totalFreeQuota, subscription: quota.subscription });
   const navigate = onNavigate || creativeNavigate;
   const name = user.displayName || user.nickname || user.username || '创作者';
