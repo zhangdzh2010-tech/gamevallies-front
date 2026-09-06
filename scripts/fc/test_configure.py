@@ -14,6 +14,17 @@ class PackageConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'separate'):
             c.runtime_config({'PUBLIC_ORIGIN':'https://app.example.com', 'CONTENT_ORIGIN':'https://app.example.com'}, False)
 
+    def test_frontend_requires_private_upstream_and_runtime_token(self):
+        env = dict(PUBLIC_ORIGIN='https://app.example.com', CONTENT_ORIGIN='https://content.example.com', FC_API_URL='https://api.example.com', FC_INTERNAL_TOKEN='a'*64)
+        runtime = c.runtime_config(env, False)
+        self.assertEqual(runtime['services']['frontend']['API_UPSTREAM'], env['FC_API_URL'])
+        self.assertEqual(set(runtime['services']['frontend']), {'API_UPSTREAM', 'FC_INTERNAL_TOKEN'})
+        for upstream in (env['PUBLIC_ORIGIN'], env['CONTENT_ORIGIN']):
+            with self.assertRaisesRegex(ValueError, 'backend function'):
+                c.runtime_config({**env, 'FC_API_URL': upstream}, False)
+        for token in ('', 'invalid'):
+            with self.assertRaises(ValueError): c.runtime_config({**env, 'FC_INTERNAL_TOKEN': token}, False)
+
     def test_zip_bootstrap_digest_and_path_guards(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'frontend.zip'

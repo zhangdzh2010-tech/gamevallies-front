@@ -33,10 +33,16 @@ def package_index(directory, manifest, env):
 
 def runtime_config(env, backend):
     runtime = {'common': {}, 'services': {}}
-    public = origin(env.get('PUBLIC_ORIGIN') or 'https://zlspace.clawworks.cn')
+    public = origin(env.get('PUBLIC_ORIGIN') or 'https://zlspace.ai')
     content = origin(need(env, 'CONTENT_ORIGIN'))
     if content == public: raise ValueError('CONTENT_ORIGIN must be separate from the application')
-    if not backend: return runtime
+    if not backend:
+        upstream = origin(need(env, 'FC_API_URL'))
+        if upstream in (public, content): raise ValueError('FC_API_URL must be the backend function origin')
+        token = need(env, 'FC_INTERNAL_TOKEN')
+        if not re.fullmatch('[a-f0-9]{64}', token): raise ValueError('Invalid FC_INTERNAL_TOKEN')
+        runtime['services']['frontend'] = {'API_UPSTREAM': upstream, 'FC_INTERNAL_TOKEN': token}
+        return runtime
     common = runtime['common']
     for key in ('DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ADMIN_TOKEN', 'FC_INTERNAL_TOKEN'):
         common[key] = need(env, key)
@@ -83,6 +89,7 @@ def check_settings(env, manifest):
     required = ['FC_ACCOUNT_ID', 'FC_REGION', 'FC_PREFIX', 'FC_EXECUTION_ROLE', 'ALIYUN_OSS_BUCKET', 'CONTENT_ORIGIN', 'RELEASE_SHA']
     if backend:
         required += ['FC_FRONTEND_URL', 'DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ADMIN_TOKEN', 'FC_INTERNAL_TOKEN', 'FC_VPC_ID', 'FC_VSWITCH_IDS', 'FC_SECURITY_GROUP_ID', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL', 'ALIYUN_OSS_ACCESS_KEY_ID', 'ALIYUN_OSS_ACCESS_KEY_SECRET', 'ALIYUN_OSS_REGION', 'ALIYUN_OSS_ENDPOINT', 'ALIYUN_OSS_PREFIX']
+    if not backend: required += ['FC_API_URL', 'FC_INTERNAL_TOKEN']
     missing = [key for key in required if not env.get(key, '').strip()]
     if missing: raise ValueError('Missing configuration: ' + ', '.join(missing))
     runtime = runtime_config(env, backend)
@@ -90,7 +97,7 @@ def check_settings(env, manifest):
     runtime['artifacts'] = {f['name']: {'sha256': '0'*64, 'object': f"{prefix}/releases/{env['RELEASE_SHA']}/{'0'*64}/{f['name']}.zip"} for f in manifest['functions']}
     from deploy import validate
     validate(manifest, runtime, env)
-    if backend and origin(env['FC_FRONTEND_URL']) in (origin(env.get('PUBLIC_ORIGIN') or 'https://zlspace.clawworks.cn'), origin(env['CONTENT_ORIGIN'])):
+    if backend and origin(env['FC_FRONTEND_URL']) in (origin(env.get('PUBLIC_ORIGIN') or 'https://zlspace.ai'), origin(env['CONTENT_ORIGIN'])):
         raise ValueError('FC_FRONTEND_URL must be the frontend function URL, not a gateway/content origin')
     return runtime
 
