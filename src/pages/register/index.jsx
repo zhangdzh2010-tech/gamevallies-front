@@ -123,6 +123,23 @@ export default function Register() {
         <Text className="back-text">返回</Text>
       </View>
 
+      {isH5 && (
+        <View className="register-web-intro" aria-hidden="true">
+          <View className="register-web-brand">
+            <Text className="register-web-mark">G</Text>
+            <Text className="register-web-wordmark">GameVallies</Text>
+          </View>
+          <View className="register-web-copy">
+            <Text className="register-web-kicker">YOUR CREATIVE SPACE</Text>
+            <Text className="register-web-title">创建账号，保存每一个值得继续的想法。</Text>
+            <Text className="register-web-description">从第一次构思开始，作品版本、生成任务和发布记录都会留在你的创作空间。</Text>
+          </View>
+          <View className="register-web-note">
+            <Text>注册完成后会自动回到刚才的创作流程。</Text>
+          </View>
+        </View>
+      )}
+
       <View className="register-content">
         <View className="logo-section">
           <Text className="logo">智了空间</Text>
@@ -135,8 +152,9 @@ export default function Register() {
             <Input
               className="input"
               type="number"
+              aria-label="手机号"
               placeholder="请输入手机号"
-              placeholderStyle="color: #55516e"
+              placeholderStyle="color: #8a9689"
               maxlength={11}
               value={phone}
               onInput={(e) => setPhone(e.detail.value)}
@@ -147,8 +165,9 @@ export default function Register() {
             <Input
               className="input"
               type="number"
+              aria-label="验证码"
               placeholder="6 位验证码"
-              placeholderStyle="color: #55516e"
+              placeholderStyle="color: #8a9689"
               maxlength={6}
               value={code}
               onInput={(e) => setCode(e.detail.value)}
@@ -162,8 +181,9 @@ export default function Register() {
             <Input
               className="input"
               type="text"
+              aria-label="昵称"
               placeholder="给自己起一个昵称（必填）"
-              placeholderStyle="color: #55516e"
+              placeholderStyle="color: #8a9689"
               maxlength={20}
               value={nickname}
               onInput={(e) => setNickname(e.detail.value)}
@@ -175,8 +195,9 @@ export default function Register() {
               className="input"
               type="text"
               password
+              aria-label="设置登录密码"
               placeholder="设置登录密码（至少 6 位）"
-              placeholderStyle="color: #55516e"
+              placeholderStyle="color: #8a9689"
               maxlength={128}
               value={password}
               onInput={(e) => setPassword(e.detail.value)}
@@ -188,8 +209,9 @@ export default function Register() {
               className="input"
               type="text"
               password
+              aria-label="确认登录密码"
               placeholder="再次输入密码"
-              placeholderStyle="color: #55516e"
+              placeholderStyle="color: #8a9689"
               maxlength={128}
               value={confirmPassword}
               onInput={(e) => setConfirmPassword(e.detail.value)}

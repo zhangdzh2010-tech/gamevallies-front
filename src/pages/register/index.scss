@@ -1,4 +1,5 @@
 @import '../../styles/variables.scss';
+@import '../../styles/creative-web-page.scss';
 .register-container {
   background: $bg;
   min-height: 100vh;
@@ -294,6 +295,283 @@
 
       .logo-section {
         margin-bottom: 24px;
+      }
+    }
+  }
+}
+
+.register-container.register-container--h5 {
+  @include creative-web-page-theme;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(460px, 1.1fr);
+  gap: clamp(36px, 7vw, 120px);
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: clamp(22px, 3.5vw, 56px);
+  overflow: visible;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(196, 244, 101, 0.18), transparent 30%),
+    var(--gv-web-canvas);
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .back-header {
+    position: absolute;
+    top: clamp(22px, 3.5vw, 56px);
+    right: clamp(22px, 3.5vw, 56px);
+    left: auto;
+    z-index: 4;
+    gap: 7px;
+    padding: 8px 0;
+    background: transparent;
+    backdrop-filter: none;
+
+    .back-arrow,
+    .back-text {
+      color: #587064;
+    }
+
+    .back-arrow {
+      font-size: 20px;
+    }
+
+    .back-text {
+      font-size: 13px;
+    }
+
+    &:focus-visible {
+      @include creative-web-focus-ring;
+    }
+  }
+
+  .register-web-intro {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 6px 0;
+  }
+
+  .register-web-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .register-web-mark {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background: var(--gv-web-ink);
+    color: var(--gv-web-lime);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+    transform: rotate(-5deg);
+  }
+
+  .register-web-wordmark {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .register-web-copy {
+    width: min(560px, 100%);
+    margin: auto 0;
+    padding: 70px 0;
+  }
+
+  .register-web-kicker,
+  .register-web-title,
+  .register-web-description,
+  .register-web-note text {
+    display: block;
+  }
+
+  .register-web-kicker {
+    margin-bottom: 18px;
+    color: #71867a;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .register-web-title {
+    max-width: 12em;
+    font-size: clamp(36px, 4vw, 62px);
+    font-weight: 750;
+    letter-spacing: -2px;
+    line-height: 1.22;
+  }
+
+  .register-web-description {
+    max-width: 34em;
+    margin-top: 24px;
+    color: var(--gv-web-muted);
+    font-size: 16px;
+    line-height: 1.9;
+  }
+
+  .register-web-note {
+    padding-top: 20px;
+    border-top: 1px solid var(--gv-web-line);
+    color: #526f60;
+    font-size: 12px;
+  }
+
+  .register-content {
+    @include creative-web-panel;
+    align-self: center;
+    width: min(540px, 100%);
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    padding: clamp(38px, 4vw, 58px);
+    justify-self: end;
+
+    .logo-section {
+      margin-bottom: 28px;
+      text-align: left;
+
+      .logo {
+        margin-bottom: 7px;
+        background: none;
+        color: var(--gv-web-ink);
+        font-size: 31px;
+        letter-spacing: -1px;
+        -webkit-text-fill-color: currentColor;
+      }
+
+      .tagline {
+        color: var(--gv-web-muted);
+        font-size: 14px;
+      }
+    }
+
+    .form-section {
+      gap: 11px;
+
+      .input-field {
+        gap: 12px;
+        min-height: 50px;
+        border-color: var(--gv-web-line);
+        border-radius: 10px;
+        background: #fbfcfb;
+        padding: 12px 15px;
+
+        &:focus-within {
+          border-color: #6a9b7a;
+          box-shadow: 0 0 0 3px rgba(105, 155, 122, 0.13);
+        }
+
+        .field-prefix {
+          border-color: var(--gv-web-line);
+          color: #60766a;
+          font-size: 14px;
+        }
+
+        .input {
+          width: 100%;
+          min-height: 24px;
+          border: 0;
+          background: transparent;
+          padding: 0;
+          color: var(--gv-web-ink);
+          font-size: 14px;
+        }
+
+        &.code-field .send-code-btn {
+          border-radius: 8px;
+          background: #eaf3eb;
+          color: var(--gv-web-accent);
+          font-size: 12px;
+
+          &.disabled {
+            background: transparent;
+            color: #9aa69e;
+          }
+        }
+      }
+
+      .register-btn {
+        margin-top: 8px;
+        border-radius: 10px;
+        background: var(--gv-web-accent);
+        padding: 14px 20px;
+        color: #fff;
+        font-size: 15px;
+        box-shadow: none;
+        transition: background 0.2s, transform 0.2s;
+
+        &:hover {
+          background: var(--gv-web-accent-hover);
+        }
+
+        &:active {
+          transform: translateY(1px);
+        }
+
+        &:focus-visible {
+          @include creative-web-focus-ring;
+        }
+      }
+
+      .login-link {
+        margin-top: 2px;
+        color: var(--gv-web-muted);
+        font-size: 13px;
+
+        .link {
+          color: var(--gv-web-accent);
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 900PX) {
+  .register-container.register-container--h5 {
+    display: block;
+    padding: 72px 20px 28px;
+
+    .back-header {
+      top: 16px;
+      right: 20px;
+    }
+
+    .register-web-intro {
+      display: none;
+    }
+
+    .register-content {
+      width: min(540px, 100%);
+      margin: 0 auto;
+      padding: clamp(28px, 7vw, 46px);
+    }
+  }
+}
+
+@media screen and (max-width: 520PX) {
+  .register-container.register-container--h5 {
+    padding: 60px 14px 20px;
+
+    .back-header {
+      top: 8px;
+      right: 14px;
+    }
+
+    .register-content {
+      border-radius: 13px;
+      padding: 26px 20px;
+
+      .logo-section .logo {
+        font-size: 29px;
       }
     }
   }
