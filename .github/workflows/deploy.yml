@@ -41,6 +41,8 @@ jobs:
     environment: Aliyun
     timeout-minutes: 120
     env:
+      FC_API_URL: ${{ vars.FC_API_URL }}
+      FC_INTERNAL_TOKEN: ${{ secrets.FC_INTERNAL_TOKEN }}
       FC_ACCOUNT_ID: ${{ vars.FC_ACCOUNT_ID }}
       FC_EXECUTION_ROLE: ${{ vars.FC_EXECUTION_ROLE }}
       ALIYUN_OSS_BUCKET: ${{ vars.ALIYUN_OSS_BUCKET }}

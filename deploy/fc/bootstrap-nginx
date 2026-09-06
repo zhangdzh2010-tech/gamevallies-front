@@ -2,7 +2,9 @@
 set -eu
 export LD_LIBRARY_PATH=/code/lib
 mkdir -p /tmp/nginx/client /tmp/nginx/proxy
-if [ -f /code/gateway-entrypoint.sh ]; then
+if [ -f /code/frontend-entrypoint.sh ]; then
+  . /code/frontend-entrypoint.sh
+elif [ -f /code/gateway-entrypoint.sh ]; then
   . /code/gateway-entrypoint.sh
 else
   cp /code/frontend.conf /tmp/nginx/server.conf

@@ -55,6 +55,10 @@ def validate(manifest, runtime, env):
         if not re.fullmatch(r'[a-z][a-z0-9-]+', f['name']): raise ValueError('Invalid function name')
         if f.get('background') and (f.get('provisioned') != 1 or not f.get('disableOndemand')):
             raise ValueError('Background services require one continuously active provisioned instance and no on-demand replicas')
+    if 'frontend' in names:
+        frontend = runtime.get('services', {}).get('frontend', {})
+        origin(need(frontend, 'API_UPSTREAM'))
+        if not re.fullmatch('[a-f0-9]{64}', frontend.get('FC_INTERNAL_TOKEN', '')): raise ValueError('Invalid frontend FC_INTERNAL_TOKEN')
     if 'game-service' in names:
         if not re.fullmatch('[a-f0-9]{64}', common.get('FC_INTERNAL_TOKEN', '')): raise ValueError('Set 64 hex character FC_INTERNAL_TOKEN')
         for key in ('DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ADMIN_TOKEN'):
