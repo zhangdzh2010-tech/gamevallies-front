@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import Taro from '@tarojs/taro';
 import * as gameService from '../services/game';
 import * as subscriptionService from '../services/subscription';
 import { emitGameUnlocked } from '../utils/gameUnlock';
@@ -582,9 +581,7 @@ const useQuotaStore = create((set, get) => ({
 
   updateAfterCreate: (canPlay, quotaRemaining) => {
     void canPlay;
-    set((prev) => ({
-      freeQuota: Math.max(0, quotaRemaining ?? prev.freeQuota - 1),
-    }));
+    void quotaRemaining;
   },
 
   reset: () => {

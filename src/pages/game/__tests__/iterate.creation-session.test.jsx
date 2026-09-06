@@ -384,7 +384,7 @@ describe('Iterate page creation session flow', () => {
 
     render(<IteratePage />);
 
-    expect(await screen.findByText('Updated Runner')).toBeTruthy();
+    expect((await screen.findAllByText('Updated Runner')).length).toBeGreaterThan(0);
     expect(mockGetGame).not.toHaveBeenCalled();
     expect(mockResetCreationSessionState).not.toHaveBeenCalled();
     expect(screen.queryByTestId('workspace')).toBeNull();

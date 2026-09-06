@@ -35,8 +35,14 @@ export function creativeNavigate(view) {
   Taro.switchTab({ url: '/pages/index/index' });
 }
 export default function CreativeShell({ children, active = 'home', title = '工作台', studio = false, actions, onNavigate }) {
-  const user = Storage.getUser() || {};
-  const quota = useQuotaStore() || {};
+  const loggedIn = typeof isLoggedIn === 'function' && isLoggedIn();
+  const user = loggedIn ? (Storage.getUser() || {}) : {};
+  const quota = useQuotaStore((state) => ({
+    freeQuota: state.freeQuota,
+    totalFreeQuota: state.totalFreeQuota,
+    subscription: state.subscription,
+    loading: state.loading,
+  })) || {};
   const summary = getQuotaSummary({ freeQuota: quota.freeQuota, totalFreeQuota: quota.totalFreeQuota, subscription: quota.subscription });
   const navigate = onNavigate || creativeNavigate;
   const name = user.displayName || user.nickname || user.username || '创作者';
@@ -49,9 +55,9 @@ export default function CreativeShell({ children, active = 'home', title = '工�
       <div className="cw-nav-label">社区</div>
       {[['friends', 'users', '朋友作品'], ['messages', 'bell', '消息通知']].map(([id, icon, label]) => <button className={`cw-nav ${active === id ? 'active' : ''}`} key={id} onClick={() => navigate(id)} title={label}><CreativeIcon name={icon} /><span>{label}</span></button>)}
       <div className="cw-sidebar-bottom">
-        {isLoggedIn() && <div className="cw-quota"><div className="cw-between"><span>创作额度</span><span className="cw-badge">{quota.subscription?.active ? '会员' : '免费'}</span></div><strong>{quota.loading ? '…' : summary.totalRemaining}<small> 次可用</small></strong><p>按当前账户额度展示</p><button onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}>查看用量与订阅 →</button></div>}
+        {loggedIn && <div className="cw-quota"><div className="cw-between"><span>创作额度</span><span className="cw-badge">{quota.subscription?.active ? '会员' : '免费'}</span></div><strong>{quota.loading ? '…' : summary.totalRemaining}<small> 次可用</small></strong><p>按当前账户额度展示</p><button onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}>查看用量与订阅 →</button></div>}
         <button className={`cw-nav ${active === 'tasks' ? 'active' : ''}`} onClick={() => openProfilePageWithTab('tasks')} title="任务中心"><CreativeIcon name="refresh" /><span>任务中心</span></button>
-        <button className="cw-account" onClick={() => isLoggedIn() ? openProfilePageWithTab('works') : Taro.navigateTo({ url: '/pages/login/index' })}><span className="cw-avatar">{isLoggedIn() ? name.slice(0, 1) : '访'}</span><span><strong>{isLoggedIn() ? name : '登录 / 注册'}</strong><small>{isLoggedIn() ? '我的创作空间' : '保存并延续你的创意'}</small></span></button>
+        <button className="cw-account" onClick={() => loggedIn ? openProfilePageWithTab('works') : Taro.navigateTo({ url: '/pages/login/index' })}><span className="cw-avatar">{loggedIn ? name.slice(0, 1) : '访'}</span><span><strong>{loggedIn ? name : '登录 / 注册'}</strong><small>{loggedIn ? '我的创作空间' : '保存并延续你的创意'}</small></span></button>
       </div>
     </aside>
     <div className="cw-content"><header className="cw-topbar"><div className="cw-row">{studio && <button className="cw-icon-button" onClick={() => navigate('home')} aria-label="返回工作台"><CreativeIcon name="back" /></button>}<span className="cw-breadcrumb">创作空间 <b>/</b> <strong>{title}</strong></span></div><div className="cw-row">{actions || <span className="cw-desktop-label">CREATIVE STUDIO / WEB</span>}</div></header>{children}</div>

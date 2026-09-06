@@ -922,10 +922,8 @@ export const useGameStore = create((set, get) => {
     const normalizedEditedPrompt = normalizeSessionMessageContent(
       hasPromptArgument ? promptOrOptions : rawOptions.editedPrompt
     );
-    const {
-      editedPrompt: _ignoredEditedPrompt,
-      ...generateOptions
-    } = rawOptions || {};
+    const generateOptions = { ...(rawOptions || {}) };
+    delete generateOptions.editedPrompt;
     let session = get().creationSession;
 
     if (!session?.sessionId) {

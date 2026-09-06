@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import { buildCreativePrompt, saveCreativeDraft, consumeCreativeDraft, normalizeWorks } from '../creativeModel';
 
 afterEach(() => { sessionStorage.clear(); jest.restoreAllMocks(); });
