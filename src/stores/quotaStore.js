@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import Taro from '@tarojs/taro';
 import * as gameService from '../services/game';
 import * as subscriptionService from '../services/subscription';
 import { emitGameUnlocked } from '../utils/gameUnlock';
@@ -6,6 +7,7 @@ import { getGameCoverUrl } from '../utils/media';
 import { getGameOrientation } from '../utils/gameOrientation';
 import {
   getPaymentActionFailureMessage,
+  launchJsapiPayment,
   launchPaymentAction,
   resolveSubscriptionPaymentAction,
 } from '../utils/paymentRuntime';
@@ -376,7 +378,7 @@ const useQuotaStore = create((set, get) => ({
   },
 
   subscribe: async (planId) => {
-    const { pendingGameId, pendingPlayContext } = get();
+    const { pendingGameId, pendingPlayContext, selectedPaymentMethod } = get();
     const normalizedPlanId = planId || null;
 
     set({ subscribing: true, subscribingPlanId: normalizedPlanId });
@@ -393,7 +395,7 @@ const useQuotaStore = create((set, get) => ({
 
     let order = null;
     try {
-      order = await subscriptionService.createOrder(planId, pendingGameId);
+      order = await subscriptionService.createOrder(planId, pendingGameId, selectedPaymentMethod);
     } catch (error) {
       console.error('create subscription order failed:', error);
       set({ subscribing: false, subscribingPlanId: null });
@@ -450,7 +452,8 @@ const useQuotaStore = create((set, get) => ({
           pendingPlayContext,
           lastError: getErrorMessage(error),
         });
-        toastError(error, '无法打开支付宝支付，请稍后重试');
+        const paymentLabel = selectedPaymentMethod === 'wechat' ? '微信' : '支付宝';
+        toastError(error, `无法打开${paymentLabel}支付，请稍后重试`);
         return false;
       }
 
@@ -462,8 +465,46 @@ const useQuotaStore = create((set, get) => ({
         subscribingPlanId: null,
       });
 
-      toastInfo('正在打开支付宝，请支付完成后返回');
+      const paymentLabel = selectedPaymentMethod === 'wechat' ? '微信' : '支付宝';
+      toastInfo(`正在打开${paymentLabel}支付，请支付完成后返回`);
       return true;
+    }
+
+    if (paymentAction.kind === 'jsapi') {
+      try {
+        await launchJsapiPayment(paymentAction, {
+          isH5: isH5Runtime(),
+          requestPayment: Taro.requestPayment,
+        });
+        const confirmation = await get()._waitForPaymentConfirmation(orderId);
+        if (!confirmation.subscriptionActive) {
+          throw new Error('支付结果确认中，请稍后在订阅页查看');
+        }
+        set({
+          showPaywall: false,
+          pendingGameId: null,
+          pendingPlayContext: null,
+          subscribing: false,
+          subscribingPlanId: null,
+        });
+        await get()._setPaymentAttempt({
+          status: 'paid',
+          stage: 'complete',
+          orderStatus: confirmation.orderStatus?.status || 'paid',
+          lastError: null,
+        });
+        toastSuccess('支付成功，订阅已生效');
+        return true;
+      } catch (error) {
+        set({ subscribing: false, subscribingPlanId: null });
+        await get()._setPaymentAttempt({
+          status: 'failed',
+          stage: 'request_payment',
+          lastError: getErrorMessage(error),
+        });
+        toastError(error, '微信支付失败，请重试');
+        return false;
+      }
     }
 
     set({ subscribing: false, subscribingPlanId: null });

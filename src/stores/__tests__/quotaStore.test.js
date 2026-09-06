@@ -10,6 +10,7 @@ const mockShowToast = jest.fn();
 const mockRequestPayment = jest.fn(() => Promise.resolve());
 const mockNavigateTo = jest.fn(() => Promise.resolve());
 const mockLaunchPaymentAction = jest.fn();
+const mockLaunchJsapiPayment = jest.fn(() => Promise.resolve());
 
 const mockListeners = new Map();
 const mockStorage = {};
@@ -92,6 +93,7 @@ jest.mock('../../utils/paymentRuntime', () => {
   const actual = jest.requireActual('../../utils/paymentRuntime');
   return {
     ...actual,
+    launchJsapiPayment: (...args) => mockLaunchJsapiPayment(...args),
     launchPaymentAction: (...args) => mockLaunchPaymentAction(...args),
   };
 });
@@ -181,7 +183,7 @@ describe('quotaStore payment unlock flow', () => {
     const result = await useQuotaStore.getState().subscribe('plan-pro');
 
     expect(result).toBe(true);
-    expect(mockCreateOrder).toHaveBeenCalledWith('plan-pro', 'game-1');
+    expect(mockCreateOrder).toHaveBeenCalledWith('plan-pro', 'game-1', 'alipay');
     expect(mockLaunchPaymentAction).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'h5_redirect',
@@ -198,7 +200,7 @@ describe('quotaStore payment unlock flow', () => {
       })
     );
     expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({
-      title: '正在打开支付宝，请支付完成后返回',
+      title: '正在打开支付宝支付，请支付完成后返回',
       icon: 'none',
     }));
   });
@@ -270,7 +272,7 @@ describe('quotaStore payment unlock flow', () => {
     expect(useQuotaStore.getState().pendingGameId).toBe('game-1');
   });
 
-  test('fails fast when the backend still returns legacy wechat-only payment payload', async () => {
+  test('completes a WeChat JSAPI payment returned by the backend', async () => {
     mockCreateOrder.mockResolvedValueOnce({
       orderId: 'order-legacy',
       payment: {
@@ -284,13 +286,17 @@ describe('quotaStore payment unlock flow', () => {
 
     const result = await useQuotaStore.getState().subscribe('plan-pro');
 
-    expect(result).toBe(false);
+    expect(result).toBe(true);
+    expect(mockLaunchJsapiPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'jsapi' }),
+      expect.objectContaining({ isH5: true, requestPayment: mockRequestPayment })
+    );
     expect(mockLaunchPaymentAction).not.toHaveBeenCalled();
     expect(useQuotaStore.getState().paymentAttempt).toEqual(
       expect.objectContaining({
         orderId: 'order-legacy',
-        status: 'failed',
-        stage: 'request_payment',
+        status: 'paid',
+        stage: 'complete',
       })
     );
   });

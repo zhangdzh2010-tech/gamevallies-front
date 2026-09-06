@@ -127,7 +127,7 @@ export function resolveSubscriptionPaymentAction(order, options = {}) {
 
   if (weappJsapiPayload) {
     return {
-      kind: 'unsupported_jsapi',
+      kind: 'jsapi',
       payload: weappJsapiPayload,
     };
   }
@@ -140,8 +140,8 @@ export function getPaymentActionFailureMessage(action) {
     return '支付参数异常，请稍后重试';
   }
 
-  if (action.kind === 'unsupported_jsapi') {
-    return '当前订单未返回可跳转的支付宝支付链接，请检查后端支付 provider 配置';
+  if (action.kind === 'jsapi') {
+    return '当前环境无法调起微信支付，请在微信中重新打开页面';
   }
 
   if (action.kind === 'unsupported_qrcode') {
@@ -161,4 +161,47 @@ export function launchPaymentAction(action) {
   }
 
   window.location.assign(action.url);
+}
+
+export async function launchJsapiPayment(action, options = {}) {
+  if (action?.kind !== 'jsapi' || !action.payload) {
+    throw new Error('微信支付参数不完整');
+  }
+
+  if (options.isH5 && typeof window !== 'undefined') {
+    let bridge = window.WeixinJSBridge;
+    if (!bridge || typeof bridge.invoke !== 'function') {
+      bridge = await new Promise((resolve, reject) => {
+        const timeout = window.setTimeout(() => {
+          document.removeEventListener('WeixinJSBridgeReady', onReady);
+          reject(new Error('微信支付组件尚未就绪，请在微信中重新打开页面'));
+        }, 5000);
+        const onReady = () => {
+          window.clearTimeout(timeout);
+          document.removeEventListener('WeixinJSBridgeReady', onReady);
+          resolve(window.WeixinJSBridge);
+        };
+        document.addEventListener('WeixinJSBridgeReady', onReady, false);
+      });
+    }
+    if (!bridge || typeof bridge.invoke !== 'function') {
+      throw new Error('微信支付组件尚未就绪，请在微信中重新打开页面');
+    }
+    await new Promise((resolve, reject) => {
+      bridge.invoke('getBrandWCPayRequest', action.payload, (result) => {
+        const message = result?.err_msg || result?.errMsg || '';
+        if (/\bok\b/i.test(message)) {
+          resolve(result);
+        } else {
+          reject(new Error(/cancel/i.test(message) ? '支付已取消' : (message || '微信支付失败')));
+        }
+      });
+    });
+    return;
+  }
+
+  if (typeof options.requestPayment !== 'function') {
+    throw new Error('当前环境无法调起微信支付');
+  }
+  await options.requestPayment(action.payload);
 }

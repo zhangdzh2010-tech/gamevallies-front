@@ -77,12 +77,33 @@ function getSubscriptionReturnUrl() {
 }
 
 function resolveAlipayProvider() {
+  const userAgent = typeof navigator === 'undefined' ? '' : (navigator.userAgent || '');
+  return MOBILE_H5_USER_AGENT_RE.test(userAgent) ? 'alipay_wap' : 'alipay_page';
+}
+
+function resolvePaymentQuery(paymentMethod) {
+  if (paymentMethod !== 'wechat') {
+    if (!isH5Runtime()) {
+      throw new Error('当前环境暂不支持支付宝支付，请在 H5 页面完成订阅');
+    }
+    return { provider: resolveAlipayProvider() };
+  }
+
   if (!isH5Runtime()) {
-    return null;
+    return {
+      provider: 'wechat_pay',
+      clientPlatform: 'weapp',
+      wechatPayFlow: 'jsapi',
+    };
   }
 
   const userAgent = typeof navigator === 'undefined' ? '' : (navigator.userAgent || '');
-  return MOBILE_H5_USER_AGENT_RE.test(userAgent) ? 'alipay_wap' : 'alipay_page';
+  const isWechatBrowser = /micromessenger/i.test(userAgent);
+  return {
+    provider: 'wechat_pay',
+    clientPlatform: isWechatBrowser ? 'wechat_h5' : 'h5',
+    wechatPayFlow: isWechatBrowser ? 'jsapi' : 'mweb',
+  };
 }
 
 export async function getQuota() {
@@ -94,13 +115,8 @@ export async function getPlans() {
   return get('/api/v1/subscription/plans');
 }
 
-export async function createOrder(planId, gameId) {
-  const provider = resolveAlipayProvider();
-  if (!provider) {
-    throw new Error('当前环境暂不支持支付宝支付，请在 H5 页面完成订阅');
-  }
-
-  const query = new URLSearchParams({ provider });
+export async function createOrder(planId, gameId, paymentMethod = 'alipay') {
+  const query = new URLSearchParams(resolvePaymentQuery(paymentMethod));
   const returnUrl = getSubscriptionReturnUrl();
   if (returnUrl) {
     query.set('returnUrl', returnUrl);
