@@ -18,6 +18,16 @@ MANIFEST = json.loads(Path('deploy/fc/functions.json').read_text())
 RUNTIME['artifacts'] = {f['name']: {'sha256': 'b'*64, 'object': 'gamevallies/prod/releases/' + 'a'*40 + '/' + 'b'*64 + '/' + f['name'] + '.zip'} for f in MANIFEST['functions']}
 
 class ConfigTests(unittest.TestCase):
+    def test_restore_omits_empty_custom_handler(self):
+        client = Mock()
+        client.get_function.return_value.body = m.Function(runtime='custom.debian12',
+            handler='', description='GameVallies OSS ' + json.dumps(
+                {'ossBucketName': 'bucket', 'ossObjectName': 'old.zip'}))
+        deployment = d.Deployment(client, m)
+        deployment.wait_function = Mock()
+        deployment.restore('frontend', '1')
+        self.assertNotIn('handler', client.update_function.call_args.args[1].body.to_map())
+
     def test_official_sdk_round_trip_preserves_runtime_and_port(self):
         d.validate(MANIFEST, RUNTIME, ENV)
         for f in MANIFEST['functions']:

@@ -173,6 +173,9 @@ class Deployment:
 
     def restore(self, name, version):
         previous = self.c.get_function(name, self.m.GetFunctionRequest(qualifier=version)).body.to_map()
+        # FC reads return an empty handler for custom runtimes, but updates reject it.
+        if previous.get('runtime', '').startswith('custom') and not previous.get('handler'):
+            previous.pop('handler', None)
         if previous.get('runtime') == 'custom-container':
             container = previous.get('customContainerConfig', {})
             previous['customContainerConfig'] = {k: v for k, v in container.items() if k in ('image', 'port', 'command', 'entrypoint', 'healthCheckConfig', 'acrInstanceId', 'registryConfig', 'accelerationType')}
