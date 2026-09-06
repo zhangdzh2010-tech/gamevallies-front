@@ -263,6 +263,24 @@ export default function Login() {
         <Text className="back-text">返回</Text>
       </View>
 
+      {isH5 && (
+        <View className="login-web-intro" aria-hidden="true">
+          <View className="login-web-brand">
+            <Text className="login-web-mark">G</Text>
+            <Text className="login-web-wordmark">GameVallies</Text>
+          </View>
+          <View className="login-web-copy">
+            <Text className="login-web-kicker">CREATIVE STUDIO</Text>
+            <Text className="login-web-title">让每一次登录，接回正在生长的创意。</Text>
+            <Text className="login-web-description">作品、任务和创作记录会保存在你的空间中，随时回来继续完善。</Text>
+          </View>
+          <View className="login-web-proof">
+            <Text className="login-web-proof-label">一个账号，延续完整创作流程</Text>
+            <Text className="login-web-proof-value">构思  /  生成  /  体验  /  发布</Text>
+          </View>
+        </View>
+      )}
+
       <View className="login-content">
         <View className="logo-section">
           <Text className="logo">智了空间</Text>
@@ -297,8 +315,9 @@ export default function Login() {
                 <Input
                   className="input"
                   type="text"
+                  aria-label="手机号或用户名"
                   placeholder="手机号或用户名"
-                  placeholderStyle="color: #55516e"
+                  placeholderStyle="color: #8a9689"
                   value={account}
                   onInput={(e) => setAccount(e.detail.value)}
                 />
@@ -309,8 +328,9 @@ export default function Login() {
                   className="input"
                   type="text"
                   password
+                  aria-label="密码"
                   placeholder="请输入密码"
-                  placeholderStyle="color: #55516e"
+                  placeholderStyle="color: #8a9689"
                   maxlength={128}
                   value={password}
                   onInput={(e) => setPassword(e.detail.value)}
@@ -332,8 +352,9 @@ export default function Login() {
                 <Input
                   className="input"
                   type="number"
+                  aria-label="手机号"
                   placeholder="请输入手机号"
-                  placeholderStyle="color: #55516e"
+                  placeholderStyle="color: #8a9689"
                   maxlength={11}
                   value={phone}
                   onInput={(e) => setPhone(e.detail.value)}
@@ -344,8 +365,9 @@ export default function Login() {
                 <Input
                   className="input"
                   type="number"
+                  aria-label="验证码"
                   placeholder="6 位验证码"
-                  placeholderStyle="color: #55516e"
+                  placeholderStyle="color: #8a9689"
                   maxlength={6}
                   value={code}
                   onInput={(e) => setCode(e.detail.value)}
