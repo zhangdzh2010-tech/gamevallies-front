@@ -33,15 +33,10 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - run: bash -n scripts/aliyun/deploy.sh
-      - run: python3 scripts/aliyun/test_deploy.py
-      - name: Validate production Compose
-        env:
-          IMAGE_PREFIX: registry.example.com/gamevallies
-          IMAGE_TAG: test
-          RUNTIME_ENV_FILE: /tmp/runtime.env
-        run: |
-          touch /tmp/runtime.env
-          docker compose -f deploy/aliyun/compose.yml config --quiet
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r scripts/fc/requirements.txt
+      - run: python scripts/fc/test_deploy.py
       - name: Build frontend image without publishing
         run: docker build --tag gamevallies-frontend:ci .
