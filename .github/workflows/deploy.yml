@@ -41,10 +41,10 @@ jobs:
     environment: Aliyun
     timeout-minutes: 120
     env:
-      FC_ACCOUNT_ID: ${{ vars.FC_ACCOUNT_ID }}
-      FC_EXECUTION_ROLE: ${{ vars.FC_EXECUTION_ROLE }}
-      ALIYUN_OSS_BUCKET: ${{ vars.ALIYUN_OSS_BUCKET }}
-      CONTENT_ORIGIN: ${{ vars.CONTENT_ORIGIN }}
+      FC_ACCOUNT_ID: ${{ vars.FC_ACCOUNT_ID || '1318350152273303' }}
+      FC_EXECUTION_ROLE: ${{ vars.FC_EXECUTION_ROLE || 'acs:ram::1318350152273303:role/clawworks-staging-fc-vpc-role' }}
+      ALIYUN_OSS_BUCKET: ${{ vars.ALIYUN_OSS_BUCKET || 'clawworks-server-staging-1318350152273303' }}
+      CONTENT_ORIGIN: ${{ vars.CONTENT_ORIGIN || 'https://zlspace-content.clawworks.cn' }}
       FC_REGION: ${{ vars.FC_REGION || 'cn-shenzhen' }}
       FC_PREFIX: ${{ vars.FC_PREFIX || 'gamevallies-prod' }}
       ALIYUN_OSS_REGION: ${{ vars.ALIYUN_OSS_REGION || 'cn-shenzhen' }}
