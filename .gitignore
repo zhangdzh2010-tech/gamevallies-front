@@ -87,3 +87,7 @@ fc-release*.json
 # Python deployment helpers
 __pycache__/
 *.pyc
+
+# FC code artifacts (no runtime secrets in git)
+fc-packages/
+.fc-runtime*.json
