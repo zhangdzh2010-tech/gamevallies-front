@@ -142,7 +142,10 @@ class Deployment:
         for _ in range(90):
             f = self.c.get_function(name, self.m.GetFunctionRequest()).body
             if f.state == 'Failed' or f.last_update_status == 'Failed': raise RuntimeError(f'Function update failed: {name}')
-            if f.state == 'Active' and f.last_update_status in (None, 'Successful'): return f
+            # FC omits both status fields from the first GetFunction response
+            # after CreateFunction. Treat the absent fields as ready, while
+            # retaining the explicit failure checks above.
+            if f.state in (None, 'Active') and f.last_update_status in (None, 'Successful'): return f
             self.sleep(5)
         raise TimeoutError(f'Function did not become active: {name}')
 
