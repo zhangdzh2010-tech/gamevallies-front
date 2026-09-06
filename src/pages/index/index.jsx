@@ -562,7 +562,7 @@ function LegacyHome() {
         </View>
       ) : games.length === 0 ? (
         <View className="loading-state loading-state--empty">
-          <Text className="loading-text">还没有作品。点击上方"现在开始"，做你的第一款作品。</Text>
+          <Text className="loading-text">还没有作品。点击上方“现在开始”，做你的第一款作品。</Text>
         </View>
       ) : (
         <View className="poster-waterfall">

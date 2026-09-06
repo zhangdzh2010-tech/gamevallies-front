@@ -179,7 +179,9 @@ class WebSocketManager {
     this.isConnected = false;
     try {
       Taro.closeSocket({});
-    } catch (_e) {}
+    } catch (_e) {
+      // The socket may already be closed.
+    }
   }
 
   /**
@@ -311,7 +313,9 @@ class WebSocketManager {
     if (!this.isConnected) return;
     try {
       Taro.sendSocketMessage({ data: frame });
-    } catch (_e) {}
+    } catch (_e) {
+      // Ignore sends after the runtime closes the socket.
+    }
   }
 
   _emitStatusChange(connected) {

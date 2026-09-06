@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { get } from '../../../services/api';

@@ -116,6 +116,8 @@ export function getDisplayStageKey(stageKey, task = null) {
 
 
 export function buildStageSequence(task, events = []) {
+  void task;
+  void events;
   return PIPELINE_STAGES;
 }
 

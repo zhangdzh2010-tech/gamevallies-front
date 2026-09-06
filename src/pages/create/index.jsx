@@ -92,7 +92,6 @@ export default function Create() {
     creationSessionSubmitting,
     startCreationSession,
     confirmEditedPrompt,
-    confirmCurrentPrompt,
     confirmAndGenerate,
     abandonCreationSession,
     restoreActiveCreationSession,
@@ -379,14 +378,6 @@ export default function Create() {
 
     try {
       await confirmEditedPrompt(nextPromptDraft);
-    } catch (err) {
-      toastError(getUserFacingCreateError(err?.message, '保存创作描述'), '这次方向没能保存，请稍后重试');
-    }
-  };
-
-  const handleConfirmCurrentCreatePrompt = async () => {
-    try {
-      await confirmCurrentPrompt();
     } catch (err) {
       toastError(getUserFacingCreateError(err?.message, '保存创作描述'), '这次方向没能保存，请稍后重试');
     }

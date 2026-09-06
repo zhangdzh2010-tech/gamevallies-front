@@ -714,6 +714,7 @@ export default function GameIteratePage() {
       mode="iterate" title={currentGame?.title || ''}
       orientation={getGameOrientation(currentGame, 'landscape')}
       input={isIterateSessionActive ? sessionPromptDraft : iterateFeedback}
+      inputAriaLabel={isIterateSessionActive ? 'iterate-session-prompt' : 'iterate-initial-prompt'}
       onInputChange={value => isIterateSessionActive ? setSessionPromptDraft(value) : setIterateFeedback(value)}
       session={isCurrentIterateSession ? creationSession : null} work={currentGame}
       generating={isGenerating} progress={generationProgress}
@@ -724,10 +725,12 @@ export default function GameIteratePage() {
         onClick: readyToGenerate ? handleIterateWorkspaceGenerate : handleIterateWorkspacePrimaryAction,
         disabled: Boolean(resumeCandidate) || !currentGame?.id || (readyToGenerate ? false : isIterateSessionActive ? !canEditIteratePrompt || !hasIteratePromptChanges : !canStartIterateSession),
       }}
-      secondary={isIterateSessionActive ? [{ key: 'restart', label: '重新整理方向', onClick: handleRestartIterateSession }] : []}
+      secondary={isIterateSessionActive
+        ? [{ key: 'restart', label: '重新整理方向', onClick: handleRestartIterateSession }]
+        : [{ key: 'generate-iterate-directly', label: '直接开始创作', onClick: handleIterateWorkspaceGenerate, disabled: !canStartIterateSession }]}
       canPlay={currentGame?.canPlay !== false} onUnlock={handleLockedPlay}
       onCancel={currentTask?.taskId ? handleCancelTask : null}
-      supplemental={resumeCandidate ? <div className="cw-ready"><strong>发现未完成的创作方向</strong><p>继续上次的思路，或开始一轮新的调整。</p><button className="cw-button cw-outline" disabled={resumeDecisionSubmitting} onClick={handleContinueIterateSession}>继续上次创作</button><button className="cw-button cw-outline" disabled={resumeDecisionSubmitting} onClick={handleStartFreshIterateSession}>开启新一轮</button></div> : null}
+      supplemental={resumeCandidate ? <div className="cw-ready" data-testid="resume-scene"><strong>发现未完成的创作方向</strong><p>继续上次的思路，或开始一轮新的调整。</p><button className="cw-button cw-outline" data-testid="resume-continue" disabled={resumeDecisionSubmitting} onClick={handleContinueIterateSession}>继续上次创作</button><button className="cw-button cw-outline" data-testid="resume-restart" disabled={resumeDecisionSubmitting} onClick={handleStartFreshIterateSession}>开启新一轮</button></div> : null}
     />;
   }
 

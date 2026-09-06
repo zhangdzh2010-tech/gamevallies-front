@@ -17,6 +17,8 @@ jest.mock('@tarojs/components', () => require('../../../test-utils/taroComponent
 jest.mock('@tarojs/taro', () => {
   const api = {
     showToast: mockShowToast,
+    navigateTo: mockPush,
+    pageScrollTo: jest.fn(() => Promise.resolve()),
   };
 
   return {
@@ -133,6 +135,11 @@ jest.mock('../../../utils/share', () => ({
 
 jest.mock('../../../utils/profileDisplay', () => ({
   getSafeDisplayText: jest.fn((candidates, fallback) => candidates.find(Boolean) || fallback),
+}));
+
+jest.mock('../../../utils/runtime', () => ({
+  isH5Runtime: jest.fn(() => false),
+  isWeappRuntime: jest.fn(() => true),
 }));
 
 const HomePage = require('../index').default;
