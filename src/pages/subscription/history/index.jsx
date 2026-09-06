@@ -3,6 +3,7 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../../components/common/AppTopBar';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
+import CreativeShell from '../../../components/creative-web/CreativeShell';
 import useQuotaStore from '../../../stores/quotaStore';
 import * as subscriptionService from '../../../services/subscription';
 import { getQuotaSummary } from '../../../utils/quotaSummary';
@@ -166,11 +167,8 @@ export default function SubscriptionHistoryPage() {
     || paymentAttempt?.updatedAt
     || null;
 
-  return (
-    <View className={`subscription-history-container${isH5 ? ' subscription-history-container--h5' : ''}`}>
-      <AppTopBar showBack title={'\u8ba2\u9605\u8bb0\u5f55'} />
-
-      <PageScrollContainer scrollY className="subscription-history-scroll">
+  const historyContent = (
+    <PageScrollContainer scrollY className="subscription-history-scroll">
         <View className="subscription-history-shell">
           <View className="subscription-history-card">
             <Text className="subscription-history-card__eyebrow">Current Subscription</Text>
@@ -256,7 +254,21 @@ export default function SubscriptionHistoryPage() {
 
           <View className="bottom-spacer" />
         </View>
-      </PageScrollContainer>
+    </PageScrollContainer>
+  );
+
+  return (
+    <View className={`subscription-history-container${isH5 ? ' subscription-history-container--h5' : ''}`}>
+      {isH5 ? (
+        <CreativeShell active="works" title="订阅记录">
+          {historyContent}
+        </CreativeShell>
+      ) : (
+        <>
+          <AppTopBar showBack title={'\u8ba2\u9605\u8bb0\u5f55'} />
+          {historyContent}
+        </>
+      )}
     </View>
   );
 }

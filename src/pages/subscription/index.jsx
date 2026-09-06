@@ -3,6 +3,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
 import { PageScrollContainer } from '../../components/common/PageScrollContainer';
+import CreativeShell from '../../components/creative-web/CreativeShell';
 import useQuotaStore from '../../stores/quotaStore';
 import { getQuotaSummary } from '../../utils/quotaSummary';
 import { Storage } from '../../utils/storage';
@@ -134,11 +135,8 @@ export default function SubscriptionPage() {
     return selectedPaymentOption.actionLabel;
   };
 
-  return (
-    <View className={`subscription-container${isH5 ? ' subscription-container--h5' : ''}`}>
-      <AppTopBar showBack rightText={'\u8bb0\u5f55'} onRightClick={openHistoryPage} />
-
-      <PageScrollContainer scrollY className="subscription-scroll">
+  const subscriptionContent = (
+    <PageScrollContainer scrollY className="subscription-scroll">
         <View className="subscription-shell">
           <View className="subscription-stage">
             <View className="subscription-stage__copy">
@@ -334,9 +332,28 @@ export default function SubscriptionPage() {
 
           <View className="bottom-spacer" />
         </View>
-      </PageScrollContainer>
+    </PageScrollContainer>
+  );
 
-      <CustomTabBar activeIndex={4} />
+  return (
+    <View className={`subscription-container${isH5 ? ' subscription-container--h5' : ''}`}>
+      {isH5 ? (
+        <CreativeShell
+          active="works"
+          title="订阅与额度"
+          actions={(
+            <button className="cw-button cw-outline" onClick={openHistoryPage}>订阅记录</button>
+          )}
+        >
+          {subscriptionContent}
+        </CreativeShell>
+      ) : (
+        <>
+          <AppTopBar showBack rightText={'\u8bb0\u5f55'} onRightClick={openHistoryPage} />
+          {subscriptionContent}
+          <CustomTabBar activeIndex={4} />
+        </>
+      )}
     </View>
   );
 }

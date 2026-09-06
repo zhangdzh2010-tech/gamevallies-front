@@ -1,4 +1,5 @@
 @import '../../../styles/variables.scss';
+@import '../../../styles/creative-web-page.scss';
 
 .subscription-history-container {
   min-height: 100vh;
@@ -243,5 +244,115 @@
 
   .subscription-record-card__value--mono {
     max-width: none;
+  }
+}
+
+.subscription-history-container.subscription-history-container--h5 {
+  @include creative-web-page-theme;
+  min-height: 100dvh;
+  overflow: visible;
+  background: var(--gv-web-canvas);
+
+  .subscription-history-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .subscription-history-shell {
+    display: grid;
+    grid-template-columns: minmax(280PX, .72fr) minmax(440PX, 1.28fr);
+    align-items: start;
+    gap: 20PX;
+    width: 100%;
+    max-width: 1180PX;
+    margin: 0 auto;
+    padding: 34PX 42PX 30PX;
+  }
+
+  .subscription-history-card,
+  .subscription-record-card,
+  .subscription-history-empty {
+    margin: 0;
+    padding: 23PX;
+    border: 1PX solid var(--gv-web-line);
+    border-radius: 14PX;
+    background: white;
+    box-shadow: 0 15PX 40PX rgba(27, 70, 50, .07);
+  }
+
+  .subscription-history-card {
+    background:
+      radial-gradient(circle at 95% 5%, rgba(196, 244, 101, .25), transparent 29%),
+      white;
+  }
+
+  .subscription-history-card__eyebrow,
+  .subscription-record-card__eyebrow {
+    margin-bottom: 7PX;
+    color: #768979;
+    font-size: 10PX;
+    letter-spacing: 1.4PX;
+  }
+
+  .subscription-history-card__title,
+  .subscription-record-card__title { color: var(--gv-web-ink); font-size: 19PX; }
+
+  .subscription-history-card__rows,
+  .subscription-record-card__rows { gap: 10PX; margin-top: 17PX; }
+
+  .subscription-history-card__row,
+  .subscription-record-card__row { padding-bottom: 10PX; border-bottom-color: #edf1ed; }
+
+  .subscription-history-card__label,
+  .subscription-record-card__label { color: var(--gv-web-muted); font-size: 12PX; }
+
+  .subscription-history-card__value,
+  .subscription-record-card__value { color: #294b38; font-size: 12PX; }
+
+  .subscription-record-card__value--mono { max-width: 370PX; font-size: 11PX; }
+  .subscription-record-card__desc { margin-top: 8PX; color: var(--gv-web-muted); font-size: 12PX; }
+
+  .subscription-record-badge { padding: 6PX 9PX; border-radius: 5PX; font-size: 10PX; }
+  .subscription-record-badge--success { background: #e7f5eb; border-color: #cbe2d1; color: #337050; }
+  .subscription-record-badge--pending { background: #eef4ec; border-color: #d7e3d4; color: #567158; }
+  .subscription-record-badge--warning { background: #fff7df; border-color: #eadfb9; color: #83681e; }
+  .subscription-record-badge--failure { background: #fff0ea; border-color: #ead2c7; color: #96563e; }
+  .subscription-record-badge--neutral { background: #f1f4f1; border-color: #dfe5df; color: #737f75; }
+
+  .subscription-record-card__notice { border-radius: 9PX; background: #fff6f1; border-color: #ecd8ce; }
+  .subscription-record-card__notice-text { color: #925c43; font-size: 12PX; }
+
+  .subscription-history-empty {
+    min-height: 180PX;
+    border-style: dashed;
+    background: #fbfdfa;
+    box-shadow: none;
+  }
+
+  .subscription-record-card .subscription-history-empty { margin-top: 16PX; }
+  .subscription-history-empty__title { color: var(--gv-web-ink); font-size: 16PX; }
+  .subscription-history-empty__text { color: var(--gv-web-muted); font-size: 12PX; }
+  .bottom-spacer { display: none; }
+}
+
+@media screen and (max-width: 860PX) {
+  .subscription-history-container.subscription-history-container--h5 {
+    .subscription-history-shell { grid-template-columns: 1fr; padding: 24PX 20PX; }
+  }
+}
+
+@media screen and (max-width: 480PX) {
+  .subscription-history-container.subscription-history-container--h5 {
+    .subscription-history-shell { padding: 16PX 12PX 22PX; }
+    .subscription-history-card,
+    .subscription-record-card { padding: 18PX 16PX; }
+    .subscription-record-card__header { flex-direction: column; }
+    .subscription-history-card__row,
+    .subscription-record-card__row { grid-template-columns: 1fr; gap: 3PX; }
+    .subscription-history-card__value,
+    .subscription-record-card__value { max-width: none; text-align: left; }
   }
 }
