@@ -18,7 +18,7 @@ class PackageConfigTests(unittest.TestCase):
         env = dict(PUBLIC_ORIGIN='https://app.example.com', CONTENT_ORIGIN='https://content.example.com', FC_API_URL='https://api.example.com', FC_INTERNAL_TOKEN='a'*64)
         runtime = c.runtime_config(env, False)
         self.assertEqual(runtime['services']['frontend']['API_UPSTREAM'], env['FC_API_URL'])
-        self.assertEqual(set(runtime['services']['frontend']), {'API_UPSTREAM', 'FC_INTERNAL_TOKEN'})
+        self.assertEqual(set(runtime['services']['frontend']), {'API_UPSTREAM', 'GAMEVALLIES_FC_INTERNAL_TOKEN'})
         logged = c.runtime_config({**env, 'FC_LOG_PROJECT':'logs', 'FC_LOG_STORE':'runtime'}, False)
         self.assertEqual(logged['logConfig'], {'project':'logs', 'logstore':'runtime'})
         with self.assertRaisesRegex(ValueError, 'FC_LOG_STORE'):
