@@ -65,7 +65,7 @@ describe('paymentRuntime', () => {
     });
   });
 
-  test('marks pure jsapi payload as unsupported', () => {
+  test('maps pure jsapi payload to a payment action', () => {
     const { resolveSubscriptionPaymentAction } = require('../paymentRuntime');
 
     const action = resolveSubscriptionPaymentAction(
@@ -81,7 +81,7 @@ describe('paymentRuntime', () => {
     );
 
     expect(action).toEqual({
-      kind: 'unsupported_jsapi',
+      kind: 'jsapi',
       payload: {
         timeStamp: '1',
         nonceStr: 'nonce',
@@ -90,6 +90,24 @@ describe('paymentRuntime', () => {
         paySign: 'sign',
       },
     });
+  });
+
+  test('launches WeChat JSAPI payment in an h5 WeChat browser', async () => {
+    const { launchJsapiPayment } = require('../paymentRuntime');
+    const invoke = jest.fn((_method, _payload, callback) => callback({ err_msg: 'get_brand_wcpay_request:ok' }));
+    window.WeixinJSBridge = { invoke };
+
+    await launchJsapiPayment({
+      kind: 'jsapi',
+      payload: { timeStamp: '1', nonceStr: 'nonce', package: 'prepay_id=123', signType: 'RSA', paySign: 'sign' },
+    }, { isH5: true });
+
+    expect(invoke).toHaveBeenCalledWith(
+      'getBrandWCPayRequest',
+      expect.objectContaining({ package: 'prepay_id=123' }),
+      expect.any(Function)
+    );
+    delete window.WeixinJSBridge;
   });
 
   test('maps launchable code_url to h5 redirect action', () => {

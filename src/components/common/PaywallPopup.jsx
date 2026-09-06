@@ -50,8 +50,8 @@ export function PaywallPopup() {
   };
 
   const selectedPaymentNote = selectedPaymentAvailable
-    ? '将跳转到支付宝收银台完成支付，付款后自动返回。'
-    : `${selectedPaymentOption.label}暂不可用，请切换为支付宝继续。`;
+    ? `将打开${selectedPaymentOption.label}收银台，付款后自动确认订阅。`
+    : `${selectedPaymentOption.label}暂不可用，请切换其他支付方式。`;
 
   const getButtonLabel = (planId) => {
     if (subscribing && subscribingPlanId === planId) {
@@ -175,7 +175,7 @@ export function PaywallPopup() {
           <Text className="paywall-icon">支付方式</Text>
           <Text className="paywall-title">选择支付方式并解锁更多创作</Text>
           <Text className="paywall-subtitle">
-            支持支付宝支付，几秒完成订阅。
+            支持支付宝与微信支付，几秒完成订阅。
           </Text>
         </View>
 

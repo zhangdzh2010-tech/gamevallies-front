@@ -63,7 +63,7 @@ describe('subscriptionService.createOrder', () => {
     );
   });
 
-  test('rejects non-h5 environments while wechat payment is disabled', async () => {
+  test('rejects Alipay in non-h5 environments', async () => {
     jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(false);
 
     await expect(createOrder('plan-pro', 'game-1')).rejects.toThrow('当前环境暂不支持支付宝支付');
@@ -100,6 +100,32 @@ describe('subscriptionService.createOrder', () => {
         totalRemaining: 22,
       },
     });
+  });
+
+  test('uses mweb flow for WeChat Pay in a regular h5 browser', async () => {
+    jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(true);
+
+    await createOrder('plan-pro', null, 'wechat');
+
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining('provider=wechat_pay&clientPlatform=h5&wechatPayFlow=mweb'),
+      { planId: 'plan-pro' }
+    );
+  });
+
+  test('uses jsapi flow for WeChat Pay inside WeChat', async () => {
+    jest.spyOn(runtime, 'isH5Runtime').mockReturnValue(true);
+    Object.defineProperty(window, 'navigator', {
+      value: { userAgent: 'Mozilla/5.0 MicroMessenger/8.0.50' },
+      configurable: true,
+    });
+
+    await createOrder('plan-pro', null, 'wechat');
+
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining('provider=wechat_pay&clientPlatform=wechat_h5&wechatPayFlow=jsapi'),
+      { planId: 'plan-pro' }
+    );
   });
 
   test('treats freeQuota as remaining when totalFreeQuota is provided by the quota api', async () => {
