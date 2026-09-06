@@ -8,6 +8,7 @@ import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
 import { SharePanel } from '../../../components/common/SharePanel';
+import CreativeShell from '../../../components/creative-web/CreativeShell';
 import useGamePlayerStore from '../../../stores/gamePlayer';
 import useQuotaStore from '../../../stores/quotaStore';
 import { useGameStore } from '../../../store/gameStore';
@@ -792,11 +793,27 @@ export default function GameDetail() {
   };
 
   if (loading || !game) {
+    const stateContent = (
+      <View className="detail-web-state" role="status">
+        <Text className="detail-web-state__eyebrow">WORK DETAIL</Text>
+        <Text className="detail-web-state__title">{loading ? '正在加载作品' : '作品不存在'}</Text>
+        <Text className="detail-web-state__desc">
+          {loading ? '正在获取作品内容和互动数据，请稍等。' : '链接可能已经失效，或作品暂时不可访问。'}
+        </Text>
+      </View>
+    );
+
     return (
       <View className={containerClassName}>
-        <View style={{ padding: '40px', textAlign: 'center' }}>
-          <Text style={{ color: '#8b87a3', fontSize: '28px' }}>{loading ? '加载中...' : '作品不存在'}</Text>
-        </View>
+        {isH5 ? (
+          <CreativeShell active="works" title="作品详情">
+            {stateContent}
+          </CreativeShell>
+        ) : (
+          <View style={{ padding: '40px', textAlign: 'center' }}>
+            <Text style={{ color: '#8b87a3', fontSize: '28px' }}>{loading ? '加载中...' : '作品不存在'}</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -804,15 +821,15 @@ export default function GameDetail() {
   const detailCoverUrl = getGameCoverUrl(game);
   const handleBack = () => navigateBackOrHome();
 
-  return (
-    <View className={containerClassName}>
-      <View className="detail-top-bar">
+  const detailContent = (
+    <>
+      {!isH5 && <View className="detail-top-bar">
         <View className="detail-top-bar__inner" style={topBarStyle}>
           <View className="back-btn" onClick={handleBack}>
             <View className="back-btn__icon" />
           </View>
         </View>
-      </View>
+      </View>}
       <PageScrollContainer
         className="detail-scroll"
         style={detailScrollStyle}
@@ -1009,7 +1026,7 @@ export default function GameDetail() {
               className="comment-input"
               type="text"
               placeholder={replyingTo ? `回复 @${replyingTo.username}...` : '写下你的想法...'}
-              placeholderStyle="color: #55516e"
+              placeholderStyle={`color: ${isH5 ? '#91a095' : '#55516e'}`}
               focus={commentInputFocused}
               value={commentText}
               onFocus={() => setCommentInputFocused(true)}
@@ -1027,6 +1044,20 @@ export default function GameDetail() {
           </View>
         </View>
       </View>
+    </>
+  );
+
+  return (
+    <View className={containerClassName}>
+      {isH5 ? (
+        <CreativeShell
+          active="works"
+          title="作品详情"
+          actions={<button className="cw-button cw-outline" onClick={handleBack}>返回作品列表</button>}
+        >
+          {detailContent}
+        </CreativeShell>
+      ) : detailContent}
 
       <GlobalGamePlayer />
       <PaywallPopup />

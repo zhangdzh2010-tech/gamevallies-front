@@ -7,6 +7,7 @@ import { GlobalGamePlayer } from '../../../components/common/GamePlayer';
 import { PageScrollContainer } from '../../../components/common/PageScrollContainer';
 import { GenerationProgressPanel } from '../../../components/common/GenerationProgressPanel';
 import { PaywallPopup } from '../../../components/common/PaywallPopup';
+import CreativeStudio from '../../../components/creative-web/CreativeStudio';
 import {
   CreationCreateWorkspace,
   CreationReferenceCard,
@@ -488,6 +489,71 @@ export default function GameForkPage() {
 
     Taro.navigateTo({ url: buildGameDetailPath(currentGame.id, { authorView: 1 }) }).catch(() => {});
   };
+
+  if (isH5) {
+    const readyToGenerate = isForkSessionActive && !hasForkPromptChanges
+      && (canGenerateForkSession || canConfirmCurrentForkPrompt);
+    const blocked = Boolean(sourceGame && !canForkGame && !isCurrentForkSession);
+    const forkError = blocked
+      ? (isOwnGame ? '这是你的作品，请从“我的作品”进入继续优化。' : '作者暂未开放这款作品的复刻权限。')
+      : getUserFacingForkError(
+        (creationSession?.entryMode === 'fork'
+          ? (creationSessionError || error || terminalError?.message || '')
+          : '')
+        || pageError
+        || ''
+      );
+    const secondary = resumeCandidate ? [
+      { key: 'resume', label: '继续上次复刻', onClick: handleContinueForkSession, disabled: resumeDecisionSubmitting },
+      { key: 'fresh', label: '开启新一轮', onClick: handleStartFreshForkSession, disabled: resumeDecisionSubmitting },
+    ] : isForkSessionActive ? [
+      { key: 'restart', label: '重新整理方向', onClick: handleRestartForkSession },
+    ] : [
+      { key: 'generate-fork-directly', label: '跳过整理，直接生成', onClick: handleForkWorkspaceGenerate, disabled: !canStartForkSession },
+    ];
+    const supplemental = resumeCandidate ? (
+      <div className="cw-ready" data-testid="resume-scene">
+        <strong>发现未完成的复刻方向</strong>
+        <p>{resumeCandidate.prompt || '可以接着上次的方向继续，也可以重新开始。'}</p>
+        <button data-testid="resume-continue" className="cw-button cw-outline" disabled={resumeDecisionSubmitting} onClick={handleContinueForkSession}>继续上次复刻</button>
+        <button data-testid="resume-restart" className="cw-button cw-outline" disabled={resumeDecisionSubmitting} onClick={handleStartFreshForkSession}>开启新一轮</button>
+      </div>
+    ) : isCurrentForkCompleted ? (
+      <div className="cw-ready">
+        <strong>{currentGame?.title || '复刻作品已生成'}</strong>
+        <p>新版本已经保存到你的作品中，可以先试玩，再决定是否继续优化。</p>
+        <button className="cw-button cw-outline" onClick={handlePlayForkResult}>试玩这版</button>
+        <button className="cw-button cw-outline" onClick={handleOpenForkResultDetail}>查看详情</button>
+        <button className="cw-button cw-outline" onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}>继续优化</button>
+      </div>
+    ) : null;
+
+    return <CreativeStudio
+      mode="fork"
+      title={sourceGame?.title || '正在载入原作'}
+      orientation={getGameOrientation(sourceGame, 'portrait')}
+      input={isForkSessionActive ? sessionPromptDraft : forkInstruction}
+      inputAriaLabel={isForkSessionActive ? 'fork-session-prompt' : 'fork-initial-prompt'}
+      onInputChange={value => isForkSessionActive ? setSessionPromptDraft(value) : setForkInstruction(value)}
+      session={isCurrentForkSession ? creationSession : null}
+      work={isCurrentForkCompleted ? currentGame : null}
+      referenceWork={sourceGame}
+      generating={isCurrentForkGenerating}
+      progress={generationProgress}
+      loading={isLoading || creationSessionSubmitting || resumeDecisionSubmitting}
+      error={forkError}
+      primary={{
+        label: readyToGenerate ? '按此方向生成复刻作品' : isForkSessionActive ? '确认修改方向' : '整理复刻方向',
+        onClick: readyToGenerate ? handleForkWorkspaceGenerate : handleForkWorkspacePrimaryAction,
+        disabled: blocked || Boolean(resumeCandidate) || !sourceGame?.id
+          || (readyToGenerate ? false : isForkSessionActive ? !canEditForkPrompt || !hasForkPromptChanges : !canStartForkSession),
+      }}
+      secondary={secondary}
+      canPlay={sourceGame?.canPlay !== false}
+      onCancel={currentTask?.taskId ? handleCancelTask : null}
+      supplemental={supplemental}
+    />;
+  }
 
   const renderForkPage = (content, { workspaceLayout = false } = {}) => (
     <View className={containerClassName}>

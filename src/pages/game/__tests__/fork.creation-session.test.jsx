@@ -355,7 +355,7 @@ describe('Fork page creation session flow', () => {
 
     render(<ForkPage />);
 
-    expect(await screen.findByText('Fork Result')).toBeTruthy();
+    expect((await screen.findAllByText('Fork Result')).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByText('试玩这版'));
     expect(mockOpenGame).toHaveBeenCalledWith(
