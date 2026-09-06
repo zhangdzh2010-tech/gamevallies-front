@@ -41,6 +41,7 @@ import { getQuotaSummary } from '../../utils/quotaSummary';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { toastError, toastInfo } from '../../utils/feedback';
 import { SkeletonListRow } from '../../components/common/Skeleton';
+import CreativeShell from '../../components/creative-web/CreativeShell';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
@@ -1314,10 +1315,8 @@ export default function Profile() {
   const profileAvatarSrc = normalizeAvatarSource(profile.avatarUrl) || normalizeAvatarSource(profile.avatar);
   const profileAvatarFallback = getAvatarFallback(profile.avatar, profile.name);
 
-  return (
-    <View className={`profile-container${isH5 ? ' profile-container--h5' : ''}${isWeapp ? ' profile-container--weapp' : ''}`}>
-      <AppTopBar />
-      <View className="profile-shell">
+  const profileShell = (
+    <View className="profile-shell">
       <View className="profile-header">
         <View className="profile-summary-card">
           <View className="header-top">
@@ -1408,7 +1407,7 @@ export default function Profile() {
         </View>
 
         <View className="games-section">
-          {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的作品作品')}
+          {activeTab === 'works'     && renderGameList(publishedGames, 'empty-icon--works', '还没有发布的作品')}
           {activeTab === 'drafts'    && renderGameList(draftGames, 'empty-icon--drafts', '还没有草稿作品')}
           {activeTab === 'liked'     && renderGameList(likedGames, 'empty-icon--liked', '你还没有点赞过作品', false, false)}
           {activeTab === 'bookmarks' && (
@@ -1447,7 +1446,24 @@ export default function Profile() {
         <IcpFooter />
         <View className="bottom-spacer" />
       </PageScrollContainer>
-      </View>
+    </View>
+  );
+
+  return (
+    <View className={`profile-container${isH5 ? ' profile-container--h5' : ''}${isWeapp ? ' profile-container--weapp' : ''}`}>
+      {isH5 ? (
+        <CreativeShell
+          active={activeTab === 'tasks' ? 'tasks' : 'works'}
+          title={activeTab === 'tasks' ? '任务中心' : '个人中心'}
+        >
+          {profileShell}
+        </CreativeShell>
+      ) : (
+        <>
+          <AppTopBar />
+          {profileShell}
+        </>
+      )}
 
       {moreGame && (
         <MoreMenu
@@ -1480,7 +1496,7 @@ export default function Profile() {
         />
       )}
 
-      <CustomTabBar activeIndex={4} />
+      {!isH5 && <CustomTabBar activeIndex={4} />}
       <GlobalGamePlayer />
       <PaywallPopup />
     </View>
