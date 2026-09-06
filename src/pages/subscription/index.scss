@@ -1,4 +1,5 @@
 @import '../../styles/variables.scss';
+@import '../../styles/creative-web-page.scss';
 .subscription-container {
   height: 100vh;
   display: flex;
@@ -1155,5 +1156,214 @@
   .payment-method-card__head {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* Desktop H5 subscription workspace. */
+.subscription-container.subscription-container--h5 {
+  @include creative-web-page-theme;
+  display: block;
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+  background: var(--gv-web-canvas);
+
+  &::before { display: none; }
+
+  .subscription-scroll {
+    display: block;
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .subscription-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(290PX, .65fr);
+    gap: 20PX;
+    width: 100%;
+    max-width: 1320PX;
+    margin: 0 auto;
+    padding: 34PX 42PX 30PX;
+  }
+
+  .subscription-stage,
+  .payment-method-card,
+  .plans-section,
+  .subscription-record-entry { grid-column: 1 / -1; }
+
+  .subscription-stage {
+    display: grid;
+    grid-template-columns: minmax(250PX, .8fr) minmax(420PX, 1.2fr);
+    align-items: center;
+    gap: 30PX;
+    margin: 0;
+    padding: 27PX 29PX;
+    border: 1PX solid #d6e6d8;
+    border-radius: 15PX;
+    background:
+      radial-gradient(circle at 95% 8%, rgba(196, 244, 101, .29), transparent 28%),
+      #f6fbf4;
+    box-shadow: 0 14PX 38PX rgba(27, 70, 50, .06);
+
+    &__copy { margin: 0; }
+    &__eyebrow { margin-bottom: 8PX; color: #6e856f; font-size: 10PX; letter-spacing: 1.5PX; }
+    &__title { margin-bottom: 9PX; color: var(--gv-web-ink); font-size: 27PX; }
+    &__desc { color: var(--gv-web-muted); font-size: 13PX; }
+    &__metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9PX; }
+    &__metric {
+      min-height: 80PX;
+      padding: 13PX;
+      border: 1PX solid #dce8de;
+      border-radius: 9PX;
+      background: rgba(255, 255, 255, .82);
+      box-shadow: none;
+    }
+    &__metric-label { margin-bottom: 8PX; color: var(--gv-web-muted); font-size: 10PX; }
+    &__metric-value { color: #294b38; font-size: 15PX; }
+  }
+
+  .quota-card,
+  .sub-status-card,
+  .payment-method-card,
+  .plan-card,
+  .subscription-record-entry {
+    margin-top: 0;
+    border: 1PX solid var(--gv-web-line);
+    border-radius: 13PX;
+    background: white;
+    box-shadow: 0 14PX 38PX rgba(27, 70, 50, .06);
+  }
+
+  .quota-card,
+  .sub-status-card { padding: 22PX; }
+
+  .quota-card-eyebrow,
+  .sub-status-eyebrow,
+  .payment-method-card__eyebrow,
+  .plans-section-kicker,
+  .plan-card-kicker {
+    margin-bottom: 7PX;
+    color: #7d8f7f;
+    font-size: 10PX;
+    letter-spacing: 1.4PX;
+  }
+
+  .quota-card-title,
+  .sub-status-title,
+  .payment-method-card__title,
+  .plans-section-title {
+    color: var(--gv-web-ink);
+    font-size: 18PX;
+  }
+
+  .quota-progress-bg { height: 7PX; margin-bottom: 8PX; background: #dfe8e1; }
+  .quota-progress-fill { background: var(--gv-web-accent); }
+  .quota-progress-text { color: var(--gv-web-muted); font-size: 11PX; }
+  .quota-remaining-num { color: #234c3b; font-size: 44PX; }
+  .quota-remaining-label { color: var(--gv-web-muted); font-size: 13PX; }
+
+  .sub-status-info { gap: 10PX; }
+  .sub-info-row { padding-bottom: 9PX; border-bottom: 1PX solid #edf1ed; }
+  .sub-info-row:last-child { padding-bottom: 0; border-bottom: 0; }
+  .sub-info-label { color: var(--gv-web-muted); font-size: 12PX; }
+  .sub-info-value { color: #294b38; font-size: 12PX; }
+
+  .subscription-record-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 18PX 20PX;
+    cursor: pointer;
+
+    &:hover { border-color: #bed3c2; }
+    &__title { color: var(--gv-web-ink); font-size: 16PX; }
+    &__desc { margin-top: 6PX; color: var(--gv-web-muted); font-size: 12PX; }
+    &__action { min-height: 38PX; padding: 0 14PX; border-radius: 8PX; background: var(--gv-web-accent); font-size: 12PX; }
+  }
+
+  .payment-method-card { padding: 22PX; }
+  .payment-method-card__head { margin-bottom: 14PX; }
+  .payment-method-card__badge { padding: 6PX 9PX; border-radius: 5PX; font-size: 10PX; }
+  .payment-method-card__badge.is-live { background: #e8f5ec; border-color: #cbe2d1; color: #337050; }
+  .payment-method-card__badge.is-soon { background: #f2f4f2; border-color: #e0e6e1; color: #778279; }
+  .payment-method-card__note { margin-top: 12PX; color: var(--gv-web-muted); font-size: 11PX; }
+
+  .payment-method-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11PX; }
+  .payment-method-option {
+    grid-template-columns: 38PX minmax(0, 1fr) 17PX;
+    gap: 11PX;
+    padding: 13PX;
+    border: 1PX solid #e1e9e3;
+    border-radius: 9PX;
+    background: #fafcf9;
+    cursor: pointer;
+
+    &:hover { border-color: #bdd2c1; }
+    &.is-selected { border-color: #77a98a; background: #f0f7f1; box-shadow: 0 8PX 24PX rgba(35, 89, 55, .08); }
+    &__icon { width: 38PX; height: 38PX; border-radius: 9PX; background: #176c59; font-size: 14PX; }
+    &__icon--wechat { background: #3c8a50; }
+    &__label { color: var(--gv-web-ink); font-size: 13PX; }
+    &__status { border-radius: 4PX; }
+    &__status.is-live { background: #e6f4eb; color: #347050; }
+    &__status.is-soon { background: #eef1ee; color: #78847a; }
+    &__desc { color: var(--gv-web-muted); font-size: 11PX; }
+    &__radio { width: 17PX; height: 17PX; border-color: #aebeb1; }
+    &__radio.is-selected { border-color: var(--gv-web-accent); }
+    &__radio.is-selected::after { background: var(--gv-web-accent); }
+  }
+
+  .plans-section {
+    padding: 23PX;
+  }
+
+  .plans-section-head { margin-bottom: 17PX; }
+  .plans-section-meta { padding: 6PX 9PX; border: 1PX solid #dce7de; border-radius: 5PX; background: #f3f8f3; color: #55745d; font-size: 10PX; }
+  .plans-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14PX; }
+  .plan-card { min-width: 0; padding: 20PX 18PX 17PX; }
+  .plan-card.recommended { border-color: #7da98a; background: #f6fbf5; }
+  .plan-card-badge { right: 15PX; padding: 4PX 9PX; border-radius: 0 0 6PX 6PX; background: var(--gv-web-accent); font-size: 10PX; }
+  .plan-card-header { gap: 10PX; margin-bottom: 8PX; }
+  .plan-card-name { color: var(--gv-web-ink); font-size: 17PX; }
+  .plan-card-currency { color: #3e684b; font-size: 11PX; }
+  .plan-card-amount { color: #234c3b; font-size: 29PX; text-shadow: none; }
+  .plan-card-period { color: var(--gv-web-muted); font-size: 10PX; }
+  .plan-card-quota { color: #34704d; font-size: 12PX; }
+  .plan-card-features { gap: 8PX; }
+  .feature-dot { color: #5e8a65; font-size: 12PX; }
+  .feature-text { color: #607264; font-size: 11PX; }
+  .plan-card-payment-hint { color: var(--gv-web-muted); font-size: 10PX; }
+  .plan-card-subscribe-btn {
+    min-height: 41PX;
+    border-radius: 8PX;
+    background: var(--gv-web-accent);
+    box-shadow: none;
+    color: white;
+    cursor: pointer;
+  }
+  .plan-card-subscribe-btn.coming-soon { background: #7b877d; }
+  .subscriber-bar { grid-column: 1 / -1; padding: 0; text-align: center; }
+  .subscriber-bar text { color: var(--gv-web-muted); font-size: 11PX; }
+  .bottom-spacer { display: none; }
+}
+
+@media screen and (max-width: 1100PX) {
+  .subscription-container.subscription-container--h5 {
+    .subscription-shell { padding: 28PX; }
+    .subscription-stage { grid-template-columns: 1fr; }
+    .plans-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+}
+
+@media screen and (max-width: 760PX) {
+  .subscription-container.subscription-container--h5 {
+    .subscription-shell { display: flex; flex-direction: column; padding: 20PX 16PX 24PX; }
+    .subscription-stage { padding: 21PX 18PX; }
+    .subscription-stage__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .payment-method-list,
+    .plans-list { grid-template-columns: 1fr; }
+    .subscription-record-entry { grid-template-columns: 1fr; }
+    .subscription-record-entry__action { width: 100%; }
   }
 }
