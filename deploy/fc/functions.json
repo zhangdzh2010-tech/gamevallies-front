@@ -1,0 +1,15 @@
+{
+  "functions": [
+    {
+      "name": "frontend",
+      "port": 8080,
+      "health": "/health",
+      "cpu": 0.5,
+      "memory": 1024,
+      "concurrency": 20,
+      "maxInstances": 2,
+      "timeout": 60,
+      "provisioned": 0
+    }
+  ]
+}

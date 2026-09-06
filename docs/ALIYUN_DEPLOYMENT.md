@@ -1,31 +1,29 @@
-# 阿里云前端发布
+# 阿里云函数计算 FC 前端发布
 
-前端构建为 Nginx 容器，推送 ACR，由 ECS 上标签为 `aliyun-ecs-front` 的专用 Runner 部署。镜像按 Git commit SHA 标记，容器通过 HTTP 检查才记录为当前版本，失败时恢复前一个版本。入口为 `.github/workflows/deploy.yml`；未设 `ALIYUN_DEPLOY_ENABLED=true` 时不会发布。
+采用 FC 自定义容器承载 Nginx Web 静态页面，GitHub 托管 Runner 构建 linux/amd64 镜像并推送同账号同地域 ACR，再使用官方 FC 3.0 SDK 发布。无需 ECS、SSH、服务器 Runner 或 ALB。
 
-先按[后端阿里云部署说明](https://github.com/zhangdzh2010-tech/gamevallies-backend/blob/main/docs/deployment/ALIYUN_DEPLOYMENT.md)准备 ACR、同一台 Linux x86_64 ECS、Docker Compose、专用 Runner、ALB、共享网络和 Secrets。本仓库的目标目录为 `/opt/gamevallies/front`，Compose project 为 `gamevallies-front`。前端容器不直接暴露主机端口，由后端 gateway 转发。
+通用配置与后台任务约束见[后端部署文档](https://github.com/zhangdzh2010-tech/gamevallies-backend/blob/feat/aliyun-fc-deployment-20260905/docs/deployment/ALIYUN_DEPLOYMENT.md)。前后端 FC 改造 PR 必须配套合并后才能启用。
 
-两个仓库均需 repository Variables：`ALIYUN_DEPLOY_ENABLED`、`ACR_REGISTRY`、`ACR_NAMESPACE`；repository Secrets：`ACR_USERNAME`、`ACR_PASSWORD`（构建推送），`ACR_PULL_USERNAME`、`ACR_PULL_PASSWORD`（仅拉取）。创建 production Environment，部署限制为 main。
+## GitHub 配置
 
-前端追加以下公开构建变量，不能填写任何服务端密钥：
+Repository Variables：`ALIYUN_FC_DEPLOY_ENABLED=true`（准备完成后启用）、`FC_ACCOUNT_ID`、`FC_REGION`、`FC_PREFIX`、`FC_EXECUTION_ROLE`、`ACR_REGISTRY`、`ACR_NAMESPACE`，企业版 ACR 按需增加 `ACR_INSTANCE_ID`。
 
-| Variable | 用途 |
-| --- | --- |
-| `PUBLIC_ORIGIN` | 应用 HTTPS origin，同时作为各业务 API 地址；ALB 转发后端 8080 |
-| `GAME_CONTENT_ORIGIN` | 独立的游戏内容 HTTPS origin；ALB 转发后端 8082 |
-| `GAME_SHELL_ORIGIN` | 可选，游戏外壳应用 origin，默认 PUBLIC_ORIGIN |
-| `TARO_APP_ENABLE_WECHAT_H5_LOGIN` | 可选，启用公众号登录时设为 true |
-| `TARO_APP_WECHAT_OAUTH_APP_ID` | 可选，公众号的公开 App ID |
-| `TARO_APP_WECHAT_OAUTH_SCOPE` | 可选，OAuth scope |
+Repository Secrets：`ACR_USERNAME`、`ACR_PASSWORD`、`ALIBABA_CLOUD_ACCESS_KEY_ID`、`ALIBABA_CLOUD_ACCESS_KEY_SECRET`；临时身份可增加 `ALIBABA_CLOUD_SECURITY_TOKEN`。`FC_RUNTIME_JSON` 可使用 `deploy/fc/runtime.example.json` 的空运行配置，按需增加 SLS 日志配置；不要把后端运行密钥放入此前端函数。production Environment 限制 main 部署。
 
-Origin 不带结尾 `/` 或路径。上述值编译进 H5；改变后须重新构建发布。WebSocket 使用 PUBLIC_ORIGIN 对应的 `/ws` 命名空间，后端 gateway 负责 `/ws/socket.io/` 转发。
+前端构建变量：`PUBLIC_ORIGIN`（最终应用 HTTPS origin）、`GAME_CONTENT_ORIGIN`（独立作品内容 HTTPS origin），可选 `GAME_SHELL_ORIGIN` 默认应用 origin。它们不带路径和结尾斜杠。微信构建变量仅在实际启用对应登录时配置；本次不新增移动 H5 产品。域名变量变更需要重新构建。
 
-首次先部署后端，再部署前端，两者健康且经过登录、作品创建/播放、SSE/WebSocket 检查后再切换生产域名。应用健康检查通过不等于真实业务验证通过。ECS/ACR/Runner/域名和凭据需要实际配置，本仓库提交不会创建云资源。
+## 发布顺序
 
-维护使用 `/opt/gamevallies/front/current/compose.yml` 和 `images.env`：
+先部署 frontend 函数，取得工作流 `fc-release-<SHA>` 工件中的函数 URL，并将其填入后端 `FC_FRONTEND_URL`。随后部署后端内部服务、gateway、content，在 FC 控制台绑定最终应用和作品内容域名并配置 HTTPS/DNS。
+
+`deploy/fc/functions.json` 定义函数资源，`scripts/fc/deploy.py` 负责创建/更新、获取触发器地址、状态/HTTP 健康检查和版本回滚。原 ECS 开关、Compose 和 SSH 发布入口已移除。发布检查不等于已完成真实账号登录、生成、发布、SSE/WebSocket 验收。
+
+本地验证与回滚：
 
 ```bash
-unset IMAGE_PREFIX IMAGE_TAG RUNTIME_ENV_FILE GATEWAY_BIND
-docker compose -p gamevallies-front --env-file /opt/gamevallies/front/current/images.env -f /opt/gamevallies/front/current/compose.yml ps
+pip install -r scripts/fc/requirements.txt
+python scripts/fc/deploy.py validate --runtime .fc-runtime.json
+python scripts/fc/deploy.py rollback --runtime .fc-runtime.json --release fc-release.json
 ```
 
-回滚步骤与后端相同，将目标目录改为 `/opt/gamevallies/front`、project 改为 `gamevallies-front`。保留已验证发布目录和对应 ACR 镜像。不要自动清理仍可能用于回滚的标签。线上业务验证脚本仍可用，其本地环境文件入口已改为 `.env.production`。
+需配置工作流同名环境变量，`IMAGE_TAG` 使用完整提交 SHA。回滚只恢复记录中的上一函数版本，不改数据库或 DNS；第一次发布没有旧版本。失败安装保留资源诊断，并阻止新实例启动。

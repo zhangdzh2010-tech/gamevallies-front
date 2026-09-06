@@ -75,7 +75,15 @@ docs/微信支付.zip
 Thumbs.db
 desktop.ini
 
-# Production configuration stays on ECS
+# Production credentials remain outside Git
 .env.production
 .env.production.*
 !.env.production.example
+
+# FC local runtime and generated release records
+.fc-runtime*.json
+fc-release*.json
+
+# Python deployment helpers
+__pycache__/
+*.pyc
