@@ -38,5 +38,11 @@ jobs:
           python-version: '3.12'
       - run: pip install -r scripts/fc/requirements.txt
       - run: python scripts/fc/test_deploy.py
-      - name: Build frontend image without publishing
-        run: docker build --tag gamevallies-frontend:ci .
+      - run: python scripts/fc/test_configure.py
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and verify FC ZIP packages without cloud credentials
+        env:
+          CONTENT_ORIGIN: https://content.example.com
+        run: |
+          bash scripts/fc/build.sh
+          python scripts/fc/test_packages.py
