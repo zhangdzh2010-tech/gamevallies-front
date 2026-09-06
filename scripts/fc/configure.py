@@ -42,6 +42,8 @@ def runtime_config(env, backend):
         token = need(env, 'FC_INTERNAL_TOKEN')
         if not re.fullmatch('[a-f0-9]{64}', token): raise ValueError('Invalid FC_INTERNAL_TOKEN')
         runtime['services']['frontend'] = {'API_UPSTREAM': upstream, 'FC_INTERNAL_TOKEN': token}
+        if env.get('FC_LOG_PROJECT') or env.get('FC_LOG_STORE'):
+            runtime['logConfig'] = {'project': need(env, 'FC_LOG_PROJECT'), 'logstore': need(env, 'FC_LOG_STORE')}
         return runtime
     common = runtime['common']
     for key in ('DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ADMIN_TOKEN', 'FC_INTERNAL_TOKEN'):

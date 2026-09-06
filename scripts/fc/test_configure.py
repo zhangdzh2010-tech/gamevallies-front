@@ -19,6 +19,10 @@ class PackageConfigTests(unittest.TestCase):
         runtime = c.runtime_config(env, False)
         self.assertEqual(runtime['services']['frontend']['API_UPSTREAM'], env['FC_API_URL'])
         self.assertEqual(set(runtime['services']['frontend']), {'API_UPSTREAM', 'FC_INTERNAL_TOKEN'})
+        logged = c.runtime_config({**env, 'FC_LOG_PROJECT':'logs', 'FC_LOG_STORE':'runtime'}, False)
+        self.assertEqual(logged['logConfig'], {'project':'logs', 'logstore':'runtime'})
+        with self.assertRaisesRegex(ValueError, 'FC_LOG_STORE'):
+            c.runtime_config({**env, 'FC_LOG_PROJECT':'logs'}, False)
         for upstream in (env['PUBLIC_ORIGIN'], env['CONTENT_ORIGIN']):
             with self.assertRaisesRegex(ValueError, 'backend function'):
                 c.runtime_config({**env, 'FC_API_URL': upstream}, False)
