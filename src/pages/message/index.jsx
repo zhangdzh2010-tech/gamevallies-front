@@ -9,6 +9,7 @@ import * as socialService from '../../services/social';
 import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
 import { getH5PageScrollContainer } from '../../utils/h5Scroll';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
+import CreativeShell from '../../components/creative-web/CreativeShell';
 import './index.scss';
 
 function getNotificationIconType(type) {
@@ -275,10 +276,8 @@ export default function Message() {
   const isUnread = (message) => !(message.isRead || message.read);
   const unreadCount = messages.filter(isUnread).length;
 
-  return (
-    <View className={`messages-page${isH5 ? ' messages-page--h5' : ''}${isWeapp ? ' messages-page--weapp' : ''}`}>
-      <AppTopBar />
-      <View className="messages-shell">
+  const messageContent = (
+    <View className="messages-shell">
         <View className="messages-toolbar">
           <View className="header-main">
             <Text className="header-title">消息</Text>
@@ -357,9 +356,22 @@ export default function Message() {
           )}
           <IcpFooter />
         </PageScrollContainer>
-      </View>
+    </View>
+  );
 
-      <CustomTabBar activeIndex={3} />
+  return (
+    <View className={`messages-page${isH5 ? ' messages-page--h5' : ''}${isWeapp ? ' messages-page--weapp' : ''}`}>
+      {isH5 ? (
+        <CreativeShell active="messages" title="消息通知">
+          {messageContent}
+        </CreativeShell>
+      ) : (
+        <>
+          <AppTopBar />
+          {messageContent}
+          <CustomTabBar activeIndex={3} />
+        </>
+      )}
     </View>
   );
 }

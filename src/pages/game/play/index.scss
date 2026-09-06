@@ -30,3 +30,118 @@
     font-size: 28px;
   }
 }
+
+.game-play-page.game-play-page--h5 {
+  background: #0b1511;
+
+  .game-webview {
+    top: 64PX;
+    height: calc(100% - 64PX);
+  }
+
+  .game-loading {
+    top: 64PX;
+    background:
+      radial-gradient(circle at 50% 32%, rgba(33, 112, 76, 0.2), transparent 30%),
+      #0b1511;
+  }
+
+  .game-loading-text {
+    color: rgba(244, 250, 247, 0.78);
+    font-size: 15PX;
+  }
+
+  .game-play-page__web-toolbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    height: 64PX;
+    padding: 0 24PX;
+    display: grid;
+    grid-template-columns: minmax(100PX, 1fr) minmax(0, 2fr) minmax(100PX, 1fr);
+    align-items: center;
+    gap: 16PX;
+    color: #f4faf7;
+    background: rgba(8, 20, 14, 0.96);
+    border-bottom: 1PX solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12PX 30PX rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(18PX);
+  }
+
+  .game-play-page__web-back,
+  .game-play-page__web-detail {
+    min-height: 38PX;
+    display: inline-flex;
+    align-items: center;
+    gap: 8PX;
+    font-size: 14PX;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .game-play-page__web-back {
+    justify-self: start;
+  }
+
+  .game-play-page__web-back-icon {
+    font-size: 20PX;
+    line-height: 1;
+  }
+
+  .game-play-page__web-title {
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15PX;
+    font-weight: 800;
+  }
+
+  .game-play-page__web-detail {
+    justify-self: end;
+    min-height: 38PX;
+    padding: 0 16PX;
+    border: 1PX solid rgba(130, 207, 169, 0.4);
+    border-radius: 10PX;
+    color: #c8f2dc;
+    background: rgba(31, 103, 69, 0.22);
+
+    &.is-disabled {
+      opacity: 0.42;
+      cursor: default;
+    }
+  }
+}
+
+@media screen and (max-width: 640PX) {
+  .game-play-page.game-play-page--h5 {
+    .game-webview,
+    .game-loading {
+      top: 52PX;
+      height: calc(100% - 52PX);
+    }
+
+    .game-play-page__web-toolbar {
+      height: 52PX;
+      padding: 0 14PX;
+      grid-template-columns: 74PX minmax(0, 1fr) 82PX;
+      gap: 8PX;
+    }
+
+    .game-play-page__web-detail {
+      min-height: 32PX;
+      padding: 0 10PX;
+      font-size: 12PX;
+    }
+
+    .game-play-page__web-back {
+      font-size: 13PX;
+    }
+
+    .game-play-page__web-title {
+      font-size: 13PX;
+    }
+  }
+}
