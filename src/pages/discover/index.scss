@@ -246,3 +246,83 @@
     }
   }
 }
+
+@media screen and (min-width: 900PX) {
+  .follow-page.follow-page--h5 {
+    color: #183026;
+    background: #f4f7f4;
+
+    &::before {
+      display: none;
+    }
+
+    .follow-shell {
+      width: 100%;
+      max-width: none;
+      min-height: calc(100vh - 64PX);
+      background:
+        radial-gradient(circle at 86% 4%, rgba(58, 134, 91, 0.09), transparent 24%),
+        #f4f7f4;
+    }
+
+    .follow-content,
+    taro-scroll-view-core.follow-content,
+    taro-scroll-view-core.follow-content .taro-scroll-view__scroll-y {
+      height: calc(100vh - 64PX) !important;
+      overflow-y: auto !important;
+    }
+
+    .friends-feed {
+      width: min(1120PX, calc(100% - 72PX));
+      margin: 0 auto;
+      padding: 42PX 0 0;
+    }
+
+    .friends-feed__title {
+      margin-bottom: 24PX;
+      color: #173126;
+      font-size: 28PX;
+      letter-spacing: -0.6PX;
+    }
+
+    .waterfall {
+      max-width: none;
+      gap: 22PX;
+    }
+
+    .waterfall-col {
+      gap: 22PX;
+    }
+
+    .empty-state {
+      min-height: 420PX;
+      padding: 72PX 40PX;
+      border: 1PX solid #dce6df;
+      border-radius: 18PX;
+      background: #ffffff;
+      box-shadow: 0 18PX 50PX rgba(34, 69, 50, 0.07);
+
+      .empty-title {
+        color: #173126;
+        font-size: 22PX;
+      }
+
+      .empty-text {
+        max-width: 460PX;
+        color: #6a7c71;
+        font-size: 15PX;
+      }
+
+      .empty-action {
+        min-height: 44PX;
+        padding: 0 24PX;
+        border-radius: 10PX;
+        background: #1f6745;
+      }
+    }
+
+    .bottom-spacer {
+      height: 52PX;
+    }
+  }
+}

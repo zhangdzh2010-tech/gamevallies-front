@@ -22,6 +22,7 @@ import { getSafeDisplayText } from '../../utils/profileDisplay';
 import { buildGameDetailPath } from '../../utils/share';
 import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Scroll';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
+import CreativeShell from '../../components/creative-web/CreativeShell';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
@@ -288,10 +289,8 @@ export default function FriendsPage() {
 
   const posterColumns = buildPosterColumns(friendGames);
 
-  return (
-    <View className={`follow-page${isH5 ? ' follow-page--h5' : ''}${isWeapp ? ' follow-page--weapp' : ''}`}>
-      <AppTopBar />
-      <View className="follow-shell">
+  const feedContent = (
+    <View className="follow-shell">
         <PageScrollContainer
           className="follow-content"
           refresherEnabled
@@ -367,9 +366,22 @@ export default function FriendsPage() {
           <IcpFooter />
           <View className="bottom-spacer" />
         </PageScrollContainer>
-      </View>
+    </View>
+  );
 
-      <CustomTabBar activeIndex={1} />
+  return (
+    <View className={`follow-page${isH5 ? ' follow-page--h5' : ''}${isWeapp ? ' follow-page--weapp' : ''}`}>
+      {isH5 ? (
+        <CreativeShell active="friends" title="朋友作品">
+          {feedContent}
+        </CreativeShell>
+      ) : (
+        <>
+          <AppTopBar />
+          {feedContent}
+          <CustomTabBar activeIndex={1} />
+        </>
+      )}
       <GlobalGamePlayer />
       <FloatingPlayer />
       <PaywallPopup />

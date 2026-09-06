@@ -1,9 +1,10 @@
 @import '../../../styles/game-ui.scss';
 
 .game-web-shell-page {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
   overflow: hidden;
   background: #000;
   color: #fff;
@@ -313,6 +314,75 @@
     &__label {
       font-size: 12px;
       letter-spacing: 0.4px;
+    }
+  }
+}
+
+@media screen and (min-width: 900PX) {
+  .game-web-shell-page:not(.is-landscape) {
+    background:
+      radial-gradient(circle at 50% 40%, rgba(38, 104, 74, 0.24), transparent 34%),
+      #07100c;
+
+    .game-web-shell-page__player {
+      left: 50%;
+      right: auto;
+      width: min(56.25vh, 560PX);
+      transform: translateX(-50%);
+      border-left: 1PX solid rgba(255, 255, 255, 0.08);
+      border-right: 1PX solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 80PX rgba(0, 0, 0, 0.52);
+    }
+
+    .game-web-shell-page__bottom-gradient {
+      left: 50%;
+      right: auto;
+      width: min(56.25vh, 560PX);
+      transform: translateX(-50%);
+    }
+
+    .game-web-shell-author {
+      left: max(28PX, calc(50% - min(28.125vh, 280PX) - 280PX));
+      right: auto;
+      bottom: 32PX;
+      width: 250PX;
+
+      &__card {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        border-radius: 18PX;
+      }
+
+      &__body {
+        padding-top: 5PX;
+      }
+
+      &__follow {
+        width: 100%;
+      }
+    }
+
+    .game-web-shell-actions {
+      right: max(28PX, calc(50% - min(28.125vh, 280PX) - 112PX));
+      bottom: 32PX;
+      gap: 18PX;
+    }
+
+    .game-web-shell-action__button {
+      width: 62PX;
+      height: 62PX;
+      border-radius: 20PX;
+    }
+
+    .game-web-shell-action__icon {
+      width: 30PX;
+      height: 30PX;
+    }
+  }
+
+  .game-web-shell-page.is-landscape {
+    .game-web-shell-author {
+      width: min(34vw, 440PX);
     }
   }
 }

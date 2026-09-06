@@ -40,6 +40,7 @@ function getRoutePagePath(route) {
 }
 
 export default function GamePlay() {
+  const isH5 = process.env.TARO_ENV === 'h5';
   const route = useRoute();
   const gameUrl = useGamePlayerStore((s) => s.gameUrl);
   const gameTitle = useGamePlayerStore((s) => s.gameTitle);
@@ -301,8 +302,36 @@ export default function GamePlay() {
     ));
   };
 
+  const handleBack = () => {
+    navigateBackOrHome(activeGameId ? buildGameDetailPath(activeGameId) : undefined);
+  };
+
+  const handleOpenDetail = () => {
+    if (!activeGameId) {
+      return;
+    }
+    Taro.redirectTo({ url: buildGameDetailPath(activeGameId) }).catch(() => {
+      navigateBackOrHome(buildGameDetailPath(activeGameId));
+    });
+  };
+
   return (
-    <View className={`game-play-page${activeGameOrientation === 'landscape' ? ' is-landscape' : ''}`}>
+    <View className={`game-play-page${isH5 ? ' game-play-page--h5' : ''}${activeGameOrientation === 'landscape' ? ' is-landscape' : ''}`}>
+      {isH5 ? (
+        <View className="game-play-page__web-toolbar">
+          <View className="game-play-page__web-back" onClick={handleBack}>
+            <Text className="game-play-page__web-back-icon">←</Text>
+            <Text>返回</Text>
+          </View>
+          <Text className="game-play-page__web-title">{gameMeta?.title || gameTitle || '作品试玩'}</Text>
+          <View
+            className={`game-play-page__web-detail${activeGameId ? '' : ' is-disabled'}`}
+            onClick={handleOpenDetail}
+          >
+            <Text>作品详情</Text>
+          </View>
+        </View>
+      ) : null}
       {currentUrl ? (
         <WebView
           className="game-webview"

@@ -28,6 +28,7 @@
   .cw-mark {display:grid;place-items:center;width:34PX;height:34PX;border-radius:11PX;background:var(--cw-ink);color:var(--cw-lime);font-size:24PX;font-weight:800;transform:rotate(-5deg);flex-shrink:0;}
   .cw-new {width:100%;margin-bottom:28PX;}
   .cw-nav-label {font-size:12PX;color:#97a298;padding:0 13PX;margin-bottom:9PX;letter-spacing:1PX;}
+  .cw-nav + .cw-nav-label {margin-top:24PX;}
   .cw-nav {display:flex;align-items:center;gap:12PX;padding:12PX 14PX;width:100%;border-radius:8PX;color:#687b6e;margin:3PX 0;text-align:left;}
   .cw-nav.active {background:#edf5f0;color:var(--cw-green);font-weight:700;}
   .cw-nav:hover {background:#f3f7f3;}

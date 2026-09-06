@@ -512,3 +512,130 @@
     font-size: 26rpx;
   }
 }
+
+@media screen and (min-width: 900PX) {
+  .messages-page.messages-page--h5 {
+    color: #183026;
+    background: #f4f7f4;
+
+    &::before {
+      display: none;
+    }
+
+    .messages-shell {
+      width: min(1040PX, calc(100% - 72PX));
+      max-width: none;
+      min-height: calc(100vh - 64PX);
+      margin: 0 auto;
+      padding-top: 38PX;
+    }
+
+    .messages-toolbar {
+      margin: 0 0 22PX;
+      padding: 0;
+    }
+
+    .header-title {
+      color: #173126;
+      font-size: 28PX;
+      letter-spacing: -0.6PX;
+    }
+
+    .unread-badge {
+      min-width: 28PX;
+      height: 28PX;
+      background: #1f6745;
+      box-shadow: none;
+    }
+
+    .mark-all-read-text {
+      color: #1f6745;
+      font-size: 14PX;
+    }
+
+    .messages-list,
+    taro-scroll-view-core.messages-list,
+    taro-scroll-view-core.messages-list .taro-scroll-view__scroll-y {
+      height: calc(100vh - 124PX) !important;
+      overflow-y: auto !important;
+    }
+
+    .empty-state {
+      min-height: 440PX;
+      margin: 0;
+      padding: 72PX 40PX;
+      border: 1PX solid #dce6df;
+      border-radius: 18PX;
+      background: #ffffff;
+      box-shadow: 0 18PX 50PX rgba(34, 69, 50, 0.07);
+    }
+
+    .empty-icon {
+      width: 58PX;
+      height: 58PX;
+      padding: 16PX;
+      border-radius: 18PX;
+      background-color: #edf5f0;
+      box-sizing: content-box;
+    }
+
+    .empty-text {
+      color: #173126;
+      font-size: 20PX;
+    }
+
+    .empty-desc {
+      color: #718077;
+      font-size: 15PX;
+    }
+
+    .empty-action {
+      min-height: 44PX;
+      border-radius: 10PX;
+      background: #1f6745;
+      box-shadow: none;
+    }
+
+    .notifications {
+      padding: 0 0 54PX;
+    }
+
+    .notification-item {
+      gap: 18PX;
+      margin-bottom: 12PX;
+      padding: 18PX 20PX;
+      border: 1PX solid #dfe8e2;
+      border-radius: 14PX;
+      background: #ffffff;
+      box-shadow: 0 8PX 24PX rgba(34, 69, 50, 0.05);
+
+      &.unread {
+        border-color: #bfd6c7;
+        background: #f7fbf8;
+      }
+    }
+
+    .notification-icon {
+      background-color: #edf5f0;
+      border-color: #dce8e0;
+    }
+
+    .notification-tag {
+      color: #416052;
+      background: #edf5f0;
+    }
+
+    .actor-name {
+      color: #1b3328;
+    }
+
+    .notification-time,
+    .notification-action {
+      color: #718077;
+    }
+
+    .notification-arrow {
+      filter: brightness(0) saturate(100%) invert(34%) sepia(12%) saturate(664%) hue-rotate(95deg);
+    }
+  }
+}
