@@ -172,7 +172,15 @@ class Deployment:
         return origin(t.http_trigger.url_internet)
 
     def version(self, name):
-        return self.c.publish_function_version(name, self.m.PublishFunctionVersionRequest(body=self.m.PublishVersionInput(description='GameVallies deployment checkpoint'))).body.version_id
+        try:
+            return self.c.publish_function_version(name, self.m.PublishFunctionVersionRequest(body=self.m.PublishVersionInput(description='GameVallies deployment checkpoint'))).body.version_id
+        except Exception as error:
+            if getattr(error, 'code', None) != 'VersionPublishError':
+                raise
+            versions = self.c.list_function_versions(name, self.m.ListFunctionVersionsRequest(limit=1)).body.versions
+            if not versions:
+                raise
+            return versions[0].version_id
 
     def restore(self, name, version):
         previous = self.c.get_function(name, self.m.GetFunctionRequest(qualifier=version)).body.to_map()
