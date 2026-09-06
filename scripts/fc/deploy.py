@@ -58,7 +58,7 @@ def validate(manifest, runtime, env):
     if 'frontend' in names:
         frontend = runtime.get('services', {}).get('frontend', {})
         origin(need(frontend, 'API_UPSTREAM'))
-        if not re.fullmatch('[a-f0-9]{64}', frontend.get('FC_INTERNAL_TOKEN', '')): raise ValueError('Invalid frontend FC_INTERNAL_TOKEN')
+        if not re.fullmatch('[a-f0-9]{64}', frontend.get('GAMEVALLIES_FC_INTERNAL_TOKEN', '')): raise ValueError('Invalid frontend internal token')
     if 'game-service' in names:
         if not re.fullmatch('[a-f0-9]{64}', common.get('FC_INTERNAL_TOKEN', '')): raise ValueError('Set 64 hex character FC_INTERNAL_TOKEN')
         for key in ('DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'ADMIN_TOKEN'):

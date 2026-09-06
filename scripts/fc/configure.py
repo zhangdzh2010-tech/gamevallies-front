@@ -41,7 +41,9 @@ def runtime_config(env, backend):
         if upstream in (public, content): raise ValueError('FC_API_URL must be the backend function origin')
         token = need(env, 'FC_INTERNAL_TOKEN')
         if not re.fullmatch('[a-f0-9]{64}', token): raise ValueError('Invalid FC_INTERNAL_TOKEN')
-        runtime['services']['frontend'] = {'API_UPSTREAM': upstream, 'FC_INTERNAL_TOKEN': token}
+        # FC reserves FC_* environment names. Keep the GitHub Secret name for
+        # compatibility, but inject the token under an application-owned name.
+        runtime['services']['frontend'] = {'API_UPSTREAM': upstream, 'GAMEVALLIES_FC_INTERNAL_TOKEN': token}
         if env.get('FC_LOG_PROJECT') or env.get('FC_LOG_STORE'):
             runtime['logConfig'] = {'project': need(env, 'FC_LOG_PROJECT'), 'logstore': need(env, 'FC_LOG_STORE')}
         return runtime

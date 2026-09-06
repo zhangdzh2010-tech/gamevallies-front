@@ -14,7 +14,7 @@ server {
     proxy_set_header Host $proxy_host;
     proxy_set_header X-Forwarded-Host $host;
     proxy_set_header X-Forwarded-Proto https;
-    proxy_set_header X-GameVallies-Internal-Token ${FC_INTERNAL_TOKEN};
+    proxy_set_header X-GameVallies-Internal-Token ${GAMEVALLIES_FC_INTERNAL_TOKEN};
     proxy_read_timeout 900s;
     proxy_send_timeout 900s;
     proxy_buffering off;
@@ -32,7 +32,7 @@ server {
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-GameVallies-Internal-Token ${FC_INTERNAL_TOKEN};
+        proxy_set_header X-GameVallies-Internal-Token ${GAMEVALLIES_FC_INTERNAL_TOKEN};
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
     }
@@ -42,7 +42,7 @@ server {
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-GameVallies-Internal-Token ${FC_INTERNAL_TOKEN};
+        proxy_set_header X-GameVallies-Internal-Token ${GAMEVALLIES_FC_INTERNAL_TOKEN};
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
     }

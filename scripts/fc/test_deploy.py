@@ -12,7 +12,7 @@ from alibabacloud_fc20230330 import models as m
 
 ENV = dict(FC_ACCOUNT_ID='123456789', FC_REGION='cn-shanghai', FC_PREFIX='gamevallies-test', ALIYUN_OSS_BUCKET='gamevallies-test', RELEASE_SHA='a'*40, FC_EXECUTION_ROLE='acs:ram::123456789:role/fc', FC_FRONTEND_URL='https://front.example.com')
 RUNTIME = {'common': dict(DATABASE_URL='mysql://u:p@db:3306/db', REDIS_URL='redis://redis:6379', JWT_SECRET='jwt', JWT_REFRESH_SECRET='refresh', ADMIN_TOKEN='admin', FC_INTERNAL_TOKEN='a'*64), 'services': {'game-service': {'OBJECT_STORAGE_PROVIDER':'aliyun-oss','ALIYUN_OSS_ACCESS_KEY_ID':'id','ALIYUN_OSS_ACCESS_KEY_SECRET':'secret','ALIYUN_OSS_BUCKET':'gamevallies-test','ALIYUN_OSS_ENDPOINT':'https://oss-cn-shanghai.aliyuncs.com','ALIYUN_OSS_PREFIX':'gamevallies/prod/'}}, 'vpcConfig': {'vpcId':'vpc-123','vSwitchIds':['vsw-123'],'securityGroupId':'sg-123'}, 'nasConfig': {'mountPoints':[{'mountDir':'/mnt/data','serverAddr':'nas.internal:/data'}]}}
-RUNTIME['services']['frontend'] = {'API_UPSTREAM':'https://api.example.com','FC_INTERNAL_TOKEN':'a'*64}
+RUNTIME['services']['frontend'] = {'API_UPSTREAM':'https://api.example.com','GAMEVALLIES_FC_INTERNAL_TOKEN':'a'*64}
 MANIFEST = json.loads(Path('deploy/fc/functions.json').read_text())
 
 RUNTIME['artifacts'] = {f['name']: {'sha256': 'b'*64, 'object': 'gamevallies/prod/releases/' + 'a'*40 + '/' + 'b'*64 + '/' + f['name'] + '.zip'} for f in MANIFEST['functions']}
