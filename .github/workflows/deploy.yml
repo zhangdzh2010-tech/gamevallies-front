@@ -45,6 +45,8 @@ jobs:
       FC_INTERNAL_TOKEN: ${{ secrets.FC_INTERNAL_TOKEN }}
       FC_ACCOUNT_ID: ${{ vars.FC_ACCOUNT_ID }}
       FC_EXECUTION_ROLE: ${{ vars.FC_EXECUTION_ROLE }}
+      FC_LOG_PROJECT: ${{ vars.FC_LOG_PROJECT }}
+      FC_LOG_STORE: ${{ vars.FC_LOG_STORE }}
       ALIYUN_OSS_BUCKET: ${{ vars.ALIYUN_OSS_BUCKET }}
       CONTENT_ORIGIN: https://content.zlspace.ai
       FC_REGION: ${{ vars.FC_REGION || 'cn-shenzhen' }}
