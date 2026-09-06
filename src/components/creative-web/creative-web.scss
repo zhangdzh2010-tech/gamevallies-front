@@ -3,12 +3,11 @@
   min-height:100vh;background:#f5f7f8;color:var(--cw-ink);font:14PX/1.65 Inter,"PingFang SC","Microsoft YaHei",sans-serif;text-align:left;
   &, * {box-sizing:border-box;}
   h1,h2,h3,h4,p {margin:0;}
-  button,input,textarea,select {font:inherit;}
-  button {cursor:pointer;border:0;background:none;color:inherit;line-height:inherit;border-radius:0;margin:0;box-shadow:none;}
-  button::after {border:0;}
-  button:disabled {cursor:not-allowed;opacity:.45;}
-  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible {outline:3PX solid #91bd5b;outline-offset:3PX;}
-  input,textarea,select {color:var(--cw-ink);background:white;}
+  /* Keep the H5 controls independent of Taro's element-selector rewriting. */
+  .cw-brand,.cw-button,.cw-nav,.cw-account,.cw-icon-button,.cw-chip,.cw-tab,.cw-project,.cw-format {background:none;border:0;border-radius:0;box-shadow:none;color:inherit;cursor:pointer;font:inherit;line-height:inherit;margin:0;}
+  .cw-button:disabled {cursor:not-allowed;opacity:.45;}
+  .cw-brand:focus-visible,.cw-button:focus-visible,.cw-nav:focus-visible,.cw-account:focus-visible,.cw-icon-button:focus-visible,.cw-chip:focus-visible,.cw-tab:focus-visible,.cw-idea-input:focus-visible,.cw-domain-select:focus-visible,.cw-search:focus-visible {outline:3PX solid #91bd5b;outline-offset:3PX;}
+  .cw-idea-input,.cw-domain-select,.cw-search {background:white;color:var(--cw-ink);font:inherit;}
   h1 {font-size:32PX;line-height:1.45;letter-spacing:-.8PX;}
   h2 {font-size:21PX;line-height:1.5;}
   h3 {font-size:16PX;line-height:1.5;}
@@ -52,15 +51,15 @@
   .cw-prompt-box {background:white;border:1PX solid #d8e4dc;border-radius:15PX;box-shadow:0 12PX 35PX #21492e08;padding:23PX 24PX 19PX;position:relative;overflow:hidden;}
   .cw-prompt-box:before {content:"";position:absolute;inset:0 0 auto;height:3PX;background:linear-gradient(90deg,#2b8872,#c4f465);}
   .cw-prompt-label {display:flex;gap:7PX;align-items:center;font-size:12PX;color:#4a785b;}.cw-prompt-label .cw-icon {width:16PX;height:16PX;}
-  .cw-prompt-box textarea {display:block;width:100%;height:125PX;border:0;resize:vertical;min-height:90PX;font-size:17PX;line-height:1.8;padding:13PX 0;}.cw-prompt-box textarea::placeholder {color:#9ea99e;}
+  .cw-idea-input {display:block;width:100%;height:125PX;border:0;resize:vertical;min-height:90PX;font-size:17PX;line-height:1.8;padding:13PX 0;}.cw-idea-input::placeholder {color:#9ea99e;}
   .cw-prompt-footer {display:flex;justify-content:space-between;align-items:center;border-top:1PX solid #edf1ed;padding-top:14PX;gap:12PX;}
-  .cw-prompt-footer select {border:0;background:#f5f8f4;border-radius:7PX;padding:8PX 12PX;font-size:13PX;color:#627560;}
+  .cw-domain-select {border:0;background:#f5f8f4;border-radius:7PX;padding:8PX 12PX;font-size:13PX;color:#627560;}
   .cw-continue {background:#163d35;color:white;border-radius:15PX;padding:22PX;display:flex;flex-direction:column;align-items:flex-start;min-width:0;}
   .cw-continue small {color:#a8c6b5;}.cw-continue h2 {margin-top:11PX;overflow-wrap:anywhere;}.cw-continue p {font-size:13PX;color:#b6cfc0;margin:9PX 0 23PX;}.cw-continue .cw-button {margin-top:auto;font-size:13PX;}
   .cw-idea-chips {display:flex;align-items:center;gap:9PX;flex-wrap:wrap;margin:17PX 0 34PX;font-size:12PX;color:#819280;}
-  .cw-idea-chips button {background:white;border:1PX solid var(--cw-line);border-radius:20PX;padding:5PX 11PX;font-size:12PX;color:#597253;}
+  .cw-chip {background:white;border:1PX solid var(--cw-line);border-radius:20PX;padding:5PX 11PX;font-size:12PX;color:#597253;}
   .cw-section-head {display:flex;align-items:center;justify-content:space-between;margin-bottom:16PX;gap:16PX;}
-  .cw-tabs {display:flex;gap:22PX;}.cw-tabs button {padding:7PX 0;color:#8a9689;border-bottom:2PX solid transparent;}.cw-tabs button.active {color:#2d5036;border-color:var(--cw-green);font-weight:700;}
+  .cw-tabs {display:flex;gap:22PX;}.cw-tab {padding:7PX 0;color:#8a9689;border-bottom:2PX solid transparent;}.cw-tab.active {color:#2d5036;border-color:var(--cw-green);font-weight:700;}
   .cw-search {border:1PX solid var(--cw-line);border-radius:8PX;padding:9PX 12PX;font-size:12PX;width:180PX;}
   .cw-projects {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20PX;}
   .cw-project {border:1PX solid var(--cw-line);border-radius:12PX;overflow:hidden;background:white;text-align:left;padding:0;transition:transform .2s,box-shadow .2s;min-width:0;}
