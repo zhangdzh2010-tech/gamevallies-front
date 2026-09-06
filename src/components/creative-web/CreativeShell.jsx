@@ -48,7 +48,7 @@ export default function CreativeShell({ children, active = 'home', title = '工�
   const name = user.displayName || user.nickname || user.username || '创作者';
   return <div className={`creative-web${studio ? ' cw-studio-shell' : ''}`}>
     <aside className="cw-sidebar">
-      <button className="cw-brand" onClick={() => navigate('home')} aria-label="返回创意工作台"><span className="cw-mark">G</span><span>GameVallies</span></button>
+      <button className="cw-brand" onClick={() => navigate('home')} aria-label="返回智了空间工作台"><span className="cw-mark">智</span><span>智了空间</span></button>
       <button className="cw-button cw-primary cw-new" onClick={() => openCreatePageWithAuth({ mode: 'fresh' })}><CreativeIcon name="plus" /><span>新建创意</span></button>
       <div className="cw-nav-label">创作空间</div>
       {[['home', 'grid', '工作台'], ['works', 'folder', '我的作品'], ['ideas', 'spark', '创意灵感']].map(([id, icon, label]) => <button className={`cw-nav ${active === id ? 'active' : ''}`} key={id} onClick={() => navigate(id)} title={label}><CreativeIcon name={icon} /><span>{label}</span></button>)}

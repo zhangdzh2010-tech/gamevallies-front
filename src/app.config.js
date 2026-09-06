@@ -65,7 +65,7 @@ export default {
   window: {
     backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#08080d',
-    navigationBarTitleText: 'GameVallies · 创意空间',
+    navigationBarTitleText: '智了空间 · 创意空间',
     navigationBarTextStyle: 'white',
     backgroundColor: '#08080d',
     navigationStyle: 'custom',
