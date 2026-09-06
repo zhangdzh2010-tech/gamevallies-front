@@ -9,7 +9,7 @@
       "concurrency": 20,
       "maxInstances": 2,
       "timeout": 900,
-      "provisioned": 0
+      "provisioned": 1
     }
   ]
 }
