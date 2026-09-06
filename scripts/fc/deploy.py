@@ -314,5 +314,14 @@ if __name__ == '__main__':
     try: main()
     except Exception as e:
         # SDK exceptions may contain full request bodies/environment values.
-        print(f'FC deployment stopped ({type(e).__name__}); inspect protected cloud logs/configuration.', file=sys.stderr)
+        code = getattr(e, 'code', None)
+        if not code and hasattr(e, 'get_error_code'):
+            code = e.get_error_code()
+        status = getattr(e, 'status_code', None)
+        request_id = getattr(e, 'request_id', None)
+        print(
+            f'FC deployment stopped ({type(e).__name__}, status={status}, code={code}, requestId={request_id}); '
+            'inspect protected cloud logs/configuration.',
+            file=sys.stderr,
+        )
         sys.exit(1)
