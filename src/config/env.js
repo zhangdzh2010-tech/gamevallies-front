@@ -20,7 +20,7 @@ function parseBooleanEnv(value, defaultValue = false) {
 
 export const ENV = {
   // API Configuration — read from .env / .env.development
-  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL || 'https://gamevallies.com',
+  API_BASE_URL: process.env.TARO_APP_AUTH_SERVICE_URL || 'https://www.zlspace.ai',
   SERVICE_URLS: {
     AUTH: process.env.TARO_APP_AUTH_SERVICE_URL,
     GAME: process.env.TARO_APP_GAME_SERVICE_URL,

@@ -10,11 +10,17 @@ import './index.scss';
 const COOLDOWN = 60;
 
 function getSmsErrorMessage(error) {
+  const message = String(error?.message || error?.errMsg || '').trim();
+
+  if (/failed to fetch|fetch failed|network error|request:fail/i.test(message)) {
+    return '网络连接失败，请稍后重试';
+  }
+
   if (error?.code === 'HTTP_500') {
     return '短信服务暂时不可用，请稍后重试';
   }
 
-  return error?.message || '发送失败，请重试';
+  return message || '发送失败，请重试';
 }
 
 export default function Register() {

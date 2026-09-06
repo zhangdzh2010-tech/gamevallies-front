@@ -1,10 +1,11 @@
 /* eslint-env jest */
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 
 const mockShowToast = jest.fn();
 const mockNavigateTo = jest.fn();
 const mockLogin = jest.fn();
+const mockSendSmsCode = jest.fn();
 const mockHandleLoginBackNavigation = jest.fn();
 const mockNavigateAfterLogin = jest.fn();
 const mockIsWechatH5LoginEnabled = jest.fn(() => false);
@@ -55,7 +56,7 @@ jest.mock('../../../services/auth', () => ({
   getWechatH5AuthParams: jest.fn(() => ({})),
   clearWechatH5AuthParams: jest.fn(),
   loginByWechatH5AuthCode: jest.fn(),
-  sendSmsCode: jest.fn(),
+  sendSmsCode: (...args) => mockSendSmsCode(...args),
   login: jest.fn(),
   loginByPhone: jest.fn(),
   startWechatH5Login: jest.fn(),
@@ -77,5 +78,22 @@ describe('Login page wechat entrance', () => {
     expect(mockIsWechatH5LoginEnabled).toHaveBeenCalled();
     expect(container.querySelector('.wechat-btn')).toBeNull();
     expect(container.querySelector('.divider')).toBeNull();
+  });
+
+  test('shows a localized message when the sms request cannot reach the server', async () => {
+    mockSendSmsCode.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const { getByLabelText, getByText } = render(<LoginPage />);
+
+    fireEvent.click(getByText('短信登录'));
+    fireEvent.change(getByLabelText('手机号'), { target: { value: '13900000000' } });
+    fireEvent.click(getByText('获取验证码'));
+
+    await waitFor(() => {
+      expect(mockSendSmsCode).toHaveBeenCalledWith('13900000000', 'login');
+      expect(mockShowToast).toHaveBeenCalledWith({
+        title: '网络连接失败，请稍后重试',
+        icon: 'none',
+      });
+    });
   });
 });
