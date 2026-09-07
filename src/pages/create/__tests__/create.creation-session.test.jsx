@@ -46,6 +46,7 @@ jest.mock('../../../components/creative-web/CreativeShell', () => ({
   CreativeIcon: () => <span />,
 }));
 jest.mock('../../../components/creative-web/WorkPreview', () => ({ __esModule: true, default: () => <div>preview</div> }));
+jest.mock('../../../components/creative-web/ConversationLayout', () => ({ __esModule: true, default: ({ children, actions }) => <div>{actions}{children}</div>, ConversationIcon: () => <span /> }));
 
 jest.mock('../../../components/common/AppTopBar', () => ({
   AppTopBar: ({ rightText, onRightClick }) => (
@@ -225,9 +226,9 @@ describe('Create page creation session flow', () => {
   test('starts a creation session from the first prompt', async () => {
     render(<CreatePage />);
 
-    const initialInput = await screen.findByLabelText('描述你的创意');
+    const initialInput = await screen.findByLabelText('creative-description');
     fireEvent.change(initialInput, { target: { value: 'Make a funny office stealth game' } });
-    fireEvent.click(screen.getByText(/确认创作描述|确认这段方向/));
+    fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
@@ -254,9 +255,9 @@ describe('Create page creation session flow', () => {
 
     render(<CreatePage />);
 
-    const promptInput = await screen.findByLabelText('确认或修改创作方向');
+    const promptInput = await screen.findByLabelText('creative-description');
     fireEvent.change(promptInput, { target: { value: 'Expanded prompt draft with more traps' } });
-    fireEvent.click(screen.getByText(/确认创作描述|确认这段方向/));
+    fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
       expect(mockConfirmEditedPrompt).toHaveBeenCalledWith('Expanded prompt draft with more traps');
@@ -283,7 +284,7 @@ describe('Create page creation session flow', () => {
   test('supports direct generate from the initial entry prompt', async () => {
     render(<CreatePage />);
 
-    const initialInput = await screen.findByLabelText('描述你的创意');
+    const initialInput = await screen.findByLabelText('creative-description');
     fireEvent.change(initialInput, { target: { value: 'Make a boss-rush rhythm game' } });
     fireEvent.click(screen.getByText('直接生成'));
 

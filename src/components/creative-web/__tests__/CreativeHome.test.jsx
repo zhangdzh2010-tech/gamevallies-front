@@ -13,6 +13,8 @@ jest.mock('../../../utils/media', () => ({ getGameCoverUrl: () => '' }));
 jest.mock('../../../store/gameStore', () => ({ useGameStore: jest.fn() }));
 jest.mock('../../../stores/quotaStore', () => ({ __esModule: true, default: { getState: () => ({ fetchQuota: () => Promise.resolve() }) } }));
 jest.mock('../CreativeShell', () => ({ __esModule: true, default: ({ children }) => <div>{children}</div>, CreativeIcon: () => null }));
+jest.mock('../ConversationLayout', () => ({ __esModule: true, default: ({ children }) => <div>{children}</div>, ConversationIcon: () => null }));
+jest.mock('../WorkPreview', () => () => null);
 beforeEach(() => {
   jest.clearAllMocks(); sessionStorage.clear();
   HTMLDialogElement.prototype.showModal = jest.fn(); HTMLDialogElement.prototype.close = jest.fn();
@@ -23,18 +25,16 @@ test('loads actual works and preserves iterate task routing', async () => {
   useGameStore.mockReturnValue({ isGenerating: true, currentTask: { taskId: 'task-1', gameId: 'work-1', taskType: 'pipeline_iterate' } });
   getMyGames.mockResolvedValue({ items: [{ id: 'work-1', title: '真实双摆作品', status: 'ready' }], total: 1 });
   render(<CreativeHome />);
-  await screen.findByText('真实双摆作品');
+  await screen.findByText('查看进展');
   expect(getMyGames).toHaveBeenCalledWith(1, 24);
   fireEvent.click(screen.getByText('查看进展'));
   expect(openTaskCreatePageWithAuth).toHaveBeenCalledWith('task-1', 'work-1', 'pipeline_iterate');
 });
 test('carries the chosen scientific idea into the authenticated creation flow', async () => {
   render(<CreativeHome />);
-  await screen.findByText('这里将收藏你的创意世界。');
+  await screen.findByText('让一个想法，变得可以探索。');
   fireEvent.change(screen.getByLabelText('你的创意'), { target: { value: '观察不同初始角度的双摆运动' } });
-  fireEvent.change(screen.getByLabelText('创作领域'), { target: { value: 'physics' } });
-  fireEvent.click(screen.getByText('构思创意'));
-  fireEvent.click(screen.getByText('进入创作台'));
+  fireEvent.click(screen.getByTestId('workspace-primary'));
   expect(openCreatePageWithAuth).toHaveBeenCalledWith({ mode: 'fresh' });
   expect(consumeCreativeDraft().prompt).toContain('观察不同初始角度的双摆运动');
 });

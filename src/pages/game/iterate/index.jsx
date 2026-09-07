@@ -1,4 +1,5 @@
 import CreativeStudio from '../../../components/creative-web/CreativeStudio';
+import { consumeIterationDraft } from '../../../components/creative-web/creativeModel';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from '@tarojs/components';
 import { useRoute } from '@tarojs/hooks';
@@ -160,6 +161,11 @@ export default function GameIteratePage() {
 
   const activeIterateTask = currentTask?.taskType === 'pipeline_iterate' ? currentTask : null;
   const currentIterateSourceGameId = String(currentGame?.id || gameId || '');
+  useEffect(() => {
+    if (!currentIterateSourceGameId) return;
+    const draft = consumeIterationDraft(currentIterateSourceGameId);
+    if (draft) setIterateFeedback(draft);
+  }, [currentIterateSourceGameId]);
   const isCurrentIterateSession = Boolean(
     creationSession?.entryMode === 'iterate'
     && (
