@@ -32,5 +32,19 @@ export function consumeCreativeDraft() {
 export function setCreativeView(view) { try { sessionStorage.setItem(VIEW_KEY, view); } catch (_) { /* Navigation still opens home. */ } }
 export function consumeCreativeView() { try { const view = sessionStorage.getItem(VIEW_KEY); sessionStorage.removeItem(VIEW_KEY); return ['home', 'works', 'ideas'].includes(view) ? view : null; } catch (_) { return null; } }
 export function normalizeWorks(result) {
-  return Array.isArray(result?.items) ? result.items : [];
+  return Array.isArray(result) ? result : Array.isArray(result?.items) ? result.items : [];
+}
+
+// A one-use draft for the explicit create-result -> iterate transition.
+const ITERATION_DRAFT = 'gamevallies.creative-web.iteration-draft.v1';
+export function saveIterationDraft(gameId, prompt) {
+  try { sessionStorage.setItem(ITERATION_DRAFT, JSON.stringify({ gameId, prompt, createdAt: Date.now() })); return true; } catch (_) { return false; }
+}
+export function consumeIterationDraft(gameId) {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(ITERATION_DRAFT) || 'null');
+    if (!draft || draft.gameId !== gameId) return '';
+    sessionStorage.removeItem(ITERATION_DRAFT);
+    return Date.now() - draft.createdAt < 10 * 60 * 1000 ? draft.prompt : '';
+  } catch (_) { return ''; }
 }

@@ -3,11 +3,14 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import CreativeStudio from '../CreativeStudio';
 import { publishGame } from '../../../services/game';
+import { openIteratePageWithAuth } from '../../../utils/authNavigation';
+import { consumeIterationDraft } from '../creativeModel';
 jest.mock('../../../services/game', () => ({ publishGame: jest.fn() }));
 jest.mock('../../../utils/share', () => ({ buildGameDetailPath: id => `/pages/game/detail/index?id=${id}` }));
 jest.mock('../../../utils/authNavigation', () => ({ openIteratePageWithAuth: jest.fn() }));
 jest.mock('../../common/PaywallPopup', () => ({ PaywallPopup: () => null }));
 jest.mock('../CreativeShell', () => ({ __esModule: true, default: ({ children, actions }) => <div>{actions}{children}</div>, CreativeIcon: () => null }));
+jest.mock('../ConversationLayout', () => ({ __esModule: true, default: ({ children, actions }) => <div>{actions}{children}</div>, ConversationIcon: () => null }));
 jest.mock('../WorkPreview', () => () => null);
 const work = { id: 'physics-1', title: '双摆实验', status: 'ready', version: 2 };
 beforeEach(() => { jest.clearAllMocks(); HTMLDialogElement.prototype.showModal = jest.fn(); });
@@ -43,4 +46,24 @@ test('already published works can be shared without another mutation', () => {
   render(<CreativeStudio work={{ ...work, status: 'published' }} />);
   expect(screen.getByLabelText('作品分享地址').value).toContain('id=physics-1');
   expect(publishGame).not.toHaveBeenCalled();
+});
+
+test('blocks duplicate generation while the task is running and displays actual progress', () => {
+  const generate = jest.fn();
+  render(<CreativeStudio generating input="生态实验" session={{initialPrompt:'生态实验'}} progress={{pct:37,stageLabel:'构建交互'}} primary={{label:'开始生成',onClick:generate}} />);
+  const button=screen.getByTestId('workspace-primary');
+  expect(button.disabled).toBe(true);
+  fireEvent.click(button);
+  fireEvent.keyDown(screen.getByLabelText('creative-description'),{key:'Enter'});
+  expect(generate).not.toHaveBeenCalled();
+  expect(screen.getByText('37%')).toBeTruthy();
+});
+
+test('carries a completed-work follow-up into iteration without silently discarding the input', () => {
+  render(<CreativeStudio work={work} />);
+  fireEvent.change(screen.getByLabelText('creative-description'),{target:{value:'增加摆长对比曲线'}});
+  fireEvent.click(screen.getByTestId('workspace-primary'));
+  expect(openIteratePageWithAuth).toHaveBeenCalledWith(work,work.id);
+  expect(consumeIterationDraft(work.id)).toBe('增加摆长对比曲线');
+  expect(consumeIterationDraft(work.id)).toBe('');
 });

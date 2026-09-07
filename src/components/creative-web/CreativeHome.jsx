@@ -6,6 +6,8 @@ import { getGameCoverUrl } from '../../utils/media';
 import { useGameStore } from '../../store/gameStore';
 import useQuotaStore from '../../stores/quotaStore';
 import CreativeShell, { CreativeIcon } from './CreativeShell';
+import ConversationStudioBody from './ConversationStudioBody';
+import ConversationLayout from './ConversationLayout';
 import { CREATIVE_DOMAINS, CREATIVE_FORMATS, buildCreativePrompt, saveCreativeDraft, consumeCreativeView, normalizeWorks } from './creativeModel';
 
 export function CreativePlot({ domain = 'physics' }) {
@@ -20,6 +22,8 @@ export function CreativePlot({ domain = 'physics' }) {
 export default function CreativeHome() {
   const [view, setView] = useState('home');
   const [idea, setIdea] = useState('');
+  const [orientation, setOrientation] = useState('landscape');
+  const [creativeTitle, setCreativeTitle] = useState('');
   const [domain, setDomain] = useState('open');
   const [format, setFormat] = useState('experiment');
   const [choosing, setChoosing] = useState(false);
@@ -53,7 +57,7 @@ export default function CreativeHome() {
   const pickIdea = item => { setIdea(item.prompt); setDomain(item.id); setView('home'); };
   const begin = () => {
     const prompt = buildCreativePrompt(idea, domain, format);
-    if (!saveCreativeDraft({ prompt, domain, format })) { setError('浏览器无法暂存创意，请检查存储权限后重试。'); return; }
+    if (!saveCreativeDraft({ prompt, domain, format, orientation, title: creativeTitle })) { setError('浏览器无法暂存创意，请检查存储权限后重试。'); return; }
     setChoosing(false); openCreatePageWithAuth({ mode: 'fresh' });
   };
   const openWork = work => {
@@ -61,7 +65,8 @@ export default function CreativeHome() {
     else openIteratePageWithAuth(work, work.id);
   };
   const visible = works.filter(work => (filter === 'all' || (filter === 'published' ? work.status === 'published' : work.status !== 'published')) && String(work.title || '').toLowerCase().includes(search.toLowerCase()));
-  return <CreativeShell active={view} onNavigate={navigate} title={{ home: '工作台', works: '我的作品', ideas: '创意灵感' }[view]}>
+  if (view === 'home') return <ConversationStudioBody mode="create" home displayTitle={creativeTitle || '新的创意'} onTitleChange={setCreativeTitle} orientation={orientation} onOrientationChange={setOrientation} input={idea} onInputChange={setIdea} format={format} onFormatChange={setFormat} navigation={navigate} onNew={() => {setIdea('');setCreativeTitle('');setError('');}} inputAriaLabel="你的创意" primary={{label:'开始创作',onClick:begin,disabled:idea.trim().length<5}} secondary={[]} error={error} supplemental={isGenerating && currentTask?.taskId ? <div><p>你的创作任务正在进行。</p><button onClick={() => openTaskCreatePageWithAuth(currentTask.taskId,currentTask.gameId,currentTask.taskType)}>查看进展</button></div> : null}/>;
+  return <ConversationLayout active={view} navigation={navigate} title={{ works: '我的作品', ideas: '创意灵感' }[view]}><div className="creative-web" style={{background:'transparent',minHeight:0}}>
     <main className="cw-home"><div className="cw-eyebrow">YOUR CREATIVE PLAYGROUND</div><h1>{view === 'works' ? '你的创意，都在这里。' : view === 'ideas' ? '世界的规律，也是创意的起点。' : '今天，想让什么创意发生？'}</h1><p className="cw-intro">{view === 'works' ? '继续打磨一个想法，或者分享一个已经成形的世界。' : '物理规律、生物世界、化学反应，或一个天马行空的想法。把它变成可以探索的作品。'}</p>
     {view === 'home' && <><div className="cw-creation-row"><section className="cw-prompt-box"><div className="cw-prompt-label"><CreativeIcon name="spark" /> 你的想法，是创作的起点</div><textarea className="cw-idea-input" aria-label="你的创意" maxLength={3000} value={idea} onChange={e => setIdea(e.target.value)} placeholder="例如：让两个初始角度几乎相同的双摆开始运动，看看它们的轨迹会如何变化……" /><div className="cw-prompt-footer"><select className="cw-domain-select" aria-label="创作领域" value={domain} onChange={e => setDomain(e.target.value)}>{CREATIVE_DOMAINS.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}</select><button className="cw-button cw-primary" disabled={idea.trim().length < 5} onClick={() => setChoosing(true)}>构思创意<CreativeIcon name="arrow" /></button></div></section><section className="cw-continue"><small>{isGenerating ? '创意正在成形' : works[0] ? '继续上次的创作' : '从观察，到创造'}</small><h2>{isGenerating ? '你的创作任务正在进行' : works[0]?.title || '让规律变得可感知'}</h2><p>{isGenerating ? '重新打开任务，查看最新进展。' : works[0] ? '再观察一次，再调整一点。' : '改变参数，观察反馈，在亲手探索中发现新的可能。'}</p><button className="cw-button cw-lime" onClick={() => isGenerating ? (currentTask?.taskId ? openTaskCreatePageWithAuth(currentTask.taskId, currentTask.gameId, currentTask.taskType) : openCreatePageWithAuth()) : works[0] ? openWork(works[0]) : pickIdea(CREATIVE_DOMAINS[1])}>{isGenerating ? '查看进展' : works[0] ? '进入创作台' : '从一个物理创意开始'}<CreativeIcon name="arrow" /></button></section></div><div className="cw-idea-chips"><span>试试这些灵感</span>{CREATIVE_DOMAINS.slice(1).map(d => <button className="cw-chip" key={d.id} onClick={() => pickIdea(d)}>{d.title} ↗</button>)}</div></>}
     {view === 'ideas' ? <div className="cw-projects cw-inspirations">{CREATIVE_DOMAINS.slice(1).map(d => <button key={d.id} className="cw-project" onClick={() => pickIdea(d)}><div className="cw-cover"><CreativePlot domain={d.id} /><span>{d.label}</span></div><div className="cw-project-body"><h3>{d.title}</h3><p>{d.description}</p><small>以此为起点，写下你的想法 →</small></div></button>)}</div> : <><div className="cw-section-head"><div className="cw-tabs">{[['all', '全部作品'], ['draft', '草稿与任务'], ['published', '已发布']].map(([id, label]) => <button key={id} className={`cw-tab${filter === id ? ' active' : ''}`} onClick={() => setFilter(id)}>{label}</button>)}</div><input className="cw-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索已加载的作品" aria-label="搜索作品" /></div>
@@ -72,5 +77,5 @@ export default function CreativeHome() {
       <footer className="cw-footer"><span>创意，不止一种形态。</span><span>智了空间 / 桌面创作台</span></footer>
     </main>
     <dialog className="cw-dialog" ref={dialogRef} onCancel={() => setChoosing(false)}><div className="cw-dialog-head"><div><div className="cw-eyebrow">01 / SHAPE YOUR IDEA</div><h2>你想让这个创意，如何被体验？</h2><p>先选择呈现方式，再确认创作描述。</p></div><button className="cw-icon-button" aria-label="关闭" onClick={() => setChoosing(false)}><CreativeIcon name="close" /></button></div><div className="cw-format-grid">{CREATIVE_FORMATS.map(f => <button key={f.id} className={`cw-format ${format === f.id ? 'active' : ''}`} onClick={() => setFormat(f.id)} aria-pressed={format === f.id}><CreativeIcon name={f.id === 'experiment' ? 'spark' : f.id === 'explanation' ? 'play' : 'grid'} /><h3>{f.title}</h3><p>{f.description}</p><span>{format === f.id ? '✓ 已选择' : '选择这个方向'}</span></button>)}</div><div className="cw-dialog-foot"><span>进入创作台后，你仍然可以修改方向。</span><button className="cw-button cw-primary" onClick={begin}>进入创作台<CreativeIcon name="arrow" /></button></div></dialog>
-  </CreativeShell>;
+  </div></ConversationLayout>;
 }

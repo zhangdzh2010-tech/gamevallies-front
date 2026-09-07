@@ -265,7 +265,11 @@ export default function Create() {
       resetCreateSession({ clearPersistedTask: mode === 'fresh' });
       if (isH5 && mode === 'fresh') {
         const draft = consumeCreativeDraft();
-        if (draft) setPrompt(draft.prompt);
+        if (draft) {
+          setPrompt(draft.prompt);
+          if (draft.title) setGameName(draft.title);
+          if (['landscape', 'portrait'].includes(draft.orientation)) setOrientation(draft.orientation);
+        }
       }
 
       if (mode === 'resume' && gameId) {
