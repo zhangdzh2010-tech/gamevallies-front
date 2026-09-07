@@ -30,9 +30,9 @@ export function consumeCreativeDraft() {
   } catch (_) { return null; }
 }
 export function setCreativeView(view) { try { sessionStorage.setItem(VIEW_KEY, view); } catch (_) { /* Navigation still opens home. */ } }
-export function consumeCreativeView() { try { const view = sessionStorage.getItem(VIEW_KEY); sessionStorage.removeItem(VIEW_KEY); return ['home', 'works', 'ideas'].includes(view) ? view : null; } catch (_) { return null; } }
+export function consumeCreativeView() { try { const view = sessionStorage.getItem(VIEW_KEY); sessionStorage.removeItem(VIEW_KEY); return ['home', 'works', 'ideas', 'square'].includes(view) ? view : null; } catch (_) { return null; } }
 export function normalizeWorks(result) {
-  return Array.isArray(result) ? result : Array.isArray(result?.items) ? result.items : [];
+  return Array.isArray(result) ? result : Array.isArray(result?.items) ? result.items : Array.isArray(result?.data) ? result.data : [];
 }
 
 // A one-use draft for the explicit create-result -> iterate transition.
@@ -48,3 +48,4 @@ export function consumeIterationDraft(gameId) {
     return Date.now() - draft.createdAt < 10 * 60 * 1000 ? draft.prompt : '';
   } catch (_) { return ''; }
 }
+
