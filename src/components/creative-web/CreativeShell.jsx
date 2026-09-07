@@ -53,7 +53,7 @@ export default function CreativeShell({ children, active = 'home', title = '工�
       <div className="cw-nav-label">创作空间</div>
       {[['home', 'grid', '工作台'], ['works', 'folder', '我的作品'], ['ideas', 'spark', '创意灵感']].map(([id, icon, label]) => <button className={`cw-nav ${active === id ? 'active' : ''}`} key={id} onClick={() => navigate(id)} title={label}><CreativeIcon name={icon} /><span>{label}</span></button>)}
       <div className="cw-nav-label">社区</div>
-      {[['friends', 'users', '朋友作品'], ['messages', 'bell', '消息通知']].map(([id, icon, label]) => <button className={`cw-nav ${active === id ? 'active' : ''}`} key={id} onClick={() => navigate(id)} title={label}><CreativeIcon name={icon} /><span>{label}</span></button>)}
+      {[['square', 'grid', '创意广场'], ['friends', 'users', '朋友作品'], ['messages', 'bell', '消息通知']].map(([id, icon, label]) => <button className={`cw-nav ${active === id ? 'active' : ''}`} key={id} onClick={() => navigate(id)} title={label}><CreativeIcon name={icon} /><span>{label}</span></button>)}
       <div className="cw-sidebar-bottom">
         {loggedIn && <div className="cw-quota"><div className="cw-between"><span>创作额度</span><span className="cw-badge">{quota.subscription?.active ? '会员' : '免费'}</span></div><strong>{quota.loading ? '…' : summary.totalRemaining}<small> 次可用</small></strong><p>按当前账户额度展示</p><button type="button" className="cw-quota-link" onClick={() => Taro.navigateTo({ url: '/pages/subscription/index' })}>查看用量与订阅 →</button></div>}
         <button className={`cw-nav ${active === 'tasks' ? 'active' : ''}`} onClick={() => openProfilePageWithTab('tasks')} title="任务中心"><CreativeIcon name="refresh" /><span>任务中心</span></button>
@@ -63,3 +63,4 @@ export default function CreativeShell({ children, active = 'home', title = '工�
     <div className="cw-content"><header className="cw-topbar"><div className="cw-row">{studio && <button className="cw-icon-button" onClick={() => navigate('home')} aria-label="返回工作台"><CreativeIcon name="back" /></button>}<span className="cw-breadcrumb">创作空间 <b>/</b> <strong>{title}</strong></span></div><div className="cw-row">{actions || <span className="cw-desktop-label">CREATIVE STUDIO / WEB</span>}</div></header>{children}</div>
   </div>;
 }
+
