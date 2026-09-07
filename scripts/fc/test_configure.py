@@ -37,11 +37,11 @@ class PackageConfigTests(unittest.TestCase):
         self.assertEqual(logged['logConfig'], {'project':'logs', 'logstore':'runtime'})
         with self.assertRaisesRegex(ValueError, 'FC_LOG_STORE'):
             c.runtime_config({**env, 'FC_LOG_PROJECT':'logs'}, False)
-        for upstream in (env['PUBLIC_ORIGIN'], env['CONTENT_ORIGIN']):
-            with self.assertRaisesRegex(ValueError, 'backend function'):
+        for upstream in (env['CONTENT_ORIGIN'],):
+            with self.assertRaisesRegex(ValueError, 'content origin'):
                 c.runtime_config({**env, 'FC_API_URL': upstream}, False)
-        with self.assertRaisesRegex(ValueError, 'public site domain'):
-            c.runtime_config({**env, 'FC_API_URL': 'https://www.zlspace.ai'}, False)
+        runtime = c.runtime_config({**env, 'FC_API_URL': 'https://www.zlspace.ai'}, False)
+        self.assertEqual(runtime['services']['frontend']['API_UPSTREAM'], 'https://www.zlspace.ai')
         for token in ('', 'invalid'):
             with self.assertRaises(ValueError): c.runtime_config({**env, 'FC_INTERNAL_TOKEN': token}, False)
 
