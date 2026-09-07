@@ -277,12 +277,16 @@ export function deriveTaskErrorMessage(task) {
   }
 
   if (taskStatus === 'timed_out') {
-    return '创作超时，请稍后到“我的作品”里查看结果';
+    return '本次创作已超时并停止，未生成可用作品。请重试。';
   }
 
   const source = String(task.terminalError?.message || task.errorMessage || '').trim();
   const failureFamily = String(task.failureFamily || '').trim().toLowerCase();
   const failedStage = String(task.failedStage || '').trim().toLowerCase();
+
+  if (failureFamily === 'worker_interrupted') {
+    return '创作服务中断，自动恢复未能完成。请重试。';
+  }
 
   if (!source) {
     if (failureFamily === 'code_generation' || failedStage === 'logic_generate') {
@@ -303,7 +307,9 @@ export function deriveTaskErrorMessage(task) {
   }
 
   if (/request:fail timeout|timeout|timed out|超时/i.test(source)) {
-    return '创作超时，请稍后到“我的作品”里查看结果';
+    return ['failed', 'timed_out'].includes(taskStatus)
+      ? '本次创作已超时并停止，未生成可用作品。请重试。'
+      : '暂时无法获取创作进度，可到“我的作品”查看任务状态。';
   }
 
   if (/network|request:fail|econn|enotfound|enetunreach|网络/i.test(source)) {
