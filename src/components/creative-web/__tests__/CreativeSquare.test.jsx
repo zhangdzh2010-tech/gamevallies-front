@@ -1,6 +1,6 @@
 /* eslint-env jest */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import CreativeSquare from '../CreativeSquare';
 import { getLatest, getTrending, searchGames } from '../../../services/feed';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../../utils/authNavigation';
@@ -14,6 +14,7 @@ const work = { id: 'public-work', title: '种群模型', authorId: 'author', sta
 beforeEach(() => {
   jest.clearAllMocks(); Storage.getUser.mockReturnValue(null);
   HTMLDialogElement.prototype.showModal = jest.fn();
+  HTMLDialogElement.prototype.close = jest.fn();
   getLatest.mockResolvedValue({ items: [work], hasMore: false });
   getTrending.mockResolvedValue({ items: [], hasMore: false });
   searchGames.mockResolvedValue({ items: [], hasMore: false });
@@ -44,6 +45,19 @@ test('searches the server and respects pagination, rather than filtering one pag
   fireEvent.click(screen.getByText('搜索'));
   await waitFor(() => expect(searchGames).toHaveBeenCalledWith('化学',{page:1,limit:24}));
   await screen.findByText('没有找到匹配的作品');
+});
+test.each([false, true])('releases the preview modal before navigating (own work: %s)', async isOwn => {
+  Storage.getUser.mockReturnValue({ id: isOwn ? 'author' : 'visitor' });
+  render(<CreativeSquare />);
+  fireEvent.click(await screen.findByText('体验作品'));
+  const modal = screen.getByRole('dialog', { hidden: true });
+  const navigate = isOwn ? openIteratePageWithAuth : openForkPageWithAuth;
+  navigate.mockImplementationOnce(() => {
+    expect(HTMLDialogElement.prototype.close).toHaveBeenCalledTimes(1);
+  });
+  fireEvent.click(within(modal).getByText(isOwn ? '继续创作' : '复刻并创作'));
+  expect(navigate).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
 });
 test('disabled forks and API errors are visible', async () => {
   getLatest.mockResolvedValueOnce({items:[{...work,allowFork:false}],hasMore:false});
