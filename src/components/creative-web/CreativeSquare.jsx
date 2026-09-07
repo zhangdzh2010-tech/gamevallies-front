@@ -41,7 +41,14 @@ export default function CreativeSquare() {
   }
   useEffect(() => { setWorks([]); setMore(false); void load(); return () => { serial.current++; }; }, [sort, search]);
   useEffect(() => { setPlaying(false); if (selected) dialog.current?.showModal(); }, [selected]);
-  const remix = work => own(work) ? openIteratePageWithAuth(work, work.id) : openForkPageWithAuth(work.id);
+  const remix = work => {
+    // Taro keeps the previous page mounted. Release the native modal's
+    // top layer before navigating so the next page can receive focus.
+    dialog.current?.close();
+    setSelected(null);
+    setPlaying(false);
+    return own(work) ? openIteratePageWithAuth(work, work.id) : openForkPageWithAuth(work.id);
+  };
   return <>
     <div className="cw-section-head"><div className="cw-tabs">{[['latest', '最新发布'], ['trending', '热门作品']].map(([id, label]) => <button type="button" key={id} className={`cw-tab${sort === id ? ' active' : ''}`} onClick={() => setSort(id)}>{label}</button>)}</div>
       <form className="cw-row" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}><input className="cw-search" aria-label="搜索广场作品" placeholder="搜索作品或创作者" value={query} onChange={e => setQuery(e.target.value)} /><button type="submit" className="cw-button cw-outline">搜索</button></form></div>
