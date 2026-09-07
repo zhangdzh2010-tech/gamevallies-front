@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import re
 import zipfile
+from urllib.parse import urlsplit
+
 from deploy import need, origin
 
 
@@ -38,7 +40,12 @@ def runtime_config(env, backend):
     if content == public: raise ValueError('CONTENT_ORIGIN must be separate from the application')
     if not backend:
         upstream = origin(need(env, 'FC_API_URL'))
-        if upstream in (public, content): raise ValueError('FC_API_URL must be the backend function origin')
+        if upstream in (public, content):
+            raise ValueError('FC_API_URL must be the backend function origin')
+        upstream_host = urlsplit(upstream).hostname or ''
+        public_hosts = {urlsplit(public).hostname, urlsplit(content).hostname, 'zlspace.ai', 'www.zlspace.ai'}
+        if upstream_host in public_hosts:
+            raise ValueError('FC_API_URL must not use the public site domain (causes proxy loop / ExternalRedirectForbidden)')
         token = need(env, 'FC_INTERNAL_TOKEN')
         if not re.fullmatch('[a-f0-9]{64}', token): raise ValueError('Invalid FC_INTERNAL_TOKEN')
         # FC reserves FC_* environment names. Keep the GitHub Secret name for
