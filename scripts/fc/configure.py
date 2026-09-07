@@ -40,12 +40,21 @@ def runtime_config(env, backend):
     if content == public: raise ValueError('CONTENT_ORIGIN must be separate from the application')
     if not backend:
         upstream = origin(need(env, 'FC_API_URL'))
-        if upstream in (public, content):
-            raise ValueError('FC_API_URL must be the backend function origin')
+        if upstream == content:
+            raise ValueError('FC_API_URL must not use the content origin')
         upstream_host = urlsplit(upstream).hostname or ''
-        public_hosts = {urlsplit(public).hostname, urlsplit(content).hostname, 'zlspace.ai', 'www.zlspace.ai'}
-        if upstream_host in public_hosts:
-            raise ValueError('FC_API_URL must not use the public site domain (causes proxy loop / ExternalRedirectForbidden)')
+        public_host = urlsplit(public).hostname or ''
+        content_host = urlsplit(content).hostname or ''
+        if upstream_host == content_host:
+            raise ValueError('FC_API_URL must not use the content origin')
+        # www.zlspace.ai is allowed: FC custom-domain path routes send /api and /admin
+        # directly to game-service, so nginx proxying back to the app domain is safe
+        # and avoids fcapp.run ExternalRedirectForbidden.
+        if upstream_host not in (public_host, content_host) and (
+            upstream_host.endswith('.fc.aliyuncs.com')
+            or upstream_host.endswith('.fcapp.run')
+        ):
+            pass  # Legacy default-domain upstream; prefer https://www.zlspace.ai
         token = need(env, 'FC_INTERNAL_TOKEN')
         if not re.fullmatch('[a-f0-9]{64}', token): raise ValueError('Invalid FC_INTERNAL_TOKEN')
         # FC reserves FC_* environment names. Keep the GitHub Secret name for
