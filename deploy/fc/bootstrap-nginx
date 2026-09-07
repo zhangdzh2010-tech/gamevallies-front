@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 export LD_LIBRARY_PATH=/code/lib
-mkdir -p /tmp/nginx/client /tmp/nginx/proxy
+mkdir -p /tmp/nginx/client /tmp/nginx/proxy /tmp/nginx/cache
 if [ -f /code/frontend-entrypoint.sh ]; then
   . /code/frontend-entrypoint.sh
 elif [ -f /code/gateway-entrypoint.sh ]; then
@@ -19,6 +19,7 @@ http {
   access_log /dev/stdout;
   client_body_temp_path /tmp/nginx/client;
   proxy_temp_path /tmp/nginx/proxy;
+  proxy_cache_path /tmp/nginx/cache levels=1:2 keys_zone=admin_assets:10m max_size=100m inactive=7d use_temp_path=off;
   fastcgi_temp_path /tmp/nginx/fastcgi;
   uwsgi_temp_path /tmp/nginx/uwsgi;
   scgi_temp_path /tmp/nginx/scgi;

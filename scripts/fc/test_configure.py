@@ -22,8 +22,10 @@ class PackageConfigTests(unittest.TestCase):
             matches = [b for b in blocks if b.split('{', 1)[0].strip().endswith(prefix)]
             self.assertTrue(matches, prefix)
             return matches[0]
-        for prefix in ('^~ /admin', '^~ /games/', '^~ /game-shell/', '^~ /api/', '^~ /users/'):
+        for prefix in ('^~ /admin/assets/', '^~ /admin', '^~ /games/', '^~ /game-shell/', '^~ /api/', '^~ /users/'):
             self.assertIn('proxy_hide_header Content-Disposition', block_for(prefix))
+        admin_assets = block_for('^~ /admin/assets/')
+        self.assertIn('proxy_cache admin_assets', admin_assets)
         self.assertNotIn('proxy_hide_header Content-Disposition', block_for('^~ /api/v1/growth'))
 
     def test_frontend_requires_private_upstream_and_runtime_token(self):
@@ -38,6 +40,8 @@ class PackageConfigTests(unittest.TestCase):
         for upstream in (env['PUBLIC_ORIGIN'], env['CONTENT_ORIGIN']):
             with self.assertRaisesRegex(ValueError, 'backend function'):
                 c.runtime_config({**env, 'FC_API_URL': upstream}, False)
+        with self.assertRaisesRegex(ValueError, 'public site domain'):
+            c.runtime_config({**env, 'FC_API_URL': 'https://www.zlspace.ai'}, False)
         for token in ('', 'invalid'):
             with self.assertRaises(ValueError): c.runtime_config({**env, 'FC_INTERNAL_TOKEN': token}, False)
 
