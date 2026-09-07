@@ -42,6 +42,7 @@ import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { toastError, toastInfo } from '../../utils/feedback';
 import { SkeletonListRow } from '../../components/common/Skeleton';
 import CreativeShell from '../../components/creative-web/CreativeShell';
+import FailedWorkDialog, { isFailedWork } from '../../components/creative-web/FailedWorkDialog';
 import './index.scss';
 
 const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
@@ -766,6 +767,7 @@ export default function Profile() {
   const [bookmarkRefreshing, setBookmarkRefreshing] = useState(false);
   const [bookmarkLoadingMore, setBookmarkLoadingMore] = useState(false);
   const [loadingGames, setLoadingGames] = useState(false);
+  const [failedWork, setFailedWork] = useState(null);
   const [moreGame, setMoreGame] = useState(null);
   const [settingsGame, setSettingsGame] = useState(null);
   const [editProfile, setEditProfile] = useState(false);
@@ -1124,6 +1126,11 @@ export default function Profile() {
   };
 
   const handleResumeTask = (task) => {
+    if (isH5 && isFailedWork(task)) {
+      const game = allGames.find(item => item.id === task.gameId);
+      setFailedWork({ ...game, ...task, id: task.gameId, title: game?.title || task.title || task.gameTitle, description: game?.description || task.description });
+      return;
+    }
     openTaskCreatePageWithAuth(task.taskId, task.gameId || null, task.taskType || 'pipeline_run');
   };
 
@@ -1497,9 +1504,11 @@ export default function Profile() {
       )}
 
       {!isH5 && <CustomTabBar activeIndex={4} />}
+      {isH5 && <div className="creative-web" style={{minHeight:0}}><FailedWorkDialog work={failedWork} onClose={() => setFailedWork(null)} /></div>}
       <GlobalGamePlayer />
       <PaywallPopup />
     </View>
   );
 }
+
 
