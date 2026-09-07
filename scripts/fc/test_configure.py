@@ -14,6 +14,18 @@ class PackageConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'separate'):
             c.runtime_config({'PUBLIC_ORIGIN':'https://app.example.com', 'CONTENT_ORIGIN':'https://app.example.com'}, False)
 
+    def test_frontend_strips_fc_attachment_except_growth_downloads(self):
+        import re
+        template = (Path(__file__).resolve().parents[2] / 'deploy/fc/frontend.conf.template').read_text(encoding='utf-8')
+        blocks = re.findall(r'location[^{]+\{[^}]+\}', template)
+        def block_for(prefix):
+            matches = [b for b in blocks if b.split('{', 1)[0].strip().endswith(prefix)]
+            self.assertTrue(matches, prefix)
+            return matches[0]
+        for prefix in ('^~ /admin', '^~ /games/', '^~ /game-shell/', '^~ /api/', '^~ /users/'):
+            self.assertIn('proxy_hide_header Content-Disposition', block_for(prefix))
+        self.assertNotIn('proxy_hide_header Content-Disposition', block_for('^~ /api/v1/growth'))
+
     def test_frontend_requires_private_upstream_and_runtime_token(self):
         env = dict(PUBLIC_ORIGIN='https://app.example.com', CONTENT_ORIGIN='https://content.example.com', FC_API_URL='https://api.example.com', FC_INTERNAL_TOKEN='a'*64)
         runtime = c.runtime_config(env, False)

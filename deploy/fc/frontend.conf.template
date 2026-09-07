@@ -22,11 +22,30 @@ server {
     location ^~ /api/v1/internal/ { return 404; }
     location ^~ /api/v1/ai/ { return 404; }
     location ^~ /ai/ { return 404; }
-    location ^~ /api/ { proxy_pass $api$request_uri; }
-    location ^~ /users/ { proxy_pass $api$request_uri; }
-    location ^~ /admin { proxy_pass $api$request_uri; }
-    location ^~ /games/ { proxy_pass $api$request_uri; }
-    location ^~ /game-shell/ { proxy_pass $api$request_uri; }
+    # FC default *.aliyuncs.com triggers force Content-Disposition: attachment.
+    # Custom domains do not, so hide the header after proxying HTML/API pages.
+    # Keep growth downloads untouched so APK/IPA still attach a filename.
+    location ^~ /api/v1/growth { proxy_pass $api$request_uri; }
+    location ^~ /api/ {
+        proxy_pass $api$request_uri;
+        proxy_hide_header Content-Disposition;
+    }
+    location ^~ /users/ {
+        proxy_pass $api$request_uri;
+        proxy_hide_header Content-Disposition;
+    }
+    location ^~ /admin {
+        proxy_pass $api$request_uri;
+        proxy_hide_header Content-Disposition;
+    }
+    location ^~ /games/ {
+        proxy_pass $api$request_uri;
+        proxy_hide_header Content-Disposition;
+    }
+    location ^~ /game-shell/ {
+        proxy_pass $api$request_uri;
+        proxy_hide_header Content-Disposition;
+    }
     location ^~ /socket.io/ {
         proxy_pass $api$request_uri;
         proxy_set_header Host $proxy_host;
