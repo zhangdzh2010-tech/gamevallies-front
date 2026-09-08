@@ -12,7 +12,7 @@ jest.mock('../../../utils/media', () => ({ getGameCoverUrl: () => '' }));
 jest.mock('../CreativeShell', () => ({ CreativeIcon: () => null }));
 const work = { id: 'public-work', title: '种群模型', authorId: 'author', status: 'published', author: { displayName: '原作者' } };
 beforeEach(() => {
-  jest.clearAllMocks(); Storage.getUser.mockReturnValue(null);
+  jest.clearAllMocks(); global.fetch = jest.fn().mockResolvedValue({ok:true,text:async()=>'<html>public work</html>'}); Storage.getUser.mockReturnValue(null);
   HTMLDialogElement.prototype.showModal = jest.fn();
   HTMLDialogElement.prototype.close = jest.fn();
   getLatest.mockResolvedValue({ items: [], hasMore: false });
@@ -24,8 +24,9 @@ test('visitors can browse and play public works without the authenticated play e
   await screen.findByText('种群模型');
   fireEvent.click(screen.getByText('体验作品'));
   fireEvent.click(await screen.findByText('开始体验'));
-  const frame = screen.getByTitle('种群模型');
-  expect(frame.getAttribute('src')).toBe('/games/public-work/index.html');
+  const frame = await screen.findByTitle('种群模型');
+  expect(global.fetch).toHaveBeenCalledWith('/games/public-work/index.html', {credentials:'omit',referrerPolicy:'no-referrer'});
+  expect(frame.getAttribute('srcdoc')).toContain('public work');
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts');
 });
 test('remixing somebody else opens fork flow, while own works open iteration', async () => {
