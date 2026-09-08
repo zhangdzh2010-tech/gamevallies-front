@@ -3,6 +3,7 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { get } from '../../../services/api';
 import WorkPreview from '../WorkPreview';
+jest.mock('../../../utils/storage', () => ({ Storage: { getUser: () => null } }));
 jest.mock('../../../services/api', () => ({ get: jest.fn() }));
 jest.mock('../CreativeShell', () => ({ CreativeIcon: () => <span /> }));
 const work = { id: 'creative-1', version: 1, title: '双摆实验' };
