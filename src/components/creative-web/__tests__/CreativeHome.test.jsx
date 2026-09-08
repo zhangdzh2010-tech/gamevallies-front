@@ -14,6 +14,7 @@ jest.mock('../../../store/gameStore', () => ({ useGameStore: jest.fn() }));
 jest.mock('../../../stores/quotaStore', () => ({ __esModule: true, default: { getState: () => ({ fetchQuota: () => Promise.resolve() }) } }));
 jest.mock('../CreativeShell', () => ({ __esModule: true, default: ({ children }) => <div>{children}</div>, CreativeIcon: () => null }));
 jest.mock('../ConversationLayout', () => ({ __esModule: true, default: ({ children, navigation }) => <div><button onClick={() => navigation('works')}>我的作品</button>{children}</div>, ConversationIcon: () => null }));
+jest.mock('../CreativeSquare', () => () => <div>公开作品列表</div>);
 jest.mock('../WorkPreview', () => () => null);
 beforeEach(() => {
   jest.clearAllMocks(); sessionStorage.clear();
@@ -22,6 +23,7 @@ beforeEach(() => {
   getMyGames.mockResolvedValue({ items: [], total: 0 });
 });
 test('loads actual works and preserves iterate task routing', async () => {
+  setCreativeView('home');
   useGameStore.mockReturnValue({ isGenerating: true, currentTask: { taskId: 'task-1', gameId: 'work-1', taskType: 'pipeline_iterate' } });
   getMyGames.mockResolvedValue({ items: [{ id: 'work-1', title: '真实双摆作品', status: 'ready' }], total: 1 });
   render(<CreativeHome />);
@@ -31,6 +33,7 @@ test('loads actual works and preserves iterate task routing', async () => {
   expect(openTaskCreatePageWithAuth).toHaveBeenCalledWith('task-1', 'work-1', 'pipeline_iterate');
 });
 test('carries the chosen scientific idea into the authenticated creation flow', async () => {
+  setCreativeView('home');
   render(<CreativeHome />);
   await screen.findByText('让一个想法，变得可以探索。');
   fireEvent.change(screen.getByLabelText('你的创意'), { target: { value: '观察不同初始角度的双摆运动' } });
@@ -58,4 +61,11 @@ test('a draft is published only after explicit confirmation and the returned sta
   fireEvent.click(screen.getByText('确认公开发布'));
   await screen.findByText('已发布', {selector:'.cw-cover > span'});
   expect(publishGame).toHaveBeenCalledWith('draft',{visibility:'public'});
+});
+
+test('opens the creative square by default without introductory filler', async () => {
+  render(<CreativeHome />);
+  await screen.findByText('公开作品列表');
+  expect(screen.queryByText(/体验大家公开发布的作品/)).toBeNull();
+  expect(screen.queryByLabelText('你的创意')).toBeNull();
 });

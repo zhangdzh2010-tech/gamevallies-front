@@ -15,8 +15,8 @@ beforeEach(() => {
   jest.clearAllMocks(); Storage.getUser.mockReturnValue(null);
   HTMLDialogElement.prototype.showModal = jest.fn();
   HTMLDialogElement.prototype.close = jest.fn();
-  getLatest.mockResolvedValue({ items: [work], hasMore: false });
-  getTrending.mockResolvedValue({ items: [], hasMore: false });
+  getLatest.mockResolvedValue({ items: [], hasMore: false });
+  getTrending.mockResolvedValue({ items: [work], hasMore: false });
   searchGames.mockResolvedValue({ items: [], hasMore: false });
 });
 test('visitors can browse and play public works without the authenticated play endpoint', async () => {
@@ -38,9 +38,9 @@ test('remixing somebody else opens fork flow, while own works open iteration', a
   expect(openIteratePageWithAuth).toHaveBeenCalledWith(work, 'public-work');
 });
 test('searches the server and respects pagination, rather than filtering one page', async () => {
-  getLatest.mockResolvedValueOnce({ items: [work], hasMore: true }).mockResolvedValueOnce({ items: [{...work,id:'second',title:'第二件作品'}], hasMore: false });
+  getTrending.mockResolvedValueOnce({ items: [work], hasMore: true }).mockResolvedValueOnce({ items: [{...work,id:'second',title:'第二件作品'}], hasMore: false });
   render(<CreativeSquare />); fireEvent.click(await screen.findByText('加载更多作品'));
-  await screen.findByText('第二件作品'); expect(getLatest).toHaveBeenLastCalledWith(2,24);
+  await screen.findByText('第二件作品'); expect(getTrending).toHaveBeenLastCalledWith(2,24);
   fireEvent.change(screen.getByLabelText('搜索广场作品'), { target: {value:'化学'} });
   fireEvent.click(screen.getByText('搜索'));
   await waitFor(() => expect(searchGames).toHaveBeenCalledWith('化学',{page:1,limit:24}));
@@ -60,10 +60,18 @@ test.each([false, true])('releases the preview modal before navigating (own work
   expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
 });
 test('disabled forks and API errors are visible', async () => {
-  getLatest.mockResolvedValueOnce({items:[{...work,allowFork:false}],hasMore:false});
+  getTrending.mockResolvedValueOnce({items:[{...work,allowFork:false}],hasMore:false});
   render(<CreativeSquare />); const button=await screen.findByText('作者未开放复刻');
   expect(button.disabled).toBe(true);
-  getTrending.mockRejectedValue(new Error('服务暂时不可用'));
-  fireEvent.click(screen.getByText('热门作品'));
+  getLatest.mockRejectedValue(new Error('服务暂时不可用'));
+  fireEvent.click(screen.getByText('最新发布'));
   await screen.findByText('服务暂时不可用');
+});
+
+test('defaults to ranked popular works and highlights the leading cards', async () => {
+  render(<CreativeSquare />);
+  await screen.findByText('种群模型');
+  expect(getTrending).toHaveBeenCalledWith(1, 24);
+  expect(screen.getByText('热门 · 1').closest('article').className).toContain('cw-project-featured');
+  expect(getLatest).not.toHaveBeenCalled();
 });

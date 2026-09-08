@@ -8,7 +8,7 @@ import { CreativeIcon } from './CreativeShell';
 
 
 export default function CreativeSquare() {
-  const [sort, setSort] = useState('latest');
+  const [sort, setSort] = useState('trending');
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [works, setWorks] = useState([]);
@@ -50,10 +50,10 @@ export default function CreativeSquare() {
     return own(work) ? openIteratePageWithAuth(work, work.id) : openForkPageWithAuth(work.id);
   };
   return <>
-    <div className="cw-section-head"><div className="cw-tabs">{[['latest', '最新发布'], ['trending', '热门作品']].map(([id, label]) => <button type="button" key={id} className={`cw-tab${sort === id ? ' active' : ''}`} onClick={() => setSort(id)}>{label}</button>)}</div>
+    <div className="cw-section-head"><div className="cw-tabs">{[['trending', '热门作品'], ['latest', '最新发布']].map(([id, label]) => <button type="button" key={id} className={`cw-tab${sort === id ? ' active' : ''}`} onClick={() => setSort(id)}>{label}</button>)}</div>
       <form className="cw-row" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}><input className="cw-search" aria-label="搜索广场作品" placeholder="搜索作品或创作者" value={query} onChange={e => setQuery(e.target.value)} /><button type="submit" className="cw-button cw-outline">搜索</button></form></div>
     {error && <div className="cw-error" role="alert">{error}<button type="button" onClick={() => load(page)}>重试</button></div>}
-    <div className="cw-projects">{works.map(work => <article key={work.id} className="cw-project"><button type="button" className="cw-project-open" onClick={() => setSelected(work)} aria-label={`体验 ${work.title}`}><div className="cw-cover">{getGameCoverUrl(work) ? <img src={getGameCoverUrl(work)} alt="" loading="lazy" /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /></div>}</div><div className="cw-project-body"><h3>{work.title || '未命名作品'}</h3><p>{work.description}</p><small>作者：{work.author?.displayName || work.author?.username || '创作者'}</small></div></button><div className="cw-square-actions"><button type="button" className="cw-button cw-outline" onClick={() => setSelected(work)}>体验作品</button><button type="button" className="cw-button cw-primary" disabled={!own(work) && work.allowFork === false} onClick={() => remix(work)}>{own(work) ? '继续创作' : work.allowFork === false ? '作者未开放复刻' : '复刻并创作'}</button></div></article>)}</div>
+    <div className="cw-projects">{works.map((work, index) => <article key={work.id} className={`cw-project${sort === 'trending' && !search && index < 3 ? ' cw-project-featured' : ''}`}><button type="button" className="cw-project-open" onClick={() => setSelected(work)} aria-label={`体验 ${work.title}`}><div className="cw-cover">{sort === 'trending' && !search && index < 3 && <span className="cw-hot-badge">热门 · {index + 1}</span>}{getGameCoverUrl(work) ? <img src={getGameCoverUrl(work)} alt="" loading="lazy" /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /></div>}</div><div className="cw-project-body"><h3>{work.title || '未命名作品'}</h3><p>{work.description}</p><small>作者：{work.author?.displayName || work.author?.username || '创作者'}</small></div></button><div className="cw-square-actions"><button type="button" className="cw-button cw-outline" onClick={() => setSelected(work)}>体验作品</button><button type="button" className="cw-button cw-primary" disabled={!own(work) && work.allowFork === false} onClick={() => remix(work)}>{own(work) ? '继续创作' : work.allowFork === false ? '作者未开放复刻' : '复刻并创作'}</button></div></article>)}</div>
     {loading && <p className="cw-loading" role="status">正在加载广场作品…</p>}
     {!loading && !works.length && !error && <div className="cw-empty"><h3>{search ? '没有找到匹配的作品' : '广场等待第一个公开作品'}</h3><p>在我的作品中发布后，其他人就可以在这里体验。</p></div>}
     {more && !loading && <button type="button" className="cw-button cw-outline cw-loadmore" onClick={() => load(page + 1)}>加载更多作品</button>}
