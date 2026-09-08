@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro';
+import { setCreativeView } from '../components/creative-web/creativeModel';
 import { ENV } from '../config/env';
 import {
   getPersistedGenerationTaskSnapshot,
@@ -563,6 +564,7 @@ export function ensureCreateAccess() {
 export function navigateAfterLogin(fallbackUrl = HOME_PAGE_URL) {
   const redirectUrl = consumePostLoginRedirect();
   const targetUrl = redirectUrl || fallbackUrl;
+  if (targetUrl === HOME_PAGE_URL) setCreativeView('square');
 
   if (targetUrl) {
     return replacePage(targetUrl);
