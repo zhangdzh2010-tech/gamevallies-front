@@ -54,13 +54,13 @@ test('failed works open local details without task navigation', async () => {
 });
 test('a draft is published only after explicit confirmation and the returned status updates the list', async () => {
   setCreativeView('works');
-  getMyGames.mockResolvedValue({items:[{id:'draft',title:'我的实验',status:'ready'}],total:1});
+  getMyGames.mockResolvedValue({items:[{id:'draft',title:'我的实验',description:'改变参数，观察周期如何变化。',status:'ready'}],total:1});
   publishGame.mockResolvedValue({id:'draft',status:'published'});
   render(<CreativeHome />); fireEvent.click(await screen.findByText('发布到创意广场'));
   expect(publishGame).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText('确认公开发布'));
   await screen.findByText('已发布', {selector:'.cw-cover > span'});
-  expect(publishGame).toHaveBeenCalledWith('draft',{visibility:'public'});
+  expect(publishGame).toHaveBeenCalledWith('draft',{visibility:'public',title:'我的实验',description:'改变参数，观察周期如何变化。'});
 });
 
 test('opens the creative square by default without introductory filler', async () => {

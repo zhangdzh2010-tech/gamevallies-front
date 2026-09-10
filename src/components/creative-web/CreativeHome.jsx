@@ -10,6 +10,7 @@ import ConversationStudioBody from './ConversationStudioBody';
 import ConversationLayout from './ConversationLayout';
 import CreativeSquare from './CreativeSquare';
 import FailedWorkDialog, { isFailedWork } from './FailedWorkDialog';
+import PublicationFields, { publicationDraftFor, isPublicationReady } from './PublicationFields';
 import { CREATIVE_DOMAINS, CREATIVE_FORMATS, buildCreativePrompt, saveCreativeDraft, consumeCreativeView, normalizeWorks } from './creativeModel';
 
 export function CreativePlot({ domain = 'physics' }) {
@@ -33,6 +34,7 @@ export default function CreativeHome() {
   const [failedWork, setFailedWork] = useState(null);
   const [publishCandidate, setPublishCandidate] = useState(null);
   const [publishing, setPublishing] = useState(false);
+  const [publicationDraft, setPublicationDraft] = useState(() => publicationDraftFor(null));
   const publishDialog = useRef(null);
   const publishLock = useRef(false);
   const [page, setPage] = useState(1);
@@ -72,12 +74,12 @@ export default function CreativeHome() {
     if (work.status === 'generating' && (work.generationTaskId || work.taskId)) openTaskCreatePageWithAuth(work.generationTaskId || work.taskId, work.id, work.taskType || 'pipeline_run');
     else openIteratePageWithAuth(work, work.id);
   };
-  useEffect(() => { if (publishCandidate) publishDialog.current?.showModal(); }, [publishCandidate]);
+  useEffect(() => { if (publishCandidate) { setPublicationDraft(publicationDraftFor(publishCandidate)); publishDialog.current?.showModal(); } }, [publishCandidate]);
   async function publishWork() {
-    if (!publishCandidate || publishLock.current) return;
+    if (!publishCandidate || publishLock.current || !isPublicationReady(publicationDraft)) return;
     publishLock.current = true; setPublishing(true); setError('');
     try {
-      const result = await publishGame(publishCandidate.id, { visibility: 'public' });
+      const result = await publishGame(publishCandidate.id, { visibility: 'public', title: publicationDraft.title.trim(), description: publicationDraft.description.trim() });
       const updated = result?.game || result;
       if (!updated?.status) throw new Error('未收到发布结果，请刷新作品列表确认状态。');
       setWorks(previous => previous.map(work => work.id === publishCandidate.id ? { ...work, ...updated } : work));
@@ -98,8 +100,7 @@ export default function CreativeHome() {
       <footer className="cw-footer"><span>创意，不止一种形态。</span><span>智了空间 / 桌面创作台</span></footer>
     </main>
     <FailedWorkDialog work={failedWork} onClose={() => setFailedWork(null)} />
-    {publishCandidate && <dialog ref={publishDialog} className="cw-dialog cw-publish-dialog" aria-label="发布到创意广场" onCancel={e => { if (publishing) e.preventDefault(); else setPublishCandidate(null); }}><div className="cw-dialog-head"><h2>发布到创意广场</h2><button type="button" disabled={publishing} onClick={() => setPublishCandidate(null)}>关闭</button></div><div className="cw-publish-body"><h3>{publishCandidate.title}</h3><p>发布后所有用户都能体验作品。其他用户可在你允许复刻时创建独立版本，原作不会被修改。</p>{error && <p role="alert">{error}</p>}</div><div className="cw-dialog-foot"><span>只有明确发布的作品才会进入广场。</span><button type="button" className="cw-button cw-primary" disabled={publishing} onClick={publishWork}>{publishing ? '正在发布…' : '确认公开发布'}</button></div></dialog>}
+    {publishCandidate && <dialog ref={publishDialog} className="cw-dialog cw-publish-dialog" aria-label="发布到创意广场" onCancel={e => { if (publishing) e.preventDefault(); else setPublishCandidate(null); }}><div className="cw-dialog-head"><h2>发布到创意广场</h2><button type="button" disabled={publishing} onClick={() => setPublishCandidate(null)}>关闭</button></div><div className="cw-publish-body"><h3>{publishCandidate.title}</h3><PublicationFields draft={publicationDraft} onChange={setPublicationDraft} disabled={publishing} /><p>发布后所有用户都能体验作品。其他用户可在你允许复刻时创建独立版本，原作不会被修改。</p>{error && <p role="alert">{error}</p>}</div><div className="cw-dialog-foot"><span>只有明确发布的作品才会进入广场。</span><button type="button" className="cw-button cw-primary" disabled={publishing || !isPublicationReady(publicationDraft)} onClick={publishWork}>{publishing ? '正在发布…' : '确认公开发布'}</button></div></dialog>}
     <dialog className="cw-dialog" ref={dialogRef} onCancel={() => setChoosing(false)}><div className="cw-dialog-head"><div><div className="cw-eyebrow">01 / SHAPE YOUR IDEA</div><h2>你想让这个创意，如何被体验？</h2><p>先选择呈现方式，再确认创作描述。</p></div><button className="cw-icon-button" aria-label="关闭" onClick={() => setChoosing(false)}><CreativeIcon name="close" /></button></div><div className="cw-format-grid">{CREATIVE_FORMATS.map(f => <button key={f.id} className={`cw-format ${format === f.id ? 'active' : ''}`} onClick={() => setFormat(f.id)} aria-pressed={format === f.id}><CreativeIcon name={f.id === 'experiment' ? 'spark' : f.id === 'explanation' ? 'play' : 'grid'} /><h3>{f.title}</h3><p>{f.description}</p><span>{format === f.id ? '✓ 已选择' : '选择这个方向'}</span></button>)}</div><div className="cw-dialog-foot"><span>进入创作台后，你仍然可以修改方向。</span><button className="cw-button cw-primary" onClick={begin}>进入创作台<CreativeIcon name="arrow" /></button></div></dialog>
   </div></ConversationLayout>;
 }
-

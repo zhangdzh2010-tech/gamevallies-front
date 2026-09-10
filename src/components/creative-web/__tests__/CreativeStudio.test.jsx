@@ -12,14 +12,14 @@ jest.mock('../../common/PaywallPopup', () => ({ PaywallPopup: () => null }));
 jest.mock('../CreativeShell', () => ({ __esModule: true, default: ({ children, actions }) => <div>{actions}{children}</div>, CreativeIcon: () => null }));
 jest.mock('../ConversationLayout', () => ({ __esModule: true, default: ({ children, actions }) => <div>{actions}{children}</div>, ConversationIcon: () => null }));
 jest.mock('../WorkPreview', () => () => null);
-const work = { id: 'physics-1', title: '双摆实验', status: 'ready', version: 2 };
+const work = { id: 'physics-1', title: '双摆实验', description: '改变初始角度，探索双摆的运动轨迹。', status: 'ready', version: 2 };
 beforeEach(() => { jest.clearAllMocks(); HTMLDialogElement.prototype.showModal = jest.fn(); });
 test('publishes through the real service and exposes the returned public state', async () => {
   publishGame.mockResolvedValue({ status: 'published' });
   render(<CreativeStudio work={work} />);
   fireEvent.click(screen.getByText('确认公开发布'));
   await screen.findByText('已发布');
-  expect(publishGame).toHaveBeenCalledWith('physics-1', { visibility: 'public' });
+  expect(publishGame).toHaveBeenCalledWith('physics-1', { visibility: 'public', title: work.title, description: work.description });
   expect(screen.getByLabelText('作品分享地址').value).toContain('id=physics-1');
 });
 test('moderation is not presented as a successful public release', async () => {
@@ -66,4 +66,17 @@ test('carries a completed-work follow-up into iteration without silently discard
   expect(openIteratePageWithAuth).toHaveBeenCalledWith(work,work.id);
   expect(consumeIterationDraft(work.id)).toBe('增加摆长对比曲线');
   expect(consumeIterationDraft(work.id)).toBe('');
+});
+
+ test('publishes edited public copy and refuses blank descriptions', async () => {
+  publishGame.mockResolvedValue({status:'published'});
+  render(<CreativeStudio work={work} />);
+  fireEvent.change(screen.getByLabelText('作品简介'),{target:{value:'  '}});
+  fireEvent.click(screen.getByText('确认公开发布'));
+  expect(publishGame).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('发布名称'),{target:{value:'  摆动之间  '}});
+  fireEvent.change(screen.getByLabelText('作品简介'),{target:{value:'  调整摆长和重力，观察单摆的周期如何变化。  '}});
+  fireEvent.click(screen.getByText('确认公开发布'));
+  await screen.findByText('已发布');
+  expect(publishGame).toHaveBeenCalledWith(work.id,{visibility:'public',title:'摆动之间',description:'调整摆长和重力，观察单摆的周期如何变化。'});
 });
