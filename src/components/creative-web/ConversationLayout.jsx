@@ -24,13 +24,18 @@ export default function ConversationLayout({ children, title, actions, workId, o
   useDidShow(() => { setRefresh(v => v + 1); });
   useEffect(() => {
     let activeRequest = true;
-    setHistory([]); setHistoryError(false);
-    if (loggedIn) {
-      getMyGames(1, 12).then(result => { if (activeRequest) setHistory(normalizeWorks(result)); }).catch(() => { if (activeRequest) setHistoryError(true); });
-      useQuotaStore.getState().fetchQuota(false).catch(() => {});
+    if (!loggedIn) {
+      setHistory([]);
+      setHistoryError(false);
+      return () => { activeRequest = false; };
     }
+
+    getMyGames(1, 12)
+      .then(result => { if (activeRequest) { setHistory(normalizeWorks(result)); setHistoryError(false); } })
+      .catch(() => { if (activeRequest) setHistoryError(true); });
+    useQuotaStore.getState().fetchQuota(false).catch(() => {});
     return () => { activeRequest = false; };
-  }, [loggedIn, userId, refresh, workId]);
+  }, [loggedIn, userId, refresh]);
   const navigate = navigation || creativeNavigate;
   const name = user.displayName || user.nickname || user.username || '创作者';
   const open = item => {
