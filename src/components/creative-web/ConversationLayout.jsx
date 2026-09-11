@@ -11,7 +11,7 @@ import styles from './conversationStyles';
 import FailedWorkDialog, { isFailedWork } from './FailedWorkDialog';
 
 export function ConversationIcon({ name, ...props }) { return <CreativeIcon name={name} className="icon" {...props} />; }
-export default function ConversationLayout({ children, title, actions, workId, onNew, navigation, active = 'home' }) {
+export default function ConversationLayout({ children, title, actions, workId, onNew, onOpenWork, navigation, active = 'home' }) {
   const loggedIn = isLoggedIn();
   const user = loggedIn ? Storage.getUser() || {} : {};
   const userId = user.id || user.userId || user.username || '';
@@ -36,6 +36,7 @@ export default function ConversationLayout({ children, title, actions, workId, o
   const open = item => {
     if (isFailedWork(item)) { setFailedWork(item); return; }
     if (item.id === workId) return;
+    if (onOpenWork) { onOpenWork(item); return; }
     const task = item.generationTaskId || item.taskId;
     if (task && ['generating', 'failed', 'canceled', 'cancelled'].includes(item.status)) openTaskCreatePageWithAuth(task, item.id, item.taskType || 'pipeline_run');
     else openIteratePageWithAuth(item, item.id);

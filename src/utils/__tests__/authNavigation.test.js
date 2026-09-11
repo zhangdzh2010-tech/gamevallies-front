@@ -132,6 +132,28 @@ describe('authNavigation user journey', () => {
     });
   });
 
+  test('logged-in iterate entry opens in-page studio when host is registered on H5', () => {
+    mockGetToken.mockReturnValue('token');
+    const openInPage = jest.fn(() => true);
+    const {
+      openIteratePageWithAuth,
+      registerCreativeStudioHost,
+      unregisterCreativeStudioHost,
+    } = require('../authNavigation');
+
+    registerCreativeStudioHost(openInPage);
+    const result = openIteratePageWithAuth({ id: 'game-3', title: '页内作品' }, null);
+
+    expect(result).toBe(true);
+    expect(openInPage).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'iterate',
+      gameId: 'game-3',
+    }));
+    expect(mockTaro.navigateTo).not.toHaveBeenCalled();
+
+    unregisterCreativeStudioHost();
+  });
+
   test('iterate task entry persists task snapshot before redirecting to login', () => {
     const { openTaskCreatePageWithAuth } = require('../authNavigation');
 

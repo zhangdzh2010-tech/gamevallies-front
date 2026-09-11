@@ -1,4 +1,5 @@
 import CreativeStudio from '../../components/creative-web/CreativeStudio';
+import { useStudioEmbed } from '../../components/creative-web/StudioEmbedContext';
 import { consumeCreativeDraft } from '../../components/creative-web/creativeModel';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text } from '@tarojs/components';
@@ -69,6 +70,7 @@ function getUserFacingCreateError(rawError, fallbackStageLabel = '保存创作�
 }
 
 export default function Create() {
+  const embed = useStudioEmbed();
   const isH5 = isH5Runtime();
   const isWeapp = isWeappRuntime();
   const {
@@ -165,6 +167,16 @@ export default function Create() {
   ]);
 
   useDidShow(() => {
+    if (embed?.inPage) {
+      authRedirectingRef.current = false;
+      try {
+        fetchQuota(false)?.catch?.(() => {});
+      } catch (err) {
+        // Non-fatal; banner will simply fall back to zero state.
+      }
+      return;
+    }
+
     if (isLoggedIn()) {
       authRedirectingRef.current = false;
       // Refresh quota on page enter so the banner and gate reflect latest state.
@@ -195,6 +207,9 @@ export default function Create() {
   const iterateRedirectGuardRef = useRef(false);
 
   useDidShow(() => {
+    if (embed?.inPage) {
+      return;
+    }
     if (iterateRedirectGuardRef.current) {
       return;
     }

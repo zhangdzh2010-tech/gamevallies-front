@@ -1,4 +1,5 @@
 import CreativeStudio from '../../../components/creative-web/CreativeStudio';
+import { useStudioEmbed } from '../../../components/creative-web/StudioEmbedContext';
 import { consumeIterationDraft } from '../../../components/creative-web/creativeModel';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from '@tarojs/components';
@@ -115,9 +116,10 @@ function formatMetadataTime(value) {
 }
 
 export default function GameIteratePage() {
+  const embed = useStudioEmbed();
   const route = useRoute();
-  const gameId = route?.params?.gameId || '';
-  const taskId = route?.params?.taskId || '';
+  const gameId = embed?.gameId || route?.params?.gameId || '';
+  const taskId = embed?.taskId || route?.params?.taskId || '';
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const isH5 = isH5Runtime();
   const {
@@ -191,14 +193,14 @@ export default function GameIteratePage() {
   const canStartIterateSession = Boolean(iterateFeedback.trim());
 
   useEffect(() => {
-    if (isLoggedIn()) {
+    if (embed?.inPage || isLoggedIn()) {
       return;
     }
 
     const targetUrl = buildIteratePageUrl(gameId, taskId);
     setPostLoginRedirect(targetUrl);
     Taro.navigateTo({ url: LOGIN_PAGE_URL }).catch(() => {});
-  }, [gameId, taskId]);
+  }, [embed?.inPage, gameId, taskId]);
 
   useEffect(() => {
     if (!isLoggedIn()) {

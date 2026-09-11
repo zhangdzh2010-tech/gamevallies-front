@@ -8,13 +8,21 @@ import { consumeCreativeDraft, setCreativeView } from '../creativeModel';
 import { useGameStore } from '../../../store/gameStore';
 jest.mock('@tarojs/taro', () => ({ useDidShow: cb => require('react').useEffect(cb, []) }));
 jest.mock('../../../services/game', () => ({ getMyGames: jest.fn(), getGenerationStatus: jest.fn(), publishGame: jest.fn() }));
-jest.mock('../../../utils/authNavigation', () => ({ isLoggedIn: () => true, openCreatePageWithAuth: jest.fn(), openIteratePageWithAuth: jest.fn(), openTaskCreatePageWithAuth: jest.fn() }));
+jest.mock('../../../utils/authNavigation', () => ({
+  isLoggedIn: () => true,
+  openCreatePageWithAuth: jest.fn(),
+  openIteratePageWithAuth: jest.fn(),
+  openTaskCreatePageWithAuth: jest.fn(),
+  registerCreativeStudioHost: jest.fn(),
+  unregisterCreativeStudioHost: jest.fn(),
+}));
 jest.mock('../../../utils/media', () => ({ getGameCoverUrl: () => '' }));
 jest.mock('../../../store/gameStore', () => ({ useGameStore: jest.fn() }));
 jest.mock('../../../stores/quotaStore', () => ({ __esModule: true, default: { getState: () => ({ fetchQuota: () => Promise.resolve() }) } }));
 jest.mock('../CreativeShell', () => ({ __esModule: true, default: ({ children }) => <div>{children}</div>, CreativeIcon: () => null }));
 jest.mock('../ConversationLayout', () => ({ __esModule: true, default: ({ children, navigation }) => <div><button onClick={() => navigation('works')}>我的作品</button>{children}</div>, ConversationIcon: () => null }));
 jest.mock('../CreativeSquare', () => () => <div>公开作品列表</div>);
+jest.mock('../CreativeStudioPanel', () => () => <div data-testid="creative-studio-panel">页内创作台</div>);
 jest.mock('../WorkPreview', () => () => null);
 beforeEach(() => {
   jest.clearAllMocks(); sessionStorage.clear();

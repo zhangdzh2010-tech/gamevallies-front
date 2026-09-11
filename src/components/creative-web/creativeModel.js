@@ -18,6 +18,7 @@ export function buildCreativePrompt(idea, domainId = 'open', formatId = 'experim
 }
 const DRAFT_KEY = 'gamevallies.creative-web.draft.v1';
 const VIEW_KEY = 'gamevallies.creative-web.view.v1';
+const STUDIO_KEY = 'gamevallies.creative-web.studio.v1';
 export function saveCreativeDraft(draft) {
   try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...draft, createdAt: Date.now() })); return true; } catch (_) { return false; }
 }
@@ -31,6 +32,17 @@ export function consumeCreativeDraft() {
 }
 export function setCreativeView(view) { try { sessionStorage.setItem(VIEW_KEY, view); } catch (_) { /* Navigation still opens home. */ } }
 export function consumeCreativeView() { try { const view = sessionStorage.getItem(VIEW_KEY); sessionStorage.removeItem(VIEW_KEY); return ['home', 'works', 'ideas', 'square'].includes(view) ? view : null; } catch (_) { return null; } }
+export function setPendingStudioOpen(spec) {
+  try { sessionStorage.setItem(STUDIO_KEY, JSON.stringify({ ...spec, createdAt: Date.now() })); } catch (_) { /* Home tab will open without studio. */ }
+}
+export function consumePendingStudioOpen() {
+  try {
+    const raw = sessionStorage.getItem(STUDIO_KEY);
+    sessionStorage.removeItem(STUDIO_KEY);
+    const spec = JSON.parse(raw || 'null');
+    return spec && Date.now() - spec.createdAt < 5 * 60 * 1000 ? spec : null;
+  } catch (_) { return null; }
+}
 export function normalizeWorks(result) {
   return Array.isArray(result) ? result : Array.isArray(result?.items) ? result.items : Array.isArray(result?.data) ? result.data : [];
 }

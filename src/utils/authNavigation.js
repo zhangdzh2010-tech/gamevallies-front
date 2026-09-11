@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro';
-import { setCreativeView } from '../components/creative-web/creativeModel';
+import { setCreativeView, setPendingStudioOpen } from '../components/creative-web/creativeModel';
 import { ENV } from '../config/env';
+import { isH5Runtime } from './runtime';
 import {
   getPersistedGenerationTaskSnapshot,
   setPersistedGenerationTaskSnapshot,
@@ -38,6 +39,45 @@ const PROFILE_LAST_TAB_KEY =
 const CREATE_ENTRY_INTENT_MAX_AGE_MS = 30 * 60 * 1000;
 const ITERATE_ENTRY_GAME_MAX_AGE_MS = 30 * 60 * 1000;
 const PROFILE_SUB_TABS = new Set(['works', 'drafts', 'liked', 'bookmarks', 'tasks']);
+
+let creativeStudioHost = null;
+
+export function registerCreativeStudioHost(openFn) {
+  creativeStudioHost = typeof openFn === 'function' ? openFn : null;
+}
+
+export function unregisterCreativeStudioHost() {
+  creativeStudioHost = null;
+}
+
+function shouldDeferStudioToHome() {
+  const pages = Taro.getCurrentPages();
+  if (!pages.length) {
+    return false;
+  }
+
+  const route = getPageRoute(pages[pages.length - 1]);
+  return route.includes('pages/profile/');
+}
+
+function openCreativeStudioInPage(spec) {
+  if (!isH5Runtime()) {
+    return false;
+  }
+
+  if (creativeStudioHost) {
+    return creativeStudioHost(spec);
+  }
+
+  if (shouldDeferStudioToHome()) {
+    setPendingStudioOpen(spec);
+    setCreativeView('works');
+    Taro.switchTab({ url: HOME_PAGE_URL }).catch(() => {});
+    return true;
+  }
+
+  return false;
+}
 
 function normalizeProfileActiveTab(tab) {
   if (!tab || !PROFILE_SUB_TABS.has(tab)) {
@@ -503,9 +543,20 @@ export function openIteratePageWithAuth(game, gameId = null, options = {}) {
   }
 
   const targetUrl = buildIteratePageUrl(targetGameId, taskId);
+  const studioSpec = {
+    kind: 'iterate',
+    mode: 'iterate',
+    game,
+    gameId: targetGameId,
+    taskId,
+    title: game?.title || '',
+  };
 
   if (isLoggedIn()) {
     clearPostLoginRedirect();
+    if (openCreativeStudioInPage(studioSpec)) {
+      return true;
+    }
     openPage(targetUrl);
     return true;
   }
@@ -540,6 +591,21 @@ export function openTaskCreatePageWithAuth(taskId, gameId = null, taskType = 'pi
       status: 'running',
     });
     return openIteratePageWithAuth(null, gameId, { taskId });
+  }
+
+  if (isLoggedIn()) {
+    prepareCreateEntry({ mode: 'task', taskId, gameId });
+    const studioSpec = {
+      kind: 'create-task',
+      mode: 'create-task',
+      taskId,
+      gameId: gameId || '',
+      title: '',
+    };
+    if (openCreativeStudioInPage(studioSpec)) {
+      clearPostLoginRedirect();
+      return true;
+    }
   }
 
   return openCreatePageWithAuth({ mode: 'task', taskId, gameId });

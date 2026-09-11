@@ -1,7 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDidShow } from '@tarojs/taro';
 import { getMyGames, publishGame } from '../../services/game';
-import { isLoggedIn, openCreatePageWithAuth, openIteratePageWithAuth, openTaskCreatePageWithAuth } from '../../utils/authNavigation';
+import {
+  isLoggedIn,
+  openCreatePageWithAuth,
+  openIteratePageWithAuth,
+  openTaskCreatePageWithAuth,
+  registerCreativeStudioHost,
+  unregisterCreativeStudioHost,
+} from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
 import { useGameStore } from '../../store/gameStore';
 import useQuotaStore from '../../stores/quotaStore';
@@ -9,9 +16,18 @@ import { CreativeIcon } from './CreativeShell';
 import ConversationStudioBody from './ConversationStudioBody';
 import ConversationLayout from './ConversationLayout';
 import CreativeSquare from './CreativeSquare';
+import CreativeStudioPanel from './CreativeStudioPanel';
 import FailedWorkDialog, { isFailedWork } from './FailedWorkDialog';
 import PublicationFields, { publicationDraftFor, isPublicationReady } from './PublicationFields';
-import { CREATIVE_DOMAINS, CREATIVE_FORMATS, buildCreativePrompt, saveCreativeDraft, consumeCreativeView, normalizeWorks } from './creativeModel';
+import {
+  CREATIVE_DOMAINS,
+  CREATIVE_FORMATS,
+  buildCreativePrompt,
+  saveCreativeDraft,
+  consumeCreativeView,
+  consumePendingStudioOpen,
+  normalizeWorks,
+} from './creativeModel';
 
 export function CreativePlot({ domain = 'physics' }) {
   // Illustrative mathematical curves, never presented as real experimental data.
@@ -22,8 +38,24 @@ export function CreativePlot({ domain = 'physics' }) {
   }).join(' '));
   return <svg className={`cw-plot cw-plot-${domain}`} viewBox="0 0 440 240" aria-label="概念示意曲线"><path d="M25 30V205H420M25 120H420M220 30V205" fill="none" stroke="currentColor" opacity=".12" />{paths.map((d, i) => <path key={i} d={d} fill="none" stroke="currentColor" opacity={1 - i * .18} strokeWidth="2" />)}</svg>;
 }
+function studioContextFromSpec(spec) {
+  const mode = spec?.mode || (spec?.kind === 'create-task' ? 'create-task' : spec?.kind === 'iterate' ? 'iterate' : '');
+  if (!mode) {
+    return null;
+  }
+
+  return {
+    mode,
+    gameId: spec.gameId || spec.game?.id || '',
+    taskId: spec.taskId || '',
+    game: spec.game || null,
+    title: spec.title || spec.game?.title || '创作台',
+  };
+}
+
 export default function CreativeHome() {
   const [view, setView] = useState('square');
+  const [studioContext, setStudioContext] = useState(null);
   const [idea, setIdea] = useState('');
   const [orientation, setOrientation] = useState('landscape');
   const [creativeTitle, setCreativeTitle] = useState('');
@@ -59,10 +91,48 @@ export default function CreativeHome() {
     } catch (err) { if (request === requestRef.current) setError(err?.message || '作品暂时无法加载，请重试。'); }
     finally { if (request === requestRef.current) setLoading(false); }
   }
-  useDidShow(() => { const next = consumeCreativeView(); if (next) setView(next); void loadWorks(); if (isLoggedIn()) void useQuotaStore.getState().fetchQuota(false).catch(() => {}); });
+  const openStudioFromSpec = useCallback((spec) => {
+    const nextContext = studioContextFromSpec(spec);
+    if (!nextContext) {
+      return false;
+    }
+    setStudioContext(nextContext);
+    setView('studio');
+    return true;
+  }, []);
+
+  const closeStudio = useCallback(() => {
+    setStudioContext(null);
+    setView('works');
+    void loadWorks();
+  }, []);
+
+  useEffect(() => {
+    registerCreativeStudioHost(openStudioFromSpec);
+    return () => unregisterCreativeStudioHost();
+  }, [openStudioFromSpec]);
+
+  useDidShow(() => {
+    const pendingStudio = consumePendingStudioOpen();
+    if (pendingStudio && openStudioFromSpec(pendingStudio)) {
+      void loadWorks();
+      if (isLoggedIn()) void useQuotaStore.getState().fetchQuota(false).catch(() => {});
+      return;
+    }
+    const next = consumeCreativeView();
+    if (next) setView(next);
+    void loadWorks();
+    if (isLoggedIn()) void useQuotaStore.getState().fetchQuota(false).catch(() => {});
+  });
   useEffect(() => () => { requestRef.current++; }, []);
   useEffect(() => { if (choosing) dialogRef.current?.showModal(); else dialogRef.current?.close(); }, [choosing]);
-  const navigate = next => { setView(next); setFilter('all'); setSearch(''); if (next === 'works') void loadWorks(); };
+  const navigate = next => {
+    if (view === 'studio') setStudioContext(null);
+    setView(next);
+    setFilter('all');
+    setSearch('');
+    if (next === 'works') void loadWorks();
+  };
   const pickIdea = item => { setIdea(item.prompt); setDomain(item.id); setView('home'); };
   const begin = () => {
     const prompt = buildCreativePrompt(idea, domain, format);
@@ -89,7 +159,25 @@ export default function CreativeHome() {
   }
   const visible = works.filter(work => (filter === 'all' || (filter === 'published' ? work.status === 'published' : work.status !== 'published')) && String(work.title || '').toLowerCase().includes(search.toLowerCase()));
   if (view === 'home') return <ConversationStudioBody mode="create" home displayTitle={creativeTitle || '新的创意'} onTitleChange={setCreativeTitle} orientation={orientation} onOrientationChange={setOrientation} input={idea} onInputChange={setIdea} format={format} onFormatChange={setFormat} navigation={navigate} onNew={() => {setIdea('');setCreativeTitle('');setError('');}} inputAriaLabel="你的创意" primary={{label:'开始创作',onClick:begin,disabled:idea.trim().length<5}} secondary={[]} error={error} supplemental={isGenerating && currentTask?.taskId ? <div><p>你的创作任务正在进行。</p><button onClick={() => openTaskCreatePageWithAuth(currentTask.taskId,currentTask.gameId,currentTask.taskType)}>查看进展</button></div> : null}/>;
-  return <ConversationLayout active={view} navigation={navigate} title={{ works: '我的作品', ideas: '创意灵感', square: '创意广场' }[view]}><div className="creative-web" style={{background:'transparent',minHeight:0}}>
+  if (view === 'studio' && studioContext) {
+    return (
+      <ConversationLayout
+        active="works"
+        navigation={navigate}
+        workId={studioContext.gameId}
+        onOpenWork={openWork}
+        title={studioContext.title || '创作台'}
+        actions={<button type="button" className="cw-button cw-outline" onClick={closeStudio}>返回作品列表</button>}
+      >
+        <CreativeStudioPanel
+          key={`${studioContext.mode}-${studioContext.gameId}-${studioContext.taskId || 'none'}`}
+          context={studioContext}
+          onClose={closeStudio}
+        />
+      </ConversationLayout>
+    );
+  }
+  return <ConversationLayout active={view} navigation={navigate} onOpenWork={openWork} title={{ works: '我的作品', ideas: '创意灵感', square: '创意广场' }[view]}><div className="creative-web" style={{background:'transparent',minHeight:0}}>
     <main className="cw-home"><div className="cw-eyebrow">YOUR CREATIVE PLAYGROUND</div><h1>{view === 'square' ? '让创意相遇，让作品继续生长。' : view === 'works' ? '你的创意，都在这里。' : view === 'ideas' ? '世界的规律，也是创意的起点。' : '今天，想让什么创意发生？'}</h1>{view !== 'square' && <p className="cw-intro">{view === 'square' ? null : view === 'works' ? '这里只显示当前登录账号的作品与任务。测试账号及其他创作者的公开作品请前往创意广场。' : '物理规律、生物世界、化学反应，或一个天马行空的想法。把它变成可以探索的作品。'}</p>}
     {view === 'home' && <><div className="cw-creation-row"><section className="cw-prompt-box"><div className="cw-prompt-label"><CreativeIcon name="spark" /> 你的想法，是创作的起点</div><textarea className="cw-idea-input" aria-label="你的创意" maxLength={3000} value={idea} onChange={e => setIdea(e.target.value)} placeholder="例如：让两个初始角度几乎相同的双摆开始运动，看看它们的轨迹会如何变化……" /><div className="cw-prompt-footer"><select className="cw-domain-select" aria-label="创作领域" value={domain} onChange={e => setDomain(e.target.value)}>{CREATIVE_DOMAINS.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}</select><button className="cw-button cw-primary" disabled={idea.trim().length < 5} onClick={() => setChoosing(true)}>构思创意<CreativeIcon name="arrow" /></button></div></section><section className="cw-continue"><small>{isGenerating ? '创意正在成形' : works[0] ? '继续上次的创作' : '从观察，到创造'}</small><h2>{isGenerating ? '你的创作任务正在进行' : works[0]?.title || '让规律变得可感知'}</h2><p>{isGenerating ? '重新打开任务，查看最新进展。' : works[0] ? '再观察一次，再调整一点。' : '改变参数，观察反馈，在亲手探索中发现新的可能。'}</p><button className="cw-button cw-lime" onClick={() => isGenerating ? (currentTask?.taskId ? openTaskCreatePageWithAuth(currentTask.taskId, currentTask.gameId, currentTask.taskType) : openCreatePageWithAuth()) : works[0] ? openWork(works[0]) : pickIdea(CREATIVE_DOMAINS[1])}>{isGenerating ? '查看进展' : works[0] ? '进入创作台' : '从一个物理创意开始'}<CreativeIcon name="arrow" /></button></section></div><div className="cw-idea-chips"><span>试试这些灵感</span>{CREATIVE_DOMAINS.slice(1).map(d => <button className="cw-chip" key={d.id} onClick={() => pickIdea(d)}>{d.title} ↗</button>)}</div></>}
     {view === 'square' ? <CreativeSquare /> : view === 'ideas' ? <div className="cw-projects cw-inspirations">{CREATIVE_DOMAINS.slice(1).map(d => <button key={d.id} className="cw-project" onClick={() => pickIdea(d)}><div className="cw-cover"><CreativePlot domain={d.id} /><span>{d.label}</span></div><div className="cw-project-body"><h3>{d.title}</h3><p>{d.description}</p><small>以此为起点，写下你的想法 →</small></div></button>)}</div> : <><div className="cw-section-head"><div className="cw-tabs">{[['all', '全部作品'], ['draft', '草稿与任务'], ['published', '已发布']].map(([id, label]) => <button key={id} className={`cw-tab${filter === id ? ' active' : ''}`} onClick={() => setFilter(id)}>{label}</button>)}</div><input className="cw-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索已加载的作品" aria-label="搜索作品" /></div>
