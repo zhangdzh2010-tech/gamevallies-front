@@ -1,4 +1,12 @@
+import { isH5Runtime } from './runtime';
+
 const VALID_GAME_ORIENTATIONS = new Set(['portrait', 'landscape']);
+
+// Creative Web / PC create is landscape-first. Weapp native create stays
+// portrait. Playback of existing games still uses the portrait fallback below.
+export function getDefaultCreateOrientation() {
+  return isH5Runtime() ? 'landscape' : 'portrait';
+}
 
 export function normalizeGameOrientation(value, fallback = 'portrait') {
   const normalizedFallback = VALID_GAME_ORIENTATIONS.has(String(fallback || '').trim().toLowerCase())

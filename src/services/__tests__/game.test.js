@@ -7,7 +7,6 @@ import {
   confirmAndGenerate,
   createCreationSession,
   generateFromCreationSession,
-  generateGame,
   normalizeCreationSessionSnapshot,
   normalizeCreationSessionStreamEvent,
   normalizeGenerationTaskStatus,
@@ -25,54 +24,18 @@ jest.mock('../../utils/runtime', () => ({
   isH5Runtime: jest.fn(() => true),
 }));
 
+const { isH5Runtime } = require('../../utils/runtime');
+
 jest.mock('../../utils/storage', () => ({
   Storage: {
     getToken: jest.fn(() => 'token-1'),
   },
 }));
 
-describe.skip('gameService.generateGame', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    post.mockResolvedValue({
-      gameId: 'game-1',
-      status: 'generating',
-      generationTask: {
-        taskId: 'task-1',
-        taskType: 'pipeline_run',
-        status: 'queued',
-      },
-    });
-  });
-
-  test('includes the requested orientation in generate requests', async () => {
-    await generateGame('做一个双人竞速小游戏', 'Wide Runner', {
-      orientation: 'landscape',
-    });
-
-    expect(post).toHaveBeenCalledWith('/api/v1/games/generate', expect.objectContaining({
-      title: 'Wide Runner',
-      description: '做一个双人竞速小游戏',
-      prompt: '做一个双人竞速小游戏',
-      orientation: 'landscape',
-    }), expect.objectContaining({ timeout: 60000 }));
-  });
-
-  test('defaults orientation to portrait when no option is provided', async () => {
-    await generateGame('做一个平台跳跃游戏', 'Portrait Game');
-
-    expect(post).toHaveBeenCalledWith('/api/v1/games/generate', expect.objectContaining({
-      title: 'Portrait Game',
-      description: '做一个平台跳跃游戏',
-      prompt: '做一个平台跳跃游戏',
-      orientation: 'portrait',
-    }), expect.objectContaining({ timeout: 60000 }));
-  });
-});
-
 describe('gameService.createCreationSession', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    isH5Runtime.mockReturnValue(true);
     post.mockResolvedValue({
       sessionId: 'session-1',
       status: 'collecting',
@@ -102,6 +65,52 @@ describe('gameService.createCreationSession', () => {
       expect.objectContaining({
         timeout: 90000,
       })
+    );
+  });
+
+  test('defaults omitted orientation to landscape on Creative Web', async () => {
+    await createCreationSession('观察双摆轨迹如何分离', '双摆实验', {
+      entryMode: 'create',
+    });
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/v1/games/creation-sessions',
+      expect.objectContaining({
+        prompt: '观察双摆轨迹如何分离',
+        orientation: 'landscape',
+      }),
+      expect.any(Object),
+    );
+  });
+
+  test('keeps an explicit portrait orientation', async () => {
+    await createCreationSession('做一个竖向展示的交互实验', '竖向实验', {
+      entryMode: 'create',
+      orientation: 'portrait',
+    });
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/v1/games/creation-sessions',
+      expect.objectContaining({
+        orientation: 'portrait',
+      }),
+      expect.any(Object),
+    );
+  });
+
+  test('defaults omitted orientation to portrait on weapp', async () => {
+    isH5Runtime.mockReturnValue(false);
+
+    await createCreationSession('观察双摆轨迹如何分离', '双摆实验', {
+      entryMode: 'create',
+    });
+
+    expect(post).toHaveBeenCalledWith(
+      '/api/v1/games/creation-sessions',
+      expect.objectContaining({
+        orientation: 'portrait',
+      }),
+      expect.any(Object),
     );
   });
 });
@@ -228,6 +237,7 @@ describe('gameService.normalizeCreationSessionSnapshot', () => {
       sessionId: 'session-1',
       status: 'collecting',
       prompt: '做一个平台跳跃游戏',
+      orientation: '',
       generationTask: null,
       currentQuestion: expect.objectContaining({
         id: 'question-1',
@@ -336,6 +346,7 @@ describe('creation session streaming helpers', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    isH5Runtime.mockReturnValue(true);
 
     global.EventSource = class MockEventSource {
       constructor(url) {

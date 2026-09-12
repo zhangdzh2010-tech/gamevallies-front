@@ -153,6 +153,9 @@ jest.mock('../../../utils/authNavigation', () => ({
 
 jest.mock('../../../utils/gameOrientation', () => ({
   getGameOrientation: jest.fn(() => 'portrait'),
+  getDefaultCreateOrientation: jest.fn(() => (
+    require('../../../utils/runtime').isH5Runtime() ? 'landscape' : 'portrait'
+  )),
 }));
 
 jest.mock('../../../utils/media', () => ({
@@ -163,6 +166,8 @@ jest.mock('../../../utils/runtime', () => ({
   isH5Runtime: jest.fn(() => true),
   isWeappRuntime: jest.fn(() => false),
 }));
+
+const { isH5Runtime, isWeappRuntime } = require('../../../utils/runtime');
 
 jest.mock('../../../utils/systemInfo', () => ({
   getSafeSystemInfo: jest.fn(() => ({ windowHeight: 720 })),
@@ -220,23 +225,71 @@ function buildGameStoreState(overrides = {}) {
 describe('Create page creation session flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    isH5Runtime.mockReturnValue(true);
+    isWeappRuntime.mockReturnValue(false);
     mockGameStoreState = buildGameStoreState();
   });
 
   test('starts a creation session from the first prompt', async () => {
     render(<CreatePage />);
 
+    expect(screen.getByLabelText('呈现比例').value).toBe('landscape');
     const initialInput = await screen.findByLabelText('creative-description');
     fireEvent.change(initialInput, { target: { value: 'Make a funny office stealth game' } });
     fireEvent.click(screen.getByTestId('workspace-primary'));
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
-        'Make a funny office stealth game',
+        expect.stringContaining('Make a funny office stealth game'),
         '',
         expect.objectContaining({
           entryMode: 'create',
+          orientation: 'landscape',
           generationTier: 'standard',
+        }),
+      );
+    });
+    expect(mockStartCreationSession.mock.calls[0][0]).toContain('呈现方式：交互实验');
+    expect(mockStartCreationSession.mock.calls[0][0]).toContain('请生成桌面浏览器中的可交互创意作品');
+  });
+
+  test('keeps an explicit portrait choice on Creative Web', async () => {
+    render(<CreatePage />);
+
+    fireEvent.change(await screen.findByLabelText('呈现比例'), { target: { value: 'portrait' } });
+    fireEvent.change(screen.getByLabelText('creative-description'), {
+      target: { value: '做一个竖向展示的交互实验' },
+    });
+    fireEvent.click(screen.getByTestId('workspace-primary'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        expect.stringContaining('做一个竖向展示的交互实验'),
+        '',
+        expect.objectContaining({
+          entryMode: 'create',
+          orientation: 'portrait',
+        }),
+      );
+    });
+  });
+
+  test('defaults weapp native create to portrait without desktop framing', async () => {
+    isH5Runtime.mockReturnValue(false);
+    isWeappRuntime.mockReturnValue(true);
+    render(<CreatePage />);
+
+    const initialInput = await screen.findByLabelText('create-initial-prompt');
+    fireEvent.change(initialInput, { target: { value: '观察不同初始角度的双摆运动' } });
+    fireEvent.click(screen.getByTestId('workspace-primary'));
+
+    await waitFor(() => {
+      expect(mockStartCreationSession).toHaveBeenCalledWith(
+        '观察不同初始角度的双摆运动',
+        '',
+        expect.objectContaining({
+          entryMode: 'create',
+          orientation: 'portrait',
         }),
       );
     });
@@ -290,10 +343,11 @@ describe('Create page creation session flow', () => {
 
     await waitFor(() => {
       expect(mockStartCreationSession).toHaveBeenCalledWith(
-        'Make a boss-rush rhythm game',
+        expect.stringContaining('Make a boss-rush rhythm game'),
         '',
         expect.objectContaining({
           entryMode: 'create',
+          orientation: 'landscape',
           generationTier: 'standard',
         }),
       );

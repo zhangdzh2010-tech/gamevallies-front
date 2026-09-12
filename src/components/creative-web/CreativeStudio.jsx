@@ -7,6 +7,7 @@ import { publicationDraftFor, isPublicationReady } from './PublicationFields';
 
 export default function CreativeStudio({
   mode = 'create', title = '', onTitleChange, orientation = 'landscape', onOrientationChange,
+  format, onFormatChange,
   input = '', onInputChange, session, work, referenceWork, generating = false, progress, loading = false,
   error = '', primary, secondary = [], onCancel, onNew, canPlay = true, onUnlock,
   quotaText = '', supplemental = null, inputAriaLabel = 'creative-description',
@@ -39,5 +40,5 @@ export default function CreativeStudio({
     } catch (err) { setPublishError(err?.message || '发布失败，请稍后重试。'); }
     finally { actionRef.current = false; setPublishing(false); }
   }
-  return <ConversationStudioBody {...{mode, displayTitle, onTitleChange, orientation, onOrientationChange, input, onInputChange, session, work, previewWork, generating, progress, loading, error, primary, secondary, onCancel, onNew, canPlay, onUnlock, quotaText, supplemental, inputAriaLabel, completed, publishing, published, publishError, shareUrl, publish, publicationDraft, onPublicationDraftChange}}><PaywallPopup /></ConversationStudioBody>;
+  return <ConversationStudioBody {...{mode, displayTitle, onTitleChange, orientation, onOrientationChange, format, onFormatChange, input, onInputChange, session, work, previewWork, generating, progress, loading, error, primary, secondary, onCancel, onNew, canPlay, onUnlock, quotaText, supplemental, inputAriaLabel, completed, publishing, published, publishError, shareUrl, publish, publicationDraft, onPublicationDraftChange}}><PaywallPopup /></ConversationStudioBody>;
 }

@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import { buildCreativePrompt, saveCreativeDraft, consumeCreativeDraft, normalizeWorks } from '../creativeModel';
+import { buildCreativePrompt, frameDesktopCreatePrompt, saveCreativeDraft, consumeCreativeDraft, normalizeWorks } from '../creativeModel';
 
 afterEach(() => { sessionStorage.clear(); jest.restoreAllMocks(); });
 test('preserves an original science idea and adds scientific constraints without requiring a game', () => {
@@ -25,6 +25,13 @@ test('does not revive an expired or malformed draft', () => {
   expect(consumeCreativeDraft()).toBeNull();
   sessionStorage.setItem('gamevallies.creative-web.draft.v1', '{bad json');
   expect(consumeCreativeDraft()).toBeNull();
+});
+test('frames a raw desktop idea as an interactive experiment without wrapping twice', () => {
+  const framed = frameDesktopCreatePrompt('比较两组双摆的运动轨迹');
+  expect(framed).toContain('比较两组双摆的运动轨迹');
+  expect(framed).toContain('呈现方式：交互实验');
+  expect(framed).toContain('请生成桌面浏览器中的可交互创意作品');
+  expect(frameDesktopCreatePrompt(framed)).toBe(framed);
 });
 test('never fills a failed or empty work list with demonstration projects', () => {
   expect(normalizeWorks(null)).toEqual([]);

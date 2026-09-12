@@ -1,4 +1,5 @@
 // Creation-session snapshots and UI derivation; no store ownership.
+import { getDefaultCreateOrientation, normalizeGameOrientation } from '../../utils/gameOrientation';
 import {
   ACTIVE_CREATION_SESSION_STATUSES,
 } from './constants';
@@ -284,7 +285,7 @@ export function buildCreationSessionContext(input = {}) {
     prompt: input.prompt || input.description || '',
     title: input.title || '',
     entryMode: input.entryMode || 'create',
-    orientation: input.orientation || 'portrait',
+    orientation: normalizeGameOrientation(input.orientation, getDefaultCreateOrientation()),
     generationTier: input.generationTier || 'standard',
     sourceGameId: input.sourceGameId || '',
   };

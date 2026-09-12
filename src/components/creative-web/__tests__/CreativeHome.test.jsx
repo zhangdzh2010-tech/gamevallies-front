@@ -47,7 +47,11 @@ test('carries the chosen scientific idea into the authenticated creation flow', 
   fireEvent.change(screen.getByLabelText('你的创意'), { target: { value: '观察不同初始角度的双摆运动' } });
   fireEvent.click(screen.getByTestId('workspace-primary'));
   expect(openCreatePageWithAuth).toHaveBeenCalledWith({ mode: 'fresh' });
-  expect(consumeCreativeDraft().prompt).toContain('观察不同初始角度的双摆运动');
+  const draft = consumeCreativeDraft();
+  expect(draft.prompt).toContain('观察不同初始角度的双摆运动');
+  expect(draft.prompt).toContain('呈现方式：交互实验');
+  expect(draft.orientation).toBe('landscape');
+  expect(draft.format).toBe('experiment');
 });
 
 

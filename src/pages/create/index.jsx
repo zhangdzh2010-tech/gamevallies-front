@@ -1,6 +1,6 @@
 import CreativeStudio from '../../components/creative-web/CreativeStudio';
 import { useStudioEmbed } from '../../components/creative-web/StudioEmbedContext';
-import { consumeCreativeDraft } from '../../components/creative-web/creativeModel';
+import { consumeCreativeDraft, frameDesktopCreatePrompt } from '../../components/creative-web/creativeModel';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
@@ -35,7 +35,7 @@ import {
   openIteratePageWithAuth,
   openProfilePageWithTab,
 } from '../../utils/authNavigation';
-import { getGameOrientation } from '../../utils/gameOrientation';
+import { getDefaultCreateOrientation, getGameOrientation } from '../../utils/gameOrientation';
 import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import { getSafeSystemInfo } from '../../utils/systemInfo';
@@ -44,9 +44,10 @@ import { sanitizeUserIdea } from '../../utils/sanitizeIdea';
 import './index.scss';
 
 const ORIENTATION_OPTIONS = [
-  { value: 'portrait', label: '竖屏' },
-  { value: 'landscape', label: '横屏' },
+  { value: 'landscape', label: '横向 · 桌面' },
+  { value: 'portrait', label: '纵向展示' },
 ];
+const CREATIVE_FORMATS = ['experiment', 'exploration', 'explanation'];
 
 function getUserFacingCreateError(rawError, fallbackStageLabel = '保存创作描述') {
   const source = typeof rawError === 'string' ? rawError.trim() : '';
@@ -109,7 +110,10 @@ export default function Create() {
   const [gameName, setGameName] = useState('');
   const [prompt, setPrompt] = useState('');
   const [sessionPromptDraft, setSessionPromptDraft] = useState('');
-  const [orientation, setOrientation] = useState(isH5 ? 'landscape' : 'portrait');
+  // isH5 is Creative Web / PC, not "mobile H5". Landscape is the desktop default;
+  // WeChat mini-program create stays portrait-first.
+  const [orientation, setOrientation] = useState(getDefaultCreateOrientation);
+  const [format, setFormat] = useState('experiment');
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
   const promptDraftSyncKeyRef = useRef('');
@@ -127,7 +131,8 @@ export default function Create() {
     setPrompt('');
     setSessionPromptDraft('');
     setGameName('');
-    setOrientation(isH5 ? 'landscape' : 'portrait');
+    setOrientation(getDefaultCreateOrientation());
+    setFormat('experiment');
     promptDraftSyncKeyRef.current = '';
   };
 
@@ -284,6 +289,7 @@ export default function Create() {
           setPrompt(draft.prompt);
           if (draft.title) setGameName(draft.title);
           if (['landscape', 'portrait'].includes(draft.orientation)) setOrientation(draft.orientation);
+          if (CREATIVE_FORMATS.includes(draft.format)) setFormat(draft.format);
         }
       }
 
@@ -372,8 +378,14 @@ export default function Create() {
     setSessionPromptDraft('');
 
     try {
+      const entryPrompt = isH5
+        ? frameDesktopCreatePrompt(prompt.trim(), format)
+        : prompt.trim();
+      if (entryPrompt !== prompt) {
+        setPrompt(entryPrompt);
+      }
       await startCreationSession(
-        prompt.trim(),
+        entryPrompt,
         gameName.trim(),
         {
           entryMode: 'create',
@@ -434,8 +446,15 @@ export default function Create() {
       return null;
     }
 
+    const entryPrompt = isH5
+      ? frameDesktopCreatePrompt(prompt.trim(), format)
+      : prompt.trim();
+    if (entryPrompt !== prompt) {
+      setPrompt(entryPrompt);
+    }
+
     return startCreationSession(
-      prompt.trim(),
+      entryPrompt,
       gameName.trim(),
       {
         entryMode: 'create',
@@ -702,8 +721,8 @@ export default function Create() {
       workspaceTitle={isCreateSessionActive ? '确认这次的创作方向' : '说说你的想法'}
       workspaceHint={isCreateSessionActive
         ? '请确认你的创作描述，也可以继续修改，再开始生成。'
-        : '先描述现象、交互方式和想要的体验，确认后由 AI 开始生成作品。'}
-      introMessage="先写下你想实现的创意，确认描述后开始生成。"
+        : '先描述现象、可调参数和希望观察的结果，确认后做成可交互的实验或演示。'}
+      introMessage="先写下你想探索的现象或想法，确认后生成可交互作品。"
       helperText={isCreateSessionActive
         ? (creationSession?.currentQuestion?.prompt || creationSession?.currentQuestion?.content || '请确认或修改这一版方向。')
         : ''}
@@ -723,6 +742,7 @@ export default function Create() {
     return <CreativeStudio
       title={gameName} onTitleChange={setGameName}
       orientation={orientation} onOrientationChange={setOrientation}
+      format={format} onFormatChange={setFormat}
       input={activeCreateInputValue}
       onInputChange={value => isCreateSessionActive ? setSessionPromptDraft(value) : setPrompt(value)}
       session={creationSession} work={currentGame}
@@ -827,12 +847,12 @@ export default function Create() {
   }
 
   if (currentGame && !isGenerating && isCompletedGameStatus(currentGame?.status)) {
-    const resultTitle = currentGame.title || gameName || '新游戏';
+    const resultTitle = currentGame.title || gameName || '新作品';
     const resultCoverUrl = getGameCoverUrl(currentGame);
     const resultDescription = canPlay
       ? '现在可以直接试玩，也可以继续打磨。'
       : '作品已经生成完成，订阅后即可试玩。';
-    const playActionLabel = canPlay ? '试玩游戏' : '订阅后试玩';
+    const playActionLabel = canPlay ? '体验作品' : '订阅后体验';
 
     return renderCreatePage(
       <CreationSessionShell
