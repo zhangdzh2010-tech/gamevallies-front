@@ -346,6 +346,7 @@ describe('creation session streaming helpers', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    isH5Runtime.mockReturnValue(true);
 
     global.EventSource = class MockEventSource {
       constructor(url) {

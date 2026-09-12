@@ -4,6 +4,10 @@ jest.mock('../../../utils/runtime', () => ({
   isH5Runtime: jest.fn(() => true),
 }));
 
+jest.mock('../taskProgress', () => ({
+  isCompletedGameStatus: jest.fn(() => false),
+}));
+
 const { buildCreationSessionContext } = require('../creationSessionModel');
 const { isH5Runtime } = require('../../../utils/runtime');
 
