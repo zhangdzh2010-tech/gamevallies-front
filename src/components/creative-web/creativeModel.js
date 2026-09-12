@@ -16,6 +16,18 @@ export function buildCreativePrompt(idea, domainId = 'open', formatId = 'experim
   const scientific = ['physics', 'biology', 'chemistry'].includes(domain.id);
   return `${String(idea || '').trim()}\n\n创作领域：${domain.title}。呈现方式：${format.title}。${format.instruction}\n请生成桌面浏览器中的可交互创意作品。除非用户明确需要，不要自动添加积分、输赢、关卡、敌人或倒计时。${scientific ? '\n涉及科学概念时，明确展示使用的模型、单位、参数范围与简化假设，区分示意动画和定量计算；不编造实验数据或把简化模型当成真实实验结论。' : ''}`;
 }
+
+export function hasDesktopCreateFraming(idea) {
+  return /呈现方式：|请生成桌面浏览器/.test(String(idea || ''));
+}
+
+export function frameDesktopCreatePrompt(idea, formatId = 'experiment', domainId = 'open') {
+  const text = String(idea || '').trim();
+  if (!text || hasDesktopCreateFraming(text)) {
+    return text;
+  }
+  return buildCreativePrompt(text, domainId, formatId);
+}
 const DRAFT_KEY = 'gamevallies.creative-web.draft.v1';
 const VIEW_KEY = 'gamevallies.creative-web.view.v1';
 const STUDIO_KEY = 'gamevallies.creative-web.studio.v1';

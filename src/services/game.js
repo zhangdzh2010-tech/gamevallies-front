@@ -1,6 +1,6 @@
 import { post, get, del, patch } from './api';
 import { API_CONFIG } from '../types';
-import { normalizeGameOrientation } from '../utils/gameOrientation';
+import { getDefaultCreateOrientation, normalizeGameOrientation } from '../utils/gameOrientation';
 import { isH5Runtime } from '../utils/runtime';
 import { Storage } from '../utils/storage';
 
@@ -424,7 +424,9 @@ export function normalizeCreationSessionSnapshot(raw) {
     titleDraft: raw.titleDraft || raw.title || raw.sessionTitle || '',
     title: raw.title || raw.titleDraft || raw.sessionTitle || '',
     prompt: raw.prompt || raw.description || raw.initialPrompt || '',
-    orientation: normalizeGameOrientation(raw.orientation || raw.gameOrientation),
+    orientation: raw.orientation || raw.gameOrientation
+      ? normalizeGameOrientation(raw.orientation || raw.gameOrientation)
+      : '',
     generationTier: raw.generationTier || raw.tier || 'standard',
     sourceGameId: raw.sourceGameId || raw.baseGameId || raw.parentGameId || '',
     gameId: raw.gameId || raw.generatedGameId || raw.resultGameId || '',
@@ -451,7 +453,10 @@ export function normalizeCreationSessionSnapshot(raw) {
 
 export async function createCreationSession(prompt, title, options = {}) {
   const normalizedOptions = options && typeof options === 'object' ? options : {};
-  const orientation = normalizeGameOrientation(normalizedOptions.orientation);
+  const orientation = normalizeGameOrientation(
+    normalizedOptions.orientation,
+    getDefaultCreateOrientation(),
+  );
 
   const response = await post(
     '/api/v1/games/creation-sessions',
