@@ -4,6 +4,7 @@ import { getLatest, getTrending, searchGames } from '../../services/feed';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../utils/authNavigation';
 import { Storage } from '../../utils/storage';
 import { getGameCoverUrl } from '../../utils/media';
+import { CoverMatte, PlayerLetterbox } from './coverLetterbox';
 import { normalizeWorks } from './creativeModel';
 import { CreativeIcon } from './CreativeShell';
 
@@ -58,7 +59,7 @@ export default function CreativeSquare() {
       const description = work.description || '';
       return <article key={work.id} className={`cw-project cw-square-card${sort === 'trending' && !search && index < 3 ? ' cw-project-featured' : ''}`}>
         <button type="button" className="cw-project-open" onClick={() => setSelected(work)} aria-label={`体验 ${work.title}`}>
-          <div className="cw-cover">{sort === 'trending' && !search && index < 3 && <span className="cw-hot-badge">热门 · {index + 1}</span>}{getGameCoverUrl(work) ? <img src={getGameCoverUrl(work)} alt="" loading="lazy" /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /></div>}</div>
+          <div className="cw-cover">{sort === 'trending' && !search && index < 3 && <span className="cw-hot-badge">热门 · {index + 1}</span>}{getGameCoverUrl(work) ? <CoverMatte src={getGameCoverUrl(work)} /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /></div>}</div>
           <div className="cw-project-body">
             <h3>{work.title || '未命名作品'}</h3>
             <p title={description || undefined}>{description}</p>
@@ -76,7 +77,7 @@ export default function CreativeSquare() {
     {more && !loading && <button type="button" className="cw-button cw-outline cw-loadmore" onClick={() => load(page + 1)}>加载更多作品</button>}
     {selected && <dialog ref={dialog} className="cw-dialog cw-experience-dialog" aria-label="广场作品体验" onCancel={() => setSelected(null)} onClose={() => setSelected(null)}>
       <div className="cw-dialog-head"><h2>{selected.title}</h2><button type="button" aria-label="关闭作品体验" onClick={() => setSelected(null)}>×</button></div>
-      <div className="cw-dialog-stage">{playing ? <WorkSandbox workId={selected.id} className="cw-square-player" title={selected.title || '广场作品'} src={`/games/${encodeURIComponent(selected.id)}/index.html`} sandbox="allow-scripts" referrerPolicy="no-referrer" /> : <div className="cw-empty"><p>{selected.description}</p><button type="button" className="cw-button cw-primary" onClick={() => setPlaying(true)}>开始体验</button></div>}</div>
+      <div className="cw-dialog-stage">{playing ? <PlayerLetterbox className="cw-square-stage"><WorkSandbox workId={selected.id} className="cw-square-player" title={selected.title || '广场作品'} src={`/games/${encodeURIComponent(selected.id)}/index.html`} sandbox="allow-scripts" referrerPolicy="no-referrer" /></PlayerLetterbox> : <div className="cw-empty"><p>{selected.description}</p><button type="button" className="cw-button cw-primary" onClick={() => setPlaying(true)}>开始体验</button></div>}</div>
       <div className="cw-dialog-foot"><span>复刻会创建你的独立作品，保留原作来源。</span><button type="button" className="cw-button cw-primary" disabled={!own(selected) && selected.allowFork === false} onClick={() => remix(selected)}>{own(selected) ? '继续创作' : selected.allowFork === false ? '作者未开放复刻' : '复刻并创作'}</button></div>
     </dialog>}
   </>;

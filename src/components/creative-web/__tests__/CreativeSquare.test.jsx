@@ -5,10 +5,11 @@ import CreativeSquare from '../CreativeSquare';
 import { getLatest, getTrending, searchGames } from '../../../services/feed';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../../utils/authNavigation';
 import { Storage } from '../../../utils/storage';
+import { getGameCoverUrl } from '../../../utils/media';
 jest.mock('../../../services/feed', () => ({ getLatest: jest.fn(), getTrending: jest.fn(), searchGames: jest.fn() }));
 jest.mock('../../../utils/authNavigation', () => ({ openForkPageWithAuth: jest.fn(), openIteratePageWithAuth: jest.fn() }));
 jest.mock('../../../utils/storage', () => ({ Storage: { getUser: jest.fn() } }));
-jest.mock('../../../utils/media', () => ({ getGameCoverUrl: () => '' }));
+jest.mock('../../../utils/media', () => ({ getGameCoverUrl: jest.fn(() => '') }));
 jest.mock('../CreativeShell', () => ({ CreativeIcon: () => null }));
 const work = { id: 'public-work', title: '种群模型', authorId: 'author', status: 'published', author: { displayName: '原作者' } };
 beforeEach(() => {
@@ -18,6 +19,7 @@ beforeEach(() => {
   getLatest.mockResolvedValue({ items: [], hasMore: false });
   getTrending.mockResolvedValue({ items: [work], hasMore: false });
   searchGames.mockResolvedValue({ items: [], hasMore: false });
+  getGameCoverUrl.mockReturnValue('');
 });
 test('visitors can browse and play public works without the authenticated play endpoint', async () => {
   render(<CreativeSquare />);
@@ -97,4 +99,26 @@ test('keeps square meta compact while exposing the full description and both act
   expect(modal.className).toContain('cw-experience-dialog');
   expect(modal.querySelector('.cw-dialog-stage')).toBeTruthy();
   expect(within(modal).getByText('复刻并创作')).toBeTruthy();
+});
+
+test('letterboxes plaza covers and experience iframes so landscape art is not cropped', async () => {
+  getGameCoverUrl.mockReturnValue('https://cdn.example/covers/ohm.png');
+  getTrending.mockResolvedValue({
+    items: [{ ...work, title: '电流的秘密', description: '拨动电压与电阻' }],
+    hasMore: false,
+  });
+  render(<CreativeSquare />);
+  const heading = await screen.findByText('电流的秘密');
+  const card = heading.closest('article');
+  const matte = card.querySelector('.cw-cover-matte');
+  const coverImg = matte && matte.querySelector('img');
+  expect(matte).toBeTruthy();
+  expect(coverImg.getAttribute('src')).toBe('https://cdn.example/covers/ohm.png');
+  expect(card.querySelector('.cw-cover')).toBeTruthy();
+  fireEvent.click(within(card).getByText('体验作品'));
+  fireEvent.click(await screen.findByText('开始体验'));
+  const frame = await screen.findByTitle('电流的秘密');
+  expect(frame.closest('.cw-player-letterbox')).toBeTruthy();
+  expect(frame.closest('.cw-player-letterbox--scaled')).toBeTruthy();
+  expect(frame.closest('.cw-square-stage')).toBeTruthy();
 });
