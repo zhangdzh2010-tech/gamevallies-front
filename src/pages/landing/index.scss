@@ -318,10 +318,10 @@
 .zl-band__card {
   min-height: 220PX;
   border-radius: 120PX 120PX 12PX 12PX;
-  background: radial-gradient(circle at 50% 120%, #0b1a33, #06101f 62%);
+  background: #0b1220;
   display: grid;
   place-items: center;
-  color: rgba(235, 248, 255, .72);
+  color: #{$chrome-ice-strong};
   font-size: 15PX;
 }
 
@@ -466,6 +466,22 @@
   border-top: 1PX solid var(--zl-line);
 }
 
+.zl-ver {
+  position: fixed;
+  right: 18PX;
+  bottom: 18PX;
+  z-index: 30;
+  min-height: 32PX;
+  padding: 0 12PX;
+  border-radius: 999PX;
+  background: var(--zl-surface);
+  border: 1PX solid var(--zl-line);
+  color: var(--zl-muted);
+  font-size: 12PX;
+  display: inline-flex;
+  align-items: center;
+}
+
 .zl-glyph {
   position: absolute;
   inset: 28% auto auto 50%;
@@ -487,4 +503,5 @@
   .zl-band { padding: 48PX 18PX; }
   .zl-hero { min-height: 0; }
   .zl-hero h1 { letter-spacing: .04em; }
+  .zl-ver { display: none; }
 }

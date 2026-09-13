@@ -226,7 +226,7 @@ export default function LandingPage() {
           <p className="zl-section-lead">
             {fromApi
               ? '来自已公开发布的交互实验。'
-              : '高质验收批次的 KEEP 作品。上线后接创意广场。'}
+              : '高质验收批次的 KEEP。上线后接创意广场。'}
           </p>
           {/* TODO(feed): wire domain filters to a published-by-type API when it exists. */}
           <div className="zl-filters" role="tablist" aria-label="作品领域">
@@ -276,8 +276,9 @@ export default function LandingPage() {
 
       <footer className="zl-foot">
         <span>智了空间 · 创意与教育的交互实验</span>
-        <span>v2.2.2</span>
+        <span>草箱 v2.2.2 · 去磨砂</span>
       </footer>
+      <span className="zl-ver">草箱 v2.2.2 · 去磨砂</span>
     </div>
   );
 }

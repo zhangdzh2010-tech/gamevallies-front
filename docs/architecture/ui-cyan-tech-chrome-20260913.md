@@ -22,7 +22,7 @@ H5 launch page is `pages/landing/index` (not a tab). Weapp still launches `pages
 - Unauthenticated users can open the landing without login.
 - `开启智了` → Creative Web home (`/pages/index/index` → `CreativeHome`).
 - `即刻创作` / `开始创作` → `openCreatePageWithAuth({ mode: 'fresh' })`.
-- Static draft: `docs/landing/index.html`.
+- Static draft (approved v2.2): `docs/landing/zhile-landing-draft-v2.html` (`docs/landing/index.html` redirects to it).
 
 ## What changed
 - **A** Shared tokens.
@@ -35,5 +35,4 @@ H5 launch page is `pages/landing/index` (not a tab). Weapp still launches `pages
 - Cover and preview letterbox geometry.
 
 ## Follow-ups
-- Replace KEEP showcase with a published-by-domain API when backend exposes physics/chemistry/biology/tool/game filters.
-- Port any later static landing HTML from `docs/landing/` if a newer draft arrives.
+- Replace KEEP showcase with a published-by-domain API when backend exposes physics/chemistry/biology/tool/game filters. The v2.2 draft is already committed; re-port only if a later HTML arrives.

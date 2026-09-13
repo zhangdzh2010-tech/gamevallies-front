@@ -62,6 +62,7 @@ test('landing shows approved marketing copy and never AI 游戏工坊', async ()
   expect(screen.getByText('这样探索科学')).toBeTruthy();
   expect(screen.getByText('可感知的规律')).toBeTruthy();
   expect(screen.getByText('灵感即刻成实验')).toBeTruthy();
+  expect(screen.getAllByText(/草箱 v2\.2\.2/).length).toBeGreaterThan(0);
   expect(screen.queryByText('AI 游戏工坊')).toBeNull();
   await waitFor(() => expect(mockGetLatest).toHaveBeenCalled());
 });
@@ -83,6 +84,20 @@ test('landing chrome is solid cyan-tech: no frost or purple neon', () => {
   expect(scss).not.toMatch(/backdrop-filter/i);
   expect(scss).not.toMatch(/#6e56ff/i);
   expect(scss).not.toMatch(/#c4f465/i);
+});
+
+test('v2.2 static draft matches approved tokens and section markers', () => {
+  const draft = readFileSync(join(__dirname, '../../../../docs/landing/zhile-landing-draft-v2.html'), 'utf8');
+  expect(draft).toMatch(/#060C20|#060c20/);
+  expect(draft).toMatch(/#111318/);
+  expect(draft).toMatch(/#004DC8/);
+  expect(draft).toMatch(/#00CAE0/);
+  expect(draft).toMatch(/探索方式/);
+  expect(draft).toMatch(/这样探索科学/);
+  expect(draft).toMatch(/即刻创作/);
+  expect(draft).toMatch(/灵感即刻成实验/);
+  expect(draft).not.toMatch(/backdrop-filter/i);
+  expect(draft).not.toMatch(/AI 游戏工坊/);
 });
 
 test('showcase falls back to curated KEEP when public feed is empty', async () => {
