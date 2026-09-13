@@ -816,7 +816,7 @@ async function runCase(browser, baseUrl, adminToken, stamp, caseIndex, caseConfi
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const env = loadEnv(ENV_PATH);
-  const baseUrl = (env.PUBLIC_API_BASE_URL || 'https://gamevallies.com').replace(/\/$/, '');
+  const baseUrl = (env.PUBLIC_API_BASE_URL || 'https://www.zlspace.ai').replace(/\/$/, '');
   const adminToken = env.ADMIN_TOKEN;
   const stamp = nowStamp();
   const artifactDir = path.join(FRONTEND_ROOT, 'tmp_playwright_ui_e2e_artifacts', stamp);

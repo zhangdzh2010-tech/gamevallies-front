@@ -100,7 +100,7 @@ async function collectPageSnapshot(page) {
 
 async function main() {
   const env = loadEnv(ENV_PATH);
-  const baseUrl = (env.PUBLIC_API_BASE_URL || 'https://gamevallies.com').replace(/\/$/, '');
+  const baseUrl = (env.PUBLIC_API_BASE_URL || 'https://www.zlspace.ai').replace(/\/$/, '');
   const adminToken = env.ADMIN_TOKEN;
   const stamp = Date.now();
   const username = `pwsub_${stamp}`;

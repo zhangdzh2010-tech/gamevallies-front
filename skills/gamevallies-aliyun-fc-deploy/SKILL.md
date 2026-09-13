@@ -38,7 +38,7 @@ description: 为 GameVallies 前后端规划、改造、发布和排查阿里云
 
 ## 当前配置约定
 
-两库使用 GitHub Environment `Aliyun`，读取独立 Secrets/Variables，由 configure.py 生成 0600 临时配置；不让用户寻找或编辑 `FC_RUNTIME_JSON`、services/game-service。现有域名 `zlspace.clawworks.cn`，OSS 前缀 `gamevallies/prod/`；作品域名保持独立并通过变量确认。工作流的环境级发布开关必须在绑定 Aliyun 的 job 中读取。完整字段以部署文档和实际 workflow 为准。
+两库使用 GitHub Environment `Aliyun`，读取独立 Secrets/Variables，由 configure.py 生成 0600 临时配置；不让用户寻找或编辑 `FC_RUNTIME_JSON`、services/game-service。生产公开站点 `https://www.zlspace.ai`（优先 www，不要只用 apex），OSS 前缀 `gamevallies/prod/`；作品域名 `https://content.zlspace.ai` 保持独立。工作流的环境级发布开关必须在绑定 Aliyun 的 job 中读取。完整字段以部署文档和实际 workflow 为准。
 
 发布前验证 OSS 不可变路径与 ZIP 摘要。版本描述记录无密钥的 OSS 引用，使 GetFunction 未返回代码时仍能恢复旧代码包；保留仍供回滚使用的对象。首次容器转代码包应保留旧镜像回滚。未知来源代码包先导出，不覆盖其回滚依据。业务上传使用 OSS，缺配置不能回退本地临时盘；旧文件和挂载不自动删除。
 
