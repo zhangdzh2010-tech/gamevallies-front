@@ -15,5 +15,6 @@ test('player letterbox marks the stage for 16:10 contain scaling', () => {
   const { container } = render(<PlayerLetterbox className="cw-square-stage"><iframe title="work" /></PlayerLetterbox>);
   const stage = container.querySelector('.cw-player-letterbox.cw-player-letterbox--scaled.cw-square-stage');
   expect(stage).toBeTruthy();
+  expect(stage.querySelector('.cw-player-scaler')).toBeTruthy();
   expect(stage.querySelector('iframe').getAttribute('title')).toBe('work');
 });

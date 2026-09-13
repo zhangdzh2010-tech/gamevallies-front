@@ -68,6 +68,7 @@
   .cw-project {border:1PX solid var(--cw-line);border-radius:12PX;overflow:hidden;background:white;text-align:left;padding:0;transition:transform .2s,box-shadow .2s;min-width:0;}
   .cw-project:hover {transform:translateY(-3PX);box-shadow:0 10PX 28PX #18371e15;}
   .cw-cover {aspect-ratio:16/10;height:auto;width:100%;position:relative;background:#0b1f1c;color:#b2e1ba;overflow:hidden;}
+  .cw-cover:before {content:"";display:block;width:100%;padding-top:62.5%;}
   .cw-cover>img,.cw-cover-matte>img {width:100%;height:100%;object-fit:contain;object-position:center;display:block;}
   .cw-cover>span {position:absolute;top:13PX;left:13PX;z-index:1;font-size:11PX;background:#153b32bb;color:white;padding:3PX 9PX;border:1PX solid #ffffff25;border-radius:5PX;}
   .cw-cover-empty {position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:17PX;}.cw-cover-empty>.cw-icon {width:45PX;height:45PX;stroke-width:1;}.cw-cover-empty span {font-size:10PX;letter-spacing:4PX;opacity:.6;}
@@ -142,25 +143,25 @@
   width:100%;height:100%;object-fit:contain;object-position:center;display:block;
 }
 .cw-player-letterbox {
-  container-type:size;
-  width:100%;
+  width:min(100%, calc(min(70vh,760PX) * 1.6));
+  width:min(100%, calc(min(70dvh,760PX) * 1.6));
   max-width:100%;
   aspect-ratio:16/10;
   max-height:min(70vh,760PX);
   max-height:min(70dvh,760PX);
+  margin-inline:auto;
   background:#0b1f1c;
   overflow:hidden;
   position:relative;
 }
-.cw-player-letterbox iframe {
-  position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b1f1c;display:block;
-}
-.cw-player-letterbox--scaled iframe,
-.creative-web .cw-player-letterbox--scaled iframe,
-.conversation-app .cw-player-letterbox--scaled iframe {
-  position:absolute;inset:auto;top:0;left:0;width:1280px;height:800px;max-width:none;
+.cw-player-scaler {
+  position:absolute;top:0;left:0;width:1280px;height:800px;
   transform-origin:top left;
-  transform:scale(min(calc(100cqw / 1280), calc(100cqh / 800)));
+}
+.cw-player-letterbox iframe,
+.creative-web .cw-player-letterbox iframe,
+.conversation-app .cw-player-letterbox iframe {
+  display:block;width:100%;height:100%;border:0;background:#0b1f1c;
 }
 
 .creative-web .cw-project.cw-project-featured { border-color: #d6a95b; box-shadow: 0 4px 18px rgba(145, 102, 33, .12); }

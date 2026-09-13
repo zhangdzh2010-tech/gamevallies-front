@@ -120,5 +120,6 @@ test('letterboxes plaza covers and experience iframes so landscape art is not cr
   const frame = await screen.findByTitle('电流的秘密');
   expect(frame.closest('.cw-player-letterbox')).toBeTruthy();
   expect(frame.closest('.cw-player-letterbox--scaled')).toBeTruthy();
+  expect(frame.closest('.cw-player-scaler')).toBeTruthy();
   expect(frame.closest('.cw-square-stage')).toBeTruthy();
 });
