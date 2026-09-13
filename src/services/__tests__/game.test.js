@@ -413,7 +413,7 @@ describe('creation session streaming helpers', () => {
     const receivedEvents = [];
     const unsubscribe = subscribeCreationSessionStream({
       sessionId: 'session-44',
-      streamPath: 'https://gamevallies.com/api/v1/games/creation-sessions/session-44/events',
+      streamPath: 'https://www.zlspace.ai/api/v1/games/creation-sessions/session-44/events',
     }, {
       onDelta: (event) => receivedEvents.push(event),
     });

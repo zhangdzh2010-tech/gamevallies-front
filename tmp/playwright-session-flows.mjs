@@ -10,7 +10,7 @@ const args = new Map(
   })
 );
 
-const BASE_URL = args.get('baseUrl') || process.env.GV_E2E_BASE_URL || 'https://gamevallies.com';
+const BASE_URL = args.get('baseUrl') || process.env.GV_E2E_BASE_URL || 'https://www.zlspace.ai';
 const API_BASE_URL = args.get('apiBaseUrl') || process.env.GV_E2E_API_BASE_URL || `${BASE_URL}/api/v1`;
 const TOKEN_PATH = process.env.GV_E2E_TOKEN_PATH || '/tmp/gv_token.txt';
 const ARTIFACT_DIR = process.env.GV_E2E_ARTIFACT_DIR || path.resolve('tmp/playwright-artifacts');

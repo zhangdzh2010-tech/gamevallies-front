@@ -10,13 +10,13 @@ describe('wechatH5 utils', () => {
 
     const authorizeUrl = buildWechatOauthAuthorizeUrl({
       appId: 'wx123456',
-      redirectUri: 'https://gamevallies.com/#/pages/login/index',
+      redirectUri: 'https://www.zlspace.ai/#/pages/login/index',
       state: 'oauth-state',
       scope: 'snsapi_base',
     });
 
     expect(authorizeUrl).toContain('appid=wx123456');
-    expect(authorizeUrl).toContain('redirect_uri=https%3A%2F%2Fgamevallies.com%2F%23%2Fpages%2Flogin%2Findex');
+    expect(authorizeUrl).toContain('redirect_uri=https%3A%2F%2Fwww.zlspace.ai%2F%23%2Fpages%2Flogin%2Findex');
     expect(authorizeUrl).toContain('state=oauth-state');
     expect(authorizeUrl.endsWith('#wechat_redirect')).toBe(true);
   });
@@ -38,7 +38,7 @@ describe('wechatH5 utils', () => {
     const replaceState = jest.fn();
 
     const nextUrl = clearWechatOauthParamsFromUrl({
-      href: 'https://gamevallies.com/?code=oauth-code&state=oauth-state#/pages/login/index',
+      href: 'https://www.zlspace.ai/?code=oauth-code&state=oauth-state#/pages/login/index',
       replaceState,
       title: 'GameVallies',
     });

@@ -335,7 +335,7 @@ function firstMatchingEvent(events, predicate) {
 
 async function main() {
   const env = loadEnv(ENV_PATH);
-  const baseUrl = String(env.PUBLIC_API_BASE_URL || 'https://gamevallies.com').replace(/\/$/, '');
+  const baseUrl = String(env.PUBLIC_API_BASE_URL || 'https://www.zlspace.ai').replace(/\/$/, '');
   const adminToken = env.ADMIN_TOKEN;
   if (!adminToken) {
     throw new Error(`ADMIN_TOKEN is missing in ${ENV_PATH}`);

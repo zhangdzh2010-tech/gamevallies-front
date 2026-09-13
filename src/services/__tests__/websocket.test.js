@@ -15,14 +15,14 @@ const { buildEngineIoWsUrl, parseWsUrl, getWebSocketManager } = require('../webs
 
 describe('websocket service helpers', () => {
   test('preserves the /ws prefix for Socket.IO handshakes', () => {
-    expect(parseWsUrl('https://gamevallies.com/ws')).toEqual({
-      engineBase: 'https://gamevallies.com',
+    expect(parseWsUrl('https://www.zlspace.ai/ws')).toEqual({
+      engineBase: 'https://www.zlspace.ai',
       enginePathPrefix: '/ws',
       namespace: '/ws',
     });
 
-    expect(buildEngineIoWsUrl('https://gamevallies.com', 'token-123', '/ws')).toBe(
-      'wss://gamevallies.com/ws/socket.io/?EIO=4&transport=websocket&token=token-123'
+    expect(buildEngineIoWsUrl('https://www.zlspace.ai', 'token-123', '/ws')).toBe(
+      'wss://www.zlspace.ai/ws/socket.io/?EIO=4&transport=websocket&token=token-123'
     );
   });
 

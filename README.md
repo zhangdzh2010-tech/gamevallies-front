@@ -45,7 +45,7 @@ npm run lint
 - `.env.production.example`：部署配置示例
 - `.env.development`：本地 watch 模式覆盖配置，可选
 
-主要环境变量定义集中在 [src/config/env.js](src/config/env.js)。
+主要环境变量定义集中在 [src/config/env.js](src/config/env.js)。生产公开站点默认 `https://www.zlspace.ai`，作品/壳页 origin 为 `https://content.zlspace.ai`。
 
 ## 目录结构
 

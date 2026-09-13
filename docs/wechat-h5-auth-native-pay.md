@@ -53,7 +53,7 @@ Content-Type: application/json
 {
   "code": "wechat oauth code",
   "state": "oauth state",
-  "redirectUri": "https://gamevallies.com/#/pages/login/index"
+  "redirectUri": "https://www.zlspace.ai/#/pages/login/index"
 }
 ```
 
@@ -118,7 +118,7 @@ Content-Type: application/json
   "data": {
     "orderId": "order_xxx",
     "payment": {
-      "payUrl": "https://gamevallies.com/pay/cashier/order_xxx"
+      "payUrl": "https://www.zlspace.ai/pay/cashier/order_xxx"
     }
   }
 }

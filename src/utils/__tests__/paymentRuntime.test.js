@@ -34,7 +34,7 @@ describe('paymentRuntime', () => {
       },
       {
         runtime: 'h5',
-        returnUrl: 'https://gamevallies.com/#/pages/subscription/index',
+        returnUrl: 'https://www.zlspace.ai/#/pages/subscription/index',
       }
     );
 

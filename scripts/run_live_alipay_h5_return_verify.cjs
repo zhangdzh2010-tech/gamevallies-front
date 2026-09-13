@@ -308,7 +308,7 @@ async function waitForUiMembershipState(page, timeout = 90000) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const env = loadEnv(ENV_PATH);
-  const baseUrl = (env.PUBLIC_API_BASE_URL || 'https://gamevallies.com').replace(/\/$/, '');
+  const baseUrl = (env.PUBLIC_API_BASE_URL || 'https://www.zlspace.ai').replace(/\/$/, '');
   const adminToken = env.ADMIN_TOKEN;
   const stamp = nowStamp();
   const shortStamp = compactStamp(stamp).slice(-12);

@@ -3,7 +3,7 @@ import { normalizeGameTypeKey } from './gameTypes';
 import { buildGamePlayPagePath } from './gamePlayRoute';
 import { getGameOrientation } from './gameOrientation';
 
-const DEFAULT_BASE_URL = 'https://gamevallies.local';
+const DEFAULT_BASE_URL = 'https://www.zlspace.ai';
 const DEFAULT_SHARE_IMAGE = '';
 const DEFAULT_SHARE_TITLE = 'Try this game on GameVallies';
 
