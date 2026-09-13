@@ -10,6 +10,7 @@ import {
 import { Storage } from './storage';
 
 export const HOME_PAGE_URL = '/pages/index/index';
+export const LANDING_PAGE_URL = '/pages/landing/index';
 export const LOGIN_PAGE_URL = '/pages/login/index';
 export const CREATE_PAGE_URL = '/pages/create/index';
 export const PROFILE_PAGE_URL = '/pages/profile/index';

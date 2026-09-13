@@ -18,9 +18,8 @@
 
   &__inner {
     align-items: center;
-    backdrop-filter: blur(10px);
-    background: rgba(17, 17, 24, 0.95);
-    border-bottom: 1px solid rgba(37, 37, 53, 0.5);
+    background: $chrome-bg;
+    border-bottom: 1px solid $chrome-line;
     box-sizing: border-box;
     display: flex;
     min-height: var(--gv-h5-topbar-min-height);
@@ -50,23 +49,23 @@
   }
 
   &__back-icon {
-    color: #b7a8ff;
+    color: $chrome-cta;
     font-size: var(--gv-h5-topbar-back-icon-size);
     font-weight: 600;
     line-height: 1;
   }
 
   &__back-text {
-    color: #b7a8ff;
+    color: $chrome-cta;
     font-size: var(--gv-h5-topbar-meta-size);
     font-weight: 600;
     line-height: 1;
   }
 
   &__title {
-    background: $brand-gradient;
-    background-clip: text;
-    color: #f3f1fb;
+    background: none;
+    background-clip: border-box;
+    color: $chrome-ice;
     display: block;
     flex: 1;
     font-size: var(--gv-h5-topbar-title-size);
@@ -74,8 +73,8 @@
     letter-spacing: 0.2px;
     line-height: 1.1;
     text-align: center;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: border-box;
+    -webkit-text-fill-color: $chrome-ice;
   }
 
   &__action {
@@ -86,7 +85,7 @@
   }
 
   &__action-text {
-    color: #b7a8ff;
+    color: $chrome-cta;
     font-size: var(--gv-h5-topbar-meta-size);
     font-weight: 600;
     line-height: 1;

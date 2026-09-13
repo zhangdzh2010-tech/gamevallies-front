@@ -65,7 +65,7 @@ function normalizeBookmarkedGame(game = {}) {
     coverUrl,
     thumbnailUrl,
     emoji: game.emoji || '🎮',
-    color: game.color || '#6e56ff',
+    color: game.color || '#00CAE0',
     plays: Number(game.plays || game.playCount || 0),
     likes: Number(game.likes || game.likeCount || 0),
     comments: Number(game.comments || game.commentCount || 0),

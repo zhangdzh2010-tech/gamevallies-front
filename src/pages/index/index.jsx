@@ -31,7 +31,7 @@ import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Sc
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import './index.scss';
 
-const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6', '#06b6d4', '#ec4899'];
+const GAME_COLORS = ['#00CAE0', '#004DC8', '#fbbf24', '#ff5c8a', '#f97316', '#2dd4a8', '#06b6d4', '#ec4899'];
 const GAME_EMOJIS = ['🎮', '🧩', '✨', '🚀', '🎯', '🎨', '🤖', '🪐', '🏆', '🔥'];
 const PAGE_LIMIT = 10;
 const FEED_CACHE_TTL_MS = 60 * 1000;
@@ -460,7 +460,7 @@ function LegacyHome() {
             <View className="home-ribbon__brand-icon" />
           </View>
           <View className="home-ribbon__center">
-            <Text className="home-ribbon__eyebrow">AI 游戏工坊</Text>
+            <Text className="home-ribbon__eyebrow">智了空间</Text>
             <Text className="home-ribbon__title">{activeType === 'all' ? '灵感剧场' : activeTypeLabel}</Text>
           </View>
           <View className="home-ribbon__pulse">

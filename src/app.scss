@@ -25,6 +25,17 @@ body {
   overflow: visible !important;
 }
 
+html.zl-landing-route .taro-tabbar,
+html.zl-landing-route .taro-tabbar__tabbar,
+html.zl-landing-route .taro-tabbar__container > .taro-tabbar__tabbar {
+  display: none !important;
+}
+
+html.zl-landing-route,
+html.zl-landing-route body {
+  background: $chrome-bg;
+}
+
 html.h5-page-flow,
 body.h5-page-flow {
   height: auto !important;
@@ -350,17 +361,17 @@ page {
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: rgba(13, 16, 27, 0.88);
-  border: 1px solid rgba(110, 86, 255, 0.22);
-  box-shadow: 0 10px 24px rgba(4, 6, 14, 0.22);
+  background: $chrome-surface;
+  border: 1px solid $chrome-line;
+  box-shadow: $chrome-shadow;
 }
 
 .page-scroll-container__refresh-icon {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid rgba(234, 232, 244, 0.26);
-  border-top-color: #8a7aff;
+  border: 2px solid rgba(235, 248, 255, 0.26);
+  border-top-color: $chrome-cta;
   box-sizing: border-box;
   animation: page-scroll-refresh-spin 0.85s linear infinite;
 }

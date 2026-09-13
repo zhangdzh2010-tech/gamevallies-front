@@ -45,7 +45,7 @@ import CreativeShell from '../../components/creative-web/CreativeShell';
 import FailedWorkDialog, { isFailedWork } from '../../components/creative-web/FailedWorkDialog';
 import './index.scss';
 
-const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a'];
+const GAME_COLORS = ['#00CAE0', '#004DC8', '#fbbf24', '#ff5c8a'];
 const GAME_EMOJIS = ['🎮', '🕹️', '✨', '🚀', '🎯', '🎲', '🌟', '⚡'];
 const PUBLISHED_STATUSES = ['published', 'review'];
 // 'ready' is how the API presents 'draft' games.

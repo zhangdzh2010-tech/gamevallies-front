@@ -25,7 +25,7 @@ import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import CreativeShell from '../../components/creative-web/CreativeShell';
 import './index.scss';
 
-const GAME_COLORS = ['#6e56ff', '#2dd4a8', '#fbbf24', '#ff5c8a', '#f97316', '#8b5cf6'];
+const GAME_COLORS = ['#00CAE0', '#004DC8', '#fbbf24', '#ff5c8a', '#f97316', '#2dd4a8'];
 const GAME_EMOJIS = ['🎮', '🚀', '🎲', '🎯', '🌟', '⚡', '🧩', '🕹️'];
 const PAGE_LIMIT = 10;
 const POSTER_COLUMN_COUNT = 2;

@@ -3,6 +3,7 @@
 ## 代码与架构
 
 - [project-structure.md](project-structure.md)：当前代码结构、目录职责、核心业务链路
+- [architecture/ui-cyan-tech-chrome-20260913.md](architecture/ui-cyan-tech-chrome-20260913.md)：H5 / Creative Web 青蓝科技壳层与落地页
 
 ## 后端接口与联调
 

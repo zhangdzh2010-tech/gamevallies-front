@@ -32,7 +32,7 @@
 }
 
 .game-play-page.game-play-page--h5 {
-  background: #0b1511;
+  background: #060C20;
 
   .game-webview {
     top: 64PX;
@@ -41,9 +41,7 @@
 
   .game-loading {
     top: 64PX;
-    background:
-      radial-gradient(circle at 50% 32%, rgba(33, 112, 76, 0.2), transparent 30%),
-      #0b1511;
+    background: #060C20;
   }
 
   .game-loading-text {
@@ -64,10 +62,9 @@
     align-items: center;
     gap: 16PX;
     color: #f4faf7;
-    background: rgba(8, 20, 14, 0.96);
-    border-bottom: 1PX solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 12PX 30PX rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(18PX);
+    background: #060C20;
+    border-bottom: 1PX solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
   }
 
   .game-play-page__web-back,

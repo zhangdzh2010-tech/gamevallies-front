@@ -100,7 +100,7 @@
             width: 60%;
             height: 3px;
             border-radius: 2px;
-            background: linear-gradient(90deg, #6e56ff 0%, #2dd4a8 100%);
+            background: linear-gradient(90deg, #004DC8 0%, #00CAE0 100%);
           }
         }
       }
@@ -445,8 +445,7 @@
     z-index: 20;
     gap: 6px;
     padding: calc(env(safe-area-inset-top, 0px) + 16px) 0 16px;
-    background: rgba(8, 8, 13, 0.94);
-    backdrop-filter: blur(18px);
+    background: $chrome-bg;
 
     .back-arrow {
       font-size: 28px;
@@ -638,9 +637,7 @@
   min-height: 100dvh;
   padding: clamp(22px, 3.5vw, 56px);
   overflow: hidden;
-  background:
-    radial-gradient(circle at 15% 15%, rgba(196, 244, 101, 0.18), transparent 30%),
-    var(--gv-web-canvas);
+  background: var(--gv-web-canvas);
 
   * {
     box-sizing: border-box;
@@ -659,7 +656,7 @@
 
     .back-arrow,
     .back-text {
-      color: #587064;
+      color: var(--gv-web-muted);
     }
 
     .back-arrow {
@@ -701,8 +698,8 @@
     place-items: center;
     flex: 0 0 auto;
     border-radius: 12px;
-    background: var(--gv-web-ink);
-    color: var(--gv-web-lime);
+    background: var(--gv-web-accent);
+    color: var(--gv-web-accent-ink);
     font-size: 26px;
     font-weight: 800;
     line-height: 1;
@@ -731,7 +728,7 @@
 
   .login-web-kicker {
     margin-bottom: 18px;
-    color: #71867a;
+    color: var(--gv-web-muted);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 2px;
@@ -892,7 +889,7 @@
         border-radius: 10px;
         background: var(--gv-web-accent);
         padding: 15px 20px;
-        color: #fff;
+        color: var(--gv-web-accent-ink);
         font-size: 15px;
         box-shadow: none;
         transition: background 0.2s, transform 0.2s;
