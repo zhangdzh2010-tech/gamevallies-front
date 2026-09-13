@@ -60,7 +60,7 @@ export default function CreativeShell({ children, active = 'home', title = '工�
         <button className="cw-account" onClick={() => loggedIn ? openProfilePageWithTab('works') : Taro.navigateTo({ url: '/pages/login/index' })}><span className="cw-avatar">{loggedIn ? name.slice(0, 1) : '访'}</span><span><strong>{loggedIn ? name : '登录 / 注册'}</strong><small>{loggedIn ? '我的创作空间' : '保存并延续你的创意'}</small></span></button>
       </div>
     </aside>
-    <div className="cw-content"><header className="cw-topbar"><div className="cw-row">{studio && <button className="cw-icon-button" onClick={() => navigate('home')} aria-label="返回工作台"><CreativeIcon name="back" /></button>}<span className="cw-breadcrumb">创作空间 <b>/</b> <strong>{title}</strong></span></div><div className="cw-row">{actions || <span className="cw-desktop-label">CREATIVE STUDIO / WEB</span>}</div></header>{children}</div>
+    <div className="cw-content"><header className="cw-topbar"><div className="cw-row">{studio && <button className="cw-icon-button" onClick={() => navigate('home')} aria-label="返回工作台"><CreativeIcon name="back" /></button>}<span className="cw-breadcrumb">创作空间 <b>/</b> <strong>{title}</strong></span></div><div className="cw-row">{actions || <span className="cw-desktop-label">桌面创作台</span>}</div></header>{children}</div>
   </div>;
 }
 
