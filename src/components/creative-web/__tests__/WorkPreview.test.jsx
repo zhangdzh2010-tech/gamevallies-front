@@ -18,7 +18,18 @@ test('loads real HTML only after explicit play and isolates it from application 
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts');
   expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
   expect(frame.getAttribute('srcdoc')).toContain('experiment');
+  expect(frame.closest('.cw-preview-frame')).toBeTruthy();
+  expect(frame.closest('.cw-player-letterbox--scaled')).toBeTruthy();
   expect(get).toHaveBeenCalledWith('/api/v1/games/creative-1/play');
+});
+
+test('conversation experience wraps the live iframe in a letterbox stage', async () => {
+  get.mockResolvedValue({ htmlCode: '<html><body>studio</body></html>' });
+  const { container } = render(<WorkPreview conversation work={work} />);
+  fireEvent.click(screen.getByText('开始体验'));
+  await waitFor(() => expect(container.querySelector('iframe')).not.toBeNull());
+  const frame = container.querySelector('iframe.work-player');
+  expect(frame.closest('.cw-player-letterbox--scaled')).toBeTruthy();
 });
 test('does not bypass subscription gating', () => {
   const unlock = jest.fn();
