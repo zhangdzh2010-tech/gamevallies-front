@@ -32,9 +32,9 @@ export default {
 
   tabBar: {
     custom: true,
-    color: '#8BA3B8',
+    color: '#86909C',
     selectedColor: '#00CAE0',
-    backgroundColor: '#111318',
+    backgroundColor: '#FFFFFF',
     list: [
       {
         pagePath: 'pages/index/index',
@@ -70,11 +70,11 @@ export default {
   },
 
   window: {
-    backgroundTextStyle: 'dark',
-    navigationBarBackgroundColor: '#060C20',
+    backgroundTextStyle: 'light',
+    navigationBarBackgroundColor: '#F7F8FA',
     navigationBarTitleText: '智了空间 · 创意空间',
-    navigationBarTextStyle: 'white',
-    backgroundColor: '#060C20',
+    navigationBarTextStyle: 'black',
+    backgroundColor: '#F7F8FA',
     navigationStyle: 'custom',
   },
 

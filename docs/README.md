@@ -3,7 +3,8 @@
 ## 代码与架构
 
 - [project-structure.md](project-structure.md)：当前代码结构、目录职责、核心业务链路
-- [architecture/ui-cyan-tech-chrome-20260913.md](architecture/ui-cyan-tech-chrome-20260913.md)：H5 / Creative Web 青蓝科技壳层与落地页
+- [architecture/ui-jimeng-light-chrome-20260913.md](architecture/ui-jimeng-light-chrome-20260913.md)：H5 落地页 + 创意广场浅色即梦风（取代深色青蓝壳）
+- [architecture/ui-cyan-tech-chrome-20260913.md](architecture/ui-cyan-tech-chrome-20260913.md)：已 superseded 的深色青蓝科技壳层记录
 
 ## 后端接口与联调
 

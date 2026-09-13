@@ -276,9 +276,7 @@ export default function LandingPage() {
 
       <footer className="zl-foot">
         <span>智了空间 · 创意与教育的交互实验</span>
-        <span>草箱 v2.2.2 · 去磨砂</span>
       </footer>
-      <span className="zl-ver">草箱 v2.2.2 · 去磨砂</span>
     </div>
   );
 }

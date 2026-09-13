@@ -1,6 +1,6 @@
 @import './chrome-tokens.scss';
 
-// Color Palette — cyan-tech chrome (H5 / Creative Web / shared shell)
+// Color Palette — jimeng-inspired light chrome (H5 / Creative Web / shared shell)
 $bg: $chrome-bg;
 $surface: $chrome-surface;
 $card: $chrome-card;
@@ -39,14 +39,14 @@ $sub: $chrome-muted;
 $dim: $chrome-dim;
 $white: #fff;
 $white-30: rgba(255, 255, 255, 0.3);
-$text-soft: rgba(235, 248, 255, 0.82);
-$surface-elevated: #171c26;
-$surface-overlay: rgba(17, 19, 24, 0.96);
-$surface-overlay-strong: rgba(6, 12, 32, 0.92);
+$text-soft: rgba(29, 33, 41, 0.72);
+$surface-elevated: #FFFFFF;
+$surface-overlay: rgba(255, 255, 255, 0.96);
+$surface-overlay-strong: rgba(247, 248, 250, 0.94);
 $border-soft: $chrome-line;
 $border-glow: rgba(0, 202, 224, 0.18);
 $card-shadow: $chrome-shadow;
-$overlay-shadow: 0 18px 40px rgba(2, 8, 24, 0.4);
+$overlay-shadow: 0 18px 40px rgba(29, 33, 41, 0.08);
 
 // Spacing
 $space-xs: 8px;
