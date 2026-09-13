@@ -109,6 +109,32 @@
   .cw-square-actions .cw-button {font-size:12PX;}
   .cw-square-player {display:block;width:100%;height:65vh;border:0;background:white;}
   .cw-failed-dialog {max-width:650PX;}
+
+  /* Square cards: compact meta so the cover/preview keeps most of the height. */
+  .cw-square-card {display:flex;flex-direction:column;min-height:0;}
+  .cw-square-card .cw-project-open {display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
+  .cw-square-card .cw-cover {flex:1 1 auto;height:clamp(220PX,42vh,380PX);min-height:220PX;}
+  .cw-square-card .cw-project-body {flex:0 0 auto;padding:10PX 12PX 4PX;}
+  .cw-square-card .cw-project-body h3 {font-size:14PX;line-height:1.35;}
+  .cw-square-card .cw-project-body p {font-size:12PX;line-height:1.45;margin:4PX 0 6PX;min-height:0;}
+  .cw-square-card .cw-square-actions {flex:0 0 auto;gap:8PX;padding:6PX 12PX 12PX;}
+  .cw-square-card .cw-square-actions .cw-button {padding:8PX 14PX;min-height:36PX;}
+
+  .cw-experience-dialog {display:flex;flex-direction:column;max-height:min(92vh,920PX);height:min(92vh,920PX);}
+  .cw-experience-dialog .cw-dialog-head,.cw-experience-dialog .cw-dialog-foot {flex:0 0 auto;padding:10PX 16PX;}
+  .cw-experience-dialog .cw-dialog-head h2 {font-size:18PX;}
+  .cw-dialog-stage {flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+  .cw-experience-dialog .cw-empty {flex:1 1 auto;margin:0;padding:24PX 20PX;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+  .cw-experience-dialog .cw-square-player {flex:1 1 auto;height:auto;min-height:0;width:100%;}
+
+  @media (max-height:800PX) {
+    .cw-square-card .cw-cover {height:clamp(200PX,48vh,320PX);min-height:200PX;}
+    .cw-square-card .cw-project-body {padding:8PX 12PX 2PX;}
+    .cw-square-card .cw-square-actions {padding:4PX 12PX 10PX;}
+  }
+  @media (max-width:760PX) {
+    .cw-square-card .cw-cover {height:clamp(240PX,50vh,420PX);min-height:240PX;}
+  }
 }
 
 .creative-web .cw-project.cw-project-featured { border-color: #d6a95b; box-shadow: 0 4px 18px rgba(145, 102, 33, .12); }
