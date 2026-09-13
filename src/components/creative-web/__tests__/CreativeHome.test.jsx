@@ -78,6 +78,7 @@ test('a draft is published only after explicit confirmation and the returned sta
 test('opens the creative square by default without introductory filler', async () => {
   render(<CreativeHome />);
   await screen.findByText('公开作品列表');
+  expect(screen.getByText('创意广场')).toBeTruthy();
   expect(screen.queryByText(/体验大家公开发布的作品/)).toBeNull();
   expect(screen.queryByLabelText('你的创意')).toBeNull();
 });
