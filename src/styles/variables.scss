@@ -1,18 +1,26 @@
-// Color Palette - Gamevallies Dark Theme
-$bg: #08080d;
-$surface: #111118;
-$card: #15151e;
-$card-hover: #1c1c28;
+@import './chrome-tokens.scss';
+
+// Color Palette — cyan-tech chrome (H5 / Creative Web / shared shell)
+$bg: $chrome-bg;
+$surface: $chrome-surface;
+$card: $chrome-card;
+$card-hover: $chrome-card-hover;
 
 // Borders & Dividers
-$border: #252535;
+$border: $chrome-line;
+$line: $chrome-line;
 
-// Primary Brand Color
-$primary: #6e56ff;
-$primary-soft: rgba(110, 86, 255, 0.15);
-$primary-glow: rgba(110, 86, 255, 0.35);
-$primary-border: rgba(110, 86, 255, 0.28);
-$brand-gradient: linear-gradient(135deg, #6e56ff 0%, #2dd4a8 100%);
+// Brand / CTA
+$band: $chrome-band;
+$cta: $chrome-cta;
+$cta-text: $chrome-cta-ink;
+$ice: $chrome-ice;
+$ice-strong: $chrome-ice-strong;
+$primary: $chrome-cta;
+$primary-soft: rgba(0, 202, 224, 0.15);
+$primary-glow: rgba(0, 202, 224, 0.28);
+$primary-border: rgba(0, 202, 224, 0.32);
+$brand-gradient: linear-gradient(135deg, $chrome-band 0%, $chrome-cta 100%);
 
 // Accent Colors
 $mint: #2dd4a8;
@@ -22,23 +30,23 @@ $amber: #fbbf24;
 $red: #ff4444;
 $red-soft: rgba(255, 68, 68, 0.12);
 $orange: #ff8c42;
-$cyan: #00d9ff;
+$cyan: $chrome-cta;
 
 // Text Colors
-$text: #eae8f4;
-$text-bright: #f5f3ff;
-$sub: #8b87a3;
-$dim: #55516e;
+$text: $chrome-ice;
+$text-bright: #ffffff;
+$sub: $chrome-muted;
+$dim: $chrome-dim;
 $white: #fff;
 $white-30: rgba(255, 255, 255, 0.3);
-$text-soft: rgba(234, 232, 244, 0.82);
-$surface-elevated: #171722;
-$surface-overlay: rgba(17, 17, 24, 0.9);
-$surface-overlay-strong: rgba(8, 8, 13, 0.84);
-$border-soft: rgba(37, 37, 53, 0.9);
-$border-glow: rgba(110, 86, 255, 0.18);
-$card-shadow: 0 12px 28px rgba(4, 6, 14, 0.24);
-$overlay-shadow: 0 18px 40px rgba(4, 6, 14, 0.34);
+$text-soft: rgba(235, 248, 255, 0.82);
+$surface-elevated: #171c26;
+$surface-overlay: rgba(17, 19, 24, 0.96);
+$surface-overlay-strong: rgba(6, 12, 32, 0.92);
+$border-soft: $chrome-line;
+$border-glow: rgba(0, 202, 224, 0.18);
+$card-shadow: $chrome-shadow;
+$overlay-shadow: 0 18px 40px rgba(2, 8, 24, 0.4);
 
 // Spacing
 $space-xs: 8px;
@@ -48,12 +56,12 @@ $space-lg: 30px;
 $space-xl: 42px;
 $space-2xl: 60px;
 
-// Border Radius
-$radius-sm: 8px;
-$radius-md: 15px;
-$radius-lg: 21px;
-$radius-xl: 27px;
-$radius-2xl: 39px;
+// Border Radius — chrome uses 8–12px; larger tokens stay for pills / weapp leftovers
+$radius-sm: $chrome-radius-sm;
+$radius-md: $chrome-radius;
+$radius-lg: $chrome-radius-lg;
+$radius-xl: 16px;
+$radius-2xl: 20px;
 $radius-full: 9999px;
 
 // Typography

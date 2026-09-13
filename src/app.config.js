@@ -1,12 +1,19 @@
+const sharedPages = [
+  'pages/index/index',
+  'pages/login/index',
+  'pages/discover/index',
+  'pages/create/index',
+  'pages/message/index',
+  'pages/profile/index',
+];
+
+// H5 entry is the public marketing landing. Weapp keeps the tab home first.
+const pages = process.env.TARO_ENV === 'h5'
+  ? ['pages/landing/index', ...sharedPages]
+  : sharedPages;
+
 export default {
-  pages: [
-    'pages/index/index',
-    'pages/login/index',
-    'pages/discover/index',
-    'pages/create/index',
-    'pages/message/index',
-    'pages/profile/index',
-  ],
+  pages,
 
   subPackages: [
     {
@@ -25,9 +32,9 @@ export default {
 
   tabBar: {
     custom: true,
-    color: '#55516e',
-    selectedColor: '#6e56ff',
-    backgroundColor: '#111118',
+    color: '#8BA3B8',
+    selectedColor: '#00CAE0',
+    backgroundColor: '#111318',
     list: [
       {
         pagePath: 'pages/index/index',
@@ -64,10 +71,10 @@ export default {
 
   window: {
     backgroundTextStyle: 'dark',
-    navigationBarBackgroundColor: '#08080d',
+    navigationBarBackgroundColor: '#060C20',
     navigationBarTitleText: '智了空间 · 创意空间',
     navigationBarTextStyle: 'white',
-    backgroundColor: '#08080d',
+    backgroundColor: '#060C20',
     navigationStyle: 'custom',
   },
 

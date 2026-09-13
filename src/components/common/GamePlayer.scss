@@ -27,9 +27,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(6, 12, 32, 0.72);
     opacity: 0;
     transition: opacity 0.35s ease;
   }
@@ -40,9 +38,9 @@
     right: 16px;
     bottom: 24px;
     left: 16px;
-    background: rgba(17, 17, 28, 0.95);
-    border: 1px solid rgba(110, 86, 255, 0.2);
-    border-radius: 24px;
+    background: $chrome-surface;
+    border: 1px solid $chrome-line;
+    border-radius: 12px;
     overflow: hidden;
     transform: translateY(calc(100% + 48px));
     opacity: 0;

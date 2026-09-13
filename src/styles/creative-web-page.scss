@@ -1,26 +1,30 @@
+@import './chrome-tokens.scss';
+
 @mixin creative-web-page-theme {
-  --gv-web-ink: #172c2a;
-  --gv-web-muted: #75877c;
-  --gv-web-soft: #97a49b;
-  --gv-web-line: #dfe8e2;
-  --gv-web-surface: #ffffff;
-  --gv-web-canvas: #f4f7f5;
-  --gv-web-accent: #176c59;
-  --gv-web-accent-hover: #115744;
-  --gv-web-lime: #c4f465;
-  --gv-web-danger: #925c38;
+  --gv-web-ink: #{$chrome-ice};
+  --gv-web-muted: #{$chrome-muted};
+  --gv-web-soft: #{$chrome-dim};
+  --gv-web-line: #{$chrome-line};
+  --gv-web-surface: #{$chrome-surface};
+  --gv-web-canvas: #{$chrome-bg};
+  --gv-web-accent: #{$chrome-cta};
+  --gv-web-accent-hover: #{$chrome-cta-hover};
+  --gv-web-accent-ink: #{$chrome-cta-ink};
+  --gv-web-lime: #{$chrome-cta};
+  --gv-web-band: #{$chrome-band};
+  --gv-web-danger: #e07a5f;
   color: var(--gv-web-ink);
   font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 @mixin creative-web-focus-ring {
-  outline: 3px solid #91bd5b;
+  outline: 3px solid $chrome-focus;
   outline-offset: 3px;
 }
 
 @mixin creative-web-panel {
   background: var(--gv-web-surface);
   border: 1px solid var(--gv-web-line);
-  border-radius: 16px;
-  box-shadow: 0 20px 55px rgba(27, 70, 50, 0.08);
+  border-radius: $chrome-radius-lg;
+  box-shadow: $chrome-shadow;
 }

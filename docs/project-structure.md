@@ -38,7 +38,8 @@ Taro 构建配置入口。
 
 按页面组织业务代码。
 
-- `index/`：首页 feed
+- `landing/`：H5 营销落地页（Weapp 不注册）
+- `index/`：首页 feed / Creative Web
 - `discover/`：发现页
 - `create/`：AI 创作主入口
 - `message/`：消息通知

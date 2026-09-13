@@ -1,0 +1,283 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import Taro from '@tarojs/taro';
+import { getFeaturedGames, getLatest, getTrending } from '../../services/feed';
+import { normalizeWorks, saveCreativeDraft } from '../../components/creative-web/creativeModel';
+import { CoverMatte } from '../../components/creative-web/coverLetterbox';
+import {
+  HOME_PAGE_URL,
+  openCreatePageWithAuth,
+} from '../../utils/authNavigation';
+import { getGameCoverUrl } from '../../utils/media';
+import { isH5Runtime } from '../../utils/runtime';
+import {
+  KEEP_WORKS,
+  LANDING_FILTERS,
+  adaptPublicWork,
+  filterWorks,
+} from './keepWorks';
+import './index.scss';
+
+const COMPOSER_PLACEHOLDER = '例如：两个几乎相同的双摆，轨迹会如何分叉……';
+
+function openCreativeHome() {
+  return Taro.switchTab({ url: HOME_PAGE_URL }).catch(() => {
+    Taro.navigateTo({ url: HOME_PAGE_URL }).catch(() => {});
+  });
+}
+
+function beginCreate(idea = '') {
+  const prompt = String(idea || '').trim();
+  if (prompt.length >= 5) {
+    saveCreativeDraft({
+      prompt,
+      domain: 'open',
+      format: 'experiment',
+      orientation: 'landscape',
+      title: '',
+    });
+  }
+  openCreatePageWithAuth({ mode: 'fresh' });
+}
+
+function scrollToId(id) {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function PendulumMark({ compact = false }) {
+  return (
+    <div className={`zl-pendulum${compact ? ' is-compact' : ''}`} aria-hidden="true">
+      <span className="zl-pendulum__bar" />
+      <span className="zl-pendulum__pivot" />
+      <span className="zl-pendulum__arm">
+        <span className="zl-pendulum__rod" />
+        <span className="zl-pendulum__bob" />
+      </span>
+    </div>
+  );
+}
+
+function CoverGlyph({ kind }) {
+  if (kind === 'pendulum') {
+    return <PendulumMark compact />;
+  }
+  return <span className={`zl-glyph zl-glyph--${kind || 'wave'}`} aria-hidden="true" />;
+}
+
+export default function LandingPage() {
+  const [idea, setIdea] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [works, setWorks] = useState(KEEP_WORKS);
+  const [fromApi, setFromApi] = useState(false);
+
+  useEffect(() => {
+    if (!isH5Runtime()) {
+      Taro.switchTab({ url: HOME_PAGE_URL }).catch(() => {});
+      return undefined;
+    }
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+    document.documentElement.classList.add('zl-landing-route');
+    return () => document.documentElement.classList.remove('zl-landing-route');
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function loadShowcase() {
+      // Public published feed: latest → featured → trending. Fallback is curated KEEP.
+      const loaders = [
+        () => getLatest(1, 12),
+        () => getFeaturedGames(12),
+        () => getTrending(1, 12),
+      ];
+      for (const load of loaders) {
+        try {
+          const items = normalizeWorks(await load()).map((item, index) => ({
+            ...adaptPublicWork(item, index),
+            coverUrl: getGameCoverUrl(item) || adaptPublicWork(item, index).coverUrl,
+          }));
+          if (active && items.length) {
+            setWorks(items);
+            setFromApi(true);
+            return;
+          }
+        } catch {
+          // try the next public endpoint
+        }
+      }
+      if (active) {
+        setWorks(KEEP_WORKS);
+        setFromApi(false);
+      }
+    }
+    void loadShowcase();
+    return () => { active = false; };
+  }, []);
+
+  const visible = useMemo(() => filterWorks(works, filter), [works, filter]);
+
+  const submitComposer = (event) => {
+    event.preventDefault();
+    beginCreate(idea);
+  };
+
+  return (
+    <div className="zl-landing">
+      <header className="zl-nav">
+        <div className="zl-nav__inner">
+          <button type="button" className="zl-brand" onClick={() => scrollToId('top')}>
+            <span className="zl-mark">智</span>
+            <span>智了空间</span>
+          </button>
+          <nav className="zl-nav__links" aria-label="落地页导航">
+            <button type="button" onClick={() => scrollToId('showcase')}>精选作品</button>
+            <button type="button" onClick={() => scrollToId('ways')}>探索方式</button>
+            <button type="button" onClick={() => beginCreate(idea)}>开始创作</button>
+          </nav>
+          <button type="button" className="zl-btn zl-btn--cta" onClick={openCreativeHome}>开启智了</button>
+        </div>
+      </header>
+
+      <main id="top">
+        <section className="zl-hero">
+          <div className="zl-hero__copy">
+            <p className="zl-eyebrow">CREATIVE SCIENCE</p>
+            <h1>把想法和科学<br />变成可探索的作品</h1>
+            <p className="zl-lead">
+              面向创意与教育的交互实验空间。参数、反馈，让物理、化学、生物里的规律变得可感知。游戏只是可选形式。
+            </p>
+            <form className="zl-composer" onSubmit={submitComposer}>
+              <input
+                className="zl-composer__input"
+                aria-label="你的想法"
+                placeholder={COMPOSER_PLACEHOLDER}
+                value={idea}
+                maxLength={3000}
+                onChange={(event) => setIdea(event.target.value)}
+              />
+              <button type="submit" className="zl-btn zl-btn--cta">即刻创作</button>
+            </form>
+          </div>
+
+          <article className="zl-demo">
+            <header className="zl-demo__head">
+              <h2>小角度理想单摆演示</h2>
+              <span className="zl-dot" />
+            </header>
+            <div className="zl-demo__stage">
+              <PendulumMark />
+            </div>
+            <p className="zl-demo__meta">
+              <span>T ≈ 2π√(L/g)</span>
+              <span>L · g 可调</span>
+            </p>
+            <footer>此作品内容由空间生成 · 可调参数交互实验</footer>
+          </article>
+        </section>
+
+        <section className="zl-band" aria-labelledby="band-title">
+          <div className="zl-band__copy">
+            <span className="zl-index">01</span>
+            <h2 id="band-title">灵感即刻成实验</h2>
+            <p>一句话描述现象或想法，生成可动手探索的桌面交互。适合课堂演示、自学与创意探索。</p>
+            <button type="button" className="zl-btn zl-btn--outline" onClick={() => scrollToId('showcase')}>
+              立即体验精选
+            </button>
+          </div>
+          <div className="zl-band__card">光合作 · 产氧可视化（示意）</div>
+        </section>
+
+        <section className="zl-ways" id="ways">
+          <h2>这样探索科学</h2>
+          <p className="zl-section-lead">不是一键生成小游戏工厂——我们把科学变成可感知、可调节、可继续改的作品。</p>
+          <div className="zl-ways__grid">
+            <article>
+              <header>
+                <span>01</span>
+                <i className="zl-way-icon zl-way-icon--wave" />
+              </header>
+              <h3>可感知的规律</h3>
+              <p>摆动、光合、渗透、波干涉，用动画把公式变眼前的变化。</p>
+            </article>
+            <article>
+              <header>
+                <span>02</span>
+                <i className="zl-way-icon zl-way-icon--sliders" />
+              </header>
+              <h3>可调的参数</h3>
+              <p>拖动滑块、改初态，立刻看到系统如何响应。</p>
+            </article>
+            <article>
+              <header>
+                <span>03</span>
+                <i className="zl-way-icon zl-way-icon--plus" />
+              </header>
+              <h3>可继续的创作</h3>
+              <p>发布到创意广场，别人在你打磨同一条想法。</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="zl-showcase" id="showcase">
+          <h2>精选作品</h2>
+          <p className="zl-section-lead">
+            {fromApi
+              ? '来自已公开发布的交互实验。'
+              : '高质验收批次的 KEEP 作品。上线后接创意广场。'}
+          </p>
+          {/* TODO(feed): wire domain filters to a published-by-type API when it exists. */}
+          <div className="zl-filters" role="tablist" aria-label="作品领域">
+            {LANDING_FILTERS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={filter === item.id}
+                className={filter === item.id ? 'is-active' : ''}
+                onClick={() => setFilter(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="zl-cards">
+            {visible.map((work) => (
+              <article key={work.id} className="zl-card">
+                <div className="zl-card__cover">
+                  {work.coverUrl
+                    ? <CoverMatte src={work.coverUrl} alt="" />
+                    : <CoverGlyph kind={work.coverKind} />}
+                  <span>{work.domainLabel}</span>
+                </div>
+                <div className="zl-card__body">
+                  <h3>{work.title}</h3>
+                  <p>{work.description}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          {!visible.length && (
+            <p className="zl-empty">这个分类暂时还没有作品。</p>
+          )}
+        </section>
+
+        <section className="zl-bottom">
+          <h2>把下一个想法，做成可探索的作品</h2>
+          <p>进入智了空间工作台，继续写、调参数、发布到广场。</p>
+          <div className="zl-bottom__actions">
+            <button type="button" className="zl-btn zl-btn--cta" onClick={openCreativeHome}>开启智了</button>
+            <button type="button" className="zl-btn zl-btn--ghost" onClick={() => beginCreate(idea)}>开始创作</button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="zl-foot">
+        <span>智了空间 · 创意与教育的交互实验</span>
+        <span>v2.2.2</span>
+      </footer>
+    </div>
+  );
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>智了空间 · 把想法和科学变成可探索的作品</title>
+  <style>
+    :root {
+      --bg: #060C20;
+      --surface: #111318;
+      --card: #151A24;
+      --band: #004DC8;
+      --cta: #00CAE0;
+      --cta-ink: #1D2129;
+      --ice: #EBF8FF;
+      --line: rgba(255,255,255,.12);
+      --muted: #8BA3B8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--ice); font: 16px/1.6 Inter, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+    .nav-inner { max-width: 1180px; margin: 0 auto; min-height: 72px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .mark { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; background: var(--cta); color: var(--cta-ink); font-weight: 800; }
+    .links { display: flex; gap: 28px; }
+    .links a { color: rgba(235,248,255,.78); text-decoration: none; font-size: 14px; }
+    .cta { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--cta); color: var(--cta-ink); font-weight: 700; }
+    .hero, .ways, .showcase, .bottom { max-width: 1180px; margin: 0 auto; padding: 72px 28px; }
+    .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; min-height: calc(100vh - 72px); }
+    .eyebrow { letter-spacing: .22em; color: var(--muted); font-size: 12px; }
+    h1 { font-size: clamp(36px, 5vw, 64px); letter-spacing: .08em; line-height: 1.18; margin: 12px 0 0; }
+    .lead { color: var(--muted); max-width: 36em; }
+    .composer { margin-top: 36px; display: flex; gap: 10px; padding: 8px 8px 8px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+    .composer input { flex: 1; border: 0; background: transparent; color: var(--ice); outline: none; }
+    .demo { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px 18px; min-height: 420px; display: flex; flex-direction: column; }
+    .demo-head { display: flex; justify-content: space-between; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cta); }
+    .stage { flex: 1; display: grid; place-items: center; min-height: 240px; }
+    .pendulum { position: relative; width: 220px; height: 220px; }
+    .bar { position: absolute; top: 36px; left: 18px; right: 18px; height: 6px; border-radius: 999px; background: #3b4554; }
+    .pivot { position: absolute; top: 32px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #cfd8e3; }
+    .arm { position: absolute; top: 38px; left: 50%; width: 2px; height: 148px; transform-origin: 50% 0; animation: swing 3.2s ease-in-out infinite; }
+    .rod { display: block; width: 2px; height: 128px; margin: 0 auto; background: #8b9aab; }
+    .bob { display: block; width: 22px; height: 22px; margin: -2px auto 0; border-radius: 50%; background: var(--cta); }
+    @keyframes swing { 0%,100% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } }
+    .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
+    .demo footer { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .band { background: var(--band); color: #fff; display: grid; grid-template-columns: 1fr .9fr; gap: 48px; align-items: center; padding: 72px 8vw; }
+    .band h2 { font-size: clamp(28px, 4vw, 44px); }
+    .outline { min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.55); background: transparent; color: #fff; font-weight: 700; }
+    .band-card { min-height: 220px; border-radius: 120px 120px 12px 12px; background: radial-gradient(circle at 50% 120%, #0b1a33, #06101f 62%); display: grid; place-items: center; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .filters button { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+    .filters .on { background: var(--cta); border-color: var(--cta); color: var(--cta-ink); }
+    .cover { aspect-ratio: 16/10; background: #0b1f1c; border-radius: 12px 12px 0 0; }
+    .foot { display: flex; justify-content: space-between; padding: 18px 28px 28px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+    @media (max-width: 900px) {
+      .links { display: none; }
+      .hero, .band, .grid3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <div class="brand"><span class="mark">智</span>智了空间</div>
+      <nav class="links">
+        <a href="#showcase">精选作品</a>
+        <a href="#ways">探索方式</a>
+        <a href="#create">开始创作</a>
+      </nav>
+      <button class="cta" type="button">开启智了</button>
+    </div>
+  </header>
+
+  <section class="hero" id="create">
+    <div>
+      <p class="eyebrow">CREATIVE SCIENCE</p>
+      <h1>把想法和科学<br />变成可探索的作品</h1>
+      <p class="lead">面向创意与教育的交互实验空间。参数、反馈，让物理、化学、生物里的规律变得可感知。游戏只是可选形式。</p>
+      <form class="composer">
+        <input placeholder="例如：两个几乎相同的双摆，轨迹会如何分叉……" aria-label="你的想法" />
+        <button class="cta" type="submit">即刻创作</button>
+      </form>
+    </div>
+    <article class="demo">
+      <div class="demo-head"><strong>小角度理想单摆演示</strong><span class="dot"></span></div>
+      <div class="stage">
+        <div class="pendulum"><span class="bar"></span><span class="pivot"></span><span class="arm"><span class="rod"></span><span class="bob"></span></span></div>
+      </div>
+      <p class="meta"><span>T ≈ 2π√(L/g)</span><span>L · g 可调</span></p>
+      <footer>此作品内容由空间生成 · 可调参数交互实验</footer>
+    </article>
+  </section>
+
+  <section class="band">
+    <div>
+      <div>01</div>
+      <h2>灵感即刻成实验</h2>
+      <p>一句话描述现象或想法，生成可动手探索的桌面交互。适合课堂演示、自学与创意探索。</p>
+      <button class="outline" type="button">立即体验精选</button>
+    </div>
+    <div class="band-card">光合作 · 产氧可视化（示意）</div>
+  </section>
+
+  <section class="ways" id="ways">
+    <h2>这样探索科学</h2>
+    <p class="lead">不是一键生成小游戏工厂——我们把科学变成可感知、可调节、可继续改的作品。</p>
+    <div class="grid3">
+      <article class="card"><div>01</div><h3>可感知的规律</h3><p>摆动、光合、渗透、波干涉，用动画把公式变眼前的变化。</p></article>
+      <article class="card"><div>02</div><h3>可调的参数</h3><p>拖动滑块、改初态，立刻看到系统如何响应。</p></article>
+      <article class="card"><div>03</div><h3>可继续的创作</h3><p>发布到创意广场，别人在你打磨同一条想法。</p></article>
+    </div>
+  </section>
+
+  <section class="showcase" id="showcase">
+    <h2>精选作品</h2>
+    <p class="lead">高质验收批次的 KEEP 作品。上线后接创意广场公开作品。</p>
+    <div class="filters">
+      <button class="on" type="button">全部</button>
+      <button type="button">物理</button>
+      <button type="button">化学</button>
+      <button type="button">生物</button>
+      <button type="button">工具</button>
+      <button type="button">游戏</button>
+    </div>
+    <div class="grid3">
+      <article class="card" style="padding:0"><div class="cover"></div><div style="padding:16px"><h3>小角度理想单摆演示</h3><p>调整摆长与重力，观察周期如何接近 2π√(L/g)。</p></div></article>
+      <article class="card" style="padding:0"><div class="cover"></div><div style="padding:16px"><h3>光合作 · 产氧可视化</h3><p>改变光照与二氧化碳，看产氧速率如何响应。</p></div></article>
+      <article class="card" style="padding:0"><div class="cover"></div><div style="padding:16px"><h3>双摆轨迹如何分叉</h3><p>两个几乎相同的初始角度，轨迹会在何时分开。</p></div></article>
+    </div>
+  </section>
+
+  <section class="bottom">
+    <h2>把下一个想法，做成可探索的作品</h2>
+    <p class="lead">进入智了空间工作台，继续写、调参数、发布到广场。</p>
+    <p><button class="cta" type="button">开启智了</button></p>
+  </section>
+
+  <footer class="foot"><span>智了空间 · 创意与教育的交互实验</span><span>v2.2.2</span></footer>
+</body>
+</html>

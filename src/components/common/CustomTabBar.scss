@@ -23,9 +23,8 @@
     width: var(--gv-h5-tabbar-width);
     max-width: 100%;
     margin: 0 auto;
-    background: rgba(12, 12, 18, 0.97);
-    backdrop-filter: blur(14px);
-    border-top: 1px solid rgba(110, 86, 255, 0.08);
+    background: $chrome-surface;
+    border-top: 1px solid $chrome-line;
     height: var(--gv-h5-tabbar-height);
     padding-bottom: max(env(safe-area-inset-bottom), 6px);
     box-sizing: border-box;
@@ -48,7 +47,7 @@
       }
 
       &.active .tab-label {
-        color: #c4b5fd;
+        color: $chrome-cta;
         font-weight: 700;
       }
 
@@ -63,12 +62,12 @@
         .create-btn {
           width: var(--gv-h5-create-btn-size);
           height: var(--gv-h5-create-btn-size);
-          background: linear-gradient(145deg, #7c3aed 0%, $primary 50%, #a78bfa 100%);
+          background: $chrome-cta;
           border-radius: var(--gv-h5-create-btn-radius);
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 5px 18px rgba(110, 86, 255, 0.35);
+          box-shadow: none;
           position: relative;
 
           .create-icon {
@@ -77,7 +76,7 @@
             left: 50%;
             display: block;
             font-size: var(--gv-h5-create-icon-size);
-            color: white;
+            color: $chrome-cta-ink;
             font-weight: 300;
             line-height: 1;
             transform: translate(-50%, -52%);
@@ -86,7 +85,7 @@
 
         &:active .create-btn {
           transform: scale(0.9);
-          box-shadow: 0 1px 6px rgba(110, 86, 255, 0.25);
+          box-shadow: none;
         }
       }
     }

@@ -1445,8 +1445,7 @@
     left: 222PX;
     right: 0;
     border-top: 1PX solid var(--gv-web-line);
-    background: rgba(255, 255, 255, .94);
-    backdrop-filter: blur(12PX);
+    background: var(--gv-web-surface);
 
     &__inner { width: min(100%, 700PX); }
     .reply-hint-text { color: #4f6e56; }

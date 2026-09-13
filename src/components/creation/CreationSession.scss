@@ -1,3 +1,5 @@
+@import '../../styles/chrome-tokens.scss';
+
 .creation-session-shell {
   display: flex;
   flex-direction: column;
@@ -1289,9 +1291,8 @@
   width: fit-content;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(8, 12, 22, 0.72);
-  border: 1px solid rgba(139, 216, 197, 0.22);
-  backdrop-filter: blur(12px);
+  background: $chrome-surface;
+  border: 1px solid $chrome-line;
 }
 
 .creation-result-cover-card__badge-text {
