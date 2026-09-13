@@ -49,6 +49,6 @@ test('square cards pin the hot badge to the cover and clamp title/description', 
   expect(scss).toMatch(/\.cw-square-card \.cw-cover \.cw-hot-badge \{[^}]*top:12PX/);
   expect(scss).toMatch(/\.cw-square-card \.cw-project-body h3 \{[^}]*white-space:nowrap/);
   expect(scss).toMatch(/\.cw-square-card \.cw-project-body p \{[^}]*-webkit-line-clamp:2/);
-  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none\}/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none;\}/);
   expect(scss).toMatch(/\.cw-hot-badge[\s\S]*pointer-events: none/);
 });

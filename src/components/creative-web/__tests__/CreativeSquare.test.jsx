@@ -122,7 +122,7 @@ test('grid cards keep the hot badge on the cover and never embed live widget chr
   expect(within(card).queryByText('暂停')).toBeNull();
   expect(body.querySelector('h3').textContent).toBe('热门单摆');
   expect(scss).toMatch(/\.cw-square-card \.cw-cover \.cw-hot-badge \{[^}]*top:12PX/);
-  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none\}/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none;\}/);
 });
 
 test('letterboxes plaza covers and experience iframes so landscape art is not cropped', async () => {
