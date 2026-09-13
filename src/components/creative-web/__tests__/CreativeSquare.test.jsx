@@ -76,3 +76,25 @@ test('defaults to ranked popular works and highlights the leading cards', async 
   expect(screen.getByText('热门 · 1').closest('article').className).toContain('cw-project-featured');
   expect(getLatest).not.toHaveBeenCalled();
 });
+
+test('keeps square meta compact while exposing the full description and both actions', async () => {
+  const description = '改变轨道半径与恒星质量，观察行星公转周期如何变化。在理想圆轨道模型里，动手探索开普勒第三定律。';
+  getTrending.mockResolvedValue({
+    items: [{ ...work, title: '引力漫游 · 圆轨道周期探索', description, author: { displayName: 'willzhang' } }],
+    hasMore: false,
+  });
+  render(<CreativeSquare />);
+  const heading = await screen.findByText('引力漫游 · 圆轨道周期探索');
+  const card = heading.closest('article');
+  expect(card.className).toContain('cw-square-card');
+  const blurb = within(card).getByText(description);
+  expect(blurb.getAttribute('title')).toBe(description);
+  expect(within(card).getByText('作者：willzhang')).toBeTruthy();
+  expect(within(card).getByText('体验作品')).toBeTruthy();
+  expect(within(card).getByText('复刻并创作')).toBeTruthy();
+  fireEvent.click(within(card).getByText('体验作品'));
+  const modal = screen.getByRole('dialog', { hidden: true });
+  expect(modal.className).toContain('cw-experience-dialog');
+  expect(modal.querySelector('.cw-dialog-stage')).toBeTruthy();
+  expect(within(modal).getByText('复刻并创作')).toBeTruthy();
+});
