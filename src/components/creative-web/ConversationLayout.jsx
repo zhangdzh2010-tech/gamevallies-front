@@ -19,7 +19,7 @@ export default function ConversationLayout({ children, title, actions, workId, o
   const [failedWork, setFailedWork] = useState(null);
   const [historyError, setHistoryError] = useState(false);
   const [refresh, setRefresh] = useState(0);
-  const quota = useQuotaStore();
+  const quota = useQuotaStore((state) => state) || {};
   const summary = getQuotaSummary(quota);
   useDidShow(() => { setRefresh(v => v + 1); });
   useEffect(() => {

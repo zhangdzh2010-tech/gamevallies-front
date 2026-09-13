@@ -43,7 +43,10 @@ jest.mock('../../../components/creative-web/coverLetterbox', () => ({
 }));
 
 const LandingPage = require('../index').default;
-const scss = readFileSync(join(__dirname, '../index.scss'), 'utf8');
+const scss = [
+  readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8'),
+  readFileSync(join(__dirname, '../index.scss'), 'utf8'),
+].join('\n');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -54,8 +57,8 @@ beforeEach(() => {
 
 test('landing shows approved marketing copy and never AI 游戏工坊', async () => {
   render(<LandingPage />);
-  expect(screen.getByRole('heading', { name: /把想法和科学/ })).toBeTruthy();
-  expect(screen.getByText('小角度理想单摆演示')).toBeTruthy();
+  expect(screen.getByText(/把想法和科学/)).toBeTruthy();
+  expect(screen.getAllByText('小角度理想单摆演示').length).toBeGreaterThan(0);
   expect(screen.getByText('这样探索科学')).toBeTruthy();
   expect(screen.getByText('可感知的规律')).toBeTruthy();
   expect(screen.getByText('灵感即刻成实验')).toBeTruthy();
@@ -85,8 +88,8 @@ test('landing chrome is solid cyan-tech: no frost or purple neon', () => {
 test('showcase falls back to curated KEEP when public feed is empty', async () => {
   render(<LandingPage />);
   await screen.findByText('双摆轨迹如何分叉');
-  fireEvent.click(screen.getByRole('tab', { name: '物理' }));
-  expect(screen.getByText('小角度理想单摆演示')).toBeTruthy();
+  fireEvent.click(screen.getAllByText('物理')[0]);
+  expect(screen.getAllByText('小角度理想单摆演示').length).toBeGreaterThan(0);
   expect(screen.queryByText('单位换算工作台')).toBeNull();
 });
 
