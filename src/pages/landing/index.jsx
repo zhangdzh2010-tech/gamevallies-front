@@ -126,9 +126,9 @@ export default function LandingPage() {
             智了空间
           </button>
           <nav className="zl-nav__links" aria-label="落地页导航">
-            <button type="button" onClick={() => scrollToId('showcase')}>精选作品</button>
-            <button type="button" onClick={() => scrollToId('ways')}>探索方式</button>
-            <button type="button" onClick={() => beginCreate(idea)}>开始创作</button>
+            <button type="button" className="zl-nav__link" onClick={() => scrollToId('showcase')}>精选作品</button>
+            <button type="button" className="zl-nav__link" onClick={() => scrollToId('ways')}>探索方式</button>
+            <button type="button" className="zl-nav__link" onClick={() => beginCreate(idea)}>开始创作</button>
           </nav>
           <button type="button" className="zl-btn zl-btn--cta" onClick={openCreativeHome}>开启智了</button>
         </div>
@@ -229,7 +229,7 @@ export default function LandingPage() {
                 type="button"
                 role="tab"
                 aria-selected={filter === item.id}
-                className={filter === item.id ? 'is-active' : ''}
+                className={filter === item.id ? 'zl-filter is-active' : 'zl-filter'}
                 onClick={() => setFilter(item.id)}
               >
                 {item.label}
