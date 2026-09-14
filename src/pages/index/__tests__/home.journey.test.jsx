@@ -140,6 +140,9 @@ jest.mock('../../../utils/profileDisplay', () => ({
 jest.mock('../../../utils/runtime', () => ({
   isH5Runtime: jest.fn(() => false),
   isWeappRuntime: jest.fn(() => true),
+  isH5WebBuild: jest.fn(() => false),
+  isDesktopViewport: jest.fn(() => false),
+  isPcWebViewport: jest.fn(() => false),
 }));
 
 const HomePage = require('../index').default;

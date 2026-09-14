@@ -14,6 +14,7 @@ import { Storage } from '../../../utils/storage';
 import { getShareConfig } from '../../../utils/share';
 import { getGameOrientation } from '../../../utils/gameOrientation';
 import { isLandscapePlayPagePath } from '../../../utils/gamePlayRoute';
+import { resolveWorkOpenPath, useWorkShellGuard } from '../../../utils/workExperienceRoute';
 import './index.scss';
 
 function validateGameUrl(url) {
@@ -58,6 +59,7 @@ export default function GamePlay() {
   const routePagePath = getRoutePagePath(route);
   const routeDefaultOrientation = isLandscapePlayPagePath(routePagePath) ? 'landscape' : 'portrait';
   const routeGameId = route.params?.id || '';
+  const blockMobileShell = useWorkShellGuard(routePagePath || '/pages/game/play/index', routeGameId);
   const activeGameId = gameId || routeGameId;
   const activeGameCover = getGameCoverUrl(gameMeta || {}, gameCover);
   const activeGameOrientation = gameMeta
@@ -303,17 +305,22 @@ export default function GamePlay() {
   };
 
   const handleBack = () => {
-    navigateBackOrHome(activeGameId ? buildGameDetailPath(activeGameId) : undefined);
+    navigateBackOrHome(activeGameId ? resolveWorkOpenPath(activeGameId) : undefined);
   };
 
   const handleOpenDetail = () => {
     if (!activeGameId) {
       return;
     }
-    Taro.redirectTo({ url: buildGameDetailPath(activeGameId) }).catch(() => {
-      navigateBackOrHome(buildGameDetailPath(activeGameId));
+    const detailUrl = resolveWorkOpenPath(activeGameId);
+    Taro.redirectTo({ url: detailUrl }).catch(() => {
+      navigateBackOrHome(detailUrl);
     });
   };
+
+  if (blockMobileShell) {
+    return null;
+  }
 
   return (
     <View className={`game-play-page${isH5 ? ' game-play-page--h5' : ''}${activeGameOrientation === 'landscape' ? ' is-landscape' : ''}`}>

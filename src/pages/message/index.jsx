@@ -9,6 +9,7 @@ import * as socialService from '../../services/social';
 import { LOGIN_PAGE_URL, isLoggedIn, setPostLoginRedirect } from '../../utils/authNavigation';
 import { getH5PageScrollContainer } from '../../utils/h5Scroll';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
+import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import CreativeShell from '../../components/creative-web/CreativeShell';
 import './index.scss';
 
@@ -262,7 +263,7 @@ export default function Message() {
 
     const gameId = message.gameId || message.targetId;
     if (gameId) {
-      Taro.navigateTo({ url: `/pages/game/detail/index?id=${gameId}` }).catch(() => {
+      Taro.navigateTo({ url: resolveWorkOpenPath(gameId) }).catch(() => {
         Taro.showToast({ title: '该作品暂时不可用', icon: 'none' });
       });
     }

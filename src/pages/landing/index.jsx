@@ -9,7 +9,7 @@ import {
 } from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime } from '../../utils/runtime';
-import { buildGameDetailPath } from '../../utils/share';
+import { rememberExperienceWork, resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import {
   KEEP_WORKS,
   LANDING_FILTERS,
@@ -54,7 +54,8 @@ export function openShowcaseWork(work) {
   if (!id) {
     return undefined;
   }
-  return Taro.navigateTo({ url: buildGameDetailPath(id) }).catch(() => {});
+  rememberExperienceWork(work);
+  return Taro.navigateTo({ url: resolveWorkOpenPath(id) }).catch(() => {});
 }
 
 function PendulumMark() {

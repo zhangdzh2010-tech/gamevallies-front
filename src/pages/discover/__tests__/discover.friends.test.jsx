@@ -106,6 +106,9 @@ jest.mock('../../../utils/h5Scroll', () => ({
 jest.mock('../../../utils/runtime', () => ({
   isH5Runtime: jest.fn(() => false),
   isWeappRuntime: jest.fn(() => false),
+  isH5WebBuild: jest.fn(() => false),
+  isDesktopViewport: jest.fn(() => false),
+  isPcWebViewport: jest.fn(() => false),
 }));
 
 const FriendsPage = require('../index').default;

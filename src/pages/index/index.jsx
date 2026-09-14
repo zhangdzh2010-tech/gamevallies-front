@@ -26,7 +26,7 @@ import {
 } from '../../utils/gameTypes';
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
-import { buildGameDetailPath } from '../../utils/share';
+import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
 import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Scroll';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
@@ -353,15 +353,15 @@ function LegacyHome() {
       return;
     }
 
-    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) });
   };
 
   const handleComment = (game) => {
-    Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) });
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id, { openComment: 1 }) });
   };
 
   const handleOpenDetail = (game) => {
-    Taro.navigateTo({ url: buildGameDetailPath(game.id) });
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) });
   };
 
   const handleToggleLike = async (targetGame) => {

@@ -19,7 +19,7 @@ import { mergeBookmarkedFlags, setGameBookmarked, syncBookmarkWithBackend } from
 import { getGameCoverUrl } from '../../utils/media';
 import { getGameOrientation } from '../../utils/gameOrientation';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
-import { buildGameDetailPath } from '../../utils/share';
+import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import { getH5PageScrollContainer, resetH5PageScrollTop } from '../../utils/h5Scroll';
 import { isH5Runtime, isWeappRuntime } from '../../utils/runtime';
 import CreativeShell from '../../components/creative-web/CreativeShell';
@@ -222,15 +222,15 @@ export default function FriendsPage() {
       return;
     }
 
-    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` }).catch(() => {});
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) }).catch(() => {});
   };
 
   const handleComment = (game) => {
-    Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) }).catch(() => {});
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id, { openComment: 1 }) }).catch(() => {});
   };
 
   const handleOpenDetail = (game) => {
-    Taro.navigateTo({ url: buildGameDetailPath(game.id) }).catch(() => {});
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) }).catch(() => {});
   };
 
   const handleToggleLike = async (targetGame) => {

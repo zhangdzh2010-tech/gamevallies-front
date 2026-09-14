@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { View, Text, Image } from '@tarojs/components';
 import { getSafeGameImage } from '../../utils/media';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
+import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import './GameCard.scss';
 
 const HOT_LABEL = '热门';
@@ -99,7 +100,7 @@ export const GameCard = ({
       return;
     }
 
-    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) });
   };
 
   const handleLike = async (e) => {
@@ -169,7 +170,7 @@ export const GameCard = ({
       return;
     }
 
-    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}&openComment=1` });
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id, { openComment: 1 }) });
   };
 
   const handleOpenDetail = (e) => {
@@ -180,7 +181,7 @@ export const GameCard = ({
       return;
     }
 
-    Taro.navigateTo({ url: `/pages/game/detail/index?id=${game.id}` });
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) });
   };
 
   return (

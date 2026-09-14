@@ -27,6 +27,7 @@ import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import { buildGameDetailPath, getShareConfig } from '../../../utils/share';
 import { isH5Runtime } from '../../../utils/runtime';
+import { useWorkShellGuard } from '../../../utils/workExperienceRoute';
 import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
 import { ENV } from '../../../config/env';
 import './index.scss';
@@ -250,6 +251,7 @@ function CommentRow({ comment, currentUserId, isReply, likedIds, onLike, onReply
 export default function GameDetail() {
   const route = useRoute();
   const gameId = route.params?.id;
+  const blockMobileShell = useWorkShellGuard(route.path || '/pages/game/detail/index', gameId);
   const authorViewRequested = route.params?.authorView === '1';
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const isH5 = isH5Runtime();
@@ -370,6 +372,10 @@ export default function GameDetail() {
   }));
 
   useEffect(() => {
+    if (blockMobileShell) {
+      return undefined;
+    }
+
     if (!gameId) {
       setLoading(false);
       return undefined;
@@ -432,7 +438,7 @@ export default function GameDetail() {
     return () => {
       cancelled = true;
     };
-  }, [authorViewRequested, currentUserId, gameId, storeCurrentGame]);
+  }, [authorViewRequested, blockMobileShell, currentUserId, gameId, storeCurrentGame]);
 
   useEffect(() => {
     if (!Storage.getToken() || !authorId || isOwnGame) {
@@ -791,6 +797,10 @@ export default function GameDetail() {
       </View>
     );
   };
+
+  if (blockMobileShell) {
+    return null;
+  }
 
   if (loading || !game) {
     const stateContent = (
