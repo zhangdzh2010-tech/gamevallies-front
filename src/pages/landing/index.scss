@@ -452,83 +452,84 @@
 
 .zl-photo__sun {
   position: absolute;
-  top: 28PX;
-  right: 48PX;
-  width: 34PX;
-  height: 34PX;
+  top: 26PX;
+  right: 44PX;
+  width: 38PX;
+  height: 38PX;
   border-radius: 50%;
   background: radial-gradient(circle at 32% 32%, #fff8d2, #f0b429);
-  box-shadow: 0 0 0 6PX rgba(240, 180, 41, .16), 0 0 28PX 10PX rgba(240, 180, 41, .28);
+  box-shadow: 0 0 0 7PX rgba(240, 180, 41, .18), 0 0 28PX 10PX rgba(240, 180, 41, .3);
   animation: zl-photo-glow 2.8s ease-in-out infinite;
 }
 
 .zl-photo__ray {
   position: absolute;
   top: 42PX;
-  right: 78PX;
-  width: 150PX;
-  height: 3PX;
+  right: 76PX;
+  width: 156PX;
+  height: 6PX;
   transform-origin: 100% 50%;
-  background: linear-gradient(90deg, transparent, rgba(255, 226, 140, .55));
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 140, .72));
   border-radius: 999PX;
   animation: zl-photo-ray 2.6s ease-in-out infinite;
 }
 
 .zl-photo__ray--2 {
   top: 58PX;
-  width: 132PX;
-  transform: rotate(16deg);
+  width: 138PX;
+  transform: rotate(18deg);
   animation-delay: -.6s;
 }
 
 .zl-photo__ray--3 {
-  top: 74PX;
-  width: 118PX;
-  transform: rotate(28deg);
+  top: 76PX;
+  width: 122PX;
+  transform: rotate(32deg);
   animation-delay: -1.2s;
 }
 
 .zl-photo__leaf {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 128PX;
-  height: 78PX;
-  margin: -48PX 0 0 -70PX;
+  top: 48%;
+  width: 118PX;
+  height: 118PX;
+  margin: -68PX 0 0 -64PX;
 }
 
 .zl-photo__blade {
   display: block;
-  width: 128PX;
-  height: 78PX;
-  border-radius: 10PX 70PX 14PX 70PX;
+  width: 108PX;
+  height: 108PX;
+  margin: 6PX 0 0 8PX;
+  border-radius: 2PX 100% 4PX 100%;
   background:
-    linear-gradient(135deg, rgba(235, 248, 255, .22), transparent 36%),
+    linear-gradient(135deg, rgba(235, 248, 255, .28), transparent 34%),
     linear-gradient(145deg, #3dcea0 0%, #1b8a5e 58%, #146647 100%);
-  transform: rotate(-24deg);
+  transform: rotate(-28deg);
   box-shadow: 0 10PX 24PX rgba(0, 0, 0, .28);
 }
 
 .zl-photo__vein {
   position: absolute;
-  left: 22PX;
-  top: 40PX;
-  width: 86PX;
+  left: 28PX;
+  top: 58PX;
+  width: 72PX;
   height: 2PX;
-  background: rgba(11, 18, 32, .35);
-  transform: rotate(-24deg);
+  background: rgba(11, 18, 32, .38);
+  transform: rotate(-28deg);
   border-radius: 999PX;
 }
 
 .zl-photo__stem {
   position: absolute;
-  left: 14PX;
-  top: 58PX;
-  width: 22PX;
-  height: 4PX;
+  left: 10PX;
+  top: 78PX;
+  width: 26PX;
+  height: 5PX;
   background: #146647;
   border-radius: 999PX;
-  transform: rotate(38deg);
+  transform: rotate(42deg);
 }
 
 .zl-photo__drop {
