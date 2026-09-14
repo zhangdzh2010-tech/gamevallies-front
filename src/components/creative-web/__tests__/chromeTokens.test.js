@@ -8,28 +8,30 @@ const pageTheme = readFileSync(join(__dirname, '../../../styles/creative-web-pag
 const chromeTokens = readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8');
 const chrome = `${scss}\n${conversationStyles}\n${pageTheme}\n${chromeTokens}`;
 
-test('shared chrome tokens are the approved cyan-tech set', () => {
-  expect(chromeTokens).toMatch(/\$chrome-bg: #060C20/);
-  expect(chromeTokens).toMatch(/\$chrome-surface: #111318/);
-  expect(chromeTokens).toMatch(/\$chrome-band: #004DC8/);
+test('shared chrome tokens are the approved Jimeng light set', () => {
+  expect(chromeTokens).toMatch(/\$chrome-bg: #F7F8FA/);
+  expect(chromeTokens).toMatch(/\$chrome-surface: #FFFFFF/);
+  expect(chromeTokens).toMatch(/\$chrome-band: #F2F4F6/);
   expect(chromeTokens).toMatch(/\$chrome-cta: #00CAE0/);
   expect(chromeTokens).toMatch(/\$chrome-cta-ink: #1D2129/);
-  expect(chromeTokens).toMatch(/\$chrome-ice: #EBF8FF/);
-  expect(chromeTokens).toMatch(/\$chrome-line: rgba\(255, 255, 255, 0\.12\)/);
+  expect(chromeTokens).toMatch(/\$chrome-ice: #1D2129/);
+  expect(chromeTokens).toMatch(/\$chrome-line: rgba\(29, 33, 41, 0\.08\)/);
+  expect(chromeTokens).not.toMatch(/\$chrome-bg: #060C20/);
 });
 
-test('creative-web chrome stays solid: no frost, neon lime, or purple', () => {
+test('creative-web chrome stays solid light: no frost, neon lime, or purple', () => {
   expect(chrome).not.toMatch(/backdrop-filter/i);
   expect(chrome).not.toMatch(/#c4f465/i);
   expect(chrome).not.toMatch(/#6e56ff/i);
   expect(chrome).not.toMatch(/Georgia/i);
-  expect(scss).toMatch(/--cw-shadow:0 1PX 2PX.*,0 2PX 8PX/);
+  expect(scss).toMatch(/--cw-shadow:0 1PX 2PX.*,0 8PX 24PX/);
   expect(scss).toMatch(/\.cw-project \{[^}]*border-radius:10PX/);
   expect(scss).toMatch(/\.cw-dialog \{[^}]*border-radius:12PX/);
-  expect(scss).toMatch(/\.cw-topbar \{[^}]*background:#111318/);
+  expect(scss).toMatch(/\.cw-topbar \{[^}]*background:#FFFFFF/);
   expect(scss).toMatch(/\.cw-chip \{[^}]*border-radius:8PX/);
-  expect(scss).toMatch(/background:#060C20/);
+  expect(scss).toMatch(/background:#F7F8FA/);
   expect(scss).toMatch(/#00CAE0/);
+  expect(scss).not.toMatch(/#060C20/);
 });
 
 test('letterbox contain geometry from the plaza/studio preview PR is still present', () => {
@@ -41,4 +43,12 @@ test('letterbox contain geometry from the plaza/studio preview PR is still prese
   expect(scss).toMatch(/max-height:min\(70dvh,760PX\)/);
   expect(scss).toMatch(/\.cw-preview-frame \{[^}]*aspect-ratio:16\/10/);
   expect(scss).toMatch(/\.cw-preview-wrap \{[^}]*max-height:min\(72dvh,820PX\)/);
+});
+
+test('square cards pin the hot badge to the cover and clamp title/description', () => {
+  expect(scss).toMatch(/\.cw-square-card \.cw-cover \.cw-hot-badge \{[^}]*top:12PX/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-project-body h3 \{[^}]*white-space:nowrap/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-project-body p \{[^}]*-webkit-line-clamp:2/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none;\}/);
+  expect(scss).toMatch(/\.cw-hot-badge[\s\S]*pointer-events: none/);
 });

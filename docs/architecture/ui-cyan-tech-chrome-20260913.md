@@ -1,7 +1,9 @@
-# UI: cyan-tech chrome (2026-09-13)
+# UI: cyan-tech chrome (2026-09-13) — superseded
 
-## Decision
-Product **shell** (H5 marketing + Creative Web + listed chrome) uses a jimeng-inspired dark cyan-blue system. Generated-work interiors stay on the educational paper pack from backend #90 (P4=A). No large `backdrop-filter` frost on nav, composer, cards, or tab bars. No purple neon.
+> **Superseded the same day.** Marketing + Creative Square (and Creative Web chrome) now use light Jimeng. See [ui-jimeng-light-chrome-20260913.md](ui-jimeng-light-chrome-20260913.md).
+
+## Decision (historical)
+Product **shell** (H5 marketing + Creative Web + listed chrome) used a jimeng-inspired dark cyan-blue system. Generated-work interiors stay on the educational paper pack from backend #90 (P4=A). No large `backdrop-filter` frost on nav, composer, cards, or tab bars. No purple neon.
 
 ## Tokens
 Source of truth: `src/styles/chrome-tokens.scss`, remapped through `src/styles/variables.scss` and `src/styles/creative-web-page.scss`.

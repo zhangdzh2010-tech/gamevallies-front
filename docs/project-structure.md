@@ -38,7 +38,7 @@ Taro 构建配置入口。
 
 按页面组织业务代码。
 
-- `landing/`：H5 营销落地页（Weapp 不注册）。静态草案见 `docs/landing/zhile-landing-draft-v2.html`
+- `landing/`：H5 营销落地页（Weapp 不注册）。结构参考 `docs/landing/zhile-landing-draft-v2.html`；线上为浅色即梦风，不含草案水印。
 - `index/`：首页 feed / Creative Web
 - `discover/`：发现页
 - `create/`：AI 创作主入口

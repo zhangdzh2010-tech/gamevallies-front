@@ -101,6 +101,30 @@ test('keeps square meta compact while exposing the full description and both act
   expect(within(modal).getByText('复刻并创作')).toBeTruthy();
 });
 
+test('grid cards keep the hot badge on the cover and never embed live widget chrome', async () => {
+  const description = '改变轨道半径与恒星质量，观察行星公转周期如何变化。';
+  getTrending.mockResolvedValue({
+    items: [{ ...work, title: '热门单摆', description, author: { displayName: 'willzhang' } }],
+    hasMore: false,
+  });
+  const scss = require('fs').readFileSync(require('path').join(__dirname, '../creative-web.scss'), 'utf8');
+  render(<CreativeSquare />);
+  const heading = await screen.findByText('热门单摆');
+  const card = heading.closest('article');
+  const cover = card.querySelector('.cw-cover');
+  const body = card.querySelector('.cw-project-body');
+  const badge = within(card).getByText('热门 · 1');
+  expect(cover.contains(badge)).toBe(true);
+  expect(body.contains(badge)).toBe(false);
+  expect(card.querySelector('iframe')).toBeNull();
+  expect(card.querySelector('input[type="range"]')).toBeNull();
+  expect(within(card).queryByText('开始体验')).toBeNull();
+  expect(within(card).queryByText('暂停')).toBeNull();
+  expect(body.querySelector('h3').textContent).toBe('热门单摆');
+  expect(scss).toMatch(/\.cw-square-card \.cw-cover \.cw-hot-badge \{[^}]*top:12PX/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none;\}/);
+});
+
 test('letterboxes plaza covers and experience iframes so landscape art is not cropped', async () => {
   getGameCoverUrl.mockReturnValue('https://cdn.example/covers/ohm.png');
   getTrending.mockResolvedValue({

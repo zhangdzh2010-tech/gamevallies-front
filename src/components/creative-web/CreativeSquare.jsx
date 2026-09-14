@@ -57,9 +57,14 @@ export default function CreativeSquare() {
     {error && <div className="cw-error" role="alert">{error}<button type="button" onClick={() => load(page)}>重试</button></div>}
     <div className="cw-projects">{works.map((work, index) => {
       const description = work.description || '';
-      return <article key={work.id} className={`cw-project cw-square-card${sort === 'trending' && !search && index < 3 ? ' cw-project-featured' : ''}`}>
+      const featured = sort === 'trending' && !search && index < 3;
+      const coverUrl = getGameCoverUrl(work);
+      return <article key={work.id} className={`cw-project cw-square-card${featured ? ' cw-project-featured' : ''}`}>
         <button type="button" className="cw-project-open" onClick={() => setSelected(work)} aria-label={`体验 ${work.title}`}>
-          <div className="cw-cover">{sort === 'trending' && !search && index < 3 && <span className="cw-hot-badge">热门 · {index + 1}</span>}{getGameCoverUrl(work) ? <CoverMatte src={getGameCoverUrl(work)} /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /></div>}</div>
+          <div className="cw-cover">
+            {featured && <span className="cw-hot-badge">热门 · {index + 1}</span>}
+            {coverUrl ? <CoverMatte src={coverUrl} alt="" /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /></div>}
+          </div>
           <div className="cw-project-body">
             <h3>{work.title || '未命名作品'}</h3>
             <p title={description || undefined}>{description}</p>
@@ -67,8 +72,8 @@ export default function CreativeSquare() {
           </div>
         </button>
         <div className="cw-square-actions">
-          <button type="button" className="cw-button cw-outline" onClick={() => setSelected(work)}>体验作品</button>
-          <button type="button" className="cw-button cw-primary" disabled={!own(work) && work.allowFork === false} onClick={() => remix(work)}>{own(work) ? '继续创作' : work.allowFork === false ? '作者未开放复刻' : '复刻并创作'}</button>
+          <button type="button" className="cw-button cw-primary" onClick={() => setSelected(work)}>体验作品</button>
+          <button type="button" className="cw-button cw-outline" disabled={!own(work) && work.allowFork === false} onClick={() => remix(work)}>{own(work) ? '继续创作' : work.allowFork === false ? '作者未开放复刻' : '复刻并创作'}</button>
         </div>
       </article>;
     })}</div>

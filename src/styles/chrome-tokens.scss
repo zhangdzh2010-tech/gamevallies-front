@@ -1,25 +1,27 @@
-// Shared product chrome — jimeng-inspired dark cyan-blue tech (2026-09-13).
-// Shell / marketing / nav / composer / cards / tabbars only.
+// Shared product chrome — jimeng-inspired LIGHT creative product (2026-09-13).
+// Marketing + Creative Web + listed chrome only.
 // Do not apply these to generated-work interiors (educational paper pack).
+// Cyan is reserved for CTAs. No frost, purple neon, or draft watermarks.
 
-$chrome-bg: #060C20;
-$chrome-surface: #111318;
-$chrome-card: #151A24;
-$chrome-card-hover: #1A2230;
-$chrome-band: #004DC8;
+$chrome-bg: #F7F8FA;
+$chrome-surface: #FFFFFF;
+$chrome-card: #FFFFFF;
+$chrome-card-hover: #F5F7F8;
+$chrome-band: #F2F4F6;
 $chrome-cta: #00CAE0;
 $chrome-cta-ink: #1D2129;
-$chrome-ice: #EBF8FF;
-$chrome-ice-strong: #E0F5FF;
-$chrome-line: rgba(255, 255, 255, 0.12);
-$chrome-muted: #8BA3B8;
-$chrome-dim: #5A6F80;
+$chrome-ice: #1D2129;
+$chrome-ice-strong: #0F1419;
+$chrome-line: rgba(29, 33, 41, 0.08);
+$chrome-muted: #86909C;
+$chrome-dim: #C9CDD4;
 
 $chrome-radius-sm: 8px;
 $chrome-radius: 10px;
 $chrome-radius-lg: 12px;
 
 $chrome-cta-hover: #00b8cc;
-$chrome-band-deep: #003fa8;
+$chrome-band-deep: #E8EEF2;
 $chrome-focus: rgba(0, 202, 224, 0.45);
-$chrome-shadow: 0 1px 2px rgba(2, 8, 24, 0.28), 0 8px 24px rgba(2, 8, 24, 0.32);
+$chrome-shadow: 0 1px 2px rgba(29, 33, 41, 0.04), 0 8px 24px rgba(29, 33, 41, 0.06);
+$chrome-matte: #F0F2F5;
