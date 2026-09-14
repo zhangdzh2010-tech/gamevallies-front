@@ -19,7 +19,7 @@ export const KEEP_WORKS = [
     description: '调整摆长与重力，观察周期如何接近 2π√(L/g)。',
     domain: 'physics',
     domainLabel: '物理',
-    coverKind: 'pendulum',
+    coverLabel: '物理 · 单摆',
   },
   {
     id: 'keep-photosynthesis',
@@ -27,7 +27,7 @@ export const KEEP_WORKS = [
     description: '改变光照与二氧化碳，看产氧速率如何响应。',
     domain: 'biology',
     domainLabel: '生物',
-    coverKind: 'wave',
+    coverLabel: '生物 · 光合',
   },
   {
     id: 'keep-double-pendulum',
@@ -35,7 +35,7 @@ export const KEEP_WORKS = [
     description: '两个几乎相同的初始角度，轨迹会在何时分开。',
     domain: 'physics',
     domainLabel: '物理',
-    coverKind: 'orbit',
+    coverLabel: '物理 · 双摆',
   },
   {
     id: 'keep-equilibrium',
@@ -43,7 +43,7 @@ export const KEEP_WORKS = [
     description: '调节正逆速率常数，观察浓度如何趋向平衡。',
     domain: 'chemistry',
     domainLabel: '化学',
-    coverKind: 'dots',
+    coverLabel: '化学 · 平衡',
   },
   {
     id: 'keep-unit-lab',
@@ -51,7 +51,7 @@ export const KEEP_WORKS = [
     description: '把量纲和数量级摊开，让换算过程可检查。',
     domain: 'tool',
     domainLabel: '工具',
-    coverKind: 'grid',
+    coverLabel: '工具 · 换算',
   },
   {
     id: 'keep-orbit-play',
@@ -59,7 +59,7 @@ export const KEEP_WORKS = [
     description: '用引力井改写弹珠路径。游戏是可选形式，不是默认。',
     domain: 'game',
     domainLabel: '游戏',
-    coverKind: 'play',
+    coverLabel: '游戏 · 轨道',
   },
 ];
 
@@ -96,6 +96,7 @@ export function adaptPublicWork(work, index = 0) {
     description: work.description || '一个可以动手探索的交互实验。',
     domain,
     domainLabel: LANDING_FILTERS.find((item) => item.id === domain)?.label || '作品',
+    coverLabel: LANDING_FILTERS.find((item) => item.id === domain)?.label || '作品',
     coverUrl: work.coverUrl || work.cover || work.thumbnail || '',
     playCount: work.plays || work.playCount || 0,
     source: 'api',

@@ -111,8 +111,11 @@ test('v2.2 static draft remains the approved dark structure and palette referenc
   expect(draft).toMatch(/即刻创作/);
   expect(draft).toMatch(/灵感即刻成实验/);
   expect(draft).toMatch(/精选作品/);
+  expect(draft).toMatch(/物理 · 单摆/);
   expect(draft).not.toMatch(/backdrop-filter/i);
   expect(draft).not.toMatch(/AI 游戏工坊/);
+  expect(landingScss).toMatch(/grid-template-columns:\s*1\.05fr \.95fr/);
+  expect(landingScss).toMatch(/\.zl-hero h1 \{[\s\S]*margin: 12PX 0 0/);
 });
 
 test('showcase falls back to curated KEEP when public feed is empty', async () => {
@@ -132,10 +135,14 @@ test('showcase uses published feed when the public API returns works', async () 
   expect(screen.queryByText('单位换算工作台')).toBeNull();
 });
 
-test('showcase cards letterbox covers and keep title/description from overlapping badges', () => {
+test('showcase covers match the draft matte label, and API images still letterbox', async () => {
+  render(<LandingPage />);
+  await screen.findByText('物理 · 单摆');
+  expect(screen.getByText('生物 · 光合')).toBeTruthy();
   expect(landingScss).toMatch(/\.zl-card__cover \{[\s\S]*aspect-ratio: 16\/10/);
+  expect(landingScss).toMatch(/background: #0b1f1c/);
+  expect(landingScss).toMatch(/place-items: center/);
   expect(landingScss).toMatch(/object-fit: contain/);
-  expect(landingScss).toMatch(/\.zl-card__cover[\s\S]*span \{[\s\S]*top: 12PX/);
-  expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*white-space: nowrap/);
-  expect(landingScss).toMatch(/-webkit-line-clamp: 2/);
+  expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*font-size: 18PX/);
+  expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);
 });
