@@ -25,6 +25,7 @@ import useGamePlayerStore from '../../stores/gamePlayer';
 import useQuotaStore from '../../stores/quotaStore';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
 import { buildGameDetailPath } from '../../utils/share';
+import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import Taro, { useDidShow } from '@tarojs/taro';
 import {
   getBookmarkedGames,
@@ -964,7 +965,7 @@ export default function Profile() {
       return;
     }
 
-    Taro.navigateTo({ url: buildGameDetailPath(game.id) }).catch(() => {});
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) }).catch(() => {});
   };
 
   const handleLike = async (targetGame) => {
@@ -1002,7 +1003,7 @@ export default function Profile() {
       return;
     }
 
-    Taro.navigateTo({ url: buildGameDetailPath(game.id, { openComment: 1 }) }).catch(() => {});
+    Taro.navigateTo({ url: resolveWorkOpenPath(game.id, { openComment: 1 }) }).catch(() => {});
   };
 
   const handleToggleBookmark = async (targetGame) => {

@@ -5,10 +5,12 @@ import { isH5Runtime } from './utils/runtime';
 import { Storage } from './utils/storage';
 import useQuotaStore from './stores/quotaStore';
 import { LANDSCAPE_PLAY_PAGE_PATH, PORTRAIT_PLAY_PAGE_PATH } from './utils/gamePlayRoute';
+import { WORK_EXPERIENCE_PAGE_PATH, syncH5WorkShellRoute } from './utils/workExperienceRoute';
 
 const H5_FULLSCREEN_PAGE_PREFIXES = [
   PORTRAIT_PLAY_PAGE_PATH,
   LANDSCAPE_PLAY_PAGE_PATH,
+  WORK_EXPERIENCE_PAGE_PATH,
   '/pages/game/web-shell/index',
 ];
 
@@ -142,6 +144,25 @@ function App({ children }) {
           Storage.removeUser();
         }
       });
+  }, []);
+
+  useEffect(() => {
+    if (!isH5Runtime() || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const syncWorkShell = () => {
+      syncH5WorkShellRoute(window.location.hash);
+    };
+
+    syncWorkShell();
+    window.addEventListener('hashchange', syncWorkShell);
+    window.addEventListener('resize', syncWorkShell);
+
+    return () => {
+      window.removeEventListener('hashchange', syncWorkShell);
+      window.removeEventListener('resize', syncWorkShell);
+    };
   }, []);
 
   useEffect(() => {

@@ -24,9 +24,14 @@ jest.mock('../../../utils/authNavigation', () => ({
   openCreatePageWithAuth: (...args) => mockOpenCreate(...args),
 }));
 
-jest.mock('../../../utils/runtime', () => ({
-  isH5Runtime: () => true,
-}));
+jest.mock('../../../utils/runtime', () => {
+  const actual = jest.requireActual('../../../utils/runtime');
+  return {
+    ...actual,
+    isH5Runtime: () => true,
+    isH5WebBuild: () => true,
+  };
+});
 
 jest.mock('../../../services/feed', () => ({
   getLatest: (...args) => mockGetLatest(...args),
@@ -52,6 +57,8 @@ const appScss = readFileSync(join(__dirname, '../../../app.scss'), 'utf8');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  process.env.TARO_ENV = 'h5';
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
   mockGetLatest.mockRejectedValue(new Error('no feed'));
   mockGetFeatured.mockRejectedValue(new Error('no feed'));
   mockGetTrending.mockRejectedValue(new Error('no feed'));
@@ -231,7 +238,7 @@ test('showcase uses published feed when the public API returns works', async () 
   expect(card.textContent).toContain('林栖');
 });
 
-test('clicking a KEEP showcase card opens the work detail path', async () => {
+test('clicking a KEEP showcase card opens the PC experience path on desktop', async () => {
   render(<LandingPage />);
   const heading = await screen.findByText('双摆轨迹如何分叉');
   const hit = heading.closest('.zl-card__hit');
@@ -239,7 +246,7 @@ test('clicking a KEEP showcase card opens the work detail path', async () => {
   expect(hit.getAttribute('type')).toBe('button');
   expect(hit.getAttribute('aria-label')).toBe('体验 双摆轨迹如何分叉');
   fireEvent.click(hit);
-  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=keep-double-pendulum' });
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/experience/index?id=keep-double-pendulum' });
 });
 
 test('showcase navigation skips works without an id', () => {
@@ -248,14 +255,22 @@ test('showcase navigation skips works without an id', () => {
   expect(mockNavigateTo).not.toHaveBeenCalled();
 });
 
-test('clicking a published showcase card opens that work detail path', async () => {
+test('clicking a published showcase card opens the PC experience path on desktop', async () => {
   mockGetLatest.mockResolvedValue({
     items: [{ id: 'pub-1', title: '公开单摆', description: '物理实验', tags: ['物理'] }],
   });
   render(<LandingPage />);
   const heading = await screen.findByText('公开单摆');
   fireEvent.click(heading.closest('.zl-card__hit'));
-  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-1' });
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/experience/index?id=pub-1' });
+});
+
+test('phone-width showcase clicks keep the mobile detail path', async () => {
+  window.innerWidth = 390;
+  render(<LandingPage />);
+  const heading = await screen.findByText('双摆轨迹如何分叉');
+  fireEvent.click(heading.closest('.zl-card__hit'));
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=keep-double-pendulum' });
 });
 
 test('showcase covers match the draft matte label, and API images still letterbox', async () => {
@@ -271,7 +286,7 @@ test('showcase covers match the draft matte label, and API images still letterbo
   expect(landingScss).toMatch(/\.zl-card__avatar \{[\s\S]*border-radius: 50%/);
   expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*cursor: pointer/);
   expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*appearance:\s*none/);
-  expect(landingJsx).toMatch(/buildGameDetailPath/);
+  expect(landingJsx).toMatch(/resolveWorkOpenPath/);
   expect(landingJsx).toMatch(/className="zl-card__hit"/);
   expect(appScss).toMatch(/html\.zl-landing-route \.zl-card__hit \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);

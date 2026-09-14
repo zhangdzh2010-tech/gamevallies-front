@@ -133,8 +133,11 @@ jest.mock('../../../utils/share', () => ({
 const GameDetail = require('../detail/index').default;
 
 describe('game detail back navigation', () => {
+  const previousEnv = process.env.TARO_ENV;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.TARO_ENV = previousEnv;
     mockRouteParams = { id: 'game-1' };
     mockGetCurrentPages.mockReturnValue([]);
     mockGetGame.mockResolvedValue({
@@ -183,5 +186,20 @@ describe('game detail back navigation', () => {
       expect(mockNavigateBack).toHaveBeenCalledWith({ delta: 1 });
     });
     expect(mockSwitchTab).not.toHaveBeenCalled();
+  });
+
+  test('desktop H5 detail redirects into the PC experience route', async () => {
+    process.env.TARO_ENV = 'h5';
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
+
+    const { container } = render(<GameDetail />);
+
+    await waitFor(() => {
+      expect(mockRedirectTo).toHaveBeenCalledWith({
+        url: '/pages/game/experience/index?id=game-1',
+      });
+    });
+    expect(container.firstChild).toBeNull();
+    expect(mockGetGame).not.toHaveBeenCalled();
   });
 });

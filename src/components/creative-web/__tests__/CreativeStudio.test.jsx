@@ -6,7 +6,7 @@ import { publishGame } from '../../../services/game';
 import { openIteratePageWithAuth } from '../../../utils/authNavigation';
 import { consumeIterationDraft } from '../creativeModel';
 jest.mock('../../../services/game', () => ({ publishGame: jest.fn() }));
-jest.mock('../../../utils/share', () => ({ buildGameDetailPath: id => `/pages/game/detail/index?id=${id}` }));
+jest.mock('../../../utils/workExperienceRoute', () => ({ buildWorkExperiencePath: id => `/pages/game/experience/index?id=${id}` }));
 jest.mock('../../../utils/authNavigation', () => ({ openIteratePageWithAuth: jest.fn() }));
 jest.mock('../../common/PaywallPopup', () => ({ PaywallPopup: () => null }));
 jest.mock('../CreativeShell', () => ({ __esModule: true, default: ({ children, actions }) => <div>{actions}{children}</div>, CreativeIcon: () => null }));
