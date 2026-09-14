@@ -17,6 +17,7 @@ jest.mock('../../../utils/media', () => ({
   getGameCoverUrl: jest.fn(() => ''),
   getGalleryPosterUrl: jest.fn(() => ''),
 }));
+jest.mock('../../../services/game', () => ({ getGame: jest.fn(() => Promise.resolve(null)) }));
 
 const work = { id: 'public-work', title: '种群模型', authorId: 'author', status: 'published', author: { displayName: '原作者' } };
 
@@ -144,6 +145,11 @@ test('keeps square meta to title and author only while both actions stay availab
   expect(modal.className).toContain('cw-experience-dialog');
   expect(modal.querySelector('.cw-dialog-stage')).toBeTruthy();
   expect(within(modal).getByText('复刻并创作')).toBeTruthy();
+  const maximize = modal.querySelector('[aria-label="最大化"]');
+  expect(maximize).toBeTruthy();
+  fireEvent.click(maximize);
+  expect(modal.className).toContain('is-maximized');
+  expect(modal.querySelector('[aria-label="还原窗口"]')).toBeTruthy();
 });
 
 test('grid cards are gallery posters: badge on cover, title once, never a live work embed', async () => {

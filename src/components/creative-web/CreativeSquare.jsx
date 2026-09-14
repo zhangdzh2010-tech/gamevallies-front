@@ -1,12 +1,11 @@
-import WorkSandbox from './WorkSandbox';
 import React, { useEffect, useRef, useState } from 'react';
 import { getLatest, getTrending, searchGames } from '../../services/feed';
 import { formatUserErrorMessage } from '../../utils/networkError';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../utils/authNavigation';
 import { Storage } from '../../utils/storage';
-import { PlayerLetterbox } from './coverLetterbox';
 import { normalizeWorks } from './creativeModel';
 import SquareGalleryCard from './SquareGalleryCard';
+import WorkExperienceOverlay from './WorkExperienceOverlay';
 
 export default function CreativeSquare() {
   const [sort, setSort] = useState('trending');
@@ -18,10 +17,8 @@ export default function CreativeSquare() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
-  const [playing, setPlaying] = useState(false);
   const serial = useRef(0);
   const busy = useRef(false);
-  const dialog = useRef(null);
   const user = Storage.getUser() || {};
   const own = work => Boolean((user.id || user.userId) && (user.id || user.userId) === (work.authorId || work.author?.id));
   const remixLabel = work => (own(work) ? '继续创作' : work.allowFork === false ? '作者未开放复刻' : '复刻并创作');
@@ -46,11 +43,8 @@ export default function CreativeSquare() {
     finally { if (request === serial.current) { busy.current = false; setLoading(false); } }
   }
   useEffect(() => { setWorks([]); setMore(false); void load(); return () => { serial.current++; }; }, [sort, search]);
-  useEffect(() => { setPlaying(false); if (selected) dialog.current?.showModal(); }, [selected]);
   const remix = work => {
-    dialog.current?.close();
     setSelected(null);
-    setPlaying(false);
     return own(work) ? openIteratePageWithAuth(work, work.id) : openForkPageWithAuth(work.id);
   };
   return <>
@@ -80,10 +74,6 @@ export default function CreativeSquare() {
     {loading && <p className="cw-loading" role="status">正在加载广场作品…</p>}
     {!loading && !works.length && !error && <div className="cw-empty"><h3>{search ? '没有找到匹配的作品' : '广场等待第一个公开作品'}</h3><p>在我的作品中发布后，其他人就可以在这里体验。</p></div>}
     {more && !loading && <button type="button" className="cw-button cw-outline cw-loadmore" onClick={() => load(page + 1)}>加载更多作品</button>}
-    {selected && <dialog ref={dialog} className="cw-dialog cw-experience-dialog" aria-label="广场作品体验" onCancel={() => setSelected(null)} onClose={() => setSelected(null)}>
-      <div className="cw-dialog-head"><h2>{selected.title}</h2><button type="button" aria-label="关闭作品体验" onClick={() => setSelected(null)}>×</button></div>
-      <div className="cw-dialog-stage">{playing ? <PlayerLetterbox className="cw-square-stage"><WorkSandbox workId={selected.id} className="cw-square-player" title={selected.title || '广场作品'} src={`/games/${encodeURIComponent(selected.id)}/index.html`} sandbox="allow-scripts" referrerPolicy="no-referrer" /></PlayerLetterbox> : <div className="cw-empty"><p>{selected.description}</p><button type="button" className="cw-button cw-primary" onClick={() => setPlaying(true)}>开始体验</button></div>}</div>
-      <div className="cw-dialog-foot"><span>复刻会创建你的独立作品，保留原作来源。</span><button type="button" className="cw-button cw-primary" disabled={!own(selected) && selected.allowFork === false} onClick={() => remix(selected)}>{remixLabel(selected)}</button></div>
-    </dialog>}
+    {selected && <WorkExperienceOverlay work={selected} ariaLabel="广场作品体验" onClose={() => setSelected(null)} />}
   </>;
 }

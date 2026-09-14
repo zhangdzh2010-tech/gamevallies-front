@@ -5,9 +5,9 @@
   &, * {box-sizing:border-box;}
   h1,h2,h3,h4,p {margin:0;}
   /* Keep the H5 controls independent of Taro's element-selector rewriting. */
-  .cw-brand,.cw-button,.cw-nav,.cw-account,.cw-icon-button,.cw-chip,.cw-tab,.cw-project,.cw-format,.cw-gallery-hit,.cw-gallery-meta {background:none;border:0;border-radius:0;box-shadow:none;color:inherit;cursor:pointer;font:inherit;line-height:inherit;margin:0;}
+  .cw-brand,.cw-button,.cw-nav,.cw-account,.cw-icon-button,.cw-experience-window-btn,.cw-chip,.cw-tab,.cw-project,.cw-format,.cw-gallery-hit,.cw-gallery-meta {background:none;border:0;border-radius:0;box-shadow:none;color:inherit;cursor:pointer;font:inherit;line-height:inherit;margin:0;}
   .cw-button:disabled {cursor:not-allowed;opacity:.45;}
-  .cw-brand:focus-visible,.cw-button:focus-visible,.cw-nav:focus-visible,.cw-account:focus-visible,.cw-icon-button:focus-visible,.cw-chip:focus-visible,.cw-tab:focus-visible,.cw-domain-select:focus-visible,.cw-search:focus-visible,.cw-quota-link:focus-visible,.cw-gallery-hit:focus-visible,.cw-gallery-meta:focus-visible {outline:2PX solid rgba(0,202,224,.45);outline-offset:2PX;}
+  .cw-brand:focus-visible,.cw-button:focus-visible,.cw-nav:focus-visible,.cw-account:focus-visible,.cw-icon-button:focus-visible,.cw-experience-window-btn:focus-visible,.cw-chip:focus-visible,.cw-tab:focus-visible,.cw-domain-select:focus-visible,.cw-search:focus-visible,.cw-quota-link:focus-visible,.cw-gallery-hit:focus-visible,.cw-gallery-meta:focus-visible {outline:2PX solid rgba(0,202,224,.45);outline-offset:2PX;}
   .cw-idea-input,.cw-domain-select,.cw-search,.cw-composer-input {background:var(--cw-surface);color:var(--cw-ink);font:inherit;border:0;padding:0;box-shadow:none;}
   .cw-idea-input:focus,.cw-idea-input:focus-visible,.cw-composer-input:focus {outline:none;border:0;box-shadow:none;background:var(--cw-surface);}
   h1 {font-size:28PX;line-height:1.3;letter-spacing:-.4PX;font-weight:650;}
@@ -144,13 +144,22 @@
     .cw-gallery-actions {opacity:1;pointer-events:auto;transform:none;}
   }
 
-  .cw-experience-dialog {display:flex;flex-direction:column;width:min(92vw,1000PX);max-height:min(92vh,920PX);max-height:min(92dvh,920PX);height:auto;}
+  &.cw-experience-overlay-root {min-height:0;width:0;height:0;background:transparent;position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:80;}
+  .cw-experience-dialog {display:flex;flex-direction:column;width:min(92vw,1000PX);max-height:min(92vh,920PX);max-height:min(92dvh,920PX);height:min(86vh,820PX);height:min(86dvh,820PX);}
+  .cw-experience-dialog.is-maximized {width:min(98vw,100%);max-width:none;height:min(96vh,96dvh);max-height:min(96vh,96dvh);border-radius:8PX;}
   .cw-experience-dialog .cw-dialog-head,.cw-experience-dialog .cw-dialog-foot {flex:0 0 auto;padding:10PX 16PX;}
+  .cw-experience-dialog .cw-dialog-head {align-items:center;}
   .cw-experience-dialog .cw-dialog-head h2 {font-size:18PX;}
+  .cw-experience-heading {min-width:0;flex:1 1 auto;}
+  .cw-experience-author {margin:4PX 0 0;font-size:13PX;color:var(--cw-muted);}
+  .cw-dialog-head-actions {display:flex;align-items:center;gap:4PX;flex:0 0 auto;}
+  .cw-experience-window-btn {padding:6PX 10PX;border:0;border-radius:8PX;background:transparent;color:#4E5969;font:inherit;font-size:13PX;line-height:1.2;cursor:pointer;}
+  .cw-experience-window-btn:hover,.cw-experience-window-btn[aria-pressed="true"] {background:#F5F7F8;color:#1D2129;}
   .cw-dialog-stage {flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;background:#F0F2F5;overflow:hidden;}
   .cw-experience-dialog .cw-empty {flex:1 1 auto;margin:0;padding:24PX 20PX;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#FFFFFF;border:0;border-radius:0;}
   .cw-empty .cw-button {align-self:center;}
-  .cw-experience-dialog .cw-square-stage {width:100%;max-height:min(70vh,760PX);max-height:min(70dvh,760PX);}
+  .cw-experience-dialog .cw-square-stage {width:100%;height:100%;max-height:min(70vh,760PX);max-height:min(70dvh,760PX);}
+  .cw-experience-dialog.is-maximized .cw-square-stage {max-height:none;}
 
   @media (max-height:800PX) {
     .cw-gallery-meta {padding:12PX 14PX 14PX;}

@@ -57,6 +57,8 @@ describe('PC work experience page', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
     mockRouteParams = { id: 'public-work' };
     mockRoutePath = '/pages/game/experience/index';
+    HTMLDialogElement.prototype.showModal = jest.fn();
+    HTMLDialogElement.prototype.close = jest.fn();
     Storage.getUser.mockReturnValue(null);
     mockGetGame.mockResolvedValue({
       id: 'public-work',

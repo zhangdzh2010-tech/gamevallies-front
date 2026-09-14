@@ -2,12 +2,14 @@
 
 const mockRedirectTo = jest.fn(() => Promise.resolve());
 const mockReLaunch = jest.fn(() => Promise.resolve());
+const mockNavigateTo = jest.fn(() => Promise.resolve());
 
 jest.mock('@tarojs/taro', () => ({
   __esModule: true,
   default: {
     redirectTo: (...args) => mockRedirectTo(...args),
     reLaunch: (...args) => mockReLaunch(...args),
+    navigateTo: (...args) => mockNavigateTo(...args),
   },
 }));
 
@@ -17,12 +19,15 @@ const {
   consumePendingExperienceWork,
   isMobileWorkShellPath,
   isPcWorkExperiencePath,
+  openWorkExperience,
   parseH5HashRoute,
   redirectWorkShellIfMismatched,
+  registerWorkExperienceOverlayHost,
   rememberExperienceWork,
   resolveWorkOpenPath,
   shouldBlockWorkShell,
   syncH5WorkShellRoute,
+  unregisterWorkExperienceOverlayHost,
 } = require('../workExperienceRoute');
 
 describe('work experience routes', () => {
@@ -31,6 +36,7 @@ describe('work experience routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+    unregisterWorkExperienceOverlayHost();
     process.env.TARO_ENV = 'h5';
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
   });
@@ -83,6 +89,31 @@ describe('work experience routes', () => {
     expect(shouldBlockWorkShell('/pages/game/experience/index')).toBe(true);
     expect(syncH5WorkShellRoute('#/pages/game/experience/index?id=pub-9')).toBe(true);
     expect(mockRedirectTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-9' });
+  });
+
+  test('PC clicks open an overlay host instead of navigating to the experience page', () => {
+    const open = jest.fn();
+    registerWorkExperienceOverlayHost(open);
+    expect(openWorkExperience({ id: 'pub-1', title: '摆' })).toEqual({
+      overlay: true,
+      work: expect.objectContaining({ id: 'pub-1', title: '摆' }),
+    });
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'pub-1' }));
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+    unregisterWorkExperienceOverlayHost();
+  });
+
+  test('PC clicks without a host fall back to the experience deep-link route', () => {
+    openWorkExperience({ id: 'pub-1', title: '摆' });
+    expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/experience/index?id=pub-1' });
+  });
+
+  test('phone clicks keep the mobile detail path even when a host is registered', () => {
+    registerWorkExperienceOverlayHost(jest.fn());
+    window.innerWidth = 390;
+    openWorkExperience({ id: 'pub-1' });
+    expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-1' });
+    unregisterWorkExperienceOverlayHost();
   });
 
   test('does not redirect weapp or already-correct shells', () => {

@@ -5,6 +5,7 @@ import { isH5Runtime } from './utils/runtime';
 import { Storage } from './utils/storage';
 import useQuotaStore from './stores/quotaStore';
 import { LANDSCAPE_PLAY_PAGE_PATH, PORTRAIT_PLAY_PAGE_PATH } from './utils/gamePlayRoute';
+import WorkExperienceHost from './components/creative-web/WorkExperienceHost';
 import { WORK_EXPERIENCE_PAGE_PATH, syncH5WorkShellRoute } from './utils/workExperienceRoute';
 
 const H5_FULLSCREEN_PAGE_PREFIXES = [
@@ -249,7 +250,12 @@ function App({ children }) {
     };
   }, []);
 
-  return <Fragment>{children}</Fragment>;
+  return (
+    <Fragment>
+      {children}
+      <WorkExperienceHost />
+    </Fragment>
+  );
 }
 
 export default App;
