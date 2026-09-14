@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import CreativeSquare from '../CreativeSquare';
-import SquareGalleryCard, { isDocumentLikePoster } from '../SquareGalleryCard';
+import SquareGalleryCard, { galleryAuthorName, isDocumentLikePoster } from '../SquareGalleryCard';
 import { getLatest, getTrending, searchGames } from '../../../services/feed';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../../utils/authNavigation';
 import { Storage } from '../../../utils/storage';
@@ -118,19 +118,25 @@ test('defaults to ranked popular works and highlights the leading cards', async 
   expect(getLatest).not.toHaveBeenCalled();
 });
 
-test('keeps square meta compact while exposing the full description and both actions', async () => {
+test('keeps square meta to title and author only while both actions stay available', async () => {
   const description = '改变轨道半径与恒星质量，观察行星公转周期如何变化。在理想圆轨道模型里，动手探索开普勒第三定律。';
   getTrending.mockResolvedValue({
-    items: [{ ...work, title: '引力漫游 · 圆轨道周期探索', description, author: { displayName: 'willzhang' } }],
+    items: [{
+      ...work,
+      title: '引力漫游 · 圆轨道周期探索',
+      description,
+      author: { displayName: 'willzhang', avatarUrl: 'https://cdn.example/will.png' },
+    }],
     hasMore: false,
   });
   render(<CreativeSquare />);
   const heading = await screen.findByText('引力漫游 · 圆轨道周期探索');
   const card = heading.closest('article');
   expect(card.className).toContain('cw-square-card');
-  const blurb = within(card).getByText(description);
-  expect(blurb.getAttribute('title')).toBe(description);
-  expect(within(card).getByText('作者：willzhang')).toBeTruthy();
+  expect(within(card).queryByText(description)).toBeNull();
+  expect(within(card).queryByText(/作者：/)).toBeNull();
+  expect(within(card).getByText('willzhang')).toBeTruthy();
+  expect(card.querySelector('.cw-gallery-avatar img').getAttribute('src')).toBe('https://cdn.example/will.png');
   expect(within(card).getByText('体验作品')).toBeTruthy();
   expect(within(card).getByText('复刻并创作')).toBeTruthy();
   fireEvent.click(within(card).getByText('体验作品'));
@@ -164,7 +170,10 @@ test('grid cards are gallery posters: badge on cover, title once, never a live w
   expect(cover.contains(badge)).toBe(true);
   expect(meta.contains(badge)).toBe(false);
   expect(within(card).getAllByText('自由落体演示')).toHaveLength(1);
+  expect(within(card).queryByText(description)).toBeNull();
   expect(within(card).queryByText('模型、公式与假设')).toBeNull();
+  expect(within(card).getByText('willzhang')).toBeTruthy();
+  expect(card.querySelector('.cw-gallery-avatar').textContent).toBe('W');
   expect(card.querySelector('iframe')).toBeNull();
   expect(card.querySelector('input[type="range"]')).toBeNull();
   expect(within(card).queryByText('开始体验')).toBeNull();
@@ -197,6 +206,13 @@ test('letterboxed posters stay in the cover and live iframes open only after 开
   expect(frame.closest('.cw-player-scaler')).toBeTruthy();
   expect(frame.closest('.cw-square-stage')).toBeTruthy();
   expect(card.contains(frame)).toBe(false);
+});
+
+test('gallery author prefers a safe display name', () => {
+  expect(galleryAuthorName({ author: { displayName: '林栖', username: 'lin' } })).toBe('林栖');
+  expect(galleryAuthorName({ author: { username: 'willzhang' } })).toBe('willzhang');
+  expect(galleryAuthorName({ authorName: '四头干将' })).toBe('四头干将');
+  expect(galleryAuthorName({})).toBe('创作者');
 });
 
 test('tall work-page screenshots are rejected so the cover never repeats in-work chrome', () => {

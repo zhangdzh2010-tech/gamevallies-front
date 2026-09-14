@@ -9,6 +9,7 @@ import {
 } from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime } from '../../utils/runtime';
+import { buildGameDetailPath } from '../../utils/share';
 import {
   KEEP_WORKS,
   LANDING_FILTERS,
@@ -44,6 +45,14 @@ function scrollToId(id) {
     return;
   }
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+export function openShowcaseWork(work) {
+  const id = work?.id == null ? '' : String(work.id).trim();
+  if (!id) {
+    return undefined;
+  }
+  return Taro.navigateTo({ url: buildGameDetailPath(id) }).catch(() => {});
 }
 
 function PendulumMark() {
@@ -239,15 +248,27 @@ export default function LandingPage() {
           <div className="zl-cards">
             {visible.map((work) => (
               <article key={work.id} className="zl-card">
-                <div className="zl-card__cover">
-                  {work.coverUrl
-                    ? <CoverMatte src={work.coverUrl} alt="" />
-                    : (work.coverLabel || work.domainLabel)}
-                </div>
-                <div className="zl-card__body">
-                  <h3>{work.title}</h3>
-                  <p>{work.description}</p>
-                </div>
+                <button
+                  type="button"
+                  className="zl-card__hit"
+                  aria-label={`体验 ${work.title || '作品'}`}
+                  onClick={() => openShowcaseWork(work)}
+                >
+                  <div className="zl-card__cover">
+                    {work.coverUrl
+                      ? <CoverMatte src={work.coverUrl} alt="" />
+                      : (work.coverLabel || work.domainLabel)}
+                  </div>
+                  <div className="zl-card__body">
+                    <h3>{work.title}</h3>
+                    <div className="zl-card__author">
+                      <span className="zl-card__avatar" aria-hidden="true">
+                        {Array.from(work.author || '创')[0]}
+                      </span>
+                      <span className="zl-card__author-name">{work.author || '创作者'}</span>
+                    </div>
+                  </div>
+                </button>
               </article>
             ))}
           </div>

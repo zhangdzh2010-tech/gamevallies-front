@@ -1,6 +1,6 @@
 /* eslint-env jest */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -42,7 +42,9 @@ jest.mock('../../../components/creative-web/coverLetterbox', () => ({
   CoverMatte: () => null,
 }));
 
-const LandingPage = require('../index').default;
+const landingModule = require('../index');
+const LandingPage = landingModule.default;
+const { openShowcaseWork } = landingModule;
 const landingScss = readFileSync(join(__dirname, '../index.scss'), 'utf8');
 const landingJsx = readFileSync(join(__dirname, '../index.jsx'), 'utf8');
 const chromeTokens = readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8');
@@ -154,13 +156,53 @@ test('showcase falls back to curated KEEP when public feed is empty', async () =
   expect(screen.queryByText('单位换算工作台')).toBeNull();
 });
 
+test('showcase cards keep title and author only', async () => {
+  render(<LandingPage />);
+  await screen.findByText('双摆轨迹如何分叉');
+  const card = screen.getByText('双摆轨迹如何分叉').closest('article');
+  expect(card.className).toContain('zl-card');
+  expect(within(card).queryByText(/两个几乎相同的初始角度/)).toBeNull();
+  expect(within(card).getByText('智了')).toBeTruthy();
+  expect(card.querySelector('.zl-card__avatar')).toBeTruthy();
+});
+
 test('showcase uses published feed when the public API returns works', async () => {
+  mockGetLatest.mockResolvedValue({
+    items: [{ id: 'pub-1', title: '公开单摆', description: '物理实验', tags: ['物理'], author: { displayName: '林栖' } }],
+  });
+  render(<LandingPage />);
+  const heading = await screen.findByText('公开单摆');
+  const card = heading.closest('article');
+  expect(screen.queryByText('单位换算工作台')).toBeNull();
+  expect(screen.queryByText('物理实验')).toBeNull();
+  expect(card.textContent).toContain('林栖');
+});
+
+test('clicking a KEEP showcase card opens the work detail path', async () => {
+  render(<LandingPage />);
+  const heading = await screen.findByText('双摆轨迹如何分叉');
+  const hit = heading.closest('.zl-card__hit');
+  expect(hit).toBeTruthy();
+  expect(hit.getAttribute('type')).toBe('button');
+  expect(hit.getAttribute('aria-label')).toBe('体验 双摆轨迹如何分叉');
+  fireEvent.click(hit);
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=keep-double-pendulum' });
+});
+
+test('showcase navigation skips works without an id', () => {
+  openShowcaseWork({});
+  openShowcaseWork({ id: '   ' });
+  expect(mockNavigateTo).not.toHaveBeenCalled();
+});
+
+test('clicking a published showcase card opens that work detail path', async () => {
   mockGetLatest.mockResolvedValue({
     items: [{ id: 'pub-1', title: '公开单摆', description: '物理实验', tags: ['物理'] }],
   });
   render(<LandingPage />);
-  await screen.findByText('公开单摆');
-  expect(screen.queryByText('单位换算工作台')).toBeNull();
+  const heading = await screen.findByText('公开单摆');
+  fireEvent.click(heading.closest('.zl-card__hit'));
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-1' });
 });
 
 test('showcase covers match the draft matte label, and API images still letterbox', async () => {
@@ -172,5 +214,12 @@ test('showcase covers match the draft matte label, and API images still letterbo
   expect(landingScss).toMatch(/place-items: center/);
   expect(landingScss).toMatch(/object-fit: contain/);
   expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*font-size: 18PX/);
+  expect(landingScss).toMatch(/\.zl-card__author \{[\s\S]*display: flex/);
+  expect(landingScss).toMatch(/\.zl-card__avatar \{[\s\S]*border-radius: 50%/);
+  expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*cursor: pointer/);
+  expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*appearance:\s*none/);
+  expect(landingJsx).toMatch(/buildGameDetailPath/);
+  expect(landingJsx).toMatch(/className="zl-card__hit"/);
+  expect(appScss).toMatch(/html\.zl-landing-route \.zl-card__hit \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);
 });

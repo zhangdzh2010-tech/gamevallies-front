@@ -17,6 +17,7 @@ export const KEEP_WORKS = [
     id: 'keep-pendulum',
     title: '小角度理想单摆演示',
     description: '调整摆长与重力，观察周期如何接近 2π√(L/g)。',
+    author: '智了',
     domain: 'physics',
     domainLabel: '物理',
     coverLabel: '物理 · 单摆',
@@ -25,6 +26,7 @@ export const KEEP_WORKS = [
     id: 'keep-photosynthesis',
     title: '光合作 · 产氧可视化',
     description: '改变光照与二氧化碳，看产氧速率如何响应。',
+    author: '智了',
     domain: 'biology',
     domainLabel: '生物',
     coverLabel: '生物 · 光合',
@@ -33,6 +35,7 @@ export const KEEP_WORKS = [
     id: 'keep-double-pendulum',
     title: '双摆轨迹如何分叉',
     description: '两个几乎相同的初始角度，轨迹会在何时分开。',
+    author: '智了',
     domain: 'physics',
     domainLabel: '物理',
     coverLabel: '物理 · 双摆',
@@ -41,6 +44,7 @@ export const KEEP_WORKS = [
     id: 'keep-equilibrium',
     title: '可逆反应动态平衡',
     description: '调节正逆速率常数，观察浓度如何趋向平衡。',
+    author: '智了',
     domain: 'chemistry',
     domainLabel: '化学',
     coverLabel: '化学 · 平衡',
@@ -49,6 +53,7 @@ export const KEEP_WORKS = [
     id: 'keep-unit-lab',
     title: '单位换算工作台',
     description: '把量纲和数量级摊开，让换算过程可检查。',
+    author: '智了',
     domain: 'tool',
     domainLabel: '工具',
     coverLabel: '工具 · 换算',
@@ -57,6 +62,7 @@ export const KEEP_WORKS = [
     id: 'keep-orbit-play',
     title: '轨道弹珠台',
     description: '用引力井改写弹珠路径。游戏是可选形式，不是默认。',
+    author: '智了',
     domain: 'game',
     domainLabel: '游戏',
     coverLabel: '游戏 · 轨道',
@@ -88,12 +94,26 @@ export function inferWorkDomain(work = {}) {
   ))?.id || 'tool';
 }
 
+export function landingAuthorName(work = {}) {
+  const author = work.author;
+  const candidates = [
+    author?.displayName,
+    author?.nickname,
+    author?.username,
+    work.authorName,
+    typeof author === 'string' ? author : '',
+  ];
+  const hit = candidates.find((value) => typeof value === 'string' && value.trim());
+  return hit ? hit.trim() : '创作者';
+}
+
 export function adaptPublicWork(work, index = 0) {
   const domain = inferWorkDomain(work);
   return {
     id: work.id || `public-${index}`,
     title: work.title || '未命名作品',
     description: work.description || '一个可以动手探索的交互实验。',
+    author: landingAuthorName(work),
     domain,
     domainLabel: LANDING_FILTERS.find((item) => item.id === domain)?.label || '作品',
     coverLabel: LANDING_FILTERS.find((item) => item.id === domain)?.label || '作品',

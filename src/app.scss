@@ -73,6 +73,22 @@ html.zl-landing-route .zl-btn:not(.zl-btn--cta) {
   appearance: none;
 }
 
+html.zl-landing-route .zl-card__hit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit;
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 html.h5-page-flow,
 body.h5-page-flow {
   height: auto !important;
