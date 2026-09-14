@@ -26,12 +26,22 @@ jest.mock('../../utils/storage', () => ({
   },
 }));
 
+jest.mock('../../utils/sameOriginBase', () => {
+  const actual = jest.requireActual('../../utils/sameOriginBase');
+  return {
+    ...actual,
+    getPageOrigin: jest.fn(() => ''),
+  };
+});
+
 describe('api.get', () => {
   const originalTaroEnv = process.env.TARO_ENV;
   const originalFetch = global.fetch;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    const { getPageOrigin } = require('../../utils/sameOriginBase');
+    getPageOrigin.mockReturnValue('');
     global.fetch = mockFetch;
     mockRequest.mockResolvedValue({
       statusCode: 200,
@@ -53,10 +63,6 @@ describe('api.get', () => {
       })),
       text: jest.fn(async () => ''),
     });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   afterAll(() => {
@@ -102,13 +108,8 @@ describe('api.get', () => {
 
   test('uses a same-origin relative URL when SERVICE_URLS already point at this host', async () => {
     process.env.TARO_ENV = 'h5';
-    jest.spyOn(window, 'location', 'get').mockReturnValue({
-      protocol: 'https:',
-      host: 'www.zlspace.ai',
-      hostname: 'www.zlspace.ai',
-      origin: 'https://www.zlspace.ai',
-      href: 'https://www.zlspace.ai/',
-    });
+    const { getPageOrigin } = require('../../utils/sameOriginBase');
+    getPageOrigin.mockReturnValue('https://www.zlspace.ai');
     const { get } = require('../api');
 
     await get('/api/v1/feed/trending', {
@@ -127,13 +128,8 @@ describe('api.get', () => {
 
   test('keeps apex and www on the same public site so feed GET stays relative', async () => {
     process.env.TARO_ENV = 'h5';
-    jest.spyOn(window, 'location', 'get').mockReturnValue({
-      protocol: 'https:',
-      host: 'zlspace.ai',
-      hostname: 'zlspace.ai',
-      origin: 'https://zlspace.ai',
-      href: 'https://zlspace.ai/',
-    });
+    const { getPageOrigin } = require('../../utils/sameOriginBase');
+    getPageOrigin.mockReturnValue('https://zlspace.ai');
     const { createRequest } = require('../api');
 
     await createRequest({

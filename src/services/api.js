@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro';
 import { API_CONFIG } from '../types';
 import { Storage } from '../utils/storage';
-import { preferRelativeBase } from '../utils/sameOriginBase';
+import { getPageOrigin, preferRelativeBase } from '../utils/sameOriginBase';
 import { formatUserErrorMessage, isNetworkError } from '../utils/networkError';
 
 
@@ -117,7 +117,7 @@ function resolveConfiguredBaseUrl(url) {
 }
 
 function resolveBaseUrl(url) {
-  return preferRelativeBase(resolveConfiguredBaseUrl(url));
+  return preferRelativeBase(resolveConfiguredBaseUrl(url), getPageOrigin());
 }
 
 async function requestTokenRefresh(refreshToken) {
