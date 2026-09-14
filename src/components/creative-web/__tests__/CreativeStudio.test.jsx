@@ -67,7 +67,7 @@ test('waiting-for-confirm shows an in-reply CTA that starts generation and still
   expect(screen.getByText('等待确认')).toBeTruthy();
   expect(screen.getByText('创作描述已保存。请确认或修改方向，准备好后开始生成。')).toBeTruthy();
   expect(screen.getByTestId('waiting-confirm-actions')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: '修改描述' }));
+  fireEvent.click(screen.getByText('修改描述'));
   expect(onInputChange).toHaveBeenCalledWith('观察不同初始角度的双摆运动');
   fireEvent.click(screen.getByTestId('waiting-confirm-primary'));
   await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
