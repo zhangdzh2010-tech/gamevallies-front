@@ -34,6 +34,7 @@
   .zl-nav__link,
   .zl-filter,
   .zl-btn,
+  .zl-card__hit,
   input {
     font: inherit;
   }
@@ -41,6 +42,7 @@
   .zl-nav__link,
   .zl-filter,
   .zl-btn,
+  .zl-card__hit,
   .taro-button,
   taro-button-core,
   .weui-btn,
@@ -62,6 +64,7 @@
   .zl-nav__link::after,
   .zl-filter::after,
   .zl-btn::after,
+  .zl-card__hit::after,
   .taro-button::after,
   taro-button-core::after,
   .weui-btn::after {
@@ -72,6 +75,7 @@
   .zl-nav__link:focus-visible,
   .zl-filter:focus-visible,
   .zl-btn:focus-visible,
+  .zl-card__hit:focus-visible,
   input:focus-visible {
     outline: 2PX solid rgba(0, 202, 224, .45);
     outline-offset: 3PX;
@@ -466,6 +470,21 @@
 .zl-card {
   padding: 0;
   overflow: hidden;
+}
+
+.zl-card__hit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .zl-card h3 {

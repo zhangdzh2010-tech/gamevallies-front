@@ -42,7 +42,9 @@ jest.mock('../../../components/creative-web/coverLetterbox', () => ({
   CoverMatte: () => null,
 }));
 
-const LandingPage = require('../index').default;
+const landingModule = require('../index');
+const LandingPage = landingModule.default;
+const { openShowcaseWork } = landingModule;
 const landingScss = readFileSync(join(__dirname, '../index.scss'), 'utf8');
 const landingJsx = readFileSync(join(__dirname, '../index.jsx'), 'utf8');
 const chromeTokens = readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8');
@@ -176,6 +178,33 @@ test('showcase uses published feed when the public API returns works', async () 
   expect(card.textContent).toContain('林栖');
 });
 
+test('clicking a KEEP showcase card opens the work detail path', async () => {
+  render(<LandingPage />);
+  const heading = await screen.findByText('双摆轨迹如何分叉');
+  const hit = heading.closest('.zl-card__hit');
+  expect(hit).toBeTruthy();
+  expect(hit.getAttribute('type')).toBe('button');
+  expect(hit.getAttribute('aria-label')).toBe('体验 双摆轨迹如何分叉');
+  fireEvent.click(hit);
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=keep-double-pendulum' });
+});
+
+test('showcase navigation skips works without an id', () => {
+  openShowcaseWork({});
+  openShowcaseWork({ id: '   ' });
+  expect(mockNavigateTo).not.toHaveBeenCalled();
+});
+
+test('clicking a published showcase card opens that work detail path', async () => {
+  mockGetLatest.mockResolvedValue({
+    items: [{ id: 'pub-1', title: '公开单摆', description: '物理实验', tags: ['物理'] }],
+  });
+  render(<LandingPage />);
+  const heading = await screen.findByText('公开单摆');
+  fireEvent.click(heading.closest('.zl-card__hit'));
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-1' });
+});
+
 test('showcase covers match the draft matte label, and API images still letterbox', async () => {
   render(<LandingPage />);
   await screen.findByText('物理 · 单摆');
@@ -187,5 +216,10 @@ test('showcase covers match the draft matte label, and API images still letterbo
   expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*font-size: 18PX/);
   expect(landingScss).toMatch(/\.zl-card__author \{[\s\S]*display: flex/);
   expect(landingScss).toMatch(/\.zl-card__avatar \{[\s\S]*border-radius: 50%/);
+  expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*cursor: pointer/);
+  expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*appearance:\s*none/);
+  expect(landingJsx).toMatch(/buildGameDetailPath/);
+  expect(landingJsx).toMatch(/className="zl-card__hit"/);
+  expect(appScss).toMatch(/html\.zl-landing-route \.zl-card__hit \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);
 });
