@@ -1,11 +1,37 @@
-# UI: Jimeng light chrome (2026-09-13)
+# UI: theme split — dark landing, light product (2026-09-13)
 
 ## Decision
-Marketing landing and Creative Web (especially Creative Square) use a **light Jimeng** system: airy white / off-white surfaces, charcoal type, soft gray lines, and cyan (`#00CAE0`) reserved for CTAs. This **replaces** the dark cyan-tech shell (`#060C20` / `#111318`) that shipped earlier the same day.
+**Two palettes. Do not mix them.**
 
-Generated-work interiors stay on the educational paper pack from backend #90 (P4=A). No `backdrop-filter` frost, no purple neon, no draft / version watermarks on the live landing.
+1. **Official H5 landing only** (`pages/landing/index`) is a **100% visual/structural replica** of the approved dark v2.2 draft at `docs/landing/zhile-landing-draft-v2.html`. Cinematic dark canvas, cyan CTAs, electric band, ice text, solid surfaces. **No frosted glass.** No draft / version watermark (`草箱 v2.2…`) in the runtime UI.
+2. **Every other product page** (Creative Web, Creative Square, conversation, login, register, listed chrome) stays **light Jimeng**: airy white / off-white, charcoal type, soft gray lines, cyan reserved for CTAs.
 
-## Tokens
+PR #29 incorrectly painted the landing with the shared light tokens. Landing must not import or inherit `chrome-tokens.scss`.
+
+Generated-work interiors stay on the educational paper pack from backend #90 (P4=A). No `backdrop-filter` frost, no purple neon.
+
+## Landing (dark, self-contained)
+Source of truth: `src/pages/landing/index.scss` (ported from the static draft). Taro chrome around the route is pinned in `src/app.scss` (`html.zl-landing-route` → `#060C20`).
+
+| Role | Value |
+| --- | --- |
+| Canvas / page | `#060C20` |
+| Surface / cards / nav | `#111318` |
+| Band | `#004DC8` |
+| CTA | `#00CAE0` on `#1D2129` |
+| Ice text | `#EBF8FF` / `#E0F5FF` |
+| Muted | `#8BA3B8` |
+| Line | `rgba(255,255,255,.12)` |
+| Radius | 8–12px |
+
+Structure (pixel-faithful): nav / hero + composer + demo card / electric band / ways / showcase / bottom CTA. H5 launch page is `pages/landing/index` (not a tab).
+
+- Unauthenticated users can open the landing without login.
+- `开启智了` → Creative Web home.
+- `即刻创作` / `开始创作` → `openCreatePageWithAuth({ mode: 'fresh' })`.
+- Static draft remains the approved visual reference. Re-port only if a later HTML arrives. Never ship the draft chip.
+
+## Product chrome (light)
 Source of truth: `src/styles/chrome-tokens.scss`, remapped through `src/styles/variables.scss` and `src/styles/creative-web-page.scss`.
 
 | Role | Value |
@@ -20,13 +46,6 @@ Source of truth: `src/styles/chrome-tokens.scss`, remapped through `src/styles/v
 | Cover matte | `#F0F2F5` |
 | Radius | 8–12px |
 | Card shadow | light, not glow |
-
-## Landing
-H5 launch page is `pages/landing/index` (not a tab). Structure still follows `docs/landing/zhile-landing-draft-v2.html` (hero / band / ways / showcase / bottom), but the **live palette is light**. The static HTML remains a historical structure draft (dark v2.2); do not port its draft chip (`草箱 v2.2…`) into production.
-
-- Unauthenticated users can open the landing without login.
-- `开启智了` → Creative Web home.
-- `即刻创作` / `开始创作` → `openCreatePageWithAuth({ mode: 'fresh' })`.
 
 ## Creative Square cards
 Gallery cards, not mini-players:

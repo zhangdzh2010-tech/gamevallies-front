@@ -8,7 +8,7 @@ const pageTheme = readFileSync(join(__dirname, '../../../styles/creative-web-pag
 const chromeTokens = readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8');
 const chrome = `${scss}\n${conversationStyles}\n${pageTheme}\n${chromeTokens}`;
 
-test('shared chrome tokens are the approved Jimeng light set', () => {
+test('shared chrome tokens stay light for non-landing product pages', () => {
   expect(chromeTokens).toMatch(/\$chrome-bg: #F7F8FA/);
   expect(chromeTokens).toMatch(/\$chrome-surface: #FFFFFF/);
   expect(chromeTokens).toMatch(/\$chrome-band: #F2F4F6/);
