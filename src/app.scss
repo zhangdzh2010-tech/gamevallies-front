@@ -44,9 +44,8 @@ html.zl-landing-route .taro_page_stationed {
   background: #060C20;
 }
 
-// Native <button> UA chrome. Page SCSS rewrites `button` → `taro-button-core`;
-// class selectors here are the guaranteed match. The `button` rule is a probe:
-// keep it only if the H5 build still emits a native `button` selector.
+// Taro H5 postcss also rewrites bare `button` in this file to `taro-button-core`
+// (verified in dist/h5/css/app.css). Only class selectors match native <button>.
 html.zl-landing-route .zl-brand,
 html.zl-landing-route .zl-nav__link {
   background: transparent !important;
@@ -62,11 +61,6 @@ html.zl-landing-route .zl-nav__link {
 html.zl-landing-route .zl-filter,
 html.zl-landing-route .zl-btn:not(.zl-btn--cta) {
   box-shadow: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-html.zl-landing-route button:not(.zl-btn--cta) {
   -webkit-appearance: none;
   appearance: none;
 }

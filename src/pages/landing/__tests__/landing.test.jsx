@@ -102,8 +102,8 @@ test('landing chrome is the approved dark draft and ignores shared light tokens'
 });
 
 test('landing nav controls stay transparent so Taro/weui cannot paint white chips', () => {
-  // Taro H5 rewrites bare `button` → `taro-button-core`. Native <button> only
-  // matches class selectors (or a non-rewritten html.zl-landing-route button).
+  // Taro H5 rewrites bare `button` → `taro-button-core` in page SCSS and app.scss.
+  // Native <button> only matches class selectors that survive the rewrite.
   expect(landingJsx).toMatch(/className="zl-nav__link"/);
   expect(landingJsx).toMatch(/className=\{filter === item\.id \? 'zl-filter is-active' : 'zl-filter'\}/);
   expect(landingScss).toMatch(/\.zl-nav__link \{[\s\S]*background:\s*transparent\s*!important/);
