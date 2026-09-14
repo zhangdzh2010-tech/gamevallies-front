@@ -11,11 +11,11 @@ PR #29 incorrectly painted the landing with the shared light tokens. Landing mus
 Generated-work interiors stay on the educational paper pack from backend #90 (P4=A). No `backdrop-filter` frost, no purple neon.
 
 ## Landing (dark, self-contained)
-Source of truth: `src/pages/landing/index.scss` (ported from the static draft). Taro chrome around the route is pinned in `src/app.scss` (`html.zl-landing-route` → `#060C20`).
+Source of truth: `src/pages/landing/index.scss` (ported from the static draft). Taro chrome around the route is pinned in `src/app.scss` (`html.zl-landing-route` → `#0B1B36` plus the same blue/cyan atmosphere).
 
 | Role | Value |
 | --- | --- |
-| Canvas / page | `#060C20` |
+| Canvas / page | `#0B1B36` + radial band `#004DC8` / faint cyan wash (no frost) |
 | Surface / cards / nav | `#111318` |
 | Band | `#004DC8` |
 | CTA | `#00CAE0` on `#1D2129` |

@@ -10,7 +10,7 @@ Source of truth: `src/pages/landing/index.scss` (self-contained; not `chrome-tok
 
 | Role | Value |
 | --- | --- |
-| Canvas / page | `#060C20` |
+| Canvas / page | `#0B1B36` + radial band `#004DC8` / faint cyan wash (no frost) |
 | Surface / cards / nav | `#111318` |
 | Band | `#004DC8` |
 | CTA | `#00CAE0` on `#1D2129` |

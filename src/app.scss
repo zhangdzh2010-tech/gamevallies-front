@@ -32,6 +32,8 @@ html.zl-landing-route .taro-tabbar__container > .taro-tabbar__tabbar {
 }
 
 // Landing canvas is the approved dark draft, not shared light chrome-tokens.
+// Keep #0B1B36 + atmosphere in sync with docs/landing/zhile-landing-draft-v2.html
+// and src/pages/landing/index.scss. Solid color only in page config (WeChat).
 html.zl-landing-route,
 html.zl-landing-route body,
 html.zl-landing-route #app,
@@ -41,7 +43,13 @@ html.zl-landing-route .taro-tabbar__container,
 html.zl-landing-route .taro-tabbar__panel,
 html.zl-landing-route .taro_page,
 html.zl-landing-route .taro_page_stationed {
-  background: #060C20;
+  background-color: #0B1B36;
+  background-image:
+    radial-gradient(ellipse 90% 58% at 50% -12%, rgba(0, 77, 200, 0.44), transparent 62%),
+    radial-gradient(ellipse 48% 40% at 88% 14%, rgba(0, 202, 224, 0.12), transparent 55%),
+    radial-gradient(ellipse 40% 28% at 8% 86%, rgba(0, 77, 200, 0.18), transparent 52%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 // Taro H5 postcss also rewrites bare `button` in this file to `taro-button-core`

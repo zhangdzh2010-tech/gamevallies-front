@@ -87,18 +87,20 @@ test('unauth CTAs enter Creative Web home or create', async () => {
 
 test('landing chrome is the approved dark draft and ignores shared light tokens', () => {
   expect(landingScss).not.toMatch(/@import['"\s].*chrome-tokens/);
-  expect(landingScss).toMatch(/--zl-bg:\s*#060C20/);
+  expect(landingScss).toMatch(/--zl-bg:\s*#0B1B36/);
   expect(landingScss).toMatch(/--zl-surface:\s*#111318/);
   expect(landingScss).toMatch(/--zl-band:\s*#004DC8/);
   expect(landingScss).toMatch(/--zl-cta:\s*#00CAE0/);
   expect(landingScss).toMatch(/--zl-ice:\s*#EBF8FF/);
+  expect(landingScss).not.toMatch(/#060C20/);
   expect(landingScss).not.toMatch(/#F7F8FA/);
   expect(landingScss).not.toMatch(/backdrop-filter/i);
   expect(landingScss).not.toMatch(/#6e56ff/i);
   expect(landingScss).not.toMatch(/#c4f465/i);
-  expect(appScss).toMatch(/html\.zl-landing-route[\s\S]*background:\s*#060C20/);
+  expect(appScss).toMatch(/html\.zl-landing-route[\s\S]*background-color:\s*#0B1B36/);
   expect(chromeTokens).toMatch(/\$chrome-bg:\s*#F7F8FA/);
   expect(chromeTokens).not.toMatch(/\$chrome-bg:\s*#060C20/);
+  expect(chromeTokens).not.toMatch(/\$chrome-bg:\s*#0B1B36/);
 });
 
 test('landing nav controls stay transparent so Taro/weui cannot paint white chips', () => {
@@ -121,10 +123,17 @@ test('landing nav controls stay transparent so Taro/weui cannot paint white chip
 
 test('v2.2 static draft remains the approved dark structure and palette reference', () => {
   const draft = readFileSync(join(__dirname, '../../../../docs/landing/zhile-landing-draft-v2.html'), 'utf8');
-  expect(draft).toMatch(/#060C20|#060c20/);
+  const config = readFileSync(join(__dirname, '../index.config.js'), 'utf8');
+  const atmosphere = /radial-gradient\(ellipse 90% 58% at 50% -12%, rgba\(0, 77, 200, 0\.44\), transparent 62%\)/;
+  expect(draft).toMatch(/#0B1B36|#0b1b36/);
+  expect(draft).not.toMatch(/#060C20|#060c20/);
   expect(draft).toMatch(/#111318/);
   expect(draft).toMatch(/#004DC8/);
   expect(draft).toMatch(/#00CAE0/);
+  expect(draft).toMatch(atmosphere);
+  expect(landingScss).toMatch(atmosphere);
+  expect(appScss).toMatch(atmosphere);
+  expect(config).toMatch(/backgroundColor:\s*'#0B1B36'/);
   expect(draft).toMatch(/探索方式/);
   expect(draft).toMatch(/这样探索科学/);
   expect(draft).toMatch(/即刻创作/);

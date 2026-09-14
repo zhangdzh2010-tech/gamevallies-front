@@ -5,14 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>智了空间 · 把想法和科学变成可探索的作品</title>
   <!--
-    Approved v2.2 static draft (青蓝科技).
-    Tokens: bg #060C20 / #111318, band #004DC8, CTA #00CAE0 on #1D2129,
+    Approved v2.2 static draft (青蓝科技 / 即梦深蓝).
+    Tokens: bg #0B1B36 / #111318, band #004DC8, CTA #00CAE0 on #1D2129,
     ice #EBF8FF / #E0F5FF, line rgba(255,255,255,.12).
-    Solid chrome only — no frost. No purple neon. Radii 8–12px.
+    Deep navy + viewport-locked blue/cyan atmosphere — no frost.
+    No purple neon. Radii 8–12px.
   -->
   <style>
     :root {
-      --bg: #060C20;
+      --bg: #0B1B36;
+      --atmosphere:
+        radial-gradient(ellipse 90% 58% at 50% -12%, rgba(0, 77, 200, 0.44), transparent 62%),
+        radial-gradient(ellipse 48% 40% at 88% 14%, rgba(0, 202, 224, 0.12), transparent 55%),
+        radial-gradient(ellipse 40% 28% at 8% 86%, rgba(0, 77, 200, 0.18), transparent 52%);
       --surface: #111318;
       --card: #151A24;
       --band: #004DC8;
@@ -24,11 +29,28 @@
       --muted: #8BA3B8;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; background: var(--bg); color: var(--ice); font: 16px/1.6 Inter, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    html, body {
+      margin: 0;
+      background-color: var(--bg);
+      background-image: var(--atmosphere);
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      color: var(--ice);
+      font: 16px/1.6 Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
     button, input { font: inherit; }
     button { cursor: pointer; }
     a { color: inherit; }
-    .nav { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background-color: var(--bg);
+      background-image: var(--atmosphere);
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      border-bottom: 1px solid var(--line);
+    }
     .nav-inner { max-width: 1180px; margin: 0 auto; min-height: 72px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; }
     .mark { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; background: var(--cta); color: var(--cta-ink); font-weight: 800; }
