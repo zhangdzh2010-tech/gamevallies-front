@@ -15,3 +15,9 @@ test('public works infer domain from title tags and can be filtered', () => {
   expect(filterWorks([work], 'biology')).toHaveLength(1);
   expect(filterWorks([work], 'physics')).toHaveLength(0);
 });
+
+test('adapted public works expose a display author for title-only cards', () => {
+  expect(adaptPublicWork({ id: '1', title: '光合产氧', author: { displayName: '林栖' } }).author).toBe('林栖');
+  expect(adaptPublicWork({ id: '2', title: '单摆' }).author).toBe('创作者');
+  expect(KEEP_WORKS.every((work) => work.author)).toBe(true);
+});

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getGalleryPosterUrl } from '../../utils/media';
+import { getAvatarFallback, getSafeDisplayText, normalizeAvatarSource } from '../../utils/profileDisplay';
 
 const DOMAIN_HINTS = [
   ['physics', /物理|摆|轨道|重力|自由落|力学|波动|干涉/],
@@ -25,6 +26,16 @@ export function isDocumentLikePoster(width, height) {
     return false;
   }
   return height / width > 0.78;
+}
+
+export function galleryAuthorName(work = {}) {
+  return getSafeDisplayText([
+    work.author?.displayName,
+    work.author?.nickname,
+    work.author?.username,
+    work.authorName,
+    typeof work.author === 'string' ? work.author : '',
+  ], '创作者');
 }
 
 function SquarePoster({ src, domain }) {
@@ -62,6 +73,28 @@ function SquarePoster({ src, domain }) {
   );
 }
 
+function GalleryAuthor({ work }) {
+  const author = galleryAuthorName(work);
+  const avatarSrc = normalizeAvatarSource(work.author?.avatarUrl || work.author?.avatar);
+  const fallback = getAvatarFallback(work.author?.avatar, author, '创');
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [avatarSrc]);
+
+  return (
+    <span className="cw-gallery-author">
+      <span className="cw-gallery-avatar" aria-hidden="true">
+        {avatarSrc && !imageFailed ? (
+          <img src={avatarSrc} alt="" onError={() => setImageFailed(true)} />
+        ) : fallback}
+      </span>
+      <span className="cw-gallery-author-name">{author}</span>
+    </span>
+  );
+}
+
 export default function SquareGalleryCard({
   work,
   featured = false,
@@ -71,34 +104,35 @@ export default function SquareGalleryCard({
   remixLabel,
   remixDisabled = false,
 }) {
-  const description = work.description || '';
   const title = work.title || '未命名作品';
-  const author = work.author?.displayName || work.author?.username || '创作者';
 
   return (
     <article className={`cw-project cw-square-card${featured ? ' cw-project-featured' : ''}`}>
+      <div className="cw-gallery-cover">
+        {featured && rank > 0 && <span className="cw-hot-badge">热门 · {rank}</span>}
+        <SquarePoster src={getGalleryPosterUrl(work)} domain={galleryPosterDomain(work)} />
+        <button
+          type="button"
+          className="cw-gallery-hit"
+          onClick={onExperience}
+          aria-label={`体验 ${title}`}
+        />
+        <div className="cw-gallery-actions">
+          <button type="button" className="cw-button cw-primary" onClick={onExperience}>体验作品</button>
+          <button type="button" className="cw-button cw-outline" disabled={remixDisabled} onClick={onRemix}>
+            {remixLabel}
+          </button>
+        </div>
+      </div>
       <button
         type="button"
-        className="cw-gallery-hit"
+        className="cw-gallery-meta"
         onClick={onExperience}
         aria-label={`体验 ${title}`}
       >
-        <div className="cw-gallery-cover">
-          {featured && rank > 0 && <span className="cw-hot-badge">热门 · {rank}</span>}
-          <SquarePoster src={getGalleryPosterUrl(work)} domain={galleryPosterDomain(work)} />
-        </div>
-        <div className="cw-gallery-meta">
-          <h3>{title}</h3>
-          <p title={description || undefined}>{description}</p>
-          <span className="cw-gallery-author">作者：{author}</span>
-        </div>
+        <h3>{title}</h3>
+        <GalleryAuthor work={work} />
       </button>
-      <div className="cw-gallery-actions">
-        <button type="button" className="cw-button cw-primary" onClick={onExperience}>体验作品</button>
-        <button type="button" className="cw-button cw-outline" disabled={remixDisabled} onClick={onRemix}>
-          {remixLabel}
-        </button>
-      </div>
     </article>
   );
 }

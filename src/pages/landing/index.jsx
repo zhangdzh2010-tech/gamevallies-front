@@ -246,7 +246,12 @@ export default function LandingPage() {
                 </div>
                 <div className="zl-card__body">
                   <h3>{work.title}</h3>
-                  <p>{work.description}</p>
+                  <div className="zl-card__author">
+                    <span className="zl-card__avatar" aria-hidden="true">
+                      {Array.from(work.author || '创')[0]}
+                    </span>
+                    <span className="zl-card__author-name">{work.author || '创作者'}</span>
+                  </div>
                 </div>
               </article>
             ))}

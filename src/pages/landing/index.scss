@@ -469,8 +469,12 @@
 }
 
 .zl-card h3 {
-  margin: 0 0 8PX;
+  margin: 0;
   font-size: 18PX;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .zl-card__cover {
@@ -502,12 +506,37 @@
   }
 }
 
-.zl-card__body { padding: 16PX; }
+.zl-card__body { padding: 14PX 16PX 16PX; }
 
-.zl-card p {
-  margin: 0;
+.zl-card__author {
+  display: flex;
+  align-items: center;
+  gap: 8PX;
+  margin-top: 10PX;
+  min-width: 0;
   color: var(--zl-muted);
-  font-size: 14PX;
+  font-size: 13PX;
+}
+
+.zl-card__avatar {
+  width: 20PX;
+  height: 20PX;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: #1a2433;
+  color: var(--zl-ice);
+  font-size: 10PX;
+  font-weight: 650;
+}
+
+.zl-card__author-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .zl-empty { margin-top: 24PX; color: var(--zl-muted); }

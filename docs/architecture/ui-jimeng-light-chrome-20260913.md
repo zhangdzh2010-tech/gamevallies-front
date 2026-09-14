@@ -52,8 +52,9 @@ Gallery cards, not mini-players. The grid must never look like the work’s own 
 
 - 16:10 locked poster (`padding-top: 62.5%`). Landscape posters letterbox with `object-fit: contain`.
 - Full-page work screenshots / `screenshot` fields / HTML dumps are not posters. If the only image is a tall document capture, show a clean abstract placeholder instead.
-- Title once (1 line); description once (2 lines); author; primary **体验作品** + secondary remix.
-- `热门 · N` sits on the **cover**, never over title/description.
+- Title once (1 line); author as a circular avatar + name. No description on the card.
+- Remix / experience stay available but tucked (cover overlay on hover / focus-within; always visible on touch).
+- `热门 · N` sits on the **cover**, never over title or author.
 - Live sliders / start-pause / `WorkSandbox` iframes open only after 体验作品 → 开始体验 (dialog), never in the grid.
 
 ## What must not change
