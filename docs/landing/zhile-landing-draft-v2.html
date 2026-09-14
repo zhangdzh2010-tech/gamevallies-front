@@ -71,9 +71,9 @@
     .pendulum { position: relative; width: 220px; height: 220px; }
     .bar { position: absolute; top: 36px; left: 18px; right: 18px; height: 6px; border-radius: 999px; background: #3b4554; }
     .pivot { position: absolute; top: 32px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #cfd8e3; }
-    .arm { position: absolute; top: 38px; left: 50%; width: 2px; height: 148px; transform-origin: 50% 0; animation: swing 3.2s ease-in-out infinite; }
+    .arm { position: absolute; top: 38px; left: 50%; width: 28px; height: 148px; margin-left: -14px; transform-origin: 50% 0; animation: swing 3.2s ease-in-out infinite; }
     .rod { display: block; width: 2px; height: 128px; margin: 0 auto; background: #8b9aab; }
-    .bob { display: block; width: 22px; height: 22px; margin: -2px auto 0; border-radius: 50%; background: var(--cta); }
+    .bob { display: block; width: 22px; height: 22px; margin: -11px auto 0; border-radius: 50%; background: var(--cta); }
     @keyframes swing { 0%,100% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } }
     .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
     .demo footer { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
@@ -88,9 +88,9 @@
     .photo { position: relative; width: 100%; height: 260px; }
     .photo-glow { position: absolute; left: 50%; top: 48%; width: 200px; height: 150px; margin: -75px 0 0 -100px; border-radius: 50%; background: radial-gradient(circle, rgba(46, 194, 126, .28), transparent 68%); }
     .photo-sun { position: absolute; top: 26px; right: 44px; width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 32% 32%, #fff8d2, #f0b429); box-shadow: 0 0 0 7px rgba(240, 180, 41, .18), 0 0 28px 10px rgba(240, 180, 41, .3); animation: photo-glow 2.8s ease-in-out infinite; }
-    .photo-ray { position: absolute; top: 42px; right: 76px; width: 156px; height: 6px; transform-origin: 100% 50%; background: linear-gradient(90deg, transparent, rgba(255, 226, 140, .72)); border-radius: 999px; animation: photo-ray 2.6s ease-in-out infinite; }
-    .photo-ray-2 { top: 58px; width: 138px; transform: rotate(18deg); animation-delay: -.6s; }
-    .photo-ray-3 { top: 76px; width: 122px; transform: rotate(32deg); animation-delay: -1.2s; }
+    .photo-ray { position: absolute; top: 45px; right: 63px; width: 168px; height: 5px; margin-top: -2px; transform: rotate(16deg); transform-origin: 100% 50%; background: linear-gradient(90deg, rgba(255, 226, 140, .42), rgba(255, 226, 140, .92)); border-radius: 999px; animation: photo-ray 2.6s ease-in-out infinite; }
+    .photo-ray-2 { width: 152px; transform: rotate(24deg); animation-delay: -.6s; }
+    .photo-ray-3 { width: 138px; transform: rotate(34deg); animation-delay: -1.2s; }
     .photo-leaf { position: absolute; left: 50%; top: 48%; width: 118px; height: 118px; margin: -68px 0 0 -64px; }
     .photo-blade { display: block; width: 108px; height: 108px; margin: 6px 0 0 8px; border-radius: 2px 100% 4px 100%; background: linear-gradient(135deg, rgba(235, 248, 255, .28), transparent 34%), linear-gradient(145deg, #3dcea0 0%, #1b8a5e 58%, #146647 100%); transform: rotate(-28deg); box-shadow: 0 10px 24px rgba(0, 0, 0, .28); }
     .photo-vein { position: absolute; left: 28px; top: 58px; width: 72px; height: 2px; background: rgba(11, 18, 32, .38); transform: rotate(-28deg); border-radius: 999px; }
@@ -101,7 +101,7 @@
     .photo-bubble-b { width: 10px; height: 10px; left: 66%; top: 48%; animation-delay: -1.1s; }
     .photo-bubble-c { width: 18px; height: 18px; left: 62%; top: 38%; animation-delay: -2s; }
     .photo-tag { position: absolute; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ice-strong); background: rgba(21, 26, 36, .72); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
-    .photo-tag-light { top: 22px; left: 28px; color: #ffe7a3; }
+    .photo-tag-light { top: 38px; left: 52px; width: 28px; height: 28px; padding: 0; border-radius: 50%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; line-height: 1; letter-spacing: 0; text-align: center; color: #ffe7a3; }
     .photo-tag-co2 { left: 22px; top: 54%; }
     .photo-tag-h2o { left: 36%; bottom: 58px; }
     .photo-tag-o2 { right: 36px; top: 36%; color: var(--cta); }
