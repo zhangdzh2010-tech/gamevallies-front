@@ -57,6 +57,26 @@ test('blocks duplicate generation while the task is running and displays actual 
   fireEvent.keyDown(screen.getByLabelText('creative-description'),{key:'Enter'});
   expect(generate).not.toHaveBeenCalled();
   expect(screen.getByText('37%')).toBeTruthy();
+  expect(screen.queryByTestId('waiting-confirm-primary')).toBeNull();
+});
+
+test('waiting-for-confirm shows an in-reply CTA that starts generation and still allows editing', async () => {
+  const generate = jest.fn();
+  const onInputChange = jest.fn();
+  render(<CreativeStudio input="观察不同初始角度的双摆运动" onInputChange={onInputChange} session={{initialPrompt:'观察不同初始角度的双摆运动'}} primary={{label:'开始生成',onClick:generate}} />);
+  expect(screen.getByText('等待确认')).toBeTruthy();
+  expect(screen.getByText('创作描述已保存。请确认或修改方向，准备好后开始生成。')).toBeTruthy();
+  expect(screen.getByTestId('waiting-confirm-actions')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: '修改描述' }));
+  expect(onInputChange).toHaveBeenCalledWith('观察不同初始角度的双摆运动');
+  fireEvent.click(screen.getByTestId('waiting-confirm-primary'));
+  await waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
+  expect(screen.getByTestId('waiting-confirm-primary').textContent).toBe('确认并开始生成');
+});
+
+test('waiting-for-confirm keeps a custom primary label when generation is gated', () => {
+  render(<CreativeStudio input="观察双摆" session={{initialPrompt:'观察双摆'}} primary={{label:'订阅后解锁生成',onClick:jest.fn()}} />);
+  expect(screen.getByTestId('waiting-confirm-primary').textContent).toBe('订阅后解锁生成');
 });
 
 test('carries a completed-work follow-up into iteration without silently discarding the input', () => {
