@@ -57,6 +57,17 @@ beforeEach(() => {
   mockGetTrending.mockRejectedValue(new Error('no feed'));
 });
 
+test('landing brand lockup uses the square Z mark plus 智了空间', async () => {
+  const { container } = render(<LandingPage />);
+  const mark = container.querySelector('img.zl-mark');
+  expect(mark).toBeTruthy();
+  expect(mark.getAttribute('src')).toBeTruthy();
+  expect(screen.getAllByText('智了空间').length).toBeGreaterThan(0);
+  expect(landingJsx).not.toMatch(/<span className="zl-mark">智<\/span>/);
+  expect(readFileSync(join(__dirname, '../../../index.html'), 'utf8')).toMatch(/rel="icon"/);
+  expect(readFileSync(join(__dirname, '../../../index.html'), 'utf8')).toMatch(/apple-touch-icon/);
+});
+
 test('landing shows approved marketing copy and never AI 游戏工坊', async () => {
   render(<LandingPage />);
   expect(screen.getByText(/把想法和科学/)).toBeTruthy();

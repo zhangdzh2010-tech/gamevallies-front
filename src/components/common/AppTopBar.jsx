@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import Taro from '@tarojs/taro';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Image } from '@tarojs/components';
+import { BRAND_MARK_SRC } from './BrandMark';
 import './AppTopBar.scss';
 
 export function AppTopBar({
@@ -63,7 +64,10 @@ export function AppTopBar({
             </View>
           ) : null}
         </View>
-        <Text className="app-top-bar__title">{title}</Text>
+        <View className="app-top-bar__lockup">
+          <Image className="app-top-bar__mark" src={BRAND_MARK_SRC} mode="aspectFit" />
+          <Text className="app-top-bar__title">{title}</Text>
+        </View>
         <View className="app-top-bar__side app-top-bar__side--right" style={sideStyle}>
           {rightText ? (
             <View className="app-top-bar__action" onClick={onRightClick}>

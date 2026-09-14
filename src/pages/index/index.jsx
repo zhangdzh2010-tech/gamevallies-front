@@ -1,7 +1,8 @@
 import CreativeHome from '../../components/creative-web/CreativeHome';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, Image } from '@tarojs/components';
+import { BRAND_MARK_SRC } from '../../components/common/BrandMark';
 import { AppTopBar } from '../../components/common/AppTopBar';
 import { GameCard } from '../../components/common/GameCard';
 import { CustomTabBar } from '../../components/common/CustomTabBar';
@@ -457,7 +458,7 @@ function LegacyHome() {
       <View className="home-stage">
         <View className="home-ribbon">
           <View className="home-ribbon__brand">
-            <View className="home-ribbon__brand-icon" />
+            <Image className="home-ribbon__brand-icon" src={BRAND_MARK_SRC} mode="aspectFit" />
           </View>
           <View className="home-ribbon__center">
             <Text className="home-ribbon__eyebrow">智了空间</Text>

@@ -56,6 +56,17 @@ module.exports = defineConfig({
   },
   sourceRoot: "src",
   outputRoot,
+  copy: {
+    patterns: [
+      { from: "src/static/favicon.ico", to: `${outputRoot}/favicon.ico` },
+      { from: "src/static/favicon-16x16.png", to: `${outputRoot}/favicon-16x16.png` },
+      { from: "src/static/favicon-32x32.png", to: `${outputRoot}/favicon-32x32.png` },
+      { from: "src/static/apple-touch-icon.png", to: `${outputRoot}/apple-touch-icon.png` },
+      { from: "src/static/android-chrome-192x192.png", to: `${outputRoot}/android-chrome-192x192.png` },
+      { from: "src/static/android-chrome-512x512.png", to: `${outputRoot}/android-chrome-512x512.png` },
+      { from: "src/static/site.webmanifest", to: `${outputRoot}/site.webmanifest` },
+    ],
+  },
   plugins: ["@tarojs/plugin-framework-react"],
   framework: "react",
   compiler: "webpack5",

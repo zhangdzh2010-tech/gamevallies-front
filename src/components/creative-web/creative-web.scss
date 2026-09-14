@@ -28,7 +28,7 @@
   .cw-badge {display:inline-block;font-size:12PX;background:#F5F7F8;color:#00CAE0;padding:3PX 8PX;border-radius:5PX;white-space:nowrap;}
   .cw-sidebar {position:fixed;inset:0 auto 0 0;width:222PX;background:#FFFFFF;border-right:1PX solid var(--cw-line);padding:28PX 18PX;display:flex;flex-direction:column;z-index:12;}
   .cw-brand {display:flex;gap:10PX;align-items:center;font-size:20PX;font-weight:800;letter-spacing:-.6PX;margin-bottom:29PX;padding:0 7PX;}
-  .cw-mark {display:grid;place-items:center;width:32PX;height:32PX;border-radius:8PX;background:#00CAE0;color:#1D2129;font-size:17PX;font-weight:700;flex-shrink:0;}
+  .cw-mark {display:block;width:32PX;height:32PX;border-radius:8PX;object-fit:cover;flex-shrink:0;background:none;}
   .cw-new {width:100%;margin-bottom:28PX;}
   .cw-nav-label {font-size:12PX;color:#86909C;padding:0 13PX;margin-bottom:9PX;letter-spacing:.2PX;}
   .cw-nav + .cw-nav-label {margin-top:24PX;}
