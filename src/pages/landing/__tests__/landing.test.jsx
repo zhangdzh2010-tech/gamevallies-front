@@ -316,3 +316,32 @@ test('showcase covers match the draft matte label, and API images still letterbo
   expect(appScss).toMatch(/html\.zl-landing-route \.zl-card__hit \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);
 });
+
+test('photosynthesis mark beams originate on the sun and aim at the leaf', () => {
+  const draft = readFileSync(join(__dirname, '../../../../docs/landing/zhile-landing-draft-v2.html'), 'utf8');
+  expect(landingScss).toMatch(/\.zl-photo__sun \{[\s\S]*top:\s*26PX;[\s\S]*right:\s*44PX;[\s\S]*width:\s*38PX/);
+  expect(landingScss).toMatch(/\.zl-photo__ray \{[\s\S]*top:\s*45PX;[\s\S]*right:\s*63PX/);
+  expect(landingScss).toMatch(/\.zl-photo__ray \{[\s\S]*transform-origin:\s*100% 50%/);
+  expect(landingScss).toMatch(/\.zl-photo__ray \{[\s\S]*transform:\s*rotate\(16deg\)/);
+  expect(landingScss).toMatch(/\.zl-photo__ray--2 \{[\s\S]*transform:\s*rotate\(24deg\)/);
+  expect(landingScss).toMatch(/\.zl-photo__ray--3 \{[\s\S]*transform:\s*rotate\(34deg\)/);
+  expect(landingScss).not.toMatch(/\.zl-photo__ray \{[^}]*top:\s*42PX/);
+  expect(landingScss).not.toMatch(/\.zl-photo__ray--2 \{[^}]*top:\s*58PX/);
+  expect(landingScss).not.toMatch(/\.zl-photo__tag--light \{[^}]*left:\s*28PX/);
+  expect(landingScss).toMatch(/\.zl-photo__tag--light \{[\s\S]*width:\s*28PX;[\s\S]*height:\s*28PX;[\s\S]*border-radius:\s*50%/);
+  expect(landingScss).toMatch(/\.zl-photo__tag--light \{[\s\S]*left:\s*52PX/);
+  expect(draft).toMatch(/\.photo-ray \{[^}]*top: 45px;[^}]*right: 63px/);
+  expect(draft).toMatch(/\.photo-ray \{[^}]*transform: rotate\(16deg\)/);
+  expect(draft).toMatch(/\.photo-tag-light \{[^}]*width: 28px;[^}]*height: 28px;[^}]*border-radius: 50%/);
+  expect(draft).not.toMatch(/photo-tag-light \{ top: 22px; left: 28px/);
+});
+
+test('pendulum mark keeps the bob center on the string end', () => {
+  const draft = readFileSync(join(__dirname, '../../../../docs/landing/zhile-landing-draft-v2.html'), 'utf8');
+  expect(landingScss).toMatch(/\.zl-pendulum__arm \{[\s\S]*width:\s*28PX;[\s\S]*margin-left:\s*-14PX/);
+  expect(landingScss).toMatch(/\.zl-pendulum__bob \{[\s\S]*margin:\s*-11PX auto 0/);
+  expect(landingScss).not.toMatch(/\.zl-pendulum__arm \{[^}]*width:\s*2PX/);
+  expect(landingScss).not.toMatch(/\.zl-pendulum__bob \{[^}]*margin:\s*-2PX auto 0/);
+  expect(draft).toMatch(/\.arm \{[^}]*width: 28px;[^}]*margin-left: -14px/);
+  expect(draft).toMatch(/\.bob \{[^}]*margin: -11px auto 0/);
+});

@@ -305,8 +305,9 @@
   position: absolute;
   top: 38PX;
   left: 50%;
-  width: 2PX;
+  width: 28PX;
   height: 148PX;
+  margin-left: -14PX;
   transform-origin: 50% 0;
   animation: zl-swing 3.2s ease-in-out infinite;
 }
@@ -323,7 +324,7 @@
   display: block;
   width: 22PX;
   height: 22PX;
-  margin: -2PX auto 0;
+  margin: -11PX auto 0;
   border-radius: 50%;
   background: var(--zl-cta);
 }
@@ -462,27 +463,27 @@
 
 .zl-photo__ray {
   position: absolute;
-  top: 42PX;
-  right: 76PX;
-  width: 156PX;
-  height: 6PX;
+  top: 45PX;
+  right: 63PX;
+  width: 168PX;
+  height: 5PX;
+  margin-top: -2PX;
+  transform: rotate(16deg);
   transform-origin: 100% 50%;
-  background: linear-gradient(90deg, transparent, rgba(255, 226, 140, .72));
+  background: linear-gradient(90deg, rgba(255, 226, 140, .42), rgba(255, 226, 140, .92));
   border-radius: 999PX;
   animation: zl-photo-ray 2.6s ease-in-out infinite;
 }
 
 .zl-photo__ray--2 {
-  top: 58PX;
-  width: 138PX;
-  transform: rotate(18deg);
+  width: 152PX;
+  transform: rotate(24deg);
   animation-delay: -.6s;
 }
 
 .zl-photo__ray--3 {
-  top: 76PX;
-  width: 122PX;
-  transform: rotate(32deg);
+  width: 138PX;
+  transform: rotate(34deg);
   animation-delay: -1.2s;
 }
 
@@ -585,8 +586,19 @@
 }
 
 .zl-photo__tag--light {
-  top: 22PX;
-  left: 28PX;
+  top: 38PX;
+  left: 52PX;
+  width: 28PX;
+  height: 28PX;
+  padding: 0;
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
   color: #ffe7a3;
 }
 
