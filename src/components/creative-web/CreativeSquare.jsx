@@ -1,6 +1,7 @@
 import WorkSandbox from './WorkSandbox';
 import React, { useEffect, useRef, useState } from 'react';
 import { getLatest, getTrending, searchGames } from '../../services/feed';
+import { formatUserErrorMessage } from '../../utils/networkError';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../utils/authNavigation';
 import { Storage } from '../../utils/storage';
 import { PlayerLetterbox } from './coverLetterbox';
@@ -37,7 +38,11 @@ export default function CreativeSquare() {
       setWorks(previous => next === 1 ? items : [...previous, ...items.filter(item => !previous.some(p => p.id === item.id))]);
       setPage(next);
       setMore(result?.hasMore ?? (result?.total != null ? next * 24 < Number(result.total) : items.length === 24));
-    } catch (err) { if (request === serial.current) setError(err?.message || '广场暂时无法加载，请重试。'); }
+    } catch (err) {
+      if (request === serial.current) {
+        setError(formatUserErrorMessage(err, '广场暂时无法加载，请重试。'));
+      }
+    }
     finally { if (request === serial.current) { busy.current = false; setLoading(false); } }
   }
   useEffect(() => { setWorks([]); setMore(false); void load(); return () => { serial.current++; }; }, [sort, search]);
@@ -51,7 +56,12 @@ export default function CreativeSquare() {
   return <>
     <div className="cw-section-head"><div className="cw-tabs">{[['trending', '热门作品'], ['latest', '最新发布']].map(([id, label]) => <button type="button" key={id} className={`cw-tab${sort === id ? ' active' : ''}`} onClick={() => setSort(id)}>{label}</button>)}</div>
       <form className="cw-row" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}><input className="cw-search" aria-label="搜索广场作品" placeholder="搜索作品或创作者" value={query} onChange={e => setQuery(e.target.value)} /><button type="submit" className="cw-button cw-outline">搜索</button></form></div>
-    {error && <div className="cw-error" role="alert">{error}<button type="button" onClick={() => load(page)}>重试</button></div>}
+    {error && (
+      <div className="cw-error" role="alert">
+        <span className="cw-error__message">{error}</span>
+        <button type="button" className="cw-error__retry" onClick={() => load(page)}>重试</button>
+      </div>
+    )}
     <div className="cw-projects">{works.map((work, index) => {
       const featured = sort === 'trending' && !search && index < 3;
       return (

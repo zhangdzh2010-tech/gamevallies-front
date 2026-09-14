@@ -14,6 +14,11 @@ class PackageConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'separate'):
             c.runtime_config({'PUBLIC_ORIGIN':'https://app.example.com', 'CONTENT_ORIGIN':'https://app.example.com'}, False)
 
+    def test_frontend_redirects_apex_to_www(self):
+        template = (Path(__file__).resolve().parents[2] / 'deploy/fc/frontend.conf.template').read_text(encoding='utf-8')
+        self.assertIn('if ($host = zlspace.ai)', template)
+        self.assertIn('return 301 https://www.zlspace.ai$request_uri;', template)
+
     def test_frontend_strips_fc_attachment_except_growth_downloads(self):
         import re
         template = (Path(__file__).resolve().parents[2] / 'deploy/fc/frontend.conf.template').read_text(encoding='utf-8')

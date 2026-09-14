@@ -25,6 +25,9 @@ jobs:
           src/pages/create/__tests__/create.creation-session.test.jsx
           src/pages/landing/__tests__
           src/utils/__tests__/media.test.js
+          src/utils/__tests__/sameOriginBase.test.js
+          src/utils/__tests__/networkError.test.js
+          src/services/__tests__/api.test.js
           src/components/creation/__tests__/CreationCreateWorkspace.test.jsx
           src/components/creative-web/__tests__
       - name: Build H5 from source

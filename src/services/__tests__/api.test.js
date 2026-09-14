@@ -26,12 +26,22 @@ jest.mock('../../utils/storage', () => ({
   },
 }));
 
+jest.mock('../../utils/sameOriginBase', () => {
+  const actual = jest.requireActual('../../utils/sameOriginBase');
+  return {
+    ...actual,
+    getPageOrigin: jest.fn(() => ''),
+  };
+});
+
 describe('api.get', () => {
   const originalTaroEnv = process.env.TARO_ENV;
   const originalFetch = global.fetch;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    const { getPageOrigin } = require('../../utils/sameOriginBase');
+    getPageOrigin.mockReturnValue('');
     global.fetch = mockFetch;
     mockRequest.mockResolvedValue({
       statusCode: 200,
@@ -94,5 +104,57 @@ describe('api.get', () => {
     const requestConfig = mockRequest.mock.calls[0][0];
     expect(requestConfig.url).toContain('/api/v1/games/game-types');
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test('uses a same-origin relative URL when SERVICE_URLS already point at this host', async () => {
+    process.env.TARO_ENV = 'h5';
+    const { getPageOrigin } = require('../../utils/sameOriginBase');
+    getPageOrigin.mockReturnValue('https://www.zlspace.ai');
+    const { get } = require('../api');
+
+    await get('/api/v1/feed/trending', {
+      data: { page: 1, limit: 24 },
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/feed/trending?page=1&limit=24',
+      expect.objectContaining({
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin',
+      })
+    );
+  });
+
+  test('keeps apex and www on the same public site so feed GET stays relative', async () => {
+    process.env.TARO_ENV = 'h5';
+    const { getPageOrigin } = require('../../utils/sameOriginBase');
+    getPageOrigin.mockReturnValue('https://zlspace.ai');
+    const { createRequest } = require('../api');
+
+    await createRequest({
+      method: 'GET',
+      url: '/api/v1/feed/latest',
+      data: { page: 2, limit: 5 },
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/feed/latest?page=2&limit=5',
+      expect.objectContaining({ method: 'GET' })
+    );
+    expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  test('rewrites Failed to fetch as a Chinese network error', async () => {
+    process.env.TARO_ENV = 'h5';
+    mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const { get } = require('../api');
+
+    await expect(
+      get('/api/v1/feed/trending', {
+        data: { page: 1, limit: 10 },
+        timeout: 1,
+      })
+    ).rejects.toThrow('网络连接失败，请稍后重试');
   });
 });

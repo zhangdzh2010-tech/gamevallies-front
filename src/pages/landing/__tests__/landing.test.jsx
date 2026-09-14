@@ -100,6 +100,14 @@ test('landing chrome is the approved dark draft and ignores shared light tokens'
   expect(chromeTokens).not.toMatch(/\$chrome-bg:\s*#060C20/);
 });
 
+test('landing nav controls stay transparent so Taro/weui cannot paint white chips', () => {
+  expect(landingScss).toMatch(/\.zl-landing \{[\s\S]*button,[\s\S]*\.zl-brand,[\s\S]*\.zl-nav__links button \{[\s\S]*background:\s*transparent\s*!important/);
+  expect(landingScss).toMatch(/\.zl-nav__links \{[\s\S]*button:hover[\s\S]*background:\s*transparent\s*!important/);
+  expect(landingScss).toMatch(/\.zl-btn--cta,[\s\S]*background:\s*var\(--zl-cta\)\s*!important/);
+  expect(landingScss).toMatch(/\.weui-btn/);
+  expect(landingScss).toMatch(/taro-button-core/);
+});
+
 test('v2.2 static draft remains the approved dark structure and palette reference', () => {
   const draft = readFileSync(join(__dirname, '../../../../docs/landing/zhile-landing-draft-v2.html'), 'utf8');
   expect(draft).toMatch(/#060C20|#060c20/);

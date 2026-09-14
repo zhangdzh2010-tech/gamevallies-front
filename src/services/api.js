@@ -1,6 +1,8 @@
 import Taro from '@tarojs/taro';
 import { API_CONFIG } from '../types';
 import { Storage } from '../utils/storage';
+import { getPageOrigin, preferRelativeBase } from '../utils/sameOriginBase';
+import { formatUserErrorMessage, isNetworkError } from '../utils/networkError';
 
 
 
@@ -101,7 +103,7 @@ function normalizeBackendMessage(message) {
 /**
  * Resolve base URL by matching API path to the appropriate microservice
  */
-function resolveBaseUrl(url) {
+function resolveConfiguredBaseUrl(url) {
   const s = API_CONFIG.SERVICE_URLS;
   const fallbackBaseUrl = API_CONFIG.BASE_URL;
   if (!s) return fallbackBaseUrl;
@@ -112,6 +114,10 @@ function resolveBaseUrl(url) {
   if (url.startsWith('/api/v1/social') || url.startsWith('/api/v1/comments') || url.startsWith('/api/v1/notifications')) return s.SOCIAL || fallbackBaseUrl;
   if (url.startsWith('/api/v1/feed') || url.startsWith('/api/v1/tags') || url.startsWith('/api/v1/challenges') || url.startsWith('/api/v1/creators')) return s.FEED || fallbackBaseUrl;
   return fallbackBaseUrl;
+}
+
+function resolveBaseUrl(url) {
+  return preferRelativeBase(resolveConfiguredBaseUrl(url), getPageOrigin());
 }
 
 async function requestTokenRefresh(refreshToken) {
@@ -158,8 +164,15 @@ config,
 retryConfig = DEFAULT_RETRY_CONFIG)
 {
   const { method, url, data, timeout = API_CONFIG.TIMEOUT } = config;
-  const finalUrl = url.startsWith('http') ? url : `${resolveBaseUrl(url)}${url}`;
   const normalizedMethod = String(method || 'GET').toUpperCase();
+  let finalUrl = url.startsWith('http') ? url : `${resolveBaseUrl(url)}${url}`;
+
+  if ((normalizedMethod === 'GET' || normalizedMethod === 'HEAD') && data && typeof data === 'object') {
+    const queryEntries = Object.entries(data)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+    finalUrl = appendQueryString(finalUrl, queryEntries);
+  }
 
   try {
     const headers = {
@@ -283,51 +296,18 @@ retryConfig = DEFAULT_RETRY_CONFIG)
       });
     }
 
-    // Format error message
-    const errorMessage = formatErrorMessage(error);
+    const errorMessage = formatUserErrorMessage(error);
     console.error(`[API Error] ${config.method} ${finalUrl}:`, errorMessage);
+    if (error && error.message !== errorMessage) {
+      const wrapped = new Error(errorMessage);
+      wrapped.cause = error;
+      wrapped.statusCode = error.statusCode;
+      wrapped.code = error.code;
+      wrapped.errMsg = error.errMsg;
+      throw wrapped;
+    }
     throw error;
   }
-}
-
-/**
- * Check if error is network-related
- */
-function isNetworkError(error) {
-  const rawMessage = [error?.message, error?.errMsg]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
-  if (!rawMessage) {
-    return false;
-  }
-
-  const networkPatterns = [
-    'network_error',
-    'network error',
-    'request:fail',
-    'timeout',
-    'timed out',
-    'econnrefused',
-    'econnreset',
-    'enotfound',
-    'enetunreach',
-    '网络',
-    '超时',
-  ];
-
-  return networkPatterns.some((pattern) => rawMessage.includes(pattern));
-}
-
-/**
- * Format error message
- */
-function formatErrorMessage(error) {
-  if (error.message) return error.message;
-  if (error.errMsg) return error.errMsg;
-  if (error.code) return `Error ${error.code}`;
-  return 'Unknown error';
 }
 
 function appendQueryString(url, params) {
