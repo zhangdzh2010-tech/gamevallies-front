@@ -17,6 +17,7 @@ test('shared chrome tokens stay light for non-landing product pages', () => {
   expect(chromeTokens).toMatch(/\$chrome-ice: #1D2129/);
   expect(chromeTokens).toMatch(/\$chrome-line: rgba\(29, 33, 41, 0\.08\)/);
   expect(chromeTokens).not.toMatch(/\$chrome-bg: #060C20/);
+  expect(chromeTokens).not.toMatch(/\$chrome-bg: #0B1B36/);
 });
 
 test('creative-web chrome stays solid light: no frost, neon lime, or purple', () => {

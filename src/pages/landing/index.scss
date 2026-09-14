@@ -3,7 +3,11 @@
 // Production strips only the draft chip / 「草箱」footer — keep the rest.
 
 .zl-landing {
-  --zl-bg: #060C20;
+  --zl-bg: #0B1B36;
+  --zl-atmosphere:
+    radial-gradient(ellipse 90% 58% at 50% -12%, rgba(0, 77, 200, 0.44), transparent 62%),
+    radial-gradient(ellipse 48% 40% at 88% 14%, rgba(0, 202, 224, 0.12), transparent 55%),
+    radial-gradient(ellipse 40% 28% at 8% 86%, rgba(0, 77, 200, 0.18), transparent 52%);
   --zl-surface: #111318;
   --zl-card: #151A24;
   --zl-band: #004DC8;
@@ -14,7 +18,10 @@
   --zl-line: rgba(255, 255, 255, 0.12);
   --zl-muted: #8BA3B8;
   min-height: 100vh;
-  background: var(--zl-bg);
+  background-color: var(--zl-bg);
+  background-image: var(--zl-atmosphere);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--zl-ice);
   font: 16PX/1.6 Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
   text-align: left;
@@ -75,7 +82,10 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--zl-bg);
+  background-color: var(--zl-bg);
+  background-image: var(--zl-atmosphere);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   border-bottom: 1PX solid var(--zl-line);
 }
 
