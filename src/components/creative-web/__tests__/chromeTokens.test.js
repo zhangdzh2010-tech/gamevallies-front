@@ -46,9 +46,11 @@ test('letterbox contain geometry from the plaza/studio preview PR is still prese
 });
 
 test('square cards pin the hot badge to the cover and clamp title/description', () => {
-  expect(scss).toMatch(/\.cw-square-card \.cw-cover \.cw-hot-badge \{[^}]*top:12PX/);
-  expect(scss).toMatch(/\.cw-square-card \.cw-project-body h3 \{[^}]*white-space:nowrap/);
-  expect(scss).toMatch(/\.cw-square-card \.cw-project-body p \{[^}]*-webkit-line-clamp:2/);
-  expect(scss).toMatch(/\.cw-square-card \.cw-project-body \.cw-hot-badge \{display:none;\}/);
+  expect(scss).toMatch(/\.cw-gallery-cover \{[^}]*padding-top:62\.5%/);
+  expect(scss).toMatch(/\.cw-gallery-cover \.cw-hot-badge \{[^}]*top:12PX/);
+  expect(scss).toMatch(/\.cw-gallery-meta h3 \{[^}]*white-space:nowrap/);
+  expect(scss).toMatch(/\.cw-gallery-meta p \{[^}]*-webkit-line-clamp:2/);
+  expect(scss).toMatch(/\.cw-square-card \.cw-gallery-meta \.cw-hot-badge \{display:none;\}/);
+  expect(scss).toMatch(/\.cw-square-card iframe/);
   expect(scss).toMatch(/\.cw-hot-badge[\s\S]*pointer-events: none/);
 });

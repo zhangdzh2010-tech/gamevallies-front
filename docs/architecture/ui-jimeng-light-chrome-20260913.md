@@ -48,12 +48,13 @@ Source of truth: `src/styles/chrome-tokens.scss`, remapped through `src/styles/v
 | Card shadow | light, not glow |
 
 ## Creative Square cards
-Gallery cards, not mini-players:
+Gallery cards, not mini-players. The grid must never look like the work’s own paper chrome:
 
-- 16:10 cover / thumbnail, `object-fit: contain` letterbox.
-- Title 1 line; description 2 lines; author; primary **体验作品**.
+- 16:10 locked poster (`padding-top: 62.5%`). Landscape posters letterbox with `object-fit: contain`.
+- Full-page work screenshots / `screenshot` fields / HTML dumps are not posters. If the only image is a tall document capture, show a clean abstract placeholder instead.
+- Title once (1 line); description once (2 lines); author; primary **体验作品** + secondary remix.
 - `热门 · N` sits on the **cover**, never over title/description.
-- Live sliders / start-pause / work iframes open only after 体验作品 (dialog), never in the grid.
+- Live sliders / start-pause / `WorkSandbox` iframes open only after 体验作品 → 开始体验 (dialog), never in the grid.
 
 ## What must not change
 - HTML/CSS inside generated works (`WorkSandbox` iframe / educational paper).
