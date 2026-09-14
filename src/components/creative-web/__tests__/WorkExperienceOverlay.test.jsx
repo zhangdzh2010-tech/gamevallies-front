@@ -66,4 +66,6 @@ test('autoPlay skips the start gate and styles support a near-fullscreen window'
   await waitFor(() => expect(screen.getByTitle('种群模型')).toBeTruthy());
   expect(scss).toMatch(/\.cw-experience-dialog\.is-maximized/);
   expect(scss).toMatch(/height:min\(96vh,96dvh\)/);
+  expect(scss).toMatch(/cw-experience-overlay-root \{[^}]*display:flex/);
+  expect(scss).not.toMatch(/cw-experience-overlay-root \{[^}]*width:0/);
 });

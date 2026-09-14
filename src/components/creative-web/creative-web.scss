@@ -144,8 +144,8 @@
     .cw-gallery-actions {opacity:1;pointer-events:auto;transform:none;}
   }
 
-  &.cw-experience-overlay-root {min-height:0;width:0;height:0;background:transparent;position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:80;}
-  .cw-experience-dialog {display:flex;flex-direction:column;width:min(92vw,1000PX);max-height:min(92vh,920PX);max-height:min(92dvh,920PX);height:min(86vh,820PX);height:min(86dvh,820PX);}
+  &.cw-experience-overlay-root {min-height:0;width:auto;height:auto;background:rgba(29,33,41,.32);position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;pointer-events:auto;}
+  .cw-experience-dialog {pointer-events:auto;display:flex;flex-direction:column;margin:0;width:min(92vw,1000PX);max-height:min(92vh,920PX);max-height:min(92dvh,920PX);height:min(86vh,820PX);height:min(86dvh,820PX);}
   .cw-experience-dialog.is-maximized {width:min(98vw,100%);max-width:none;height:min(96vh,96dvh);max-height:min(96vh,96dvh);border-radius:8PX;}
   .cw-experience-dialog .cw-dialog-head,.cw-experience-dialog .cw-dialog-foot {flex:0 0 auto;padding:10PX 16PX;}
   .cw-experience-dialog .cw-dialog-head {align-items:center;}

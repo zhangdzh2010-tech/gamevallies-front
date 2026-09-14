@@ -93,7 +93,14 @@ export default function WorkExperienceOverlay({
   };
 
   return (
-    <div className="creative-web cw-experience-overlay-root">
+    <div
+      className="creative-web cw-experience-overlay-root"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          close('close');
+        }
+      }}
+    >
       <dialog
         ref={dialog}
         className={`cw-dialog cw-experience-dialog${maximized ? ' is-maximized' : ''}`}
