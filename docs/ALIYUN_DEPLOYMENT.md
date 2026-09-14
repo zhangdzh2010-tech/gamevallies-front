@@ -130,3 +130,5 @@ OSS 对象路径：`gamevallies/prod/releases/<commit SHA>/<SHA256>/<function>.z
 ## zlspace.ai 域名切换
 
 生产工作流固定使用 `https://www.zlspace.ai`（公开站点，不是只绑 apex `https://zlspace.ai`）和 `https://content.zlspace.ai`，旧 GitHub PUBLIC_ORIGIN / CONTENT_ORIGIN 变量不会覆盖这两个域名。`www.zlspace.ai` 绑定 frontend 函数，content 子域名绑定 content 函数；两个域名均需配置 HTTPS 证书与 DNS。FC_API_URL 仍使用 game-service 的函数触发器地址，不能改成网站域名。域名绑定与 DNS 切换不由代码合并自动执行。
+
+H5 在 SERVICE_URLS 与当前页同站（`www.zlspace.ai` 与 apex `zlspace.ai` 视为同一站点）时改走相对路径 `/api/v1/...`，由 frontend nginx 反代，避免浏览器把 `www` ↔ apex 当成跨域后出现 `TypeError: Failed to fetch`。`deploy/fc/frontend.conf.template` 将 `zlspace.ai` 301 到 `https://www.zlspace.ai`。后端 CORS 仍应同时允许 `https://www.zlspace.ai` 与 `https://zlspace.ai`（含 OPTIONS 预检），以便旧缓存的绝对地址或尚未跳转的 apex 访问。

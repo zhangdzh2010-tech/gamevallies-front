@@ -18,6 +18,12 @@ server {
     proxy_read_timeout 900s;
     proxy_send_timeout 900s;
     proxy_buffering off;
+    # Public site is www. Prefer one origin so H5 /api calls stay same-origin.
+    # Apex still works if DNS is bound; browsers should land on www.
+    if ($host = zlspace.ai) {
+        return 301 https://www.zlspace.ai$request_uri;
+    }
+
     location ^~ /__fc/ { return 404; }
     location ^~ /api/v1/internal/ { return 404; }
     location ^~ /api/v1/ai/ { return 404; }

@@ -22,7 +22,30 @@
   &, * { box-sizing: border-box; }
   h1, h2, h3, p { margin: 0; }
   button, input { font: inherit; color: inherit; }
-  button { cursor: pointer; background: none; border: 0; padding: 0; }
+  button,
+  .taro-button,
+  taro-button-core,
+  .weui-btn,
+  .weui-btn_default,
+  .zl-brand,
+  .zl-nav__links button {
+    cursor: pointer;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  button::after,
+  .taro-button::after,
+  taro-button-core::after,
+  .weui-btn::after {
+    border: 0 !important;
+    display: none;
+  }
   button:focus-visible, input:focus-visible {
     outline: 2PX solid rgba(0, 202, 224, .45);
     outline-offset: 3PX;
@@ -74,7 +97,19 @@
     color: rgba(235, 248, 255, .78);
     text-decoration: none;
     font-size: 14PX;
+    background: transparent !important;
   }
+  button:hover,
+  .weui-btn:hover,
+  .taro-button:hover {
+    color: var(--zl-ice);
+    background: transparent !important;
+  }
+}
+
+.zl-brand:hover {
+  color: var(--zl-ice);
+  background: transparent !important;
 }
 
 .zl-btn,
@@ -90,9 +125,18 @@
   white-space: nowrap;
 }
 
-.zl-btn--cta {
-  background: var(--zl-cta);
-  color: var(--zl-cta-ink);
+.zl-btn--cta,
+.zl-btn--cta.taro-button,
+.zl-btn--cta.weui-btn {
+  background: var(--zl-cta) !important;
+  background-color: var(--zl-cta) !important;
+  color: var(--zl-cta-ink) !important;
+  border: 0 !important;
+}
+
+.zl-btn--cta:hover {
+  background: #00b8cc !important;
+  background-color: #00b8cc !important;
 }
 
 .zl-hero,
@@ -284,12 +328,13 @@
   color: #fff;
 }
 
-.zl-btn--outline {
+.zl-btn--outline,
+.zl-btn--outline:hover {
   min-height: 40PX;
   padding: 0 18PX;
   border-radius: 999PX;
   border: 1PX solid rgba(255, 255, 255, .55);
-  background: transparent;
+  background: transparent !important;
   color: #fff;
   font-weight: 700;
 }
@@ -357,18 +402,20 @@
   flex-wrap: wrap;
   gap: 10PX;
   margin-top: 22PX;
-  button {
+  button,
+  .weui-btn,
+  .taro-button {
     min-height: 36PX;
     padding: 0 14PX;
     border-radius: 999PX;
     border: 1PX solid var(--zl-line);
-    background: var(--zl-surface);
+    background: var(--zl-surface) !important;
     color: var(--zl-muted);
   }
   .is-active {
-    background: var(--zl-cta);
+    background: var(--zl-cta) !important;
     border-color: var(--zl-cta);
-    color: var(--zl-cta-ink);
+    color: var(--zl-cta-ink) !important;
   }
 }
 
@@ -428,12 +475,13 @@
   margin-top: 24PX;
 }
 
-.zl-btn--ghost {
+.zl-btn--ghost,
+.zl-btn--ghost:hover {
   min-height: 40PX;
   padding: 0 18PX;
   border-radius: 999PX;
   border: 1PX solid var(--zl-line);
-  background: transparent;
+  background: transparent !important;
   color: var(--zl-ice);
   font-weight: 700;
 }

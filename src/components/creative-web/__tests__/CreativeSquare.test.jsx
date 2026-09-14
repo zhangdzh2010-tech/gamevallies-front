@@ -93,6 +93,20 @@ test('disabled forks and API errors are visible', async () => {
   await screen.findByText('服务暂时不可用');
 });
 
+test('maps Failed to fetch to Chinese copy and keeps 重试 as its own control', async () => {
+  getTrending.mockRejectedValue(new TypeError('Failed to fetch'));
+  const scss = readFileSync(join(__dirname, '../creative-web.scss'), 'utf8');
+  render(<CreativeSquare />);
+  const alert = await screen.findByRole('alert');
+  expect(alert.textContent).toContain('网络连接失败，请稍后重试');
+  expect(alert.textContent).not.toMatch(/Failed to fetch/i);
+  const retry = within(alert).getByRole('button', { name: '重试' });
+  expect(retry.className).toContain('cw-error__retry');
+  expect(alert.querySelector('.cw-error__message')).toBeTruthy();
+  expect(scss).toMatch(/\.cw-error \{[^}]*display:flex/);
+  expect(scss).toMatch(/gap:12PX 16PX/);
+});
+
 test('defaults to ranked popular works and highlights the leading cards', async () => {
   render(<CreativeSquare />);
   await screen.findByText('种群模型');
