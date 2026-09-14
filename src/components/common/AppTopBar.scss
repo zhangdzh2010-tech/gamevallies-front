@@ -62,17 +62,38 @@
     line-height: 1;
   }
 
+  &__lockup {
+    align-items: center;
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  &__mark {
+    border-radius: 6px;
+    display: block;
+    flex-shrink: 0;
+    height: 28px;
+    object-fit: cover;
+    width: 28px;
+  }
+
   &__title {
     background: none;
     background-clip: border-box;
     color: $chrome-ice;
     display: block;
-    flex: 1;
     font-size: var(--gv-h5-topbar-title-size);
     font-weight: 700;
     letter-spacing: 0.2px;
     line-height: 1.1;
+    min-width: 0;
+    overflow: hidden;
     text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     -webkit-background-clip: border-box;
     -webkit-text-fill-color: $chrome-ice;
   }

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Input } from '@tarojs/components';
+import { View, Text, Input, Image } from '@tarojs/components';
 import { useNavigation } from '@tarojs/hooks';
 import Taro from '@tarojs/taro';
 import * as authService from '../../services/auth';
 import { navigateAfterLogin } from '../../utils/authNavigation';
 import { isH5Runtime } from '../../utils/runtime';
+import { BRAND_MARK_SRC } from '../../components/common/BrandMark';
 import './index.scss';
 
 const COOLDOWN = 60;
@@ -132,8 +133,8 @@ export default function Register() {
       {isH5 && (
         <View className="register-web-intro" aria-hidden="true">
           <View className="register-web-brand">
-            <Text className="register-web-mark">G</Text>
-            <Text className="register-web-wordmark">GameVallies</Text>
+            <Image className="register-web-mark" src={BRAND_MARK_SRC} mode="aspectFit" />
+            <Text className="register-web-wordmark">智了空间</Text>
           </View>
           <View className="register-web-copy">
             <Text className="register-web-kicker">YOUR CREATIVE SPACE</Text>
@@ -148,6 +149,7 @@ export default function Register() {
 
       <View className="register-content">
         <View className="logo-section">
+          <Image className="logo-mark" src={BRAND_MARK_SRC} mode="aspectFit" />
           <Text className="logo">智了空间</Text>
           <Text className="tagline">创建你的账号</Text>
         </View>

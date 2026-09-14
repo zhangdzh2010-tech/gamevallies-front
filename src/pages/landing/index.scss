@@ -116,12 +116,10 @@
 .zl-mark {
   width: 32PX;
   height: 32PX;
-  border-radius: 999PX;
-  display: grid;
-  place-items: center;
-  background: var(--zl-cta);
-  color: var(--zl-cta-ink);
-  font-weight: 800;
+  border-radius: 8PX;
+  display: block;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .zl-nav__links {

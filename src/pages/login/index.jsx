@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import * as authService from '../../services/auth';
 import { consumeLoginHint, handleLoginBackNavigation, navigateAfterLogin } from '../../utils/authNavigation';
 import { isH5Runtime, isWechatBrowserRuntime } from '../../utils/runtime';
+import { BRAND_MARK_SRC } from '../../components/common/BrandMark';
 import './index.scss';
 
 const COOLDOWN = 60;
@@ -272,8 +273,8 @@ export default function Login() {
       {isH5 && (
         <View className="login-web-intro" aria-hidden="true">
           <View className="login-web-brand">
-            <Text className="login-web-mark">G</Text>
-            <Text className="login-web-wordmark">GameVallies</Text>
+            <Image className="login-web-mark" src={BRAND_MARK_SRC} mode="aspectFit" />
+            <Text className="login-web-wordmark">智了空间</Text>
           </View>
           <View className="login-web-copy">
             <Text className="login-web-kicker">CREATIVE STUDIO</Text>
@@ -289,6 +290,7 @@ export default function Login() {
 
       <View className="login-content">
         <View className="logo-section">
+          <Image className="logo-mark" src={BRAND_MARK_SRC} mode="aspectFit" />
           <Text className="logo">智了空间</Text>
           <Text className="tagline">让创意成为可交互的作品</Text>
         </View>

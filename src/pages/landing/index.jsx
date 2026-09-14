@@ -16,6 +16,7 @@ import {
   adaptPublicWork,
   filterWorks,
 } from './keepWorks';
+import { BrandMarkImg } from '../../components/common/BrandMark';
 import './index.scss';
 
 const COMPOSER_PLACEHOLDER = '例如：两个几乎相同的双摆，轨迹会如何分叉……';
@@ -131,7 +132,7 @@ export default function LandingPage() {
       <header className="zl-nav">
         <div className="zl-nav__inner">
           <button type="button" className="zl-brand" onClick={() => scrollToId('create')}>
-            <span className="zl-mark">智</span>
+            <BrandMarkImg className="zl-mark" />
             智了空间
           </button>
           <nav className="zl-nav__links" aria-label="落地页导航">

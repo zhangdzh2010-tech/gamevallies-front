@@ -7,6 +7,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '@tarojs/hooks': '<rootDir>/src/utils/taroHooks.js',
     '\\.(scss|sass|css)$': 'identity-obj-proxy',
+    '\\.(png|jpe?g|gif|webp|ico)$': '<rootDir>/jest.file-mock.js',
   },
   transform: {
     '^.+\\.jsx?$': 'babel-jest',
