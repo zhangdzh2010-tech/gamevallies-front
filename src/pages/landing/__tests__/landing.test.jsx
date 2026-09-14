@@ -109,6 +109,7 @@ test('landing nav controls stay transparent so Taro/weui cannot paint white chip
   expect(landingScss).toMatch(/\.zl-nav__link \{[\s\S]*background:\s*transparent\s*!important/);
   expect(landingScss).toMatch(/\.zl-nav__link \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-nav__link:hover \{[\s\S]*background:\s*transparent\s*!important/);
+  expect(landingScss).toMatch(/\.zl-brand \{[\s\S]*color:\s*inherit/);
   expect(landingScss).toMatch(/\.zl-brand,[\s\S]*\.zl-nav__link \{[\s\S]*background:\s*transparent\s*!important/);
   expect(landingScss).toMatch(/\.zl-filter \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-btn--cta,[\s\S]*background:\s*var\(--zl-cta\)\s*!important/);
