@@ -21,32 +21,51 @@
 
   &, * { box-sizing: border-box; }
   h1, h2, h3, p { margin: 0; }
-  button, input { font: inherit; color: inherit; }
-  button,
+  // Class selectors survive Taro H5 postcss (`button` → `taro-button-core`).
+  // Landing renders native <button>, so tag selectors never match in /css/*.css.
+  .zl-brand,
+  .zl-nav__link,
+  .zl-filter,
+  .zl-btn,
+  input {
+    font: inherit;
+  }
+  .zl-brand,
+  .zl-nav__link,
+  .zl-filter,
+  .zl-btn,
   .taro-button,
   taro-button-core,
   .weui-btn,
-  .weui-btn_default,
-  .zl-brand,
-  .zl-nav__links button {
+  .weui-btn_default {
     cursor: pointer;
+    box-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .zl-brand,
+  .zl-nav__link {
     background: transparent !important;
     background-color: transparent !important;
     background-image: none !important;
     border: 0;
-    box-shadow: none;
     padding: 0;
-    -webkit-appearance: none;
-    appearance: none;
   }
-  button::after,
+  .zl-brand::after,
+  .zl-nav__link::after,
+  .zl-filter::after,
+  .zl-btn::after,
   .taro-button::after,
   taro-button-core::after,
   .weui-btn::after {
     border: 0 !important;
     display: none;
   }
-  button:focus-visible, input:focus-visible {
+  .zl-brand:focus-visible,
+  .zl-nav__link:focus-visible,
+  .zl-filter:focus-visible,
+  .zl-btn:focus-visible,
+  input:focus-visible {
     outline: 2PX solid rgba(0, 202, 224, .45);
     outline-offset: 3PX;
   }
@@ -77,6 +96,7 @@
   gap: 10PX;
   font-weight: 700;
   text-decoration: none;
+  color: inherit;
 }
 
 .zl-mark {
@@ -93,18 +113,24 @@
 .zl-nav__links {
   display: flex;
   gap: 28PX;
-  button {
-    color: rgba(235, 248, 255, .78);
-    text-decoration: none;
-    font-size: 14PX;
-    background: transparent !important;
-  }
-  button:hover,
-  .weui-btn:hover,
-  .taro-button:hover {
-    color: var(--zl-ice);
-    background: transparent !important;
-  }
+}
+
+.zl-nav__link {
+  color: rgba(235, 248, 255, .78);
+  text-decoration: none;
+  font-size: 14PX;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.zl-nav__link:hover {
+  color: var(--zl-ice);
+  background: transparent !important;
 }
 
 .zl-brand:hover {
@@ -123,6 +149,9 @@
   border-radius: 999PX;
   font-weight: 700;
   white-space: nowrap;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .zl-btn--cta,
@@ -402,21 +431,26 @@
   flex-wrap: wrap;
   gap: 10PX;
   margin-top: 22PX;
-  button,
-  .weui-btn,
-  .taro-button {
-    min-height: 36PX;
-    padding: 0 14PX;
-    border-radius: 999PX;
-    border: 1PX solid var(--zl-line);
-    background: var(--zl-surface) !important;
-    color: var(--zl-muted);
-  }
-  .is-active {
-    background: var(--zl-cta) !important;
-    border-color: var(--zl-cta);
-    color: var(--zl-cta-ink) !important;
-  }
+}
+
+.zl-filter {
+  min-height: 36PX;
+  padding: 0 14PX;
+  border-radius: 999PX;
+  border: 1PX solid var(--zl-line);
+  background: var(--zl-surface) !important;
+  background-color: var(--zl-surface) !important;
+  color: var(--zl-muted);
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.zl-filter.is-active {
+  background: var(--zl-cta) !important;
+  background-color: var(--zl-cta) !important;
+  border-color: var(--zl-cta);
+  color: var(--zl-cta-ink) !important;
 }
 
 .zl-card {

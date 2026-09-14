@@ -44,6 +44,27 @@ html.zl-landing-route .taro_page_stationed {
   background: #060C20;
 }
 
+// Taro H5 postcss also rewrites bare `button` in this file to `taro-button-core`
+// (verified in dist/h5/css/app.css). Only class selectors match native <button>.
+html.zl-landing-route .zl-brand,
+html.zl-landing-route .zl-nav__link {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+html.zl-landing-route .zl-filter,
+html.zl-landing-route .zl-btn:not(.zl-btn--cta) {
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 html.h5-page-flow,
 body.h5-page-flow {
   height: auto !important;

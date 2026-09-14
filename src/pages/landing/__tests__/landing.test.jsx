@@ -44,6 +44,7 @@ jest.mock('../../../components/creative-web/coverLetterbox', () => ({
 
 const LandingPage = require('../index').default;
 const landingScss = readFileSync(join(__dirname, '../index.scss'), 'utf8');
+const landingJsx = readFileSync(join(__dirname, '../index.jsx'), 'utf8');
 const chromeTokens = readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8');
 const appScss = readFileSync(join(__dirname, '../../../app.scss'), 'utf8');
 
@@ -101,9 +102,19 @@ test('landing chrome is the approved dark draft and ignores shared light tokens'
 });
 
 test('landing nav controls stay transparent so Taro/weui cannot paint white chips', () => {
-  expect(landingScss).toMatch(/\.zl-landing \{[\s\S]*button,[\s\S]*\.zl-brand,[\s\S]*\.zl-nav__links button \{[\s\S]*background:\s*transparent\s*!important/);
-  expect(landingScss).toMatch(/\.zl-nav__links \{[\s\S]*button:hover[\s\S]*background:\s*transparent\s*!important/);
+  // Taro H5 rewrites bare `button` → `taro-button-core` in page SCSS and app.scss.
+  // Native <button> only matches class selectors that survive the rewrite.
+  expect(landingJsx).toMatch(/className="zl-nav__link"/);
+  expect(landingJsx).toMatch(/className=\{filter === item\.id \? 'zl-filter is-active' : 'zl-filter'\}/);
+  expect(landingScss).toMatch(/\.zl-nav__link \{[\s\S]*background:\s*transparent\s*!important/);
+  expect(landingScss).toMatch(/\.zl-nav__link \{[\s\S]*appearance:\s*none/);
+  expect(landingScss).toMatch(/\.zl-nav__link:hover \{[\s\S]*background:\s*transparent\s*!important/);
+  expect(landingScss).toMatch(/\.zl-brand \{[\s\S]*color:\s*inherit/);
+  expect(landingScss).toMatch(/\.zl-brand,[\s\S]*\.zl-nav__link \{[\s\S]*background:\s*transparent\s*!important/);
+  expect(landingScss).toMatch(/\.zl-filter \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-btn--cta,[\s\S]*background:\s*var\(--zl-cta\)\s*!important/);
+  expect(appScss).toMatch(/html\.zl-landing-route \.zl-nav__link \{[\s\S]*appearance:\s*none/);
+  expect(appScss).toMatch(/html\.zl-landing-route \.zl-brand,[\s\S]*background:\s*transparent\s*!important/);
   expect(landingScss).toMatch(/\.weui-btn/);
   expect(landingScss).toMatch(/taro-button-core/);
 });
