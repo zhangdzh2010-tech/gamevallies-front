@@ -16,6 +16,7 @@ jest.mock('@tarojs/taro', () => ({
   default: {
     switchTab: (...args) => mockSwitchTab(...args),
     navigateTo: (...args) => mockNavigateTo(...args),
+    getStorageSync: jest.fn(() => ''),
   },
 }));
 
@@ -45,6 +46,16 @@ jest.mock('../../../utils/media', () => ({
 
 jest.mock('../../../components/creative-web/coverLetterbox', () => ({
   CoverMatte: ({ src, alt }) => (src ? <img src={src} alt={alt || ''} /> : null),
+  PlayerLetterbox: ({ children, className }) => <div className={className}>{children}</div>,
+}));
+
+jest.mock('../../../services/game', () => ({
+  getGame: jest.fn(() => Promise.resolve(null)),
+}));
+
+jest.mock('../../../components/creative-web/WorkSandbox', () => ({
+  __esModule: true,
+  default: ({ title }) => <iframe title={title || '交互作品'} sandbox="allow-scripts" />,
 }));
 
 const landingModule = require('../index');
@@ -58,10 +69,13 @@ const appScss = readFileSync(join(__dirname, '../../../app.scss'), 'utf8');
 beforeEach(() => {
   jest.clearAllMocks();
   process.env.TARO_ENV = 'h5';
+  HTMLDialogElement.prototype.showModal = jest.fn();
+  HTMLDialogElement.prototype.close = jest.fn();
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
   mockGetLatest.mockRejectedValue(new Error('no feed'));
   mockGetFeatured.mockRejectedValue(new Error('no feed'));
   mockGetTrending.mockRejectedValue(new Error('no feed'));
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, text: async () => '<html>keep work</html>' });
 });
 
 test('landing brand lockup uses the square Z mark plus 智了空间', async () => {
@@ -238,7 +252,7 @@ test('showcase uses published feed when the public API returns works', async () 
   expect(card.textContent).toContain('林栖');
 });
 
-test('clicking a KEEP showcase card opens the PC experience path on desktop', async () => {
+test('clicking a KEEP showcase card opens an on-page overlay on desktop', async () => {
   render(<LandingPage />);
   const heading = await screen.findByText('双摆轨迹如何分叉');
   const hit = heading.closest('.zl-card__hit');
@@ -246,7 +260,14 @@ test('clicking a KEEP showcase card opens the PC experience path on desktop', as
   expect(hit.getAttribute('type')).toBe('button');
   expect(hit.getAttribute('aria-label')).toBe('体验 双摆轨迹如何分叉');
   fireEvent.click(hit);
-  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/experience/index?id=keep-double-pendulum' });
+  expect(mockNavigateTo).not.toHaveBeenCalled();
+  const modal = screen.getByRole('dialog', { hidden: true });
+  expect(modal.className).toContain('cw-experience-dialog');
+  const maximize = modal.querySelector('[aria-label="最大化"]');
+  expect(maximize).toBeTruthy();
+  fireEvent.click(maximize);
+  expect(modal.className).toContain('is-maximized');
+  expect(modal.querySelector('[aria-label="还原窗口"]')).toBeTruthy();
 });
 
 test('showcase navigation skips works without an id', () => {
@@ -255,14 +276,17 @@ test('showcase navigation skips works without an id', () => {
   expect(mockNavigateTo).not.toHaveBeenCalled();
 });
 
-test('clicking a published showcase card opens the PC experience path on desktop', async () => {
+test('clicking a published showcase card opens an on-page overlay on desktop', async () => {
   mockGetLatest.mockResolvedValue({
     items: [{ id: 'pub-1', title: '公开单摆', description: '物理实验', tags: ['物理'] }],
   });
   render(<LandingPage />);
   const heading = await screen.findByText('公开单摆');
   fireEvent.click(heading.closest('.zl-card__hit'));
-  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/experience/index?id=pub-1' });
+  expect(mockNavigateTo).not.toHaveBeenCalled();
+  const modal = screen.getByRole('dialog', { hidden: true });
+  expect(within(modal).getByText('公开单摆')).toBeTruthy();
+  expect(modal.querySelector('[aria-label="最大化"]')).toBeTruthy();
 });
 
 test('phone-width showcase clicks keep the mobile detail path', async () => {
@@ -286,7 +310,8 @@ test('showcase covers match the draft matte label, and API images still letterbo
   expect(landingScss).toMatch(/\.zl-card__avatar \{[\s\S]*border-radius: 50%/);
   expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*cursor: pointer/);
   expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*appearance:\s*none/);
-  expect(landingJsx).toMatch(/resolveWorkOpenPath/);
+  expect(landingJsx).toMatch(/WorkExperienceOverlay/);
+  expect(landingJsx).toMatch(/openShowcaseWork/);
   expect(landingJsx).toMatch(/className="zl-card__hit"/);
   expect(appScss).toMatch(/html\.zl-landing-route \.zl-card__hit \{[\s\S]*appearance:\s*none/);
   expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);

@@ -3,13 +3,14 @@ import Taro from '@tarojs/taro';
 import { getFeaturedGames, getLatest, getTrending } from '../../services/feed';
 import { normalizeWorks, saveCreativeDraft } from '../../components/creative-web/creativeModel';
 import { CoverMatte } from '../../components/creative-web/coverLetterbox';
+import WorkExperienceOverlay from '../../components/creative-web/WorkExperienceOverlay';
 import {
   HOME_PAGE_URL,
   openCreatePageWithAuth,
 } from '../../utils/authNavigation';
 import { getGameCoverUrl } from '../../utils/media';
-import { isH5Runtime } from '../../utils/runtime';
-import { rememberExperienceWork, resolveWorkOpenPath } from '../../utils/workExperienceRoute';
+import { isH5Runtime, isPcWebViewport } from '../../utils/runtime';
+import { openWorkExperience } from '../../utils/workExperienceRoute';
 import {
   KEEP_WORKS,
   LANDING_FILTERS,
@@ -49,13 +50,16 @@ function scrollToId(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-export function openShowcaseWork(work) {
+export function openShowcaseWork(work, openOverlay) {
   const id = work?.id == null ? '' : String(work.id).trim();
   if (!id) {
     return undefined;
   }
-  rememberExperienceWork(work);
-  return Taro.navigateTo({ url: resolveWorkOpenPath(id) }).catch(() => {});
+  if (isPcWebViewport() && typeof openOverlay === 'function') {
+    openOverlay(work);
+    return { overlay: true };
+  }
+  return openWorkExperience(work);
 }
 
 function PendulumMark() {
@@ -103,6 +107,7 @@ export default function LandingPage() {
   const [filter, setFilter] = useState('all');
   const [works, setWorks] = useState(KEEP_WORKS);
   const [fromApi, setFromApi] = useState(false);
+  const [experienceWork, setExperienceWork] = useState(null);
 
   useEffect(() => {
     if (!isH5Runtime()) {
@@ -292,7 +297,7 @@ export default function LandingPage() {
                   type="button"
                   className="zl-card__hit"
                   aria-label={`体验 ${work.title || '作品'}`}
-                  onClick={() => openShowcaseWork(work)}
+                  onClick={() => openShowcaseWork(work, setExperienceWork)}
                 >
                   <div className="zl-card__cover">
                     {work.coverUrl
@@ -330,6 +335,12 @@ export default function LandingPage() {
       <footer className="zl-foot">
         <span>智了空间 · 创意与教育的交互实验</span>
       </footer>
+      <WorkExperienceOverlay
+        work={experienceWork}
+        autoPlay
+        ariaLabel="精选作品体验"
+        onClose={() => setExperienceWork(null)}
+      />
     </div>
   );
 }

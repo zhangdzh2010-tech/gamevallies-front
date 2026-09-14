@@ -91,6 +91,33 @@ export function resolveWorkOpenPath(workId, extraQuery = {}) {
     : buildGameDetailPath(id, extraQuery);
 }
 
+let overlayHost = null;
+
+export function registerWorkExperienceOverlayHost(openFn) {
+  overlayHost = typeof openFn === 'function' ? openFn : null;
+}
+
+export function unregisterWorkExperienceOverlayHost() {
+  overlayHost = null;
+}
+
+export function openWorkExperience(work, extraQuery = {}) {
+  const id = normalizeId(work?.id ?? (typeof work === 'string' || typeof work === 'number' ? work : ''));
+  if (!id) {
+    return undefined;
+  }
+  const payload = work && typeof work === 'object' ? { ...work, id } : { id };
+  if (!isPcWebViewport()) {
+    return settleNavigation(Taro.navigateTo({ url: buildGameDetailPath(id, extraQuery) }));
+  }
+  if (typeof overlayHost === 'function') {
+    overlayHost(payload);
+    return { overlay: true, work: payload };
+  }
+  rememberExperienceWork(payload);
+  return settleNavigation(Taro.navigateTo({ url: buildWorkExperiencePath(id, extraQuery) }));
+}
+
 export function rememberExperienceWork(work) {
   const id = normalizeId(work?.id);
   if (!id || typeof sessionStorage === 'undefined') {
@@ -154,6 +181,10 @@ export function shouldBlockWorkShell(path = '') {
     return true;
   }
   return false;
+}
+
+function settleNavigation(result) {
+  return Promise.resolve(result).catch(() => {});
 }
 
 function navigateToWorkShell(url) {

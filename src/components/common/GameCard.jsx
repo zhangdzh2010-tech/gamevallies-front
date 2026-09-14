@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import Taro from '@tarojs/taro';
 import { View, Text, Image } from '@tarojs/components';
 import { getSafeGameImage } from '../../utils/media';
 import { getSafeDisplayText } from '../../utils/profileDisplay';
-import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
+import { openWorkExperience } from '../../utils/workExperienceRoute';
 import './GameCard.scss';
 
 const HOT_LABEL = '热门';
@@ -100,7 +99,7 @@ export const GameCard = ({
       return;
     }
 
-    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) });
+    openWorkExperience(game);
   };
 
   const handleLike = async (e) => {
@@ -170,7 +169,7 @@ export const GameCard = ({
       return;
     }
 
-    Taro.navigateTo({ url: resolveWorkOpenPath(game.id, { openComment: 1 }) });
+    openWorkExperience(game, { openComment: 1 });
   };
 
   const handleOpenDetail = (e) => {
@@ -181,7 +180,7 @@ export const GameCard = ({
       return;
     }
 
-    Taro.navigateTo({ url: resolveWorkOpenPath(game.id) });
+    openWorkExperience(game);
   };
 
   return (
