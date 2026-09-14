@@ -107,6 +107,7 @@ test('maps Failed to fetch to Chinese copy and keeps 重试 as its own control',
   expect(retry.previousSibling).toBe(message);
   expect(scss).toMatch(/\.cw-error \{[^}]*display:flex/);
   expect(scss).toMatch(/gap:12PX 16PX/);
+  expect(scss).toMatch(/\.cw-error__retry[\s\S]*background:transparent !important/);
 });
 
 test('defaults to ranked popular works and highlights the leading cards', async () => {
