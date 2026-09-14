@@ -130,3 +130,18 @@ export function filterWorks(works, filterId) {
   }
   return works.filter((work) => work.domain === filterId);
 }
+
+const PHOTO_MARKERS = /光合|photosynth|产氧|keep-photosynthesis/i;
+
+export function isPhotosynthesisWork(work = {}) {
+  const hay = [work.id, work.title, work.description, work.coverLabel]
+    .filter(Boolean)
+    .join(' ');
+  return PHOTO_MARKERS.test(hay);
+}
+
+// Band card prefers a published cover, then the KEEP photosynthesis slot.
+export function pickPhotosynthesisWork(works = []) {
+  const matches = works.filter(isPhotosynthesisWork);
+  return matches.find((work) => work.coverUrl) || matches[0] || null;
+}

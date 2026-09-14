@@ -15,6 +15,7 @@ import {
   LANDING_FILTERS,
   adaptPublicWork,
   filterWorks,
+  pickPhotosynthesisWork,
 } from './keepWorks';
 import './index.scss';
 
@@ -64,6 +65,33 @@ function PendulumMark() {
         <span className="zl-pendulum__rod" />
         <span className="zl-pendulum__bob" />
       </span>
+    </div>
+  );
+}
+
+function PhotosynthesisMark() {
+  return (
+    <div className="zl-photo" aria-hidden="true">
+      <span className="zl-photo__glow" />
+      <span className="zl-photo__sun" />
+      <span className="zl-photo__ray" />
+      <span className="zl-photo__ray zl-photo__ray--2" />
+      <span className="zl-photo__ray zl-photo__ray--3" />
+      <span className="zl-photo__leaf">
+        <span className="zl-photo__blade" />
+        <span className="zl-photo__vein" />
+        <span className="zl-photo__stem" />
+      </span>
+      <span className="zl-photo__drop" />
+      <span className="zl-photo__bubble zl-photo__bubble--a" />
+      <span className="zl-photo__bubble zl-photo__bubble--b" />
+      <span className="zl-photo__bubble zl-photo__bubble--c" />
+      <span className="zl-photo__tag zl-photo__tag--light">光</span>
+      <span className="zl-photo__tag zl-photo__tag--co2">CO₂</span>
+      <span className="zl-photo__tag zl-photo__tag--h2o">H₂O</span>
+      <span className="zl-photo__tag zl-photo__tag--o2">O₂</span>
+      <span className="zl-photo__eq">6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂</span>
+      <span className="zl-photo__caption">光合作 · 产氧可视化</span>
     </div>
   );
 }
@@ -120,6 +148,7 @@ export default function LandingPage() {
   }, []);
 
   const visible = useMemo(() => filterWorks(works, filter), [works, filter]);
+  const bandWork = useMemo(() => pickPhotosynthesisWork(works), [works]);
 
   const submitComposer = (event) => {
     event.preventDefault();
@@ -189,7 +218,16 @@ export default function LandingPage() {
               立即体验精选
             </button>
           </div>
-          <div className="zl-band__card">光合作 · 产氧可视化（示意）</div>
+          <button
+            type="button"
+            className="zl-band__card"
+            onClick={() => scrollToId('showcase')}
+            aria-label="查看光合作 · 产氧可视化"
+          >
+            {bandWork?.coverUrl
+              ? <CoverMatte src={bandWork.coverUrl} alt={bandWork.title || ''} />
+              : <PhotosynthesisMark />}
+          </button>
         </section>
 
         <section className="zl-ways" id="ways">
