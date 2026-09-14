@@ -80,7 +80,40 @@
     .band { background: var(--band); color: #fff; display: grid; grid-template-columns: 1fr .9fr; gap: 48px; align-items: center; padding: 72px 8vw; }
     .band h2 { font-size: clamp(28px, 4vw, 44px); margin: 8px 0 14px; }
     .outline { min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.55); background: transparent; color: #fff; font-weight: 700; }
-    .band-card { min-height: 220px; border-radius: 120px 120px 12px 12px; background: #0b1220; display: grid; place-items: center; color: var(--ice-strong); }
+    .band-card {
+      min-height: 260px; border-radius: 120px 120px 12px 12px; background: #0b1220; display: grid;
+      place-items: center; color: var(--ice-strong); position: relative; overflow: hidden;
+      width: 100%; padding: 0; border: 0; cursor: pointer; text-decoration: none; font: inherit;
+    }
+    .photo { position: relative; width: 100%; height: 260px; }
+    .photo-glow { position: absolute; left: 50%; top: 48%; width: 200px; height: 150px; margin: -75px 0 0 -100px; border-radius: 50%; background: radial-gradient(circle, rgba(46, 194, 126, .28), transparent 68%); }
+    .photo-sun { position: absolute; top: 26px; right: 44px; width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 32% 32%, #fff8d2, #f0b429); box-shadow: 0 0 0 7px rgba(240, 180, 41, .18), 0 0 28px 10px rgba(240, 180, 41, .3); animation: photo-glow 2.8s ease-in-out infinite; }
+    .photo-ray { position: absolute; top: 42px; right: 76px; width: 156px; height: 6px; transform-origin: 100% 50%; background: linear-gradient(90deg, transparent, rgba(255, 226, 140, .72)); border-radius: 999px; animation: photo-ray 2.6s ease-in-out infinite; }
+    .photo-ray-2 { top: 58px; width: 138px; transform: rotate(18deg); animation-delay: -.6s; }
+    .photo-ray-3 { top: 76px; width: 122px; transform: rotate(32deg); animation-delay: -1.2s; }
+    .photo-leaf { position: absolute; left: 50%; top: 48%; width: 118px; height: 118px; margin: -68px 0 0 -64px; }
+    .photo-blade { display: block; width: 108px; height: 108px; margin: 6px 0 0 8px; border-radius: 2px 100% 4px 100%; background: linear-gradient(135deg, rgba(235, 248, 255, .28), transparent 34%), linear-gradient(145deg, #3dcea0 0%, #1b8a5e 58%, #146647 100%); transform: rotate(-28deg); box-shadow: 0 10px 24px rgba(0, 0, 0, .28); }
+    .photo-vein { position: absolute; left: 28px; top: 58px; width: 72px; height: 2px; background: rgba(11, 18, 32, .38); transform: rotate(-28deg); border-radius: 999px; }
+    .photo-stem { position: absolute; left: 10px; top: 78px; width: 26px; height: 5px; background: #146647; border-radius: 999px; transform: rotate(42deg); }
+    .photo-drop { position: absolute; left: 32%; top: 62%; width: 10px; height: 14px; border-radius: 60% 60% 60% 10%; background: rgba(0, 202, 224, .55); transform: rotate(28deg); }
+    .photo-bubble { position: absolute; border-radius: 50%; border: 2px solid rgba(0, 202, 224, .9); background: rgba(0, 202, 224, .16); animation: photo-rise 3.4s ease-in infinite; }
+    .photo-bubble-a { width: 14px; height: 14px; left: 58%; top: 42%; }
+    .photo-bubble-b { width: 10px; height: 10px; left: 66%; top: 48%; animation-delay: -1.1s; }
+    .photo-bubble-c { width: 18px; height: 18px; left: 62%; top: 38%; animation-delay: -2s; }
+    .photo-tag { position: absolute; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ice-strong); background: rgba(21, 26, 36, .72); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+    .photo-tag-light { top: 22px; left: 28px; color: #ffe7a3; }
+    .photo-tag-co2 { left: 22px; top: 54%; }
+    .photo-tag-h2o { left: 36%; bottom: 58px; }
+    .photo-tag-o2 { right: 36px; top: 36%; color: var(--cta); }
+    .photo-eq { position: absolute; left: 12px; right: 12px; bottom: 36px; text-align: center; font-size: 11px; color: var(--muted); }
+    .photo-caption { position: absolute; left: 12px; right: 12px; bottom: 14px; text-align: center; font-size: 13px; font-weight: 700; color: var(--ice-strong); }
+    @keyframes photo-glow { 0%, 100% { box-shadow: 0 0 0 6px rgba(240, 180, 41, .14), 0 0 22px 8px rgba(240, 180, 41, .22); } 50% { box-shadow: 0 0 0 10px rgba(240, 180, 41, .22), 0 0 36px 14px rgba(240, 180, 41, .38); } }
+    @keyframes photo-ray { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
+    @keyframes photo-rise { 0% { transform: translateY(18px); opacity: 0; } 18% { opacity: 1; } 100% { transform: translateY(-88px); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .arm { animation: none; transform: rotate(12deg); }
+      .photo-sun, .photo-ray, .photo-bubble { animation: none; }
+    }
     .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 32px; }
     .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
     .way-head { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: 28px; }
@@ -145,7 +178,26 @@
       <p>一句话描述现象或想法，生成可动手探索的桌面交互。适合课堂演示、自学与创意探索。</p>
       <a class="outline" href="#showcase">立即体验精选</a>
     </div>
-    <div class="band-card">光合作 · 产氧可视化（示意）</div>
+    <a class="band-card" href="#showcase" aria-label="查看光合作 · 产氧可视化">
+      <div class="photo" aria-hidden="true">
+        <span class="photo-glow"></span>
+        <span class="photo-sun"></span>
+        <span class="photo-ray"></span>
+        <span class="photo-ray photo-ray-2"></span>
+        <span class="photo-ray photo-ray-3"></span>
+        <span class="photo-leaf"><span class="photo-blade"></span><span class="photo-vein"></span><span class="photo-stem"></span></span>
+        <span class="photo-drop"></span>
+        <span class="photo-bubble photo-bubble-a"></span>
+        <span class="photo-bubble photo-bubble-b"></span>
+        <span class="photo-bubble photo-bubble-c"></span>
+        <span class="photo-tag photo-tag-light">光</span>
+        <span class="photo-tag photo-tag-co2">CO₂</span>
+        <span class="photo-tag photo-tag-h2o">H₂O</span>
+        <span class="photo-tag photo-tag-o2">O₂</span>
+        <span class="photo-eq">6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂</span>
+        <span class="photo-caption">光合作 · 产氧可视化</span>
+      </div>
+    </a>
   </section>
 
   <section class="ways" id="ways">

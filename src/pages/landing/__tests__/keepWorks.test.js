@@ -1,5 +1,12 @@
 /* eslint-env jest */
-import { adaptPublicWork, filterWorks, inferWorkDomain, KEEP_WORKS } from '../keepWorks';
+import {
+  adaptPublicWork,
+  filterWorks,
+  inferWorkDomain,
+  isPhotosynthesisWork,
+  KEEP_WORKS,
+  pickPhotosynthesisWork,
+} from '../keepWorks';
 
 test('KEEP list covers every landing filter without AI 游戏工坊 copy', () => {
   const domains = new Set(KEEP_WORKS.map((work) => work.domain));
@@ -7,6 +14,16 @@ test('KEEP list covers every landing filter without AI 游戏工坊 copy', () =>
   expect(domains.has('chemistry')).toBe(true);
   expect(domains.has('biology')).toBe(true);
   expect(JSON.stringify(KEEP_WORKS)).not.toMatch(/AI 游戏工坊/);
+});
+
+test('photosynthesis band prefers a published cover then the KEEP slot', () => {
+  const keep = KEEP_WORKS.find((work) => work.id === 'keep-photosynthesis');
+  expect(isPhotosynthesisWork(keep)).toBe(true);
+  expect(pickPhotosynthesisWork(KEEP_WORKS)?.id).toBe('keep-photosynthesis');
+  expect(pickPhotosynthesisWork(KEEP_WORKS)?.coverUrl).toBeFalsy();
+  const covered = { id: 'api-photo', title: '光合产氧', coverUrl: 'https://cdn.example.com/o2.png' };
+  expect(pickPhotosynthesisWork([covered, ...KEEP_WORKS]).coverUrl).toBe('https://cdn.example.com/o2.png');
+  expect(pickPhotosynthesisWork([{ id: 'other', title: '单摆' }])).toBeNull();
 });
 
 test('public works infer domain from title tags and can be filtered', () => {

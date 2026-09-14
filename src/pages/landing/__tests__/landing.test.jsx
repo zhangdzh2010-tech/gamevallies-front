@@ -39,7 +39,7 @@ jest.mock('../../../utils/media', () => ({
 }));
 
 jest.mock('../../../components/creative-web/coverLetterbox', () => ({
-  CoverMatte: () => null,
+  CoverMatte: ({ src, alt }) => (src ? <img src={src} alt={alt || ''} /> : null),
 }));
 
 const landingModule = require('../index');
@@ -157,6 +157,48 @@ test('v2.2 static draft remains the approved dark structure and palette referenc
   expect(draft).not.toMatch(/AI 游戏工坊/);
   expect(landingScss).toMatch(/grid-template-columns:\s*1\.05fr \.95fr/);
   expect(landingScss).toMatch(/\.zl-hero h1 \{[\s\S]*margin: 12PX 0 0/);
+  expect(draft).toMatch(/class="photo"/);
+  expect(draft).toMatch(/photo-blade/);
+  expect(draft).toMatch(/photo-bubble/);
+  expect(draft).not.toMatch(/产氧可视化（示意）/);
+});
+
+test('band card is a labeled photosynthesis schematic, not a text-only void', async () => {
+  const { container } = render(<LandingPage />);
+  expect(screen.queryByText('光合作 · 产氧可视化（示意）')).toBeNull();
+  expect(screen.getByLabelText('查看光合作 · 产氧可视化')).toBeTruthy();
+  expect(container.querySelector('.zl-band__card .zl-photo')).toBeTruthy();
+  expect(container.querySelector('.zl-photo__blade')).toBeTruthy();
+  expect(container.querySelectorAll('.zl-photo__bubble').length).toBe(3);
+  expect(container.querySelector('.zl-photo__tag--o2')?.textContent).toBe('O₂');
+  expect(landingJsx).not.toMatch(/产氧可视化（示意）/);
+  expect(landingJsx).toMatch(/function PhotosynthesisMark/);
+  expect(landingScss).toMatch(/border-radius:\s*120PX 120PX 12PX 12PX/);
+  expect(landingScss).toMatch(/\.zl-photo__blade/);
+  expect(landingScss).toMatch(/@keyframes zl-photo-rise/);
+  const scrollIntoView = jest.fn();
+  const getById = jest.spyOn(document, 'getElementById').mockImplementation((id) => (
+    id === 'showcase' ? { scrollIntoView } : null
+  ));
+  fireEvent.click(screen.getByLabelText('查看光合作 · 产氧可视化'));
+  expect(scrollIntoView).toHaveBeenCalled();
+  getById.mockRestore();
+  await waitFor(() => expect(mockGetLatest).toHaveBeenCalled());
+});
+
+test('band card letterboxes a published photosynthesis cover when present', async () => {
+  mockGetLatest.mockResolvedValue({
+    items: [{
+      id: 'pub-photo',
+      title: '光合产氧',
+      description: '生物学',
+      coverUrl: 'https://cdn.example.com/o2.png',
+    }],
+  });
+  const { container } = render(<LandingPage />);
+  await screen.findByText('光合产氧');
+  expect(container.querySelector('.zl-band__card img[src="https://cdn.example.com/o2.png"]')).toBeTruthy();
+  expect(container.querySelector('.zl-band__card .zl-photo')).toBeNull();
 });
 
 test('showcase falls back to curated KEEP when public feed is empty', async () => {
