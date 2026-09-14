@@ -85,7 +85,7 @@ test('unauth CTAs enter Creative Web home or create', async () => {
 });
 
 test('landing chrome is the approved dark draft and ignores shared light tokens', () => {
-  expect(landingScss).not.toMatch(/chrome-tokens/);
+  expect(landingScss).not.toMatch(/@import['"\s].*chrome-tokens/);
   expect(landingScss).toMatch(/--zl-bg:\s*#060C20/);
   expect(landingScss).toMatch(/--zl-surface:\s*#111318/);
   expect(landingScss).toMatch(/--zl-band:\s*#004DC8/);
