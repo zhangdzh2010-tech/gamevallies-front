@@ -43,10 +43,9 @@ jest.mock('../../../components/creative-web/coverLetterbox', () => ({
 }));
 
 const LandingPage = require('../index').default;
-const scss = [
-  readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8'),
-  readFileSync(join(__dirname, '../index.scss'), 'utf8'),
-].join('\n');
+const landingScss = readFileSync(join(__dirname, '../index.scss'), 'utf8');
+const chromeTokens = readFileSync(join(__dirname, '../../../styles/chrome-tokens.scss'), 'utf8');
+const appScss = readFileSync(join(__dirname, '../../../app.scss'), 'utf8');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -72,7 +71,7 @@ test('landing never shows a draft watermark or version chip', () => {
   expect(screen.queryByText(/草箱/)).toBeNull();
   expect(screen.queryByText(/草稿/)).toBeNull();
   expect(screen.queryByText(/v2\.2/)).toBeNull();
-  expect(scss).not.toMatch(/\.zl-ver\s*\{/);
+  expect(landingScss).not.toMatch(/\.zl-ver\s*\{/);
 });
 
 test('unauth CTAs enter Creative Web home or create', async () => {
@@ -85,26 +84,38 @@ test('unauth CTAs enter Creative Web home or create', async () => {
   expect(mockOpenCreate).toHaveBeenCalled();
 });
 
-test('landing chrome is light Jimeng: airy surfaces, cyan CTA only, no frost or purple neon', () => {
-  expect(scss).toMatch(/#F7F8FA/);
-  expect(scss).toMatch(/#FFFFFF|#fff/i);
-  expect(scss).toMatch(/#00CAE0/);
-  expect(scss).toMatch(/#1D2129/);
-  expect(scss).not.toMatch(/#060C20/);
-  expect(scss).not.toMatch(/backdrop-filter/i);
-  expect(scss).not.toMatch(/#6e56ff/i);
-  expect(scss).not.toMatch(/#c4f465/i);
+test('landing chrome is the approved dark draft and ignores shared light tokens', () => {
+  expect(landingScss).not.toMatch(/@import['"\s].*chrome-tokens/);
+  expect(landingScss).toMatch(/--zl-bg:\s*#060C20/);
+  expect(landingScss).toMatch(/--zl-surface:\s*#111318/);
+  expect(landingScss).toMatch(/--zl-band:\s*#004DC8/);
+  expect(landingScss).toMatch(/--zl-cta:\s*#00CAE0/);
+  expect(landingScss).toMatch(/--zl-ice:\s*#EBF8FF/);
+  expect(landingScss).not.toMatch(/#F7F8FA/);
+  expect(landingScss).not.toMatch(/backdrop-filter/i);
+  expect(landingScss).not.toMatch(/#6e56ff/i);
+  expect(landingScss).not.toMatch(/#c4f465/i);
+  expect(appScss).toMatch(/html\.zl-landing-route[\s\S]*background:\s*#060C20/);
+  expect(chromeTokens).toMatch(/\$chrome-bg:\s*#F7F8FA/);
+  expect(chromeTokens).not.toMatch(/\$chrome-bg:\s*#060C20/);
 });
 
-test('v2.2 static draft remains the structure reference (sections + CTAs)', () => {
+test('v2.2 static draft remains the approved dark structure and palette reference', () => {
   const draft = readFileSync(join(__dirname, '../../../../docs/landing/zhile-landing-draft-v2.html'), 'utf8');
+  expect(draft).toMatch(/#060C20|#060c20/);
+  expect(draft).toMatch(/#111318/);
+  expect(draft).toMatch(/#004DC8/);
+  expect(draft).toMatch(/#00CAE0/);
   expect(draft).toMatch(/探索方式/);
   expect(draft).toMatch(/这样探索科学/);
   expect(draft).toMatch(/即刻创作/);
   expect(draft).toMatch(/灵感即刻成实验/);
   expect(draft).toMatch(/精选作品/);
+  expect(draft).toMatch(/物理 · 单摆/);
   expect(draft).not.toMatch(/backdrop-filter/i);
   expect(draft).not.toMatch(/AI 游戏工坊/);
+  expect(landingScss).toMatch(/grid-template-columns:\s*1\.05fr \.95fr/);
+  expect(landingScss).toMatch(/\.zl-hero h1 \{[\s\S]*margin: 12PX 0 0/);
 });
 
 test('showcase falls back to curated KEEP when public feed is empty', async () => {
@@ -124,10 +135,14 @@ test('showcase uses published feed when the public API returns works', async () 
   expect(screen.queryByText('单位换算工作台')).toBeNull();
 });
 
-test('showcase cards letterbox covers and keep title/description from overlapping badges', () => {
-  expect(scss).toMatch(/\.zl-card__cover \{[\s\S]*aspect-ratio: 16\/10/);
-  expect(scss).toMatch(/object-fit: contain/);
-  expect(scss).toMatch(/\.zl-card__cover[\s\S]*span \{[\s\S]*top: 12PX/);
-  expect(scss).toMatch(/\.zl-card h3 \{[\s\S]*white-space: nowrap/);
-  expect(scss).toMatch(/-webkit-line-clamp: 2/);
+test('showcase covers match the draft matte label, and API images still letterbox', async () => {
+  render(<LandingPage />);
+  await screen.findByText('物理 · 单摆');
+  expect(screen.getByText('生物 · 光合')).toBeTruthy();
+  expect(landingScss).toMatch(/\.zl-card__cover \{[\s\S]*aspect-ratio: 16\/10/);
+  expect(landingScss).toMatch(/background: #0b1f1c/);
+  expect(landingScss).toMatch(/place-items: center/);
+  expect(landingScss).toMatch(/object-fit: contain/);
+  expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*font-size: 18PX/);
+  expect(landingScss).toMatch(/\.zl-ico \{[\s\S]*border: 2PX solid #3d4d63/);
 });

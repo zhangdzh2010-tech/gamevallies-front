@@ -31,9 +31,17 @@ html.zl-landing-route .taro-tabbar__container > .taro-tabbar__tabbar {
   display: none !important;
 }
 
+// Landing canvas is the approved dark draft, not shared light chrome-tokens.
 html.zl-landing-route,
-html.zl-landing-route body {
-  background: $chrome-bg;
+html.zl-landing-route body,
+html.zl-landing-route #app,
+html.zl-landing-route #container,
+html.zl-landing-route .taro_router,
+html.zl-landing-route .taro-tabbar__container,
+html.zl-landing-route .taro-tabbar__panel,
+html.zl-landing-route .taro_page,
+html.zl-landing-route .taro_page_stationed {
+  background: #060C20;
 }
 
 html.h5-page-flow,

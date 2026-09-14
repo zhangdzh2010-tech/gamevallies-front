@@ -46,9 +46,9 @@ function scrollToId(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function PendulumMark({ compact = false }) {
+function PendulumMark() {
   return (
-    <div className={`zl-pendulum${compact ? ' is-compact' : ''}`} aria-hidden="true">
+    <div className="zl-pendulum" aria-hidden="true">
       <span className="zl-pendulum__bar" />
       <span className="zl-pendulum__pivot" />
       <span className="zl-pendulum__arm">
@@ -57,13 +57,6 @@ function PendulumMark({ compact = false }) {
       </span>
     </div>
   );
-}
-
-function CoverGlyph({ kind }) {
-  if (kind === 'pendulum') {
-    return <PendulumMark compact />;
-  }
-  return <span className={`zl-glyph zl-glyph--${kind || 'wave'}`} aria-hidden="true" />;
 }
 
 export default function LandingPage() {
@@ -128,9 +121,9 @@ export default function LandingPage() {
     <div className="zl-landing">
       <header className="zl-nav">
         <div className="zl-nav__inner">
-          <button type="button" className="zl-brand" onClick={() => scrollToId('top')}>
+          <button type="button" className="zl-brand" onClick={() => scrollToId('create')}>
             <span className="zl-mark">智</span>
-            <span>智了空间</span>
+            智了空间
           </button>
           <nav className="zl-nav__links" aria-label="落地页导航">
             <button type="button" onClick={() => scrollToId('showcase')}>精选作品</button>
@@ -141,9 +134,9 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main id="top">
-        <section className="zl-hero">
-          <div className="zl-hero__copy">
+      <main>
+        <section className="zl-hero" id="create">
+          <div>
             <p className="zl-eyebrow">CREATIVE SCIENCE</p>
             <h1>把想法和科学<br />变成可探索的作品</h1>
             <p className="zl-lead">
@@ -163,10 +156,10 @@ export default function LandingPage() {
           </div>
 
           <article className="zl-demo">
-            <header className="zl-demo__head">
-              <h2>小角度理想单摆演示</h2>
+            <div className="zl-demo__head">
+              <strong>小角度理想单摆演示</strong>
               <span className="zl-dot" />
-            </header>
+            </div>
             <div className="zl-demo__stage">
               <PendulumMark />
             </div>
@@ -179,8 +172,8 @@ export default function LandingPage() {
         </section>
 
         <section className="zl-band" aria-labelledby="band-title">
-          <div className="zl-band__copy">
-            <span className="zl-index">01</span>
+          <div>
+            <div className="zl-index">01</div>
             <h2 id="band-title">灵感即刻成实验</h2>
             <p>一句话描述现象或想法，生成可动手探索的桌面交互。适合课堂演示、自学与创意探索。</p>
             <button type="button" className="zl-btn zl-btn--outline" onClick={() => scrollToId('showcase')}>
@@ -195,26 +188,26 @@ export default function LandingPage() {
           <p className="zl-section-lead">不是一键生成小游戏工厂——我们把科学变成可感知、可调节、可继续改的作品。</p>
           <div className="zl-ways__grid">
             <article>
-              <header>
+              <div className="zl-way-head">
                 <span>01</span>
-                <i className="zl-way-icon zl-way-icon--wave" />
-              </header>
+                <span className="zl-ico" aria-hidden="true" />
+              </div>
               <h3>可感知的规律</h3>
               <p>摆动、光合、渗透、波干涉，用动画把公式变眼前的变化。</p>
             </article>
             <article>
-              <header>
+              <div className="zl-way-head">
                 <span>02</span>
-                <i className="zl-way-icon zl-way-icon--sliders" />
-              </header>
+                <span className="zl-ico zl-ico--box" aria-hidden="true" />
+              </div>
               <h3>可调的参数</h3>
               <p>拖动滑块、改初态，立刻看到系统如何响应。</p>
             </article>
             <article>
-              <header>
+              <div className="zl-way-head">
                 <span>03</span>
-                <i className="zl-way-icon zl-way-icon--plus" />
-              </header>
+                <span className="zl-ico" aria-hidden="true" />
+              </div>
               <h3>可继续的创作</h3>
               <p>发布到创意广场，别人在你打磨同一条想法。</p>
             </article>
@@ -249,8 +242,7 @@ export default function LandingPage() {
                 <div className="zl-card__cover">
                   {work.coverUrl
                     ? <CoverMatte src={work.coverUrl} alt="" />
-                    : <CoverGlyph kind={work.coverKind} />}
-                  <span>{work.domainLabel}</span>
+                    : (work.coverLabel || work.domainLabel)}
                 </div>
                 <div className="zl-card__body">
                   <h3>{work.title}</h3>
@@ -264,9 +256,9 @@ export default function LandingPage() {
           )}
         </section>
 
-        <section className="zl-bottom">
+        <section className="zl-bottom" id="open">
           <h2>把下一个想法，做成可探索的作品</h2>
-          <p>进入智了空间工作台，继续写、调参数、发布到广场。</p>
+          <p className="zl-lead">进入智了空间工作台，继续写、调参数、发布到广场。</p>
           <div className="zl-bottom__actions">
             <button type="button" className="zl-btn zl-btn--cta" onClick={openCreativeHome}>开启智了</button>
             <button type="button" className="zl-btn zl-btn--ghost" onClick={() => beginCreate(idea)}>开始创作</button>

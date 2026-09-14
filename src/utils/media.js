@@ -48,6 +48,10 @@ export function isRenderableImageUrl(url) {
   return true;
 }
 
+function isLikelyWorkDumpUrl(url) {
+  return /screenshot|fullpage|full-page|capture/i.test(String(url || ''));
+}
+
 export function getGameCoverUrl(game = {}, fallback = '') {
   const candidates = [
     game.coverUrl,
@@ -62,6 +66,19 @@ export function getGameCoverUrl(game = {}, fallback = '') {
   ];
 
   return candidates.find((url) => isRenderableImageUrl(url)) || '';
+}
+
+export function getGalleryPosterUrl(game = {}) {
+  const candidates = [
+    game.poster,
+    game.coverUrl,
+    game.thumbnailUrl,
+    game.coverImage,
+    game.thumbnail,
+    game.imageUrl,
+  ];
+
+  return candidates.find((url) => isRenderableImageUrl(url) && !isLikelyWorkDumpUrl(url)) || '';
 }
 
 export function getSafeGameImage(game = {}) {

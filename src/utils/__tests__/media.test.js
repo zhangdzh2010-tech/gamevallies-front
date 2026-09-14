@@ -1,5 +1,5 @@
 /* eslint-env jest */
-import { getGameCoverUrl, getSafeGameImage } from '../media';
+import { getGameCoverUrl, getGalleryPosterUrl, getSafeGameImage } from '../media';
 
 describe('media cover helpers', () => {
   test('prefers coverUrl when both cover and thumbnail are available', () => {
@@ -27,6 +27,18 @@ describe('media cover helpers', () => {
     expect(getGameCoverUrl({}, 'https://img.example/fallback.png')).toBe(
       'https://img.example/fallback.png'
     );
+  });
+
+  test('gallery posters skip screenshots and html dumps so cards never show work chrome', () => {
+    expect(getGalleryPosterUrl({
+      screenshot: 'https://img.example/full-screenshot.png',
+      coverUrl: 'https://game.example/play.html',
+      poster: 'https://img.example/poster.png',
+    })).toBe('https://img.example/poster.png');
+    expect(getGalleryPosterUrl({
+      screenshot: 'https://img.example/capture.png',
+      coverUrl: 'https://img.example/work-screenshot.png',
+    })).toBe('');
   });
 
   test('getSafeGameImage stays aligned with the cover helper', () => {
