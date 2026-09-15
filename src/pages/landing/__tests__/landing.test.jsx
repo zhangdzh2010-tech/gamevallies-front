@@ -252,7 +252,7 @@ test('showcase uses published feed when the public API returns works', async () 
   expect(card.textContent).toContain('林栖');
 });
 
-test('clicking a KEEP showcase card opens an on-page overlay on desktop', async () => {
+test('clicking a KEEP showcase card opens an empty-state overlay, not a blank player', async () => {
   render(<LandingPage />);
   const heading = await screen.findByText('双摆轨迹如何分叉');
   const hit = heading.closest('.zl-card__hit');
@@ -263,6 +263,9 @@ test('clicking a KEEP showcase card opens an on-page overlay on desktop', async 
   expect(mockNavigateTo).not.toHaveBeenCalled();
   const modal = screen.getByRole('dialog', { hidden: true });
   expect(modal.className).toContain('cw-experience-dialog');
+  expect(within(modal).getByText('这个作品暂时无法体验')).toBeTruthy();
+  expect(within(modal).queryByText('开始体验')).toBeNull();
+  expect(modal.querySelector('iframe')).toBeNull();
   const maximize = modal.querySelector('[aria-label="最大化"]');
   expect(maximize).toBeTruthy();
   fireEvent.click(maximize);
@@ -289,12 +292,24 @@ test('clicking a published showcase card opens an on-page overlay on desktop', a
   expect(modal.querySelector('[aria-label="最大化"]')).toBeTruthy();
 });
 
-test('phone-width showcase clicks keep the mobile detail path', async () => {
+test('phone-width KEEP clicks stay on an empty-state overlay instead of a broken detail page', async () => {
   window.innerWidth = 390;
   render(<LandingPage />);
   const heading = await screen.findByText('双摆轨迹如何分叉');
   fireEvent.click(heading.closest('.zl-card__hit'));
-  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=keep-double-pendulum' });
+  expect(mockNavigateTo).not.toHaveBeenCalled();
+  expect(screen.getByText('这个作品暂时无法体验')).toBeTruthy();
+});
+
+test('phone-width published showcase clicks keep the mobile detail path', async () => {
+  window.innerWidth = 390;
+  mockGetLatest.mockResolvedValue({
+    items: [{ id: 'pub-1', title: '公开单摆', description: '物理实验', tags: ['物理'] }],
+  });
+  render(<LandingPage />);
+  const heading = await screen.findByText('公开单摆');
+  fireEvent.click(heading.closest('.zl-card__hit'));
+  expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-1' });
 });
 
 test('showcase covers match the draft matte label, and API images still letterbox', async () => {

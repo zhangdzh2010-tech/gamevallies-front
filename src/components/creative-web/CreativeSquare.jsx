@@ -22,6 +22,19 @@ export default function CreativeSquare() {
   const user = Storage.getUser() || {};
   const own = work => Boolean((user.id || user.userId) && (user.id || user.userId) === (work.authorId || work.author?.id));
   const remixLabel = work => (own(work) ? '继续创作' : work.allowFork === false ? '作者未开放复刻' : '复刻并创作');
+  const applySort = (id) => {
+    setSort(id);
+    if (search) {
+      setQuery('');
+      setSearch('');
+    }
+  };
+  const onQueryChange = (value) => {
+    setQuery(value);
+    if (!value.trim() && search) {
+      setSearch('');
+    }
+  };
   async function load(next = 1) {
     if (next > 1 && busy.current) return;
     const request = ++serial.current;
@@ -48,8 +61,8 @@ export default function CreativeSquare() {
     return own(work) ? openIteratePageWithAuth(work, work.id) : openForkPageWithAuth(work.id);
   };
   return <>
-    <div className="cw-section-head"><div className="cw-tabs">{[['trending', '热门作品'], ['latest', '最新发布']].map(([id, label]) => <button type="button" key={id} className={`cw-tab${sort === id ? ' active' : ''}`} onClick={() => setSort(id)}>{label}</button>)}</div>
-      <form className="cw-row" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}><input className="cw-search" aria-label="搜索广场作品" placeholder="搜索作品或创作者" value={query} onChange={e => setQuery(e.target.value)} /><button type="submit" className="cw-button cw-outline">搜索</button></form></div>
+    <div className="cw-section-head"><div className="cw-tabs">{[['trending', '热门作品'], ['latest', '最新发布']].map(([id, label]) => <button type="button" key={id} className={`cw-tab${sort === id ? ' active' : ''}`} onClick={() => applySort(id)}>{label}</button>)}</div>
+      <form className="cw-row" onSubmit={e => { e.preventDefault(); setSearch(query.trim()); }}><input className="cw-search" aria-label="搜索广场作品" placeholder="搜索作品或创作者" value={query} onChange={e => onQueryChange(e.target.value)} /><button type="submit" className="cw-button cw-outline">搜索</button></form></div>
     {error && (
       <div className="cw-error" role="alert">
         <span className="cw-error__message">{error}</span>
@@ -74,6 +87,6 @@ export default function CreativeSquare() {
     {loading && <p className="cw-loading" role="status">正在加载广场作品…</p>}
     {!loading && !works.length && !error && <div className="cw-empty"><h3>{search ? '没有找到匹配的作品' : '广场等待第一个公开作品'}</h3><p>在我的作品中发布后，其他人就可以在这里体验。</p></div>}
     {more && !loading && <button type="button" className="cw-button cw-outline cw-loadmore" onClick={() => load(page + 1)}>加载更多作品</button>}
-    {selected && <WorkExperienceOverlay work={selected} ariaLabel="广场作品体验" onClose={() => setSelected(null)} />}
+    {selected && <WorkExperienceOverlay work={selected} autoPlay ariaLabel="广场作品体验" onClose={() => setSelected(null)} />}
   </>;
 }

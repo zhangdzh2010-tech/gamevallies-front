@@ -20,7 +20,7 @@ test('publishes through the real service and exposes the returned public state',
   fireEvent.click(screen.getByText('确认公开发布'));
   await screen.findByText('已发布');
   expect(publishGame).toHaveBeenCalledWith('physics-1', { visibility: 'public', title: work.title, description: work.description });
-  expect(screen.getByLabelText('作品分享地址').value).toContain('id=physics-1');
+  expect(screen.getByLabelText('作品分享地址').value).toContain('#/pages/game/experience/index?id=physics-1');
 });
 test('moderation is not presented as a successful public release', async () => {
   publishGame.mockResolvedValue({ status: 'review' });
@@ -44,7 +44,7 @@ test('failed publishing can be retried and rapid duplicate requests are prevente
 });
 test('already published works can be shared without another mutation', () => {
   render(<CreativeStudio work={{ ...work, status: 'published' }} />);
-  expect(screen.getByLabelText('作品分享地址').value).toContain('id=physics-1');
+  expect(screen.getByLabelText('作品分享地址').value).toContain('#/pages/game/experience/index?id=physics-1');
   expect(publishGame).not.toHaveBeenCalled();
 });
 

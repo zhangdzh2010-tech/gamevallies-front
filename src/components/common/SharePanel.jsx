@@ -2,17 +2,17 @@
 import { Button, Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { getGameTypeLabel } from '../../utils/gameTypes';
-import { formatShareStats, getShareConfig } from '../../utils/share';
+import { buildH5ShareUrl, formatShareStats, getShareConfig } from '../../utils/share';
+import { resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import * as socialService from '../../services/social';
 import './SharePanel.scss';
 
-function getShareLink(path) {
+function getShareLink(path, gameId) {
   if (process.env.TARO_ENV !== 'h5') {
     return path;
   }
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${origin}${path}`;
+  return buildH5ShareUrl(resolveWorkOpenPath(gameId) || path);
 }
 
 export function SharePanel({
@@ -37,7 +37,7 @@ export function SharePanel({
       return;
     }
 
-    const shareUrl = getShareLink(shareConfig.path);
+    const shareUrl = getShareLink(shareConfig.path, game?.id);
 
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {

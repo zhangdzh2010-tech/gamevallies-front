@@ -24,8 +24,8 @@ import { isTerminalTaskStatus, useGameStore } from '../../store/gameStore';
 import useGamePlayerStore from '../../stores/gamePlayer';
 import useQuotaStore from '../../stores/quotaStore';
 import { PaywallPopup } from '../../components/common/PaywallPopup';
-import { buildGameDetailPath } from '../../utils/share';
-import { openWorkExperience } from '../../utils/workExperienceRoute';
+import { buildGameDetailPath, buildH5ShareUrl } from '../../utils/share';
+import { openWorkExperience, resolveWorkOpenPath } from '../../utils/workExperienceRoute';
 import Taro, { useDidShow } from '@tarojs/taro';
 import {
   getBookmarkedGames,
@@ -1031,7 +1031,7 @@ export default function Profile() {
   const handleShare = async (game) => {
     const sharePath = buildGameDetailPath(game.id);
     const shareUrl = process.env.TARO_ENV === 'h5'
-      ? `${typeof window !== 'undefined' ? window.location.origin : ''}${sharePath}`
+      ? buildH5ShareUrl(resolveWorkOpenPath(game.id) || sharePath)
       : sharePath;
 
     try {

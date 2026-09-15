@@ -34,7 +34,7 @@ import { getGameOrientation } from '../../../utils/gameOrientation';
 import { getGameCoverUrl } from '../../../utils/media';
 import { isH5Runtime } from '../../../utils/runtime';
 import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
-import { buildGameDetailPath } from '../../../utils/share';
+import { openWorkExperience } from '../../../utils/workExperienceRoute';
 import { Storage } from '../../../utils/storage';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
@@ -478,7 +478,7 @@ export default function GameForkPage() {
     }
 
     if (currentGame?.id) {
-      Taro.navigateTo({ url: buildGameDetailPath(currentGame.id, { authorView: 1 }) }).catch(() => {});
+      Promise.resolve(openWorkExperience(currentGame, { authorView: 1 })).catch(() => {});
     }
   };
 
@@ -487,7 +487,7 @@ export default function GameForkPage() {
       return;
     }
 
-    Taro.navigateTo({ url: buildGameDetailPath(currentGame.id, { authorView: 1 }) }).catch(() => {});
+    Promise.resolve(openWorkExperience(currentGame, { authorView: 1 })).catch(() => {});
   };
 
   if (isH5) {

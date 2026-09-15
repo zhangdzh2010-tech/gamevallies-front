@@ -39,7 +39,7 @@ import { getGameTypeLabel } from '../../../utils/gameTypes';
 import { getGameCoverUrl } from '../../../utils/media';
 import { isH5Runtime } from '../../../utils/runtime';
 import { sanitizeUserIdea } from '../../../utils/sanitizeIdea';
-import { buildGameDetailPath } from '../../../utils/share';
+import { openWorkExperience } from '../../../utils/workExperienceRoute';
 import { getSafeSystemInfo } from '../../../utils/systemInfo';
 import './index.scss';
 
@@ -455,7 +455,7 @@ export default function GameIteratePage() {
     }
 
     if (currentGame?.id) {
-      Taro.navigateTo({ url: buildGameDetailPath(currentGame.id) }).catch(() => {});
+      Promise.resolve(openWorkExperience(currentGame)).catch(() => {});
     }
   };
 
@@ -465,9 +465,10 @@ export default function GameIteratePage() {
     }
 
     const needsAuthorView = !['published', 'review'].includes(String(currentGame?.status || ''));
-    Taro.navigateTo({
-      url: buildGameDetailPath(currentGame.id, needsAuthorView ? { authorView: 1 } : {}),
-    }).catch(() => {});
+    Promise.resolve(openWorkExperience(
+      currentGame,
+      needsAuthorView ? { authorView: 1 } : {},
+    )).catch(() => {});
   };
 
   const handleLockedPlay = () => {

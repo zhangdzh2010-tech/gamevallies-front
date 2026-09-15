@@ -17,10 +17,7 @@ const mockOpenIteratePageWithAuth = jest.fn();
 const mockSetPostLoginRedirect = jest.fn();
 const mockGetActiveCreationSession = jest.fn(() => Promise.resolve(null));
 const mockGetGame = jest.fn();
-const mockBuildGameDetailPath = jest.fn((id, params = {}) => {
-  const query = new URLSearchParams({ id, ...params }).toString();
-  return `/pages/game/detail/index?${query}`;
-});
+const mockOpenWorkExperience = jest.fn();
 
 const mockSourceGame = {
   id: 'source-1',
@@ -77,6 +74,8 @@ jest.mock('@tarojs/taro', () => {
     showToast: mockShowToast,
     navigateTo: mockNavigateTo,
     showModal: jest.fn(),
+    getStorageSync: jest.fn(() => ''),
+    useDidShow: jest.fn(),
   };
 
   return {
@@ -206,8 +205,21 @@ jest.mock('../../../utils/media', () => ({
   getGameCoverUrl: jest.fn(() => 'https://img.example/fork-cover.png'),
 }));
 
-jest.mock('../../../utils/share', () => ({
-  buildGameDetailPath: (...args) => mockBuildGameDetailPath(...args),
+jest.mock('../../../utils/workExperienceRoute', () => ({
+  openWorkExperience: (...args) => mockOpenWorkExperience(...args),
+  buildWorkExperiencePath: (id) => `/pages/game/experience/index?id=${id}`,
+}));
+
+jest.mock('../../../components/creative-web/ConversationLayout', () => ({
+  __esModule: true,
+  default: ({ children, actions }) => <div>{actions}{children}</div>,
+  ConversationIcon: () => null,
+}));
+
+jest.mock('../../../components/creative-web/CreativeShell', () => ({
+  __esModule: true,
+  default: ({ children, actions }) => <div>{actions}{children}</div>,
+  CreativeIcon: () => null,
 }));
 
 jest.mock('../../../utils/storage', () => ({
@@ -370,9 +382,7 @@ describe('Fork page creation session flow', () => {
     );
 
     fireEvent.click(screen.getByText('查看详情'));
-    expect(mockNavigateTo).toHaveBeenCalledWith({
-      url: '/pages/game/detail/index?id=fork-result-1&authorView=1',
-    });
+    expect(mockOpenWorkExperience).toHaveBeenCalledWith(mockForkResultGame, { authorView: 1 });
   });
 
   test('shows the resume scene for a matching active fork session restored from the backend', async () => {

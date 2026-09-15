@@ -18,3 +18,14 @@ test('player letterbox marks the stage for 16:10 contain scaling', () => {
   expect(stage.querySelector('.cw-player-scaler')).toBeTruthy();
   expect(stage.querySelector('iframe').getAttribute('title')).toBe('work');
 });
+
+test('player letterbox centers the contained 1280x800 canvas', () => {
+  const rect = {
+    width: 1600, height: 800, top: 0, left: 0, right: 1600, bottom: 800, x: 0, y: 0, toJSON() {},
+  };
+  jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(rect);
+  const { container } = render(<PlayerLetterbox className="cw-square-stage"><iframe title="work" /></PlayerLetterbox>);
+  const scaler = container.querySelector('.cw-player-scaler');
+  expect(scaler.getAttribute('style')).toContain('translate(160px, 0px)');
+  expect(scaler.getAttribute('style')).toContain('scale(1)');
+});

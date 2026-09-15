@@ -19,6 +19,7 @@ const {
   consumePendingExperienceWork,
   isMobileWorkShellPath,
   isPcWorkExperiencePath,
+  isPlayableWorkId,
   openWorkExperience,
   parseH5HashRoute,
   redirectWorkShellIfMismatched,
@@ -96,6 +97,7 @@ describe('work experience routes', () => {
     registerWorkExperienceOverlayHost(open);
     expect(openWorkExperience({ id: 'pub-1', title: '摆' })).toEqual({
       overlay: true,
+      playable: true,
       work: expect.objectContaining({ id: 'pub-1', title: '摆' }),
     });
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'pub-1' }));
@@ -114,6 +116,16 @@ describe('work experience routes', () => {
     openWorkExperience({ id: 'pub-1' });
     expect(mockNavigateTo).toHaveBeenCalledWith({ url: '/pages/game/detail/index?id=pub-1' });
     unregisterWorkExperienceOverlayHost();
+  });
+
+  test('KEEP marketing ids are not playable and do not navigate to a broken shell', () => {
+    expect(isPlayableWorkId('keep-pendulum')).toBe(false);
+    expect(isPlayableWorkId('pub-1')).toBe(true);
+    expect(openWorkExperience({ id: 'keep-pendulum' })).toBeUndefined();
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+    window.innerWidth = 390;
+    expect(openWorkExperience({ id: 'keep-pendulum' })).toBeUndefined();
+    expect(mockNavigateTo).not.toHaveBeenCalled();
   });
 
   test('does not redirect weapp or already-correct shells', () => {
