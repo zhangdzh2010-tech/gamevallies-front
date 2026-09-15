@@ -423,4 +423,20 @@ describe('Iterate page creation session flow', () => {
       expect(mockRefreshCreationSession).toHaveBeenCalledWith('resume-iter-1');
     });
   });
+
+  test('embedded iterate page does not redirect to login', async () => {
+    const { isLoggedIn } = require('../../../utils/authNavigation');
+    const { StudioEmbedContext } = require('../../../components/creative-web/StudioEmbedContext');
+    isLoggedIn.mockReturnValue(false);
+
+    render(
+      <StudioEmbedContext.Provider value={{ inPage: true, mode: 'iterate', gameId: 'game-1' }}>
+        <IteratePage />
+      </StudioEmbedContext.Provider>,
+    );
+
+    expect(await screen.findByLabelText('iterate-initial-prompt')).toBeTruthy();
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+    expect(mockSetPostLoginRedirect).not.toHaveBeenCalled();
+  });
 });

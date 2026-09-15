@@ -12,13 +12,31 @@ let mockStudioHost = null;
 jest.mock('../../../utils/authNavigation', () => ({
   isLoggedIn: () => true,
   openCreatePageWithAuth: jest.fn(),
-  openIteratePageWithAuth: jest.fn((game, id) => mockStudioHost?.({ mode: 'iterate', game, gameId: id || game?.id, title: game?.title })),
+  openIteratePageWithAuth: jest.fn(),
   openTaskCreatePageWithAuth: jest.fn(),
+  prepareIterateStudio: (game, id, options = {}) => ({
+    kind: 'iterate',
+    mode: 'iterate',
+    game,
+    gameId: id || game?.id || '',
+    taskId: options.taskId || '',
+    title: game?.title || '',
+  }),
+  prepareTaskCreateStudio: (taskId, gameId) => ({
+    kind: 'create-task',
+    mode: 'create-task',
+    taskId,
+    gameId: gameId || '',
+    title: '',
+  }),
   registerCreativeStudioHost: jest.fn((fn) => { mockStudioHost = fn; }),
   unregisterCreativeStudioHost: jest.fn(() => { mockStudioHost = null; }),
 }));
 jest.mock('../../../utils/media', () => ({ getGameCoverUrl: () => '' }));
-jest.mock('../../../store/gameStore', () => ({ useGameStore: jest.fn() }));
+jest.mock('../../../store/gameStore', () => ({
+  useGameStore: jest.fn(),
+  setPersistedGenerationTaskSnapshot: jest.fn(),
+}));
 jest.mock('../../../stores/quotaStore', () => ({ __esModule: true, default: { getState: () => ({ fetchQuota: () => Promise.resolve() }) } }));
 jest.mock('../CreativeShell', () => ({
   __esModule: true,
@@ -57,7 +75,9 @@ test('loads actual works and preserves iterate task routing', async () => {
   await screen.findByText('查看进展');
   expect(getMyGames).toHaveBeenCalledWith(1, 24);
   fireEvent.click(screen.getByText('查看进展'));
-  expect(openTaskCreatePageWithAuth).toHaveBeenCalledWith('task-1', 'work-1', 'pipeline_iterate');
+  expect(await screen.findByTestId('creative-studio-panel')).toBeTruthy();
+  expect(openTaskCreatePageWithAuth).not.toHaveBeenCalled();
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
 });
 test('carries the chosen scientific idea into the authenticated creation flow', async () => {
   setCreativeView('home');
@@ -117,7 +137,20 @@ test('opening a session stays on the in-shell studio panel without refetching wo
   await screen.findByText('公开作品列表');
   const calls = getMyGames.mock.calls.length;
   fireEvent.click(screen.getByText('打开会话'));
-  expect(openIteratePageWithAuth).toHaveBeenCalledWith({ id: 'work-1', title: '真实双摆作品', status: 'ready' }, 'work-1');
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
   expect(await screen.findByTestId('creative-studio-panel')).toBeTruthy();
   expect(getMyGames).toHaveBeenCalledTimes(calls);
+});
+
+test('generating works open create-task studio in-shell instead of navigating away', async () => {
+  setCreativeView('works');
+  getMyGames.mockResolvedValue({
+    items: [{ id: 'work-gen', title: '生成中的实验', status: 'generating', generationTaskId: 'task-22', taskType: 'pipeline_run' }],
+    total: 1,
+  });
+  render(<CreativeHome />);
+  fireEvent.click(await screen.findByText('生成中的实验'));
+  expect(await screen.findByTestId('creative-studio-panel')).toBeTruthy();
+  expect(openTaskCreatePageWithAuth).not.toHaveBeenCalled();
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
 });

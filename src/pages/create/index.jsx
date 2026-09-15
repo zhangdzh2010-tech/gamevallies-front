@@ -294,7 +294,7 @@ export default function Create() {
       }
 
       if (mode === 'resume' && gameId) {
-        if (!cancelled) {
+        if (!cancelled && !embed?.inPage) {
           openIteratePageWithAuth(null, gameId);
         }
         consumeCreateEntryIntent();
@@ -303,7 +303,7 @@ export default function Create() {
       }
 
       if (mode === 'fork' && sourceGameId) {
-        if (!cancelled) {
+        if (!cancelled && !embed?.inPage) {
           openForkPageWithAuth(sourceGameId);
         }
         consumeCreateEntryIntent();
@@ -340,6 +340,7 @@ export default function Create() {
     clearError,
     consumeCreateEntryIntent,
     createEntryIntent,
+    embed?.inPage,
     resetCreateSession,
     restorePersistedTask,
   ]);
@@ -879,7 +880,12 @@ export default function Create() {
                 <View className="creation-result-next-steps__actions">
                   <View
                     className="creation-result-next-steps__action creation-result-next-steps__action--primary"
-                    onClick={() => openIteratePageWithAuth(currentGame, currentGame?.id)}
+                    onClick={() => {
+                      if (embed?.inPage) {
+                        return;
+                      }
+                      openIteratePageWithAuth(currentGame, currentGame?.id);
+                    }}
                   >
                     <Text className="creation-result-next-steps__action-text">继续优化</Text>
                   </View>

@@ -42,6 +42,9 @@ export default function ConversationLayout({ children, title, actions, workId, o
     if (isFailedWork(item)) { setFailedWork(item); return; }
     if (item.id === workId) return;
     if (onOpenWork) { onOpenWork(item); return; }
+    // In-shell Creative Home always passes onOpenWork. Do not fall through to
+    // iterate/create routes while the shell is hosting navigation.
+    if (navigation) return;
     const task = item.generationTaskId || item.taskId;
     if (task && ['generating', 'failed', 'canceled', 'cancelled'].includes(item.status)) openTaskCreatePageWithAuth(task, item.id, item.taskType || 'pipeline_run');
     else openIteratePageWithAuth(item, item.id);
