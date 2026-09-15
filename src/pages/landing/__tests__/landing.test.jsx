@@ -94,6 +94,8 @@ test('landing shows approved marketing copy and never AI 游戏工坊', async ()
   expect(screen.getByText(/把想法和科学/)).toBeTruthy();
   expect(screen.getAllByText('小角度理想单摆演示').length).toBeGreaterThan(0);
   expect(screen.getByText('这样探索科学')).toBeTruthy();
+  expect(screen.getByText('把科学变成可感知、可调节、可继续改的作品。')).toBeTruthy();
+  expect(screen.queryByText(/不是一键生成小游戏工厂/)).toBeNull();
   expect(screen.getByText('可感知的规律')).toBeTruthy();
   expect(screen.getByText('灵感即刻成实验')).toBeTruthy();
   expect(screen.queryByText('AI 游戏工坊')).toBeNull();
@@ -170,6 +172,8 @@ test('v2.2 static draft remains the approved dark structure and palette referenc
   expect(config).toMatch(/backgroundColor:\s*'#0B1B36'/);
   expect(draft).toMatch(/探索方式/);
   expect(draft).toMatch(/这样探索科学/);
+  expect(draft).toMatch(/把科学变成可感知、可调节、可继续改的作品。/);
+  expect(draft).not.toMatch(/不是一键生成小游戏工厂/);
   expect(draft).toMatch(/即刻创作/);
   expect(draft).toMatch(/灵感即刻成实验/);
   expect(draft).toMatch(/精选作品/);
