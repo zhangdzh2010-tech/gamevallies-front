@@ -214,7 +214,6 @@ export default function LandingPage() {
               <span>T ≈ 2π√(L/g)</span>
               <span>L · g 可调</span>
             </p>
-            <footer>此作品内容由空间生成 · 可调参数交互实验</footer>
           </article>
         </section>
 

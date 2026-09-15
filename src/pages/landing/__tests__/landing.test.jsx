@@ -98,6 +98,7 @@ test('landing shows approved marketing copy and never AI 游戏工坊', async ()
   expect(screen.queryByText('来自已公开发布的交互实验。')).toBeNull();
   expect(screen.queryByText(/高质验收批次的 KEEP/)).toBeNull();
   expect(screen.queryByText(/上线后接创意广场/)).toBeNull();
+  expect(screen.queryByText(/此作品内容由空间生成/)).toBeNull();
   expect(screen.queryByText(/不是一键生成小游戏工厂/)).toBeNull();
   expect(screen.getByText('可感知的规律')).toBeTruthy();
   expect(screen.getByText('灵感即刻成实验')).toBeTruthy();
@@ -183,6 +184,7 @@ test('v2.2 static draft remains the approved dark structure and palette referenc
   expect(draft).not.toMatch(/来自已公开发布的交互实验/);
   expect(draft).not.toMatch(/高质验收批次的 KEEP/);
   expect(draft).not.toMatch(/上线后接创意广场/);
+  expect(draft).not.toMatch(/此作品内容由空间生成/);
   expect(draft).toMatch(/物理 · 单摆/);
   expect(draft).not.toMatch(/backdrop-filter/i);
   expect(draft).not.toMatch(/AI 游戏工坊/);
@@ -343,10 +345,16 @@ test('showcase covers match the draft matte label, and API images still letterbo
   expect(landingScss).toMatch(/\.zl-card__cover \{[\s\S]*aspect-ratio: 16\/10/);
   expect(landingScss).toMatch(/background: #0b1f1c/);
   expect(landingScss).toMatch(/place-items: center/);
+  expect(landingScss).toMatch(/\.zl-card__cover \{[\s\S]*\.cw-cover-matte \{[\s\S]*padding:\s*12PX/);
+  expect(landingScss).toMatch(/\.zl-card__cover \{[\s\S]*\.cw-cover-matte > img \{[\s\S]*max-width:\s*100%/);
   expect(landingScss).toMatch(/object-fit: contain/);
+  expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*margin: 0 0 8PX/);
   expect(landingScss).toMatch(/\.zl-card h3 \{[\s\S]*font-size: 18PX/);
+  expect(landingScss).toMatch(/\.zl-card__body \{ padding: 16PX/);
+  expect(landingScss).toMatch(/\.zl-card:hover,[\s\S]*border-color: rgba\(235, 248, 255, 0\.28\)/);
   expect(landingScss).toMatch(/\.zl-card__author \{[\s\S]*display: flex/);
   expect(landingScss).toMatch(/\.zl-card__avatar \{[\s\S]*border-radius: 50%/);
+  expect(landingJsx).not.toMatch(/此作品内容由空间生成/);
   expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*cursor: pointer/);
   expect(landingScss).toMatch(/\.zl-card__hit \{[\s\S]*appearance:\s*none/);
   expect(landingJsx).toMatch(/WorkExperienceOverlay/);
