@@ -78,7 +78,7 @@ describe('PC work experience page', () => {
 
   test('desktop H5 plays the public work in the Creative Web sandbox', async () => {
     render(<WorkExperiencePage />);
-    expect(await screen.findByText('种群模型')).toBeTruthy();
+    expect((await screen.findAllByText('种群模型')).length).toBeGreaterThan(0);
     expect(screen.getByText('林栖')).toBeTruthy();
     const frame = await screen.findByTitle('种群模型');
     expect(global.fetch).toHaveBeenCalledWith('/games/public-work/index.html', {

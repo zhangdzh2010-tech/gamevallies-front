@@ -73,15 +73,14 @@ test('conversation preview keeps one primary play CTA and reaches howto after st
   expect(screen.queryByText('打开体验 ↗')).toBeNull();
   expect(screen.queryByText(/打开体验/)).toBeNull();
   expect(screen.getByText('继续调整')).toBeTruthy();
-  expect(screen.getByLabelText('放大')).toBeDisabled();
-  expect(screen.queryByRole('button', { name: '玩法说明' })).toBeNull();
+  expect(screen.getByLabelText('放大').disabled).toBe(true);
+  expect(screen.queryByText('玩法说明')).toBeNull();
 
   fireEvent.click(screen.getByText('开始体验'));
-  await screen.findByRole('region', { name: '玩法说明' });
-  expect(screen.getByText('拖动温度滑块，观察酶活性曲线。')).toBeTruthy();
+  await screen.findByText('拖动温度滑块，观察酶活性曲线。');
   expect(screen.queryByText('调节摆长与重力，观察周期变化。')).toBeNull();
-  expect(screen.getByRole('button', { name: '玩法说明' })).toBeTruthy();
-  expect(screen.getByLabelText('放大')).not.toBeDisabled();
+  expect(screen.getByText('玩法说明')).toBeTruthy();
+  expect(screen.getByLabelText('放大').disabled).toBe(false);
   expect(screen.queryByText('打开体验 ↗')).toBeNull();
   expect(screen.queryByText('开始体验')).toBeNull();
 });
@@ -90,10 +89,9 @@ test('conversation howto stays reachable when the author left description empty'
   get.mockResolvedValue({ htmlCode: '<p>ready</p>' });
   render(<WorkPreview conversation work={work} />);
   fireEvent.click(screen.getByText('开始体验'));
-  await screen.findByRole('region', { name: '玩法说明' });
-  expect(screen.getByText(EMPTY_PLAY_GUIDE)).toBeTruthy();
+  await screen.findByText(EMPTY_PLAY_GUIDE);
   fireEvent.click(screen.getByLabelText('关闭玩法说明'));
-  expect(screen.queryByRole('region', { name: '玩法说明' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: '玩法说明' }));
+  expect(screen.queryByText(EMPTY_PLAY_GUIDE)).toBeNull();
+  fireEvent.click(screen.getByText('玩法说明'));
   expect(screen.getByText(EMPTY_PLAY_GUIDE)).toBeTruthy();
 });

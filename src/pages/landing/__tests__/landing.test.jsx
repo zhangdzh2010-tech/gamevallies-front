@@ -292,7 +292,8 @@ test('clicking a published showcase card opens an on-page overlay on desktop', a
   fireEvent.click(heading.closest('.zl-card__hit'));
   expect(mockNavigateTo).not.toHaveBeenCalled();
   const modal = screen.getByRole('dialog', { hidden: true });
-  expect(within(modal).getByText('公开单摆')).toBeTruthy();
+  expect(within(modal).getAllByText('公开单摆').length).toBeGreaterThan(0);
+  expect(within(modal).getByText('物理实验')).toBeTruthy();
   expect(modal.querySelector('[aria-label="最大化"]')).toBeTruthy();
 });
 

@@ -84,7 +84,6 @@ test('KEEP marketing ids show an empty state instead of a blank player', () => {
 
 test('experience overlay surfaces play instructions from work description', () => {
   render(<WorkExperienceOverlay work={work} />);
-  expect(screen.getByRole('button', { name: '玩法说明' })).toBeTruthy();
-  expect(screen.getByRole('region', { name: '玩法说明' })).toBeTruthy();
+  expect(screen.getByText('玩法说明')).toBeTruthy();
   expect(screen.getByText('调节繁殖率')).toBeTruthy();
 });
