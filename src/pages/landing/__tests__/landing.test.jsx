@@ -95,6 +95,9 @@ test('landing shows approved marketing copy and never AI 游戏工坊', async ()
   expect(screen.getAllByText('小角度理想单摆演示').length).toBeGreaterThan(0);
   expect(screen.getByText('这样探索科学')).toBeTruthy();
   expect(screen.getByText('把科学变成可感知、可调节、可继续改的作品。')).toBeTruthy();
+  expect(screen.queryByText('来自已公开发布的交互实验。')).toBeNull();
+  expect(screen.queryByText(/高质验收批次的 KEEP/)).toBeNull();
+  expect(screen.queryByText(/上线后接创意广场/)).toBeNull();
   expect(screen.queryByText(/不是一键生成小游戏工厂/)).toBeNull();
   expect(screen.getByText('可感知的规律')).toBeTruthy();
   expect(screen.getByText('灵感即刻成实验')).toBeTruthy();
@@ -177,6 +180,9 @@ test('v2.2 static draft remains the approved dark structure and palette referenc
   expect(draft).toMatch(/即刻创作/);
   expect(draft).toMatch(/灵感即刻成实验/);
   expect(draft).toMatch(/精选作品/);
+  expect(draft).not.toMatch(/来自已公开发布的交互实验/);
+  expect(draft).not.toMatch(/高质验收批次的 KEEP/);
+  expect(draft).not.toMatch(/上线后接创意广场/);
   expect(draft).toMatch(/物理 · 单摆/);
   expect(draft).not.toMatch(/backdrop-filter/i);
   expect(draft).not.toMatch(/AI 游戏工坊/);
@@ -226,6 +232,18 @@ test('band card letterboxes a published photosynthesis cover when present', asyn
   expect(container.querySelector('.zl-band__card .zl-photo')).toBeNull();
 });
 
+test('showcase heading has no developer-jargon lead', async () => {
+  const { container } = render(<LandingPage />);
+  const heading = screen.getByRole('heading', { level: 2, name: '精选作品' });
+  expect(heading).toBeTruthy();
+  expect(heading.nextElementSibling?.className).not.toMatch(/zl-section-lead/);
+  expect(container.querySelector('#showcase .zl-section-lead')).toBeNull();
+  expect(landingJsx).not.toMatch(/来自已公开发布的交互实验/);
+  expect(landingJsx).not.toMatch(/高质验收批次的 KEEP/);
+  expect(landingJsx).not.toMatch(/上线后接创意广场/);
+  await waitFor(() => expect(mockGetLatest).toHaveBeenCalled());
+});
+
 test('showcase falls back to curated KEEP when public feed is empty', async () => {
   render(<LandingPage />);
   await screen.findByText('双摆轨迹如何分叉');
@@ -253,6 +271,7 @@ test('showcase uses published feed when the public API returns works', async () 
   const card = heading.closest('article');
   expect(screen.queryByText('单位换算工作台')).toBeNull();
   expect(screen.queryByText('物理实验')).toBeNull();
+  expect(screen.queryByText('来自已公开发布的交互实验。')).toBeNull();
   expect(card.textContent).toContain('林栖');
 });
 
