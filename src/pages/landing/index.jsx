@@ -111,7 +111,6 @@ export default function LandingPage() {
   const [idea, setIdea] = useState('');
   const [filter, setFilter] = useState('all');
   const [works, setWorks] = useState(KEEP_WORKS);
-  const [fromApi, setFromApi] = useState(false);
   const [experienceWork, setExperienceWork] = useState(null);
 
   useEffect(() => {
@@ -143,7 +142,6 @@ export default function LandingPage() {
           }));
           if (active && items.length) {
             setWorks(items);
-            setFromApi(true);
             return;
           }
         } catch {
@@ -152,7 +150,6 @@ export default function LandingPage() {
       }
       if (active) {
         setWorks(KEEP_WORKS);
-        setFromApi(false);
       }
     }
     void loadShowcase();
@@ -217,7 +214,6 @@ export default function LandingPage() {
               <span>T ≈ 2π√(L/g)</span>
               <span>L · g 可调</span>
             </p>
-            <footer>此作品内容由空间生成 · 可调参数交互实验</footer>
           </article>
         </section>
 
@@ -275,11 +271,6 @@ export default function LandingPage() {
 
         <section className="zl-showcase" id="showcase">
           <h2>精选作品</h2>
-          <p className="zl-section-lead">
-            {fromApi
-              ? '来自已公开发布的交互实验。'
-              : '高质验收批次的 KEEP。上线后接创意广场。'}
-          </p>
           {/* TODO(feed): wire domain filters to a published-by-type API when it exists. */}
           <div className="zl-filters" role="tablist" aria-label="作品领域">
             {LANDING_FILTERS.map((item) => (
