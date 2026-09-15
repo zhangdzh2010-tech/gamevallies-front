@@ -5,6 +5,7 @@ import { buildH5ShareUrl } from '../../utils/share';
 import { buildWorkExperiencePath } from '../../utils/workExperienceRoute';
 import { PaywallPopup } from '../common/PaywallPopup';
 import { publicationDraftFor, isPublicationReady } from './PublicationFields';
+import { useStudioEmbed } from './StudioEmbedContext';
 
 export default function CreativeStudio({
   mode = 'create', title = '', onTitleChange, orientation = 'landscape', onOrientationChange,
@@ -13,6 +14,7 @@ export default function CreativeStudio({
   error = '', primary, secondary = [], onCancel, onNew, canPlay = true, onUnlock,
   quotaText = '', supplemental = null, inputAriaLabel = 'creative-description',
 }) {
+  const embed = useStudioEmbed();
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
   const [published, setPublished] = useState(false);
@@ -41,5 +43,5 @@ export default function CreativeStudio({
     } catch (err) { setPublishError(err?.message || '发布失败，请稍后重试。'); }
     finally { actionRef.current = false; setPublishing(false); }
   }
-  return <ConversationStudioBody {...{mode, displayTitle, onTitleChange, orientation, onOrientationChange, format, onFormatChange, input, onInputChange, session, work, previewWork, generating, progress, loading, error, primary, secondary, onCancel, onNew, canPlay, onUnlock, quotaText, supplemental, inputAriaLabel, completed, publishing, published, publishError, shareUrl, publish, publicationDraft, onPublicationDraftChange}}><PaywallPopup /></ConversationStudioBody>;
+  return <ConversationStudioBody embedded={Boolean(embed?.inPage)} {...{mode, displayTitle, onTitleChange, orientation, onOrientationChange, format, onFormatChange, input, onInputChange, session, work, previewWork, generating, progress, loading, error, primary, secondary, onCancel, onNew, canPlay, onUnlock, quotaText, supplemental, inputAriaLabel, completed, publishing, published, publishError, shareUrl, publish, publicationDraft, onPublicationDraftChange}}><PaywallPopup /></ConversationStudioBody>;
 }

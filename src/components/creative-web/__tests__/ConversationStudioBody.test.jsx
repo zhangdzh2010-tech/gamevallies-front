@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import ConversationStudioBody from '../ConversationStudioBody';
 import { StudioEmbedContext } from '../StudioEmbedContext';
+import { resetConversationHistoryCache } from '../ConversationLayout';
 
 jest.mock('@tarojs/taro', () => ({ __esModule: true, default: { navigateTo: jest.fn(), switchTab: jest.fn() } }));
 jest.mock('../../../services/game', () => ({ getMyGames: jest.fn(() => Promise.resolve({ items: [], total: 0 })) }));
@@ -24,6 +25,10 @@ jest.mock('../../../stores/quotaStore', () => {
 });
 jest.mock('../../common/BrandMark', () => ({ BRAND_MARK_SRC: '', BrandMarkImg: () => <img alt="" /> }));
 jest.mock('../WorkPreview', () => () => null);
+
+beforeEach(() => {
+  resetConversationHistoryCache();
+});
 
 test('embedded studio body does not render a second session sidebar', () => {
   render(<ConversationStudioBody embedded home input="" inputAriaLabel="你的创意" />);

@@ -117,6 +117,8 @@ export default function Create() {
   const [isRestoringEntry, setIsRestoringEntry] = useState(false);
   const authRedirectingRef = useRef(false);
   const promptDraftSyncKeyRef = useRef('');
+  const embedIdentity = embed?.inPage ? `${embed.mode || ''}:${embed.gameId || ''}:${embed.taskId || ''}` : '';
+  const prevEmbedIdentityRef = useRef(embedIdentity);
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 400);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
@@ -135,6 +137,19 @@ export default function Create() {
     setFormat('experiment');
     promptDraftSyncKeyRef.current = '';
   };
+
+  useEffect(() => {
+    if (!embed?.inPage) {
+      prevEmbedIdentityRef.current = embedIdentity;
+      return;
+    }
+    if (prevEmbedIdentityRef.current === embedIdentity) {
+      return;
+    }
+    prevEmbedIdentityRef.current = embedIdentity;
+    resetLocalCreateState();
+    authRedirectingRef.current = false;
+  }, [embed?.inPage, embedIdentity]);
 
   useEffect(() => {
     if (!creationSession || creationSession.entryMode !== 'create') {
@@ -294,7 +309,7 @@ export default function Create() {
       }
 
       if (mode === 'resume' && gameId) {
-        if (!cancelled && !embed?.inPage) {
+        if (!cancelled) {
           openIteratePageWithAuth(null, gameId);
         }
         consumeCreateEntryIntent();
@@ -881,9 +896,6 @@ export default function Create() {
                   <View
                     className="creation-result-next-steps__action creation-result-next-steps__action--primary"
                     onClick={() => {
-                      if (embed?.inPage) {
-                        return;
-                      }
                       openIteratePageWithAuth(currentGame, currentGame?.id);
                     }}
                   >

@@ -21,7 +21,7 @@ export default function CreativeStudioPanel({ context, onClose }) {
     <StudioEmbedContext.Provider value={embedValue}>
       <div className="cw-studio-panel">
         {context.mode === 'iterate' ? <GameIteratePage /> : null}
-        {context.mode === 'create-task' ? <Create /> : null}
+        {context.mode === 'create-task' || context.mode === 'create' ? <Create /> : null}
       </div>
     </StudioEmbedContext.Provider>
   );
