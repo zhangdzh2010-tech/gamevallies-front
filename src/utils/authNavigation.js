@@ -61,13 +61,24 @@ function shouldDeferStudioToHome() {
   return route.includes('pages/profile/');
 }
 
+export function hasCreativeStudioHost() {
+  return typeof creativeStudioHost === 'function';
+}
+
 function openCreativeStudioInPage(spec) {
-  if (!isH5Runtime()) {
-    return false;
+  if (typeof creativeStudioHost === 'function') {
+    try {
+      creativeStudioHost(spec);
+    } catch (error) {
+      console.warn('Failed to open in-page creative studio:', error);
+    }
+    // A registered host means Creative Home is mounted. Never fall through to
+    // iterate/create route navigation, even if the host returns false/throws.
+    return true;
   }
 
-  if (creativeStudioHost) {
-    return creativeStudioHost(spec);
+  if (!isH5Runtime()) {
+    return false;
   }
 
   if (shouldDeferStudioToHome()) {
@@ -78,6 +89,35 @@ function openCreativeStudioInPage(spec) {
   }
 
   return false;
+}
+
+export function prepareIterateStudio(game, gameId = null, options = {}) {
+  const targetGameId = gameId || game?.id || null;
+  const { taskId = null } = options;
+  if (game) {
+    useGameStore.getState().setCurrentGame(game);
+    setPersistedIterateEntryGame(game);
+  }
+
+  return {
+    kind: 'iterate',
+    mode: 'iterate',
+    game: game || null,
+    gameId: targetGameId,
+    taskId,
+    title: game?.title || '',
+  };
+}
+
+export function prepareTaskCreateStudio(taskId, gameId = null) {
+  prepareCreateEntry({ mode: 'task', taskId, gameId });
+  return {
+    kind: 'create-task',
+    mode: 'create-task',
+    taskId,
+    gameId: gameId || '',
+    title: '',
+  };
 }
 
 function normalizeProfileActiveTab(tab) {
@@ -537,21 +577,8 @@ export function openIteratePageWithAuth(game, gameId = null, options = {}) {
     return false;
   }
 
-  const gameStore = useGameStore.getState();
-  if (game) {
-    gameStore.setCurrentGame(game);
-    setPersistedIterateEntryGame(game);
-  }
-
+  const studioSpec = prepareIterateStudio(game, targetGameId, { taskId });
   const targetUrl = buildIteratePageUrl(targetGameId, taskId);
-  const studioSpec = {
-    kind: 'iterate',
-    mode: 'iterate',
-    game,
-    gameId: targetGameId,
-    taskId,
-    title: game?.title || '',
-  };
 
   if (isLoggedIn()) {
     clearPostLoginRedirect();
@@ -595,14 +622,7 @@ export function openTaskCreatePageWithAuth(taskId, gameId = null, taskType = 'pi
   }
 
   if (isLoggedIn()) {
-    prepareCreateEntry({ mode: 'task', taskId, gameId });
-    const studioSpec = {
-      kind: 'create-task',
-      mode: 'create-task',
-      taskId,
-      gameId: gameId || '',
-      title: '',
-    };
+    const studioSpec = prepareTaskCreateStudio(taskId, gameId);
     if (openCreativeStudioInPage(studioSpec)) {
       clearPostLoginRedirect();
       return true;

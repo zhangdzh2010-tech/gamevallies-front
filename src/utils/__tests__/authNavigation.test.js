@@ -64,6 +64,8 @@ describe('authNavigation user journey', () => {
     mockGetToken.mockReturnValue(null);
     mockGetPersistedGenerationTaskSnapshot.mockReturnValue(null);
     mockGameStoreState.currentGame = null;
+    const { unregisterCreativeStudioHost } = require('../authNavigation');
+    unregisterCreativeStudioHost();
   });
 
   afterEach(() => {
@@ -150,6 +152,27 @@ describe('authNavigation user journey', () => {
       gameId: 'game-3',
     }));
     expect(mockTaro.navigateTo).not.toHaveBeenCalled();
+
+    unregisterCreativeStudioHost();
+  });
+
+  test('registered studio host cannot fall through to iterate/create routes', () => {
+    mockGetToken.mockReturnValue('token');
+    const openInPage = jest.fn(() => false);
+    const {
+      openIteratePageWithAuth,
+      openTaskCreatePageWithAuth,
+      registerCreativeStudioHost,
+      unregisterCreativeStudioHost,
+    } = require('../authNavigation');
+
+    registerCreativeStudioHost(openInPage);
+
+    expect(openIteratePageWithAuth({ id: 'game-4', title: '拒绝页内打开' }, null)).toBe(true);
+    expect(openTaskCreatePageWithAuth('task-4', 'game-4', 'pipeline_run')).toBe(true);
+    expect(mockTaro.navigateTo).not.toHaveBeenCalled();
+    expect(mockTaro.redirectTo).not.toHaveBeenCalled();
+    expect(mockTaro.switchTab).not.toHaveBeenCalled();
 
     unregisterCreativeStudioHost();
   });

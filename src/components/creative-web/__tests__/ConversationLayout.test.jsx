@@ -54,6 +54,13 @@ test('loads the session list once and keeps it when a record is opened', async (
   expect(openIteratePageWithAuth).not.toHaveBeenCalled();
 });
 
+test('in-shell navigation never falls through to iterate routes when opening a session', async () => {
+  render(<ConversationLayout navigation={jest.fn()} />);
+  await screen.findByText('双摆实验');
+  fireEvent.click(screen.getByText('双摆实验'));
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
+});
+
 test('manual refresh is the only way to reload the session list', async () => {
   render(<ConversationLayout />);
   await screen.findByText('双摆实验');
