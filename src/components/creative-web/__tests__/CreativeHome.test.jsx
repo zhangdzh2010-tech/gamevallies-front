@@ -22,6 +22,13 @@ jest.mock('../../../utils/authNavigation', () => ({
     taskId: options.taskId || '',
     title: game?.title || '',
   }),
+  prepareCreateStudio: (options = {}) => ({
+    kind: options.mode === 'task' ? 'create-task' : 'create',
+    mode: options.mode === 'task' ? 'create-task' : 'create',
+    taskId: options.taskId || '',
+    gameId: options.gameId || '',
+    title: '',
+  }),
   prepareTaskCreateStudio: (taskId, gameId) => ({
     kind: 'create-task',
     mode: 'create-task',
@@ -53,6 +60,7 @@ jest.mock('../ConversationLayout', () => ({
     <button type="button" onClick={() => navigation('square')}>创意广场</button>
     <button type="button" onClick={() => navigation('works')}>我的作品</button>
     <button type="button" onClick={() => onOpenWork?.({ id: 'work-1', title: '真实双摆作品', status: 'ready' })}>打开会话</button>
+    <button type="button" onClick={() => onOpenWork?.({ id: 'work-2', title: '生态瓶', status: 'ready' })}>打开另一会话</button>
     {children}
   </div>,
   ConversationIcon: () => null,
@@ -79,13 +87,15 @@ test('loads actual works and preserves iterate task routing', async () => {
   expect(openTaskCreatePageWithAuth).not.toHaveBeenCalled();
   expect(openIteratePageWithAuth).not.toHaveBeenCalled();
 });
-test('carries the chosen scientific idea into the authenticated creation flow', async () => {
+test('carries the chosen scientific idea into the in-shell creation studio', async () => {
   setCreativeView('home');
   render(<CreativeHome />);
   await screen.findByText('让一个想法，变得可以探索。');
   fireEvent.change(screen.getByLabelText('你的创意'), { target: { value: '观察不同初始角度的双摆运动' } });
   fireEvent.click(screen.getByTestId('workspace-primary'));
-  await waitFor(() => expect(openCreatePageWithAuth).toHaveBeenCalledWith({ mode: 'fresh' }));
+  expect(await screen.findByTestId('creative-studio-panel')).toBeTruthy();
+  expect(openCreatePageWithAuth).not.toHaveBeenCalled();
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
   const draft = consumeCreativeDraft();
   expect(draft.prompt).toContain('观察不同初始角度的双摆运动');
   expect(draft.prompt).toContain('呈现方式：交互实验');
@@ -138,8 +148,21 @@ test('opening a session stays on the in-shell studio panel without refetching wo
   const calls = getMyGames.mock.calls.length;
   fireEvent.click(screen.getByText('打开会话'));
   expect(openIteratePageWithAuth).not.toHaveBeenCalled();
+  expect(openTaskCreatePageWithAuth).not.toHaveBeenCalled();
   expect(await screen.findByTestId('creative-studio-panel')).toBeTruthy();
   expect(getMyGames).toHaveBeenCalledTimes(calls);
+});
+
+test('switching sessions only swaps the studio panel and never navigates', async () => {
+  render(<CreativeHome />);
+  await screen.findByText('公开作品列表');
+  fireEvent.click(screen.getByText('打开会话'));
+  expect(await screen.findByTestId('creative-studio-panel')).toBeTruthy();
+  fireEvent.click(screen.getByText('打开另一会话'));
+  expect(screen.getByTestId('creative-studio-panel')).toBeTruthy();
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
+  expect(openTaskCreatePageWithAuth).not.toHaveBeenCalled();
+  expect(openCreatePageWithAuth).not.toHaveBeenCalled();
 });
 
 test('generating works open create-task studio in-shell instead of navigating away', async () => {

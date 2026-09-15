@@ -118,8 +118,9 @@ function formatMetadataTime(value) {
 export default function GameIteratePage() {
   const embed = useStudioEmbed();
   const route = useRoute();
-  const gameId = embed?.gameId || route?.params?.gameId || '';
-  const taskId = embed?.taskId || route?.params?.taskId || '';
+  const gameId = embed?.inPage ? (embed.gameId || '') : (embed?.gameId || route?.params?.gameId || '');
+  const taskId = embed?.inPage ? (embed.taskId || '') : (embed?.taskId || route?.params?.taskId || '');
+  const embedIdentity = embed?.inPage ? `${embed.mode || ''}:${gameId}:${taskId}` : '';
   const isWeapp = process.env.TARO_ENV === 'weapp';
   const isH5 = isH5Runtime();
   const {
@@ -156,6 +157,7 @@ export default function GameIteratePage() {
   const [resumeDecisionSubmitting, setResumeDecisionSubmitting] = useState(false);
   const iterateSessionBootstrappedGameIdRef = useRef('');
   const promptDraftSyncKeyRef = useRef('');
+  const prevEmbedIdentityRef = useRef(embedIdentity);
   const { windowHeight = 720 } = getSafeSystemInfo();
   const scrollViewHeight = Math.max(windowHeight - 120, 420);
   const scrollContainerStyle = isH5 ? undefined : { height: `${scrollViewHeight}px` };
@@ -191,6 +193,29 @@ export default function GameIteratePage() {
   );
   const isIterateSessionActive = isCurrentIterateSession && creationSession?.status !== 'generating';
   const canStartIterateSession = Boolean(iterateFeedback.trim());
+
+  useEffect(() => {
+    if (!embed?.inPage) {
+      prevEmbedIdentityRef.current = embedIdentity;
+      return undefined;
+    }
+
+    if (prevEmbedIdentityRef.current === embedIdentity) {
+      return undefined;
+    }
+
+    prevEmbedIdentityRef.current = embedIdentity;
+    setIterateFeedback('');
+    setSessionPromptDraft('');
+    setIsBootstrapping(true);
+    setPageError('');
+    setAuthorTaskMetadata(null);
+    setResumeCandidate(null);
+    setResumeDecisionSubmitting(false);
+    iterateSessionBootstrappedGameIdRef.current = '';
+    promptDraftSyncKeyRef.current = '';
+    return undefined;
+  }, [embed?.inPage, embedIdentity]);
 
   useEffect(() => {
     if (embed?.inPage || isLoggedIn()) {

@@ -360,5 +360,26 @@ describe('Create page creation session flow', () => {
       }));
     });
   });
+
+  test('embedded resume hands off through the helper without Taro navigation', async () => {
+    const Taro = require('@tarojs/taro').default;
+    const { openIteratePageWithAuth } = require('../../../utils/authNavigation');
+    const { StudioEmbedContext } = require('../../../components/creative-web/StudioEmbedContext');
+
+    mockGameStoreState = buildGameStoreState({
+      createEntryIntent: { mode: 'resume', gameId: 'game-9' },
+    });
+
+    render(
+      <StudioEmbedContext.Provider value={{ inPage: true, mode: 'create-task', gameId: 'game-9', taskId: 'task-1' }}>
+        <CreatePage />
+      </StudioEmbedContext.Provider>,
+    );
+
+    await waitFor(() => {
+      expect(openIteratePageWithAuth).toHaveBeenCalledWith(null, 'game-9');
+    });
+    expect(Taro.navigateTo).not.toHaveBeenCalled();
+  });
 });
 

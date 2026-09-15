@@ -12,27 +12,71 @@ import FailedWorkDialog, { isFailedWork } from './FailedWorkDialog';
 import { BrandMarkImg } from '../common/BrandMark';
 
 export function ConversationIcon({ name, ...props }) { return <CreativeIcon name={name} className="icon" {...props} />; }
-export default function ConversationLayout({ children, title, actions, workId, onNew, onOpenWork, navigation, active = 'home' }) {
+
+const sessionHistoryCache = {
+  userId: '',
+  items: [],
+  error: false,
+};
+
+export function resetConversationHistoryCache() {
+  sessionHistoryCache.userId = '';
+  sessionHistoryCache.items = [];
+  sessionHistoryCache.error = false;
+}
+
+function ConversationLayout({ children, title, actions, workId, onNew, onOpenWork, navigation, active = 'home' }) {
   const loggedIn = isLoggedIn();
   const user = loggedIn ? Storage.getUser() || {} : {};
   const userId = user.id || user.userId || user.username || '';
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => (
+    loggedIn && sessionHistoryCache.userId === userId ? sessionHistoryCache.items : []
+  ));
   const [failedWork, setFailedWork] = useState(null);
-  const [historyError, setHistoryError] = useState(false);
+  const [historyError, setHistoryError] = useState(() => (
+    loggedIn && sessionHistoryCache.userId === userId ? sessionHistoryCache.error : false
+  ));
   const [refresh, setRefresh] = useState(0);
   const quota = useQuotaStore((state) => state) || {};
   const summary = getQuotaSummary(quota);
   useEffect(() => {
     let activeRequest = true;
     if (!loggedIn) {
+      sessionHistoryCache.userId = '';
+      sessionHistoryCache.items = [];
+      sessionHistoryCache.error = false;
       setHistory([]);
       setHistoryError(false);
       return () => { activeRequest = false; };
     }
 
+    const cacheHit = sessionHistoryCache.userId === userId;
+    if (cacheHit) {
+      setHistory(sessionHistoryCache.items);
+      setHistoryError(sessionHistoryCache.error);
+    }
+
+    // Remounts keep the cached sidebar. Only the first load or a manual refresh hits the network.
+    if (cacheHit && refresh === 0) {
+      return () => { activeRequest = false; };
+    }
+
     getMyGames(1, 12)
-      .then(result => { if (activeRequest) { setHistory(normalizeWorks(result)); setHistoryError(false); } })
-      .catch(() => { if (activeRequest) setHistoryError(true); });
+      .then(result => {
+        if (!activeRequest) return;
+        const items = normalizeWorks(result);
+        sessionHistoryCache.userId = userId;
+        sessionHistoryCache.items = items;
+        sessionHistoryCache.error = false;
+        setHistory(items);
+        setHistoryError(false);
+      })
+      .catch(() => {
+        if (!activeRequest) return;
+        sessionHistoryCache.userId = userId;
+        sessionHistoryCache.error = true;
+        setHistoryError(true);
+      });
     useQuotaStore.getState().fetchQuota(false).catch(() => {});
     return () => { activeRequest = false; };
   }, [loggedIn, userId, refresh]);
@@ -75,4 +119,6 @@ export default function ConversationLayout({ children, title, actions, workId, o
     </aside><div className="main"><header className="topbar"><div><div className="breadcrumb">创作空间<span>/</span>会话</div><div className="title">{title || '新的创意'}</div></div><div className="top-actions">{actions}</div></header>{children}</div>
   </div>;
 }
+
+export default React.memo(ConversationLayout);
 

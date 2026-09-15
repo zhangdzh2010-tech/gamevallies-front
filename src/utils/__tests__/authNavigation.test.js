@@ -134,6 +134,50 @@ describe('authNavigation user journey', () => {
     });
   });
 
+  test('openCreatePageWithAuth stays in-shell when studio host is registered', () => {
+    mockGetToken.mockReturnValue('token');
+    const hrefBefore = window.location.href;
+    const openInPage = jest.fn(() => true);
+    const {
+      openCreatePageWithAuth,
+      registerCreativeStudioHost,
+      unregisterCreativeStudioHost,
+    } = require('../authNavigation');
+
+    registerCreativeStudioHost(openInPage);
+    const result = openCreatePageWithAuth({ mode: 'fresh' });
+
+    expect(result).toBe(true);
+    expect(openInPage).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'create',
+      kind: 'create',
+    }));
+    expect(mockTaro.switchTab).not.toHaveBeenCalled();
+    expect(mockTaro.navigateTo).not.toHaveBeenCalled();
+    expect(mockTaro.redirectTo).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(hrefBefore);
+
+    unregisterCreativeStudioHost();
+  });
+
+  test('openCreatePageWithAuth with host cannot fall through to the create tab even if host returns false', () => {
+    mockGetToken.mockReturnValue('token');
+    const openInPage = jest.fn(() => false);
+    const {
+      openCreatePageWithAuth,
+      registerCreativeStudioHost,
+      unregisterCreativeStudioHost,
+    } = require('../authNavigation');
+
+    registerCreativeStudioHost(openInPage);
+    expect(openCreatePageWithAuth({ mode: 'fresh' })).toBe(true);
+    expect(mockTaro.switchTab).not.toHaveBeenCalled();
+    expect(mockTaro.navigateTo).not.toHaveBeenCalled();
+    expect(mockTaro.redirectTo).not.toHaveBeenCalled();
+
+    unregisterCreativeStudioHost();
+  });
+
   test('logged-in iterate entry opens in-page studio when host is registered on H5', () => {
     mockGetToken.mockReturnValue('token');
     const openInPage = jest.fn(() => true);
@@ -152,6 +196,8 @@ describe('authNavigation user journey', () => {
       gameId: 'game-3',
     }));
     expect(mockTaro.navigateTo).not.toHaveBeenCalled();
+    expect(mockTaro.redirectTo).not.toHaveBeenCalled();
+    expect(mockTaro.switchTab).not.toHaveBeenCalled();
 
     unregisterCreativeStudioHost();
   });

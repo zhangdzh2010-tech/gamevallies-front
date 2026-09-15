@@ -120,6 +120,18 @@ export function prepareTaskCreateStudio(taskId, gameId = null) {
   };
 }
 
+export function prepareCreateStudio(options = {}) {
+  prepareCreateEntry(options);
+  const isTask = options.mode === 'task';
+  return {
+    kind: isTask ? 'create-task' : 'create',
+    mode: isTask ? 'create-task' : 'create',
+    taskId: options.taskId || '',
+    gameId: options.gameId || options.game?.id || '',
+    title: options.game?.title || '',
+  };
+}
+
 function normalizeProfileActiveTab(tab) {
   if (!tab || !PROFILE_SUB_TABS.has(tab)) {
     return '';
@@ -360,6 +372,10 @@ function buildUrlWithQuery(baseUrl, params = {}) {
 }
 
 function openPage(url) {
+  if (shouldStayInCreativeShell(url)) {
+    return undefined;
+  }
+
   if (TAB_BAR_PAGES.has(url)) {
     return Taro.switchTab({ url }).catch(() => {});
   }
@@ -378,6 +394,15 @@ function replacePage(url) {
 function isWorkflowPageUrl(url) {
   return typeof url === 'string'
     && (url.startsWith(CREATE_PAGE_URL) || url.startsWith(ITERATE_PAGE_URL) || url.startsWith(FORK_PAGE_URL));
+}
+
+function isInShellBlockedUrl(url) {
+  return typeof url === 'string'
+    && (url.startsWith(CREATE_PAGE_URL) || url.startsWith(ITERATE_PAGE_URL));
+}
+
+function shouldStayInCreativeShell(url) {
+  return hasCreativeStudioHost() && isInShellBlockedUrl(url);
 }
 
 function navigateToLogin() {
@@ -534,10 +559,13 @@ export function consumePostLoginRedirect() {
 }
 
 export function openCreatePageWithAuth(options = {}) {
-  prepareCreateEntry(options);
+  const studioSpec = prepareCreateStudio(options);
 
   if (isLoggedIn()) {
     clearPostLoginRedirect();
+    if (openCreativeStudioInPage(studioSpec)) {
+      return true;
+    }
     openPage(CREATE_PAGE_URL);
     return true;
   }

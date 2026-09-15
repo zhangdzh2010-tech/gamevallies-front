@@ -1,7 +1,7 @@
 /* eslint-env jest */
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import ConversationLayout from '../ConversationLayout';
+import ConversationLayout, { resetConversationHistoryCache } from '../ConversationLayout';
 import { getMyGames } from '../../../services/game';
 import { openIteratePageWithAuth, openProfilePageWithTab } from '../../../utils/authNavigation';
 
@@ -40,7 +40,29 @@ jest.mock('../../common/BrandMark', () => ({ BrandMarkImg: () => <img alt="" /> 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  resetConversationHistoryCache();
   getMyGames.mockResolvedValue({ items: [{ id: 'work-1', title: '双摆实验', status: 'ready' }], total: 1 });
+});
+
+test('switching sessions does not navigate away or refetch the sidebar', async () => {
+  const onOpenWork = jest.fn();
+  getMyGames.mockResolvedValue({
+    items: [
+      { id: 'work-1', title: '双摆实验', status: 'ready' },
+      { id: 'work-2', title: '生态瓶', status: 'ready' },
+    ],
+    total: 2,
+  });
+  render(<ConversationLayout onOpenWork={onOpenWork} navigation={jest.fn()} />);
+  await screen.findByText('双摆实验');
+  fireEvent.click(screen.getByText('双摆实验'));
+  fireEvent.click(screen.getByText('生态瓶'));
+  expect(onOpenWork).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'work-1' }));
+  expect(onOpenWork).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'work-2' }));
+  expect(getMyGames).toHaveBeenCalledTimes(1);
+  expect(openIteratePageWithAuth).not.toHaveBeenCalled();
+  expect(screen.getByText('双摆实验')).toBeTruthy();
+  expect(screen.getByText('生态瓶')).toBeTruthy();
 });
 
 test('loads the session list once and keeps it when a record is opened', async () => {
