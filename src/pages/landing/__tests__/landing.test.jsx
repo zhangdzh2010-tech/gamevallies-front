@@ -234,8 +234,8 @@ test('band card letterboxes a published photosynthesis cover when present', asyn
 
 test('showcase heading has no developer-jargon lead', async () => {
   const { container } = render(<LandingPage />);
-  const heading = screen.getByRole('heading', { level: 2, name: '精选作品' });
-  expect(heading).toBeTruthy();
+  const heading = container.querySelector('#showcase h2');
+  expect(heading?.textContent).toBe('精选作品');
   expect(heading.nextElementSibling?.className).not.toMatch(/zl-section-lead/);
   expect(container.querySelector('#showcase .zl-section-lead')).toBeNull();
   expect(landingJsx).not.toMatch(/来自已公开发布的交互实验/);
