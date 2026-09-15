@@ -3,11 +3,16 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { get } from '../../../services/api';
 import WorkPreview from '../WorkPreview';
+import { EMPTY_PLAY_GUIDE } from '../../../utils/workPlayGuide';
 jest.mock('../../../utils/storage', () => ({ Storage: { getUser: () => null } }));
 jest.mock('../../../services/api', () => ({ get: jest.fn() }));
 jest.mock('../CreativeShell', () => ({ CreativeIcon: () => <span /> }));
 const work = { id: 'creative-1', version: 1, title: '双摆实验' };
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  HTMLDialogElement.prototype.showModal = jest.fn();
+  HTMLDialogElement.prototype.close = jest.fn();
+});
 test('loads real HTML only after explicit play and isolates it from application credentials', async () => {
   get.mockResolvedValue({ htmlCode: '<html><body>experiment</body></html>' });
   const { container } = render(<WorkPreview work={work} />);
@@ -55,4 +60,40 @@ test('discards a delayed preview response after switching works', async () => {
   rerender(<WorkPreview work={{ ...work, id: 'creative-2' }} />);
   await act(async () => resolve({ htmlCode: '<p>old private work</p>' }));
   expect(container.querySelector('iframe')).toBeNull();
+});
+
+test('conversation preview keeps one primary play CTA and reaches howto after start', async () => {
+  get.mockResolvedValue({
+    htmlCode: '<html><body>studio</body></html>',
+    howto: '拖动温度滑块，观察酶活性曲线。',
+  });
+  const described = { ...work, description: '调节摆长与重力，观察周期变化。' };
+  render(<WorkPreview conversation work={described} onEdit={() => {}} />);
+  expect(screen.getByText('开始体验')).toBeTruthy();
+  expect(screen.queryByText('打开体验 ↗')).toBeNull();
+  expect(screen.queryByText(/打开体验/)).toBeNull();
+  expect(screen.getByText('继续调整')).toBeTruthy();
+  expect(screen.getByLabelText('放大')).toBeDisabled();
+  expect(screen.queryByRole('button', { name: '玩法说明' })).toBeNull();
+
+  fireEvent.click(screen.getByText('开始体验'));
+  await screen.findByRole('region', { name: '玩法说明' });
+  expect(screen.getByText('拖动温度滑块，观察酶活性曲线。')).toBeTruthy();
+  expect(screen.queryByText('调节摆长与重力，观察周期变化。')).toBeNull();
+  expect(screen.getByRole('button', { name: '玩法说明' })).toBeTruthy();
+  expect(screen.getByLabelText('放大')).not.toBeDisabled();
+  expect(screen.queryByText('打开体验 ↗')).toBeNull();
+  expect(screen.queryByText('开始体验')).toBeNull();
+});
+
+test('conversation howto stays reachable when the author left description empty', async () => {
+  get.mockResolvedValue({ htmlCode: '<p>ready</p>' });
+  render(<WorkPreview conversation work={work} />);
+  fireEvent.click(screen.getByText('开始体验'));
+  await screen.findByRole('region', { name: '玩法说明' });
+  expect(screen.getByText(EMPTY_PLAY_GUIDE)).toBeTruthy();
+  fireEvent.click(screen.getByLabelText('关闭玩法说明'));
+  expect(screen.queryByRole('region', { name: '玩法说明' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '玩法说明' }));
+  expect(screen.getByText(EMPTY_PLAY_GUIDE)).toBeTruthy();
 });

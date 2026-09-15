@@ -4,8 +4,10 @@ import { getGame } from '../../services/game';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../utils/authNavigation';
 import { Storage } from '../../utils/storage';
 import { isPlayableWorkId } from '../../utils/workPlayability';
+import { getWorkPlayGuide } from '../../utils/workPlayGuide';
 import { PlayerLetterbox } from './coverLetterbox';
 import { galleryAuthorName } from './SquareGalleryCard';
+import { PlayGuideButton, PlayGuideSheet } from './PlayGuidePanel';
 import WorkSandbox from './WorkSandbox';
 import './creative-web.scss';
 
@@ -40,11 +42,13 @@ export default function WorkExperienceOverlay({
   const [resolved, setResolved] = useState(selected);
   const [playing, setPlaying] = useState(Boolean(autoPlay) && playable);
   const [maximized, setMaximized] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   useEffect(() => {
     setResolved(selected);
     setPlaying(Boolean(autoPlay) && playable);
     setMaximized(false);
+    setGuideOpen(true);
   }, [selected?.id, autoPlay, playable]);
 
   useEffect(() => {
@@ -87,6 +91,7 @@ export default function WorkExperienceOverlay({
   const { own, remixDisabled, remixLabel } = describeWorkRemix(current);
   const title = current.title || '交互作品';
   const author = galleryAuthorName(current);
+  const guide = getWorkPlayGuide(current);
   const close = (reason = 'close') => onClose?.(reason);
 
   const remix = () => {
@@ -117,6 +122,7 @@ export default function WorkExperienceOverlay({
             <p className="cw-experience-author">{author}</p>
           </div>
           <div className="cw-dialog-head-actions">
+            {playable ? <PlayGuideButton open={guideOpen} onClick={() => setGuideOpen((value) => !value)} /> : null}
             <button
               type="button"
               className="cw-experience-window-btn"
@@ -136,6 +142,13 @@ export default function WorkExperienceOverlay({
             </button>
           </div>
         </div>
+        {guideOpen && playable && (
+          <PlayGuideSheet
+            title={title}
+            text={guide.text}
+            onDismiss={() => setGuideOpen(false)}
+          />
+        )}
         <div className="cw-dialog-stage">
           {!playable ? (
             <div className="cw-empty">
@@ -155,8 +168,7 @@ export default function WorkExperienceOverlay({
             </PlayerLetterbox>
           ) : (
             <div className="cw-empty">
-              <p>{current.description}</p>
-              <button type="button" className="cw-button cw-primary" onClick={() => setPlaying(true)}>
+              <button type="button" className="cw-button cw-primary" onClick={() => { setPlaying(true); setGuideOpen(true); }}>
                 开始体验
               </button>
             </div>
