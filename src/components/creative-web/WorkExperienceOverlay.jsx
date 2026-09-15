@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getGame } from '../../services/game';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../utils/authNavigation';
 import { Storage } from '../../utils/storage';
@@ -94,7 +95,7 @@ export default function WorkExperienceOverlay({
     return own ? openIteratePageWithAuth(current, current.id) : openForkPageWithAuth(current.id);
   };
 
-  return (
+  const overlay = (
     <div
       className="creative-web cw-experience-overlay-root"
       onClick={(event) => {
@@ -175,4 +176,8 @@ export default function WorkExperienceOverlay({
       </dialog>
     </div>
   );
+
+  return typeof document === 'undefined'
+    ? overlay
+    : createPortal(overlay, document.body);
 }
