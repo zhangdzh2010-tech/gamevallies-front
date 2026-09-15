@@ -117,9 +117,9 @@ export default function SquareGalleryCard({
           onClick={onExperience}
           aria-label={`体验 ${title}`}
         />
-        <div className="cw-gallery-actions">
-          <button type="button" className="cw-button cw-primary" onClick={onExperience}>体验作品</button>
-          <button type="button" className="cw-button cw-outline" disabled={remixDisabled} onClick={onRemix}>
+        <div className="cw-gallery-actions" onClick={(event) => event.stopPropagation()}>
+          <button type="button" className="cw-button cw-primary" onClick={(event) => { event.stopPropagation(); onExperience?.(); }}>体验作品</button>
+          <button type="button" className="cw-button cw-outline" disabled={remixDisabled} onClick={(event) => { event.stopPropagation(); onRemix?.(); }}>
             {remixLabel}
           </button>
         </div>

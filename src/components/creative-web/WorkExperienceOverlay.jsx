@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getGame } from '../../services/game';
 import { openForkPageWithAuth, openIteratePageWithAuth } from '../../utils/authNavigation';
 import { Storage } from '../../utils/storage';
+import { isPlayableWorkId } from '../../utils/workPlayability';
 import { PlayerLetterbox } from './coverLetterbox';
 import { galleryAuthorName } from './SquareGalleryCard';
 import WorkSandbox from './WorkSandbox';
@@ -33,20 +35,21 @@ export default function WorkExperienceOverlay({
   ariaLabel = '作品体验',
 }) {
   const selected = normalizeWork(work);
+  const playable = isPlayableWorkId(selected?.id);
   const dialog = useRef(null);
   const [resolved, setResolved] = useState(selected);
-  const [playing, setPlaying] = useState(Boolean(autoPlay));
+  const [playing, setPlaying] = useState(Boolean(autoPlay) && playable);
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
     setResolved(selected);
-    setPlaying(Boolean(autoPlay));
+    setPlaying(Boolean(autoPlay) && playable);
     setMaximized(false);
-  }, [selected?.id, autoPlay]);
+  }, [selected?.id, autoPlay, playable]);
 
   useEffect(() => {
     const id = selected?.id;
-    if (!id) {
+    if (!id || !playable) {
       return undefined;
     }
     let active = true;
@@ -61,7 +64,7 @@ export default function WorkExperienceOverlay({
     return () => {
       active = false;
     };
-  }, [selected?.id]);
+  }, [playable, selected?.id]);
 
   useEffect(() => {
     const node = dialog.current;
@@ -92,7 +95,7 @@ export default function WorkExperienceOverlay({
     return own ? openIteratePageWithAuth(current, current.id) : openForkPageWithAuth(current.id);
   };
 
-  return (
+  const overlay = (
     <div
       className="creative-web cw-experience-overlay-root"
       onClick={(event) => {
@@ -134,7 +137,12 @@ export default function WorkExperienceOverlay({
           </div>
         </div>
         <div className="cw-dialog-stage">
-          {playing ? (
+          {!playable ? (
+            <div className="cw-empty">
+              <h3>这个作品暂时无法体验</h3>
+              <p>精选卡还没有对应的可玩版本。请看看广场里已发布的作品。</p>
+            </div>
+          ) : playing ? (
             <PlayerLetterbox className="cw-square-stage">
               <WorkSandbox
                 workId={current.id}
@@ -159,7 +167,7 @@ export default function WorkExperienceOverlay({
           <button
             type="button"
             className="cw-button cw-primary"
-            disabled={remixDisabled}
+            disabled={remixDisabled || !playable}
             onClick={remix}
           >
             {remixLabel}
@@ -168,4 +176,8 @@ export default function WorkExperienceOverlay({
       </dialog>
     </div>
   );
+
+  return typeof document === 'undefined'
+    ? overlay
+    : createPortal(overlay, document.body);
 }

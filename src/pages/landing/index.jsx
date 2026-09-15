@@ -11,6 +11,7 @@ import {
 import { getGameCoverUrl } from '../../utils/media';
 import { isH5Runtime, isPcWebViewport } from '../../utils/runtime';
 import { openWorkExperience } from '../../utils/workExperienceRoute';
+import { isPlayableWorkId } from '../../utils/workPlayability';
 import {
   KEEP_WORKS,
   LANDING_FILTERS,
@@ -55,9 +56,13 @@ export function openShowcaseWork(work, openOverlay) {
   if (!id) {
     return undefined;
   }
-  if (isPcWebViewport() && typeof openOverlay === 'function') {
+  const playable = isPlayableWorkId(id);
+  if (typeof openOverlay === 'function' && (isPcWebViewport() || !playable)) {
     openOverlay(work);
-    return { overlay: true };
+    return { overlay: true, playable };
+  }
+  if (!playable) {
+    return undefined;
   }
   return openWorkExperience(work);
 }

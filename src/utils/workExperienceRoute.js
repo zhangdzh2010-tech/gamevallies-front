@@ -12,6 +12,9 @@ import {
   LANDSCAPE_PLAY_PAGE_PATH,
   PORTRAIT_PLAY_PAGE_PATH,
 } from './gamePlayRoute';
+import { isPlayableWorkId } from './workPlayability';
+
+export { isPlayableWorkId };
 
 function isH5WebBuild() {
   return typeof runtimeIsH5WebBuild === 'function'
@@ -107,12 +110,19 @@ export function openWorkExperience(work, extraQuery = {}) {
     return undefined;
   }
   const payload = work && typeof work === 'object' ? { ...work, id } : { id };
+  const playable = isPlayableWorkId(id);
   if (!isPcWebViewport()) {
+    if (!playable) {
+      return undefined;
+    }
     return settleNavigation(Taro.navigateTo({ url: buildGameDetailPath(id, extraQuery) }));
   }
   if (typeof overlayHost === 'function') {
     overlayHost(payload);
-    return { overlay: true, work: payload };
+    return { overlay: true, work: payload, playable };
+  }
+  if (!playable) {
+    return undefined;
   }
   rememberExperienceWork(payload);
   return settleNavigation(Taro.navigateTo({ url: buildWorkExperiencePath(id, extraQuery) }));

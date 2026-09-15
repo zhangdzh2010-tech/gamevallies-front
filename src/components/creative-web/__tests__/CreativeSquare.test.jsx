@@ -37,7 +37,7 @@ test('visitors can browse and play public works without the authenticated play e
   render(<CreativeSquare />);
   await screen.findByText('种群模型');
   fireEvent.click(screen.getByText('体验作品'));
-  fireEvent.click(await screen.findByText('开始体验'));
+  expect(screen.queryByText('开始体验')).toBeNull();
   const frame = await screen.findByTitle('种群模型');
   expect(global.fetch).toHaveBeenCalledWith('/games/public-work/index.html', { credentials: 'omit', referrerPolicy: 'no-referrer' });
   expect(frame.getAttribute('srcdoc')).toContain('public work');
@@ -68,12 +68,18 @@ test('searches the server and respects pagination, rather than filtering one pag
   fireEvent.click(screen.getByText('搜索'));
   await waitFor(() => expect(searchGames).toHaveBeenCalledWith('化学', { page: 1, limit: 24 }));
   await screen.findByText('没有找到匹配的作品');
+  getLatest.mockResolvedValue({ items: [work], hasMore: false });
+  fireEvent.change(screen.getByLabelText('搜索广场作品'), { target: { value: '' } });
+  fireEvent.click(screen.getByText('最新发布'));
+  await waitFor(() => expect(getLatest).toHaveBeenCalledWith(1, 24));
+  await screen.findByText('种群模型');
 });
 
 test.each([false, true])('releases the preview modal before navigating (own work: %s)', async (isOwn) => {
   Storage.getUser.mockReturnValue({ id: isOwn ? 'author' : 'visitor' });
   render(<CreativeSquare />);
   fireEvent.click(await screen.findByText('体验作品'));
+  await waitFor(() => expect(screen.getByTitle('种群模型')).toBeTruthy());
   const modal = screen.getByRole('dialog', { hidden: true });
   const navigate = isOwn ? openIteratePageWithAuth : openForkPageWithAuth;
   navigate.mockImplementationOnce(() => {
@@ -140,7 +146,12 @@ test('keeps square meta to title and author only while both actions stay availab
   expect(card.querySelector('.cw-gallery-avatar img').getAttribute('src')).toBe('https://cdn.example/will.png');
   expect(within(card).getByText('体验作品')).toBeTruthy();
   expect(within(card).getByText('复刻并创作')).toBeTruthy();
+  const scss = readFileSync(join(__dirname, '../creative-web.scss'), 'utf8');
+  expect(scss).toMatch(/\.cw-gallery-cover \{[^}]*isolation:isolate/);
+  expect(scss).toMatch(/\.cw-gallery-hit \{[^}]*bottom:52PX/);
+  expect(scss).toMatch(/\.cw-gallery-actions \.cw-button \{[^}]*pointer-events:auto/);
   fireEvent.click(within(card).getByText('体验作品'));
+  await waitFor(() => expect(screen.getByTitle('引力漫游 · 圆轨道周期探索')).toBeTruthy());
   const modal = screen.getByRole('dialog', { hidden: true });
   expect(modal.className).toContain('cw-experience-dialog');
   expect(modal.querySelector('.cw-dialog-stage')).toBeTruthy();
@@ -192,7 +203,7 @@ test('grid cards are gallery posters: badge on cover, title once, never a live w
   expect(scss).toMatch(/\.cw-square-card \.cw-gallery-meta \.cw-hot-badge \{display:none;\}/);
 });
 
-test('letterboxed posters stay in the cover and live iframes open only after 开始体验', async () => {
+test('letterboxed posters stay in the cover and live iframes auto-play in the overlay', async () => {
   getGalleryPosterUrl.mockReturnValue('https://cdn.example/covers/ohm.png');
   getTrending.mockResolvedValue({
     items: [{ ...work, title: '电流的秘密', description: '拨动电压与电阻' }],
@@ -205,7 +216,7 @@ test('letterboxed posters stay in the cover and live iframes open only after 开
   expect(coverImg.getAttribute('src')).toBe('https://cdn.example/covers/ohm.png');
   expect(card.querySelector('iframe')).toBeNull();
   fireEvent.click(within(card).getByText('体验作品'));
-  fireEvent.click(await screen.findByText('开始体验'));
+  expect(screen.queryByText('开始体验')).toBeNull();
   const frame = await screen.findByTitle('电流的秘密');
   expect(frame.closest('.cw-player-letterbox')).toBeTruthy();
   expect(frame.closest('.cw-player-letterbox--scaled')).toBeTruthy();

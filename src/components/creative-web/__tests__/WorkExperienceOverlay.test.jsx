@@ -65,7 +65,19 @@ test('autoPlay skips the start gate and styles support a near-fullscreen window'
   expect(screen.queryByText('开始体验')).toBeNull();
   await waitFor(() => expect(screen.getByTitle('种群模型')).toBeTruthy());
   expect(scss).toMatch(/\.cw-experience-dialog\.is-maximized/);
-  expect(scss).toMatch(/height:min\(96vh,96dvh\)/);
+  expect(scss).toMatch(/width:96vw/);
+  expect(scss).toMatch(/height:96vh/);
   expect(scss).toMatch(/cw-experience-overlay-root \{[^}]*display:flex/);
+  expect(scss).toMatch(/cw-experience-overlay-root \{[^}]*width:100%/);
   expect(scss).not.toMatch(/cw-experience-overlay-root \{[^}]*width:0/);
+  expect(scss).toMatch(/is-maximized \.cw-square-stage/);
+  expect(scss).toMatch(/is-maximized \.cw-player-letterbox/);
+  expect(scss).toMatch(/\.cw-experience-dialog \{[^}]*margin:auto/);
+});
+
+test('KEEP marketing ids show an empty state instead of a blank player', () => {
+  render(<WorkExperienceOverlay work={{ id: 'keep-pendulum', title: '单摆', description: '示意' }} autoPlay />);
+  expect(screen.getByText('这个作品暂时无法体验')).toBeTruthy();
+  expect(screen.queryByText('开始体验')).toBeNull();
+  expect(screen.queryByTitle('单摆')).toBeNull();
 });

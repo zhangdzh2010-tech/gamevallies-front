@@ -13,7 +13,7 @@ import { getGameCoverUrl } from '../../utils/media';
 import { CoverMatte } from './coverLetterbox';
 import { useGameStore } from '../../store/gameStore';
 import useQuotaStore from '../../stores/quotaStore';
-import { CreativeIcon } from './CreativeShell';
+import { CreativeIcon, registerCreativeHomeNavigate, unregisterCreativeHomeNavigate } from './CreativeShell';
 import ConversationStudioBody from './ConversationStudioBody';
 import ConversationLayout from './ConversationLayout';
 import CreativeSquare from './CreativeSquare';
@@ -39,6 +39,34 @@ export function CreativePlot({ domain = 'physics' }) {
   }).join(' '));
   return <svg className={`cw-plot cw-plot-${domain}`} viewBox="0 0 440 240" aria-label="概念示意曲线"><path d="M25 30V205H420M25 120H420M220 30V205" fill="none" stroke="currentColor" opacity=".12" />{paths.map((d, i) => <path key={i} d={d} fill="none" stroke="currentColor" opacity={1 - i * .18} strokeWidth="2" />)}</svg>;
 }
+function CreativeTaskCenter() {
+  const trackedTasks = useGameStore((state) => state.trackedTasks) || [];
+  const hydrateTrackedTasks = useGameStore((state) => state.hydrateTrackedTasks);
+  const refreshTrackedTasks = useGameStore((state) => state.refreshTrackedTasks);
+
+  useEffect(() => {
+    hydrateTrackedTasks?.();
+    Promise.resolve(refreshTrackedTasks?.()).catch(() => {});
+  }, [hydrateTrackedTasks, refreshTrackedTasks]);
+
+  const statusLabel = {
+    queued: '排队中',
+    submitted: '执行中',
+    running: '执行中',
+    succeeded: '已完成',
+    failed: '失败',
+    canceled: '已取消',
+    cancelled: '已取消',
+    timed_out: '超时',
+  };
+
+  if (!isLoggedIn()) {
+    return <div className="creative-web" style={{background:'transparent',minHeight:0}}><main className="cw-home"><div className="cw-eyebrow">任务中心</div><h1>登录后，查看进行中的创作任务。</h1><div className="cw-empty"><CreativeIcon name="refresh" /><h3>登录后保存你的创作任务。</h3><button className="cw-button cw-primary" onClick={() => openCreatePageWithAuth({ mode: 'fresh' })}>登录并开始创作</button></div></main></div>;
+  }
+
+  return <div className="creative-web" style={{background:'transparent',minHeight:0}}><main className="cw-home"><div className="cw-eyebrow">任务中心</div><h1>进行中的创作，都在这里。</h1><p className="cw-intro">从这里继续未完成的任务，不必离开创作工作台。</p>{!trackedTasks.length ? <div className="cw-empty"><CreativeIcon name="refresh" /><h3>当前还没有任务记录</h3><p>开始一轮创作后，任务会保存在这里。</p></div> : <div className="cw-projects">{trackedTasks.map(task => <article key={task.taskId} className="cw-project"><button type="button" className="cw-project-open" onClick={() => openTaskCreatePageWithAuth(task.taskId, task.gameId, task.taskType)}><div className="cw-project-body"><div className="cw-between"><h3>{task.gameTitle || task.promptPreview || '创作任务'}</h3><small>{statusLabel[task.status] || task.status || '任务'}</small></div><p>{task.promptPreview || '继续查看这次创作任务。'}</p><div className="cw-project-foot"><span>{task.taskType === 'pipeline_iterate' ? '优化任务' : '创作任务'}</span><span>打开任务 →</span></div></div></button></article>)}</div>}</main></div>;
+}
+
 function studioContextFromSpec(spec) {
   const mode = spec?.mode || (spec?.kind === 'create-task' ? 'create-task' : spec?.kind === 'iterate' ? 'iterate' : '');
   if (!mode) {
@@ -108,9 +136,23 @@ export default function CreativeHome() {
     void loadWorks();
   }, []);
 
+  const navigateRef = useRef(() => {});
+  const navigate = useCallback((next) => {
+    setStudioContext(null);
+    setView(next);
+    setFilter('all');
+    setSearch('');
+    if (next === 'works') void loadWorks();
+  }, []);
+  navigateRef.current = navigate;
+
   useEffect(() => {
     registerCreativeStudioHost(openStudioFromSpec);
-    return () => unregisterCreativeStudioHost();
+    registerCreativeHomeNavigate((next) => navigateRef.current(next));
+    return () => {
+      unregisterCreativeStudioHost();
+      unregisterCreativeHomeNavigate();
+    };
   }, [openStudioFromSpec]);
 
   useDidShow(() => {
@@ -127,12 +169,12 @@ export default function CreativeHome() {
   });
   useEffect(() => () => { requestRef.current++; }, []);
   useEffect(() => { if (choosing) dialogRef.current?.showModal(); else dialogRef.current?.close(); }, [choosing]);
-  const navigate = next => {
-    if (view === 'studio') setStudioContext(null);
-    setView(next);
-    setFilter('all');
-    setSearch('');
-    if (next === 'works') void loadWorks();
+  const startFreshIdea = () => {
+    setStudioContext(null);
+    setIdea('');
+    setCreativeTitle('');
+    setError('');
+    setView('home');
   };
   const pickIdea = item => { setIdea(item.prompt); setDomain(item.id); setView('home'); };
   const begin = () => {
@@ -159,13 +201,12 @@ export default function CreativeHome() {
     finally { publishLock.current = false; setPublishing(false); }
   }
   const visible = works.filter(work => (filter === 'all' || (filter === 'published' ? work.status === 'published' : work.status !== 'published')) && String(work.title || '').toLowerCase().includes(search.toLowerCase()));
-  if (view === 'home') return <ConversationStudioBody mode="create" home displayTitle={creativeTitle || '新的创意'} onTitleChange={setCreativeTitle} orientation={orientation} onOrientationChange={setOrientation} input={idea} onInputChange={setIdea} format={format} onFormatChange={setFormat} navigation={navigate} onNew={() => {setIdea('');setCreativeTitle('');setError('');}} inputAriaLabel="你的创意" primary={{label:'开始创作',onClick:begin,disabled:idea.trim().length<5}} secondary={[]} error={error} supplemental={isGenerating && currentTask?.taskId ? <div><p>你的创作任务正在进行。</p><button onClick={() => openTaskCreatePageWithAuth(currentTask.taskId,currentTask.gameId,currentTask.taskType)}>查看进展</button></div> : null}/>;
   const layoutTitle = view === 'studio' && studioContext
     ? (studioContext.title || '创作台')
-    : ({ works: '我的作品', ideas: '创意灵感', square: '创意广场' }[view]);
-  return <ConversationLayout active={view === 'studio' ? 'works' : view} navigation={navigate} onOpenWork={openWork} workId={studioContext?.gameId} title={layoutTitle} actions={view === 'studio' && studioContext ? <button type="button" className="cw-button cw-outline" onClick={closeStudio}>返回作品列表</button> : null}>{view === 'studio' && studioContext ? <CreativeStudioPanel key={`${studioContext.mode}-${studioContext.gameId}-${studioContext.taskId || 'none'}`} context={studioContext} onClose={closeStudio} /> : <div className="creative-web" style={{background:'transparent',minHeight:0}}>
-    <main className="cw-home"><div className="cw-eyebrow">{view === 'square' ? '创意广场' : view === 'works' ? '我的作品' : view === 'ideas' ? '创意灵感' : '创作空间'}</div><h1>{view === 'square' ? '让创意相遇，让作品继续生长。' : view === 'works' ? '你的创意，都在这里。' : view === 'ideas' ? '世界的规律，也是创意的起点。' : '今天，想让什么创意发生？'}</h1>{view !== 'square' && <p className="cw-intro">{view === 'square' ? null : view === 'works' ? '这里只显示当前登录账号的作品与任务。测试账号及其他创作者的公开作品请前往创意广场。' : '物理规律、生物世界、化学反应，或一个天马行空的想法。把它变成可以探索的作品。'}</p>}
-    {view === 'home' && <><div className="cw-creation-row"><section className="cw-prompt-box"><div className="cw-prompt-label"><CreativeIcon name="spark" /> 你的想法，是创作的起点</div><textarea className="cw-idea-input" aria-label="你的创意" maxLength={3000} value={idea} onChange={e => setIdea(e.target.value)} placeholder="例如：让两个初始角度几乎相同的双摆开始运动，看看它们的轨迹会如何变化……" /><div className="cw-prompt-footer"><select className="cw-domain-select" aria-label="创作领域" value={domain} onChange={e => setDomain(e.target.value)}>{CREATIVE_DOMAINS.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}</select><button className="cw-button cw-primary" disabled={idea.trim().length < 5} onClick={() => setChoosing(true)}>构思创意<CreativeIcon name="arrow" /></button></div></section><section className="cw-continue"><small>{isGenerating ? '创意正在成形' : works[0] ? '继续上次的创作' : '从观察，到创造'}</small><h2>{isGenerating ? '你的创作任务正在进行' : works[0]?.title || '让规律变得可感知'}</h2><p>{isGenerating ? '重新打开任务，查看最新进展。' : works[0] ? '再观察一次，再调整一点。' : '改变参数，观察反馈，在亲手探索中发现新的可能。'}</p><button className="cw-button cw-lime" onClick={() => isGenerating ? (currentTask?.taskId ? openTaskCreatePageWithAuth(currentTask.taskId, currentTask.gameId, currentTask.taskType) : openCreatePageWithAuth()) : works[0] ? openWork(works[0]) : pickIdea(CREATIVE_DOMAINS[1])}>{isGenerating ? '查看进展' : works[0] ? '进入创作台' : '从一个物理创意开始'}<CreativeIcon name="arrow" /></button></section></div><div className="cw-idea-chips"><span>试试这些灵感</span>{CREATIVE_DOMAINS.slice(1).map(d => <button className="cw-chip" key={d.id} onClick={() => pickIdea(d)}>{d.title} ↗</button>)}</div></>}
+    : ({ works: '我的作品', ideas: '创意灵感', square: '创意广场', home: creativeTitle || '新的创意', tasks: '任务中心' }[view]);
+  const homeStudio = <ConversationStudioBody embedded mode="create" home displayTitle={creativeTitle || '新的创意'} onTitleChange={setCreativeTitle} orientation={orientation} onOrientationChange={setOrientation} input={idea} onInputChange={setIdea} format={format} onFormatChange={setFormat} inputAriaLabel="你的创意" primary={{label:'开始创作',onClick:begin,disabled:idea.trim().length<5}} secondary={[]} error={error} supplemental={isGenerating && currentTask?.taskId ? <div><p>你的创作任务正在进行。</p><button onClick={() => openTaskCreatePageWithAuth(currentTask.taskId,currentTask.gameId,currentTask.taskType)}>查看进展</button></div> : null}/>;
+  return <ConversationLayout active={view === 'studio' ? 'works' : view} navigation={navigate} onOpenWork={openWork} onNew={startFreshIdea} workId={studioContext?.gameId} title={layoutTitle} actions={view === 'studio' && studioContext ? <button type="button" className="cw-button cw-outline" onClick={closeStudio}>返回作品列表</button> : null}>{view === 'studio' && studioContext ? <CreativeStudioPanel key={`${studioContext.mode}-${studioContext.gameId}-${studioContext.taskId || 'none'}`} context={studioContext} onClose={closeStudio} /> : view === 'home' ? homeStudio : view === 'tasks' ? <CreativeTaskCenter /> : <div className="creative-web" style={{background:'transparent',minHeight:0}}>
+    <main className="cw-home"><div className="cw-eyebrow">{view === 'square' ? '创意广场' : view === 'works' ? '我的作品' : view === 'ideas' ? '创意灵感' : '创作空间'}</div><h1>{view === 'square' ? '让创意相遇，让作品继续生长。' : view === 'works' ? '你的创意，都在这里。' : view === 'ideas' ? '世界的规律，也是创意的起点。' : '今天，想让什么创意发生？'}</h1>{view !== 'square' && <p className="cw-intro">{view === 'works' ? '这里只显示当前登录账号的作品与任务。测试账号及其他创作者的公开作品请前往创意广场。' : '物理规律、生物世界、化学反应，或一个天马行空的想法。把它变成可以探索的作品。'}</p>}
     {view === 'square' ? <CreativeSquare /> : view === 'ideas' ? <div className="cw-projects cw-inspirations">{CREATIVE_DOMAINS.slice(1).map(d => <button key={d.id} className="cw-project" onClick={() => pickIdea(d)}><div className="cw-cover"><CreativePlot domain={d.id} /><span>{d.label}</span></div><div className="cw-project-body"><h3>{d.title}</h3><p>{d.description}</p><small>以此为起点，写下你的想法 →</small></div></button>)}</div> : <><div className="cw-section-head"><div className="cw-tabs">{[['all', '全部作品'], ['draft', '草稿与任务'], ['published', '已发布']].map(([id, label]) => <button key={id} className={`cw-tab${filter === id ? ' active' : ''}`} onClick={() => setFilter(id)}>{label}</button>)}</div><input className="cw-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索已加载的作品" aria-label="搜索作品" /></div>
       {error && <div className="cw-error" role="alert">{error}<button onClick={() => loadWorks()}>重新加载</button></div>}
       <div className="cw-projects">{visible.map(work => <article key={work.id} className="cw-project"><button type="button" className="cw-project-open" onClick={() => openWork(work)}><div className="cw-cover">{getGameCoverUrl(work) ? <CoverMatte src={getGameCoverUrl(work)} /> : <div className="cw-cover-empty"><CreativeIcon name="spark" /><span>暂无封面</span></div>}<span>{work.status === 'published' ? '已发布' : work.status === 'generating' ? '创作中' : isFailedWork(work) ? '任务未完成' : work.status === 'review' ? '审核中' : '未发布'}</span></div><div className="cw-project-body"><div className="cw-between"><h3>{work.title || '未命名作品'}</h3>{work.version && <small>v{work.version}</small>}</div><p>{work.description || '一个等待继续探索的创意'}</p><div className="cw-project-foot"><span>交互作品</span><span>{isFailedWork(work) ? '查看失败详情 →' : '继续创作 →'}</span></div></div></button>{['ready', 'draft', 'published'].includes(work.status) && <div className="cw-square-actions"><button type="button" className="cw-button cw-outline" onClick={() => setPublishCandidate(work)}>发布到创意广场</button></div>}</article>)}</div>

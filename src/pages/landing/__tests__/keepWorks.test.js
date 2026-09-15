@@ -1,4 +1,5 @@
 /* eslint-env jest */
+import { isPlayableWorkId } from '../../../utils/workPlayability';
 import {
   adaptPublicWork,
   filterWorks,
@@ -7,6 +8,11 @@ import {
   KEEP_WORKS,
   pickPhotosynthesisWork,
 } from '../keepWorks';
+
+test('KEEP ids are not treated as playable works', () => {
+  expect(KEEP_WORKS.every((work) => !isPlayableWorkId(work.id))).toBe(true);
+  expect(isPlayableWorkId('pub-photo')).toBe(true);
+});
 
 test('KEEP list covers every landing filter without AI 游戏工坊 copy', () => {
   const domains = new Set(KEEP_WORKS.map((work) => work.domain));

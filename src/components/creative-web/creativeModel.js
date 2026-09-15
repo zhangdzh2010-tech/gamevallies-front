@@ -43,7 +43,7 @@ export function consumeCreativeDraft() {
   } catch (_) { return null; }
 }
 export function setCreativeView(view) { try { sessionStorage.setItem(VIEW_KEY, view); } catch (_) { /* Navigation still opens home. */ } }
-export function consumeCreativeView() { try { const view = sessionStorage.getItem(VIEW_KEY); sessionStorage.removeItem(VIEW_KEY); return ['home', 'works', 'ideas', 'square'].includes(view) ? view : null; } catch (_) { return null; } }
+export function consumeCreativeView() { try { const view = sessionStorage.getItem(VIEW_KEY); sessionStorage.removeItem(VIEW_KEY); return ['home', 'works', 'ideas', 'square', 'tasks'].includes(view) ? view : null; } catch (_) { return null; } }
 export function setPendingStudioOpen(spec) {
   try { sessionStorage.setItem(STUDIO_KEY, JSON.stringify({ ...spec, createdAt: Date.now() })); } catch (_) { /* Home tab will open without studio. */ }
 }

@@ -2,6 +2,7 @@ import { getSafeGameImage } from './media';
 import { normalizeGameTypeKey } from './gameTypes';
 import { buildGamePlayPagePath } from './gamePlayRoute';
 import { getGameOrientation } from './gameOrientation';
+import { normalizeOrigin } from './sameOriginBase';
 
 const DEFAULT_BASE_URL = 'https://www.zlspace.ai';
 const DEFAULT_SHARE_IMAGE = '';
@@ -89,8 +90,36 @@ export function getShareConfig(game = {}, score, options = {}) {
   };
 }
 
-export function getGameShareLink(gameId, baseUrl = DEFAULT_BASE_URL) {
-  return `${baseUrl}${buildGameDetailPath(gameId)}`;
+/**
+ * Taro H5 is hash-routed. Absolute share links must be
+ * `origin + pathname + '#' + path`, matching CreativeStudio publish.
+ */
+export function buildH5ShareUrl(
+  path,
+  locationLike = typeof window !== 'undefined' ? window.location : null,
+  fallbackOrigin = DEFAULT_BASE_URL,
+) {
+  const hashPath = String(path || '').replace(/^#/, '');
+  const normalized = hashPath.startsWith('/') ? hashPath : `/${hashPath}`;
+  const origin = (locationLike && locationLike.origin)
+    || normalizeOrigin(fallbackOrigin)
+    || DEFAULT_BASE_URL;
+  const pathname = (locationLike && typeof locationLike.pathname === 'string' && locationLike.pathname)
+    ? locationLike.pathname
+    : '/';
+  return `${origin}${pathname}#${normalized}`;
+}
+
+export function getGameShareLink(
+  gameId,
+  baseUrl = DEFAULT_BASE_URL,
+  locationLike = typeof window !== 'undefined' ? window.location : null,
+) {
+  // Canonical public H5 share is the PC experience hash. The work-shell
+  // guard rewrites phone-width visits to mobile detail.
+  return buildH5ShareUrl(buildMiniProgramPath('/pages/game/experience/index', {
+    id: normalizeId(gameId),
+  }), locationLike, baseUrl);
 }
 
 export function getCreatorShareLink(creatorId, baseUrl = DEFAULT_BASE_URL) {

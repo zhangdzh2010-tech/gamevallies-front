@@ -73,6 +73,8 @@ jest.mock('@tarojs/taro', () => {
     showToast: mockShowToast,
     navigateTo: mockNavigateTo,
     showModal: jest.fn(),
+    getStorageSync: jest.fn(() => ''),
+    useDidShow: jest.fn(),
   };
 
   return {
@@ -186,6 +188,18 @@ jest.mock('../../../stores/gamePlayer', () => ({
 jest.mock('../../../stores/quotaStore', () => ({
   __esModule: true,
   default: jest.fn((selector) => selector({ openPaywall: mockOpenPaywall })),
+}));
+
+jest.mock('../../../components/creative-web/ConversationLayout', () => ({
+  __esModule: true,
+  default: ({ children, actions }) => <div>{actions}{children}</div>,
+  ConversationIcon: () => null,
+}));
+
+jest.mock('../../../components/creative-web/CreativeShell', () => ({
+  __esModule: true,
+  default: ({ children, actions }) => <div>{actions}{children}</div>,
+  CreativeIcon: () => null,
 }));
 
 jest.mock('../../../utils/authNavigation', () => ({

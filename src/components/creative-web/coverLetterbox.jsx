@@ -14,14 +14,19 @@ export function CoverMatte({ src, alt = '' }) {
 
 export function PlayerLetterbox({ children, className = '' }) {
   const stage = useRef(null);
-  const [scale, setScale] = useState(0);
+  const [metrics, setMetrics] = useState({ scale: 0, x: 0, y: 0 });
   useEffect(() => {
     const node = stage.current;
     if (!node) return undefined;
     const update = () => {
       const { width, height } = node.getBoundingClientRect();
       if (!width || !height) return;
-      setScale(Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT));
+      const scale = Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
+      setMetrics({
+        scale,
+        x: (width - DESIGN_WIDTH * scale) / 2,
+        y: (height - DESIGN_HEIGHT * scale) / 2,
+      });
     };
     update();
     if (typeof ResizeObserver !== 'function') {
@@ -34,7 +39,10 @@ export function PlayerLetterbox({ children, className = '' }) {
   }, []);
   return (
     <div ref={stage} className={['cw-player-letterbox', 'cw-player-letterbox--scaled', className].filter(Boolean).join(' ')}>
-      <div className="cw-player-scaler" style={{ transform: `scale(${scale || 0})` }}>
+      <div
+        className="cw-player-scaler"
+        style={{ transform: `translate(${metrics.x}px, ${metrics.y}px) scale(${metrics.scale || 0})` }}
+      >
         {children}
       </div>
     </div>
