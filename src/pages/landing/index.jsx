@@ -244,7 +244,7 @@ export default function LandingPage() {
 
         <section className="zl-ways" id="ways">
           <h2>这样探索科学</h2>
-          <p className="zl-section-lead">不是一键生成小游戏工厂——我们把科学变成可感知、可调节、可继续改的作品。</p>
+          <p className="zl-section-lead">把科学变成可感知、可调节、可继续改的作品。</p>
           <div className="zl-ways__grid">
             <article>
               <div className="zl-way-head">
