@@ -23,6 +23,18 @@ const paths = {
   close: <path d="m6 6 12 12M18 6 6 18" />,
 };
 export function CreativeIcon({ name, ...props }) { return <svg className="cw-icon" viewBox="0 0 24 24" aria-hidden="true" {...props}>{paths[name] || paths.spark}</svg>; }
+
+const IN_SHELL_VIEWS = new Set(['home', 'ideas', 'square', 'works', 'tasks']);
+let creativeHomeNavigate = null;
+
+export function registerCreativeHomeNavigate(navigate) {
+  creativeHomeNavigate = typeof navigate === 'function' ? navigate : null;
+}
+
+export function unregisterCreativeHomeNavigate() {
+  creativeHomeNavigate = null;
+}
+
 export function creativeNavigate(view) {
   if (view === 'friends') {
     Taro.switchTab({ url: '/pages/discover/index' });
@@ -30,6 +42,10 @@ export function creativeNavigate(view) {
   }
   if (view === 'messages') {
     Taro.switchTab({ url: '/pages/message/index' });
+    return;
+  }
+  if (creativeHomeNavigate && IN_SHELL_VIEWS.has(view)) {
+    creativeHomeNavigate(view);
     return;
   }
   setCreativeView(view);
